@@ -1,0 +1,10 @@
+name = "CausalGraphInterface"
+uuid = "b41ab49a-79bc-5eac-acbb-517b17bd5c16"
+authors = ["Bjarke Hautop Kristensen <bjarke.hautop@gmail.com>"]
+version = "0.1.0"
+
+[workspace]
+projects = ["test", "docs"]
+
+[compat]
+julia = "1.10"

@@ -1,0 +1,13 @@
+# Changes here will be overwritten by Copier
+AddPrecommitUpdateCI: false
+Authors: Bjarke Hautop Kristensen <bjarke.hautop@gmail.com>
+JuliaMinVersion: '1.10'
+License: MIT
+LicenseCopyrightHolders: Bjarke Hautop Kristensen
+PackageName: CausalGraphInterface
+PackageOwner: BjarkeHautop
+PackageUUID: b41ab49a-79bc-5eac-acbb-517b17bd5c16
+StrategyConfirmIncluded: false
+StrategyLevel: 2
+StrategyReviewExcluded: true
+_src_path: C:\Users\hwm271\.julia\packages\BestieTemplate\6QVd6
