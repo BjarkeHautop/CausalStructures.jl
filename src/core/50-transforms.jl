@@ -1,18 +1,26 @@
 # Graph transforms, skeleton/moralize, subgraph helpers and outer constructors
 
-function skeleton(g::DAG)
-    edges = CausalEdge[]
+function _skeleton_edges(input_edges::Vector{CausalEdge})
+    skeleton_edges = CausalEdge[]
     seen = Set{Tuple{Symbol,Symbol}}()
 
-    for e in g.edges
+    for e in input_edges
         key = _ordered_pair(e.src, e.dst)
         if !(key in seen)
             push!(seen, key)
-            push!(edges, undirected(key[1], key[2]))
+            push!(skeleton_edges, undirected(key[1], key[2]))
         end
     end
 
-    return UG(g.nodes, edges)
+    return skeleton_edges
+end
+
+function skeleton(g::DAG)
+    return UG(g.nodes, _skeleton_edges(g.edges))
+end
+
+function skeleton(g::PDAG)
+    return UG(g.nodes, _skeleton_edges(g.edges))
 end
 
 function moralize(g::DAG)
@@ -118,18 +126,29 @@ is_directed(edge::CausalEdge) = edge_kind(edge) == (Tail, Arrow)
 
 is_undirected(edge::CausalEdge) = edge_kind(edge) == (Tail, Tail)
 
-function build_graph(edges::Vector{CausalEdge}; class::Symbol = :DAG)
+function build_graph(edges::Vector{CausalEdge}; class::Symbol = :DAG, simple::Bool = true)
     if class == :DAG
+        if !simple
+            error("simple = false is only supported for class = :UNKNOWN")
+        end
         return DAG(edges)
     elseif class == :UG
+        if !simple
+            error("simple = false is only supported for class = :UNKNOWN")
+        end
         return UG(edges)
     elseif class == :PDAG
+        if !simple
+            error("simple = false is only supported for class = :UNKNOWN")
+        end
         return PDAG(edges)
+    elseif class == :UNKNOWN
+        return UNKNOWN(collect_nodes(edges), edges; simple = simple)
     end
 
     error("Unsupported graph class: $(class)")
 end
 
-function caugi(edges::CausalEdge...; class::Symbol = :DAG)
-    return build_graph(collect(edges); class = class)
+function caugi(edges::CausalEdge...; class::Symbol = :DAG, simple::Bool = true)
+    return build_graph(collect(edges); class = class, simple = simple)
 end

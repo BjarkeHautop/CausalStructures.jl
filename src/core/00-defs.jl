@@ -71,6 +71,22 @@ struct PDAG <: CausalGraph
     end
 end
 
+struct UNKNOWN <: CausalGraph
+    nodes::Set{Symbol}
+    edges::Vector{CausalEdge}
+    backend::Base.RefValue{Union{Nothing,CSRBackend}}
+    simple::Bool
+
+    function UNKNOWN(nodes::Set{Symbol}, edges::Vector{CausalEdge}; simple::Bool = true)
+
+        g = new(nodes, edges, Base.RefValue{Union{Nothing,CSRBackend}}(nothing), simple)
+
+        validate!(g)
+
+        return g
+    end
+end
+
 function collect_nodes(edges::AbstractVector{CausalEdge})
     nodes = Set{Symbol}()
     sizehint!(nodes, 2 * length(edges))
@@ -86,3 +102,4 @@ end
 backend_ref(g::DAG) = g.backend
 backend_ref(g::UG) = g.backend
 backend_ref(g::PDAG) = g.backend
+backend_ref(g::UNKNOWN) = g.backend

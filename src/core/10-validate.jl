@@ -1,5 +1,9 @@
 # Validation logic: edge-kind checks and directed-cycle detection
 
+function _unordered_edge_key(edge::CausalEdge)
+    return isless(edge.src, edge.dst) ? (edge.src, edge.dst) : (edge.dst, edge.src)
+end
+
 function pdag_edge_kind_ok(edge::CausalEdge)
     return is_directed(edge) || is_undirected(edge)
 end
@@ -94,6 +98,26 @@ function validate!(g::PDAG)
 
     if directed_cycle_detected(g.nodes, g.edges)
         error("Directed cycle detected in PDAG")
+    end
+
+    return g
+end
+
+function validate!(g::UNKNOWN)
+    if g.simple
+        seen = Set{Tuple{Symbol,Symbol}}()
+
+        for e in g.edges
+            if e.src == e.dst
+                error("Self-loop detected at $(e.src)")
+            end
+
+            key = _unordered_edge_key(e)
+            if key in seen
+                error("Parallel edge detected between $(key[1]) and $(key[2])")
+            end
+            push!(seen, key)
+        end
     end
 
     return g

@@ -90,15 +90,58 @@ end
     )
 end
 
+@testitem "constructs a valid UNKNOWN graph" tags=[:unit] begin
+    graph = CausalGraphInterface.caugi(
+        CausalGraphInterface.directed(:A, :B),
+        CausalGraphInterface.bidirected(:B, :C),
+        CausalGraphInterface.partially_directed(:C, :D);
+        class = :UNKNOWN,
+    )
+
+    @test graph isa CausalGraphInterface.UNKNOWN
+    @test graph.simple == true
+    @test graph.nodes == Set([:A, :B, :C, :D])
+    @test length(graph.edges) == 3
+    @test graph.backend[] === nothing
+end
+
+@testitem "rejects non-simple construction for non-UNKNOWN classes" tags=[
+    :unit,
+    :validation,
+] begin
+    @test_throws ErrorException CausalGraphInterface.caugi(
+        CausalGraphInterface.directed(:A, :B);
+        class = :DAG,
+        simple = false,
+    )
+    @test_throws ErrorException CausalGraphInterface.caugi(
+        CausalGraphInterface.directed(:A, :B);
+        class = :UG,
+        simple = false,
+    )
+    @test_throws ErrorException CausalGraphInterface.caugi(
+        CausalGraphInterface.directed(:A, :B);
+        class = :PDAG,
+        simple = false,
+    )
+end
+
 @testitem "rejects invalid UG edges" tags=[:unit, :validation] begin
     invalid_edge = CausalGraphInterface.directed(:A, :B)
 
     @test_throws ErrorException CausalGraphInterface.UG([invalid_edge])
 end
 
-@testitem "rejects unsupported unknown class" tags=[:unit, :validation] begin
-    @test_throws ErrorException CausalGraphInterface.caugi(
-        CausalGraphInterface.directed(:A, :B);
+@testitem "allows non-simple UNKNOWN graphs" tags=[:unit] begin
+    graph = CausalGraphInterface.caugi(
+        CausalGraphInterface.directed(:A, :B),
+        CausalGraphInterface.directed(:B, :A),
+        CausalGraphInterface.directed(:A, :A);
         class = :UNKNOWN,
+        simple = false,
     )
+
+    @test graph isa CausalGraphInterface.UNKNOWN
+    @test graph.simple == false
+    @test length(graph.edges) == 3
 end

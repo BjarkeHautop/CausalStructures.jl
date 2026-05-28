@@ -48,9 +48,10 @@ end
 
     @test graph isa CausalGraphInterface.PDAG
     using TestItemRunner
-    include("split/construct_tests.jl")
-    include("split/alg_tests.jl")
-    include("split/mutation_tests.jl")
+    include("split/test-constructs.jl")
+    include("split/test-algs.jl")
+    include("split/test-mutations.jl")
+    include("port/test-queries.jl")
     @test CausalGraphInterface.parents(graph, :B) == [:A]
     @test CausalGraphInterface.neighbors(graph, :B) == [:A, :C]
     @test graph.backend[] !== nothing
@@ -93,11 +94,13 @@ end
     @test_throws ErrorException CausalGraphInterface.UG([invalid_edge])
 end
 
-@testitem "rejects unsupported unknown class" tags=[:unit, :validation] begin
-    @test_throws ErrorException CausalGraphInterface.caugi(
-        CausalGraphInterface.directed(:A, :B);
-        class = :UNKNOWN,
-    )
+@testitem "constructs a valid UNKNOWN graph" tags=[:unit] begin
+    graph =
+        CausalGraphInterface.caugi(CausalGraphInterface.directed(:A, :B); class = :UNKNOWN)
+
+    @test graph isa CausalGraphInterface.UNKNOWN
+    @test graph.simple == true
+    @test graph.nodes == Set([:A, :B])
 end
 
 @testitem "dag traversal and transforms" tags=[:unit] begin

@@ -37,7 +37,7 @@ function topological_sort(g::DAG)
     return ordering
 end
 
-function ancestors(g::DAG, node::Symbol)
+function ancestors(g::DAG, node::Symbol; open::Bool = true)
     backend = materialize_backend!(g)
     node_idx = node_index(g, node)
     seen = falses(length(backend.nodes))
@@ -45,6 +45,9 @@ function ancestors(g::DAG, node::Symbol)
 
     while !isempty(stack)
         idx = pop!(stack)
+        if idx == node_idx
+            continue
+        end
         if seen[idx]
             continue
         end
@@ -52,11 +55,43 @@ function ancestors(g::DAG, node::Symbol)
         append!(stack, csr_slice(backend.parents_colptr, backend.parents_rowval, idx))
     end
 
-    seen[node_idx] = false
-    return [backend.nodes[i] for i in eachindex(seen) if seen[i]]
+    result = [backend.nodes[i] for i in eachindex(seen) if seen[i]]
+
+    if open
+        return result
+    end
+
+    return [node; result]
 end
 
-function descendants(g::DAG, node::Symbol)
+function ancestors(g::PDAG, node::Symbol; open::Bool = true)
+    backend = materialize_backend!(g)
+    node_idx = node_index(g, node)
+    seen = falses(length(backend.nodes))
+    stack = collect(csr_slice(backend.parents_colptr, backend.parents_rowval, node_idx))
+
+    while !isempty(stack)
+        idx = pop!(stack)
+        if idx == node_idx
+            continue
+        end
+        if seen[idx]
+            continue
+        end
+        seen[idx] = true
+        append!(stack, csr_slice(backend.parents_colptr, backend.parents_rowval, idx))
+    end
+
+    result = [backend.nodes[i] for i in eachindex(seen) if seen[i]]
+
+    if open
+        return result
+    end
+
+    return [node; result]
+end
+
+function descendants(g::DAG, node::Symbol; open::Bool = true)
     backend = materialize_backend!(g)
     node_idx = node_index(g, node)
     seen = falses(length(backend.nodes))
@@ -71,8 +106,37 @@ function descendants(g::DAG, node::Symbol)
         append!(stack, csr_slice(backend.children_colptr, backend.children_rowval, idx))
     end
 
-    seen[node_idx] = false
-    return [backend.nodes[i] for i in eachindex(seen) if seen[i]]
+    result = [backend.nodes[i] for i in eachindex(seen) if seen[i]]
+
+    if open
+        return result
+    end
+
+    return [node; result]
+end
+
+function descendants(g::PDAG, node::Symbol; open::Bool = true)
+    backend = materialize_backend!(g)
+    node_idx = node_index(g, node)
+    seen = falses(length(backend.nodes))
+    stack = collect(csr_slice(backend.children_colptr, backend.children_rowval, node_idx))
+
+    while !isempty(stack)
+        idx = pop!(stack)
+        if seen[idx]
+            continue
+        end
+        seen[idx] = true
+        append!(stack, csr_slice(backend.children_colptr, backend.children_rowval, idx))
+    end
+
+    result = [backend.nodes[i] for i in eachindex(seen) if seen[i]]
+
+    if open
+        return result
+    end
+
+    return [node; result]
 end
 
 function exogenous_nodes(g::DAG)
@@ -81,6 +145,116 @@ function exogenous_nodes(g::DAG)
         backend.nodes[i] for i in eachindex(backend.nodes) if
         isempty(csr_slice(backend.parents_colptr, backend.parents_rowval, i))
     ]
+end
+
+function exogenous_nodes(g::PDAG; undirected_as_parents::Bool = false)
+    backend = materialize_backend!(g)
+    exogenous = Symbol[]
+
+    for i in eachindex(backend.nodes)
+        pa = csr_slice(backend.parents_colptr, backend.parents_rowval, i)
+        if !isempty(pa)
+            continue
+        end
+
+        if undirected_as_parents
+            ch = csr_slice(backend.children_colptr, backend.children_rowval, i)
+            incident = csr_slice(backend.incident_colptr, backend.incident_rowval, i)
+            if any(neighbor_idx -> !(neighbor_idx in pa || neighbor_idx in ch), incident)
+                continue
+            end
+        end
+
+        push!(exogenous, backend.nodes[i])
+    end
+
+    return exogenous
+end
+
+function anteriors(g::PDAG, node::Symbol; open::Bool = true)
+    backend = materialize_backend!(g)
+    node_idx = node_index(g, node)
+    seen = falses(length(backend.nodes))
+    stack = collect(csr_slice(backend.parents_colptr, backend.parents_rowval, node_idx))
+    append!(stack, csr_slice(backend.incident_colptr, backend.incident_rowval, node_idx))
+
+    while !isempty(stack)
+        idx = pop!(stack)
+        if idx == node_idx
+            continue
+        end
+        if seen[idx]
+            continue
+        end
+        seen[idx] = true
+        append!(stack, csr_slice(backend.parents_colptr, backend.parents_rowval, idx))
+        append!(stack, csr_slice(backend.incident_colptr, backend.incident_rowval, idx))
+    end
+
+    result = [backend.nodes[i] for i in eachindex(seen) if seen[i]]
+
+    if open
+        return result
+    end
+
+    return [node; result]
+end
+
+function posteriors(g::PDAG, node::Symbol; open::Bool = true)
+    backend = materialize_backend!(g)
+    node_idx = node_index(g, node)
+    seen = falses(length(backend.nodes))
+    stack = collect(csr_slice(backend.children_colptr, backend.children_rowval, node_idx))
+    append!(stack, csr_slice(backend.incident_colptr, backend.incident_rowval, node_idx))
+
+    while !isempty(stack)
+        idx = pop!(stack)
+        if idx == node_idx
+            continue
+        end
+        if seen[idx]
+            continue
+        end
+        seen[idx] = true
+        append!(stack, csr_slice(backend.children_colptr, backend.children_rowval, idx))
+        append!(stack, csr_slice(backend.incident_colptr, backend.incident_rowval, idx))
+    end
+
+    result = [backend.nodes[i] for i in eachindex(seen) if seen[i]]
+
+    if open
+        return result
+    end
+
+    return [node; result]
+end
+
+function markov_blanket(g::PDAG, node::Symbol)
+    backend = materialize_backend!(g)
+    node_idx = node_index(g, node)
+    seen = falses(length(backend.nodes))
+
+    for parent_idx in csr_slice(backend.parents_colptr, backend.parents_rowval, node_idx)
+        seen[parent_idx] = true
+    end
+
+    for child_idx in csr_slice(backend.children_colptr, backend.children_rowval, node_idx)
+        seen[child_idx] = true
+        for parent_idx in
+            csr_slice(backend.parents_colptr, backend.parents_rowval, child_idx)
+            if parent_idx != node_idx
+                seen[parent_idx] = true
+            end
+        end
+    end
+
+    for neighbor_idx in
+        csr_slice(backend.incident_colptr, backend.incident_rowval, node_idx)
+        seen[neighbor_idx] = true
+    end
+
+    seen[node_idx] = false
+    return [backend.nodes[i] for i in eachindex(seen) if seen[i]]
 end
 
 function markov_blanket(g::DAG, node::Symbol)

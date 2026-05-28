@@ -12,7 +12,10 @@ using CausalGraphInterface
 
     @test CausalGraphInterface.topological_sort(graph) == [:A, :B, :C, :D]
     @test CausalGraphInterface.ancestors(graph, :D) == [:A, :B, :C]
+    @test CausalGraphInterface.ancestors(graph, :D; open = false) == [:D, :A, :B, :C]
+    @test CausalGraphInterface.ancestors(graph, :B; open = false) == [:B, :A]
     @test CausalGraphInterface.descendants(graph, :A) == [:B, :C, :D]
+    @test CausalGraphInterface.descendants(graph, :A; open = false) == [:A, :B, :C, :D]
     @test CausalGraphInterface.exogenous_nodes(graph) == [:A]
     @test CausalGraphInterface.markov_blanket(graph, :A) == [:B, :C]
 
@@ -24,6 +27,35 @@ using CausalGraphInterface
     moral = CausalGraphInterface.moralize(graph)
     @test moral isa CausalGraphInterface.UG
     @test CausalGraphInterface.has_edge(moral, :B, :C)
+end
+
+@testitem "pdag traversal and transforms" tags=[:unit] begin
+    graph = CausalGraphInterface.caugi(
+        CausalGraphInterface.directed(:A, :B),
+        CausalGraphInterface.undirected(:B, :C),
+        CausalGraphInterface.directed(:B, :D),
+        CausalGraphInterface.directed(:C, :D);
+        class = :PDAG,
+    )
+
+    @test CausalGraphInterface.ancestors(graph, :D) == [:A, :B, :C]
+    @test CausalGraphInterface.ancestors(graph, :D; open = false) == [:D, :A, :B, :C]
+    @test CausalGraphInterface.descendants(graph, :A) == [:B, :D]
+    @test CausalGraphInterface.descendants(graph, :A; open = false) == [:A, :B, :D]
+    @test CausalGraphInterface.anteriors(graph, :D) == [:A, :B, :C]
+    @test CausalGraphInterface.anteriors(graph, :D; open = false) == [:D, :A, :B, :C]
+    @test CausalGraphInterface.posteriors(graph, :A) == [:B, :C, :D]
+    @test CausalGraphInterface.posteriors(graph, :A; open = false) == [:A, :B, :C, :D]
+    @test CausalGraphInterface.markov_blanket(graph, :B) == [:A, :C, :D]
+    @test CausalGraphInterface.exogenous_nodes(graph) == [:A, :C]
+    @test CausalGraphInterface.exogenous_nodes(graph; undirected_as_parents = true) == [:A]
+
+    skeleton = CausalGraphInterface.skeleton(graph)
+    @test skeleton isa CausalGraphInterface.UG
+    @test CausalGraphInterface.has_edge(skeleton, :A, :B)
+    @test CausalGraphInterface.has_edge(skeleton, :B, :C)
+    @test CausalGraphInterface.has_edge(skeleton, :B, :D)
+    @test CausalGraphInterface.has_edge(skeleton, :C, :D)
 end
 
 @testitem "induced subgraph" tags=[:unit] begin
