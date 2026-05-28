@@ -84,7 +84,10 @@ end
     @test graph isa CausalGraphInterface.UG
     @test graph.nodes == Set([:A, :B, :C])
     @test length(graph.edges) == 2
-    @test all(edge -> edge == CausalGraphInterface.undirected(edge.src, edge.dst), graph.edges)
+    @test all(
+        edge -> edge == CausalGraphInterface.undirected(edge.src, edge.dst),
+        graph.edges,
+    )
 end
 
 @testitem "rejects invalid UG edges" tags=[:unit, :validation] begin

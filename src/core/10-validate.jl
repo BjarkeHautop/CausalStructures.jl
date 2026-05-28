@@ -50,7 +50,9 @@ function validate!(g::DAG)
         end
 
         if !(e.src_end == Tail && e.dst_end == Arrow)
-            error("Invalid DAG edge detected: $(e.src) $(e.src_end) -> $(e.dst) $(e.dst_end)")
+            error(
+                "Invalid DAG edge detected: $(e.src) $(e.src_end) -> $(e.dst) $(e.dst_end)",
+            )
         end
     end
 
@@ -68,7 +70,9 @@ function validate!(g::UG)
         end
 
         if !(e.src_end == Tail && e.dst_end == Tail)
-            error("Invalid UG edge detected: $(e.src) $(e.src_end) -> $(e.dst) $(e.dst_end)")
+            error(
+                "Invalid UG edge detected: $(e.src) $(e.src_end) -> $(e.dst) $(e.dst_end)",
+            )
         end
     end
 
@@ -82,7 +86,9 @@ function validate!(g::PDAG)
         end
 
         if !pdag_edge_kind_ok(e)
-            error("Invalid PDAG edge detected: $(e.src) $(e.src_end) -> $(e.dst) $(e.dst_end)")
+            error(
+                "Invalid PDAG edge detected: $(e.src) $(e.src_end) -> $(e.dst) $(e.dst_end)",
+            )
         end
     end
 

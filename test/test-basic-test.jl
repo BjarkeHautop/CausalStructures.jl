@@ -47,10 +47,10 @@ end
     )
 
     @test graph isa CausalGraphInterface.PDAG
-using TestItemRunner
-include("split/construct_tests.jl")
-include("split/alg_tests.jl")
-include("split/mutation_tests.jl")
+    using TestItemRunner
+    include("split/construct_tests.jl")
+    include("split/alg_tests.jl")
+    include("split/mutation_tests.jl")
     @test CausalGraphInterface.parents(graph, :B) == [:A]
     @test CausalGraphInterface.neighbors(graph, :B) == [:A, :C]
     @test graph.backend[] !== nothing
@@ -81,7 +81,10 @@ end
     @test graph isa CausalGraphInterface.UG
     @test graph.nodes == Set([:A, :B, :C])
     @test length(graph.edges) == 2
-    @test all(edge -> edge == CausalGraphInterface.undirected(edge.src, edge.dst), graph.edges)
+    @test all(
+        edge -> edge == CausalGraphInterface.undirected(edge.src, edge.dst),
+        graph.edges,
+    )
 end
 
 @testitem "rejects invalid UG edges" tags=[:unit, :validation] begin
@@ -158,10 +161,7 @@ end
 end
 
 @testitem "mutation invalidates and lazily rebuilds backend" tags=[:unit] begin
-    graph = CausalGraphInterface.caugi(
-        CausalGraphInterface.directed(:A, :B);
-        class = :DAG,
-    )
+    graph = CausalGraphInterface.caugi(CausalGraphInterface.directed(:A, :B); class = :DAG)
 
     CausalGraphInterface.children(graph, :A)
     @test graph.backend[] !== nothing
@@ -174,15 +174,15 @@ end
 end
 
 @testitem "invalid mutations are rejected at add_edge! time" tags=[:unit, :validation] begin
-    graph = CausalGraphInterface.caugi(
-        CausalGraphInterface.directed(:A, :B);
-        class = :DAG,
-    )
+    graph = CausalGraphInterface.caugi(CausalGraphInterface.directed(:A, :B); class = :DAG)
 
     CausalGraphInterface.children(graph, :A)
     @test graph.backend[] !== nothing
 
-    @test_throws ErrorException CausalGraphInterface.add_edge!(graph, CausalGraphInterface.directed(:B, :A))
+    @test_throws ErrorException CausalGraphInterface.add_edge!(
+        graph,
+        CausalGraphInterface.directed(:B, :A),
+    )
 
     # Mutation is rolled back on validation failure.
     @test CausalGraphInterface.children(graph, :A) == [:B]

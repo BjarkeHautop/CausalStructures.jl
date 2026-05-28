@@ -1,6 +1,10 @@
 # Mutation helpers: validate-on-add with rollback, and cache invalidation
 
-function _restore_graph_state!(g::CausalGraph, edges_snapshot::Vector{CausalEdge}, nodes_snapshot::Set{Symbol})
+function _restore_graph_state!(
+    g::CausalGraph,
+    edges_snapshot::Vector{CausalEdge},
+    nodes_snapshot::Set{Symbol},
+)
     empty!(g.edges)
     append!(g.edges, edges_snapshot)
     empty!(g.nodes)
@@ -28,7 +32,11 @@ function add_edge!(g::CausalGraph, edge::CausalEdge; validate::Bool = true)
     return invalidate_backend!(g)
 end
 
-function add_edges!(g::CausalGraph, edges::AbstractVector{CausalEdge}; validate::Bool = true)
+function add_edges!(
+    g::CausalGraph,
+    edges::AbstractVector{CausalEdge};
+    validate::Bool = true,
+)
     edges_snapshot = copy(g.edges)
     nodes_snapshot = copy(g.nodes)
 
@@ -50,7 +58,11 @@ function add_edges!(g::CausalGraph, edges::AbstractVector{CausalEdge}; validate:
     return invalidate_backend!(g)
 end
 
-function set_edges!(g::CausalGraph, edges::AbstractVector{CausalEdge}; validate::Bool = true)
+function set_edges!(
+    g::CausalGraph,
+    edges::AbstractVector{CausalEdge};
+    validate::Bool = true,
+)
     edges_snapshot = copy(g.edges)
     nodes_snapshot = copy(g.nodes)
 

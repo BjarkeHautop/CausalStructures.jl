@@ -10,7 +10,7 @@ function csr_from_rows(rows::Vector{Vector{Int}})
         sort!(rows[i])
         unique!(rows[i])
         append!(rowval, rows[i])
-        colptr[i + 1] = length(rowval) + 1
+        colptr[i+1] = length(rowval) + 1
     end
 
     return colptr, rowval
@@ -44,14 +44,16 @@ function build_backend(nodes::Set{Symbol}, edges::Vector{CausalEdge})
     parent_colptr, parent_rowval = csr_from_rows(parent_rows)
     child_colptr, child_rowval = csr_from_rows(child_rows)
 
-    return CSRBackend(ordered_nodes,
-                      index,
-                      incident_colptr,
-                      incident_rowval,
-                      parent_colptr,
-                      parent_rowval,
-                      child_colptr,
-                      child_rowval)
+    return CSRBackend(
+        ordered_nodes,
+        index,
+        incident_colptr,
+        incident_rowval,
+        parent_colptr,
+        parent_rowval,
+        child_colptr,
+        child_rowval,
+    )
 end
 
 function materialize_backend!(g::CausalGraph)
@@ -88,7 +90,7 @@ function node_index(g::CausalGraph, node::Symbol)
 end
 
 function csr_slice(colptr::Vector{Int}, rowval::Vector{Int}, index::Int)
-    return rowval[colptr[index]:(colptr[index + 1] - 1)]
+    return rowval[colptr[index]:(colptr[index+1]-1)]
 end
 
 function symbols_from_slice(backend::CSRBackend, row_slice)
@@ -98,7 +100,10 @@ end
 function adjacency(g::CausalGraph, node::Symbol)
     backend = materialize_backend!(g)
     node_idx = node_index(g, node)
-    return symbols_from_slice(backend, csr_slice(backend.incident_colptr, backend.incident_rowval, node_idx))
+    return symbols_from_slice(
+        backend,
+        csr_slice(backend.incident_colptr, backend.incident_rowval, node_idx),
+    )
 end
 
 neighbors(g::CausalGraph, node::Symbol) = adjacency(g, node)
@@ -106,13 +111,19 @@ neighbors(g::CausalGraph, node::Symbol) = adjacency(g, node)
 function parents(g::CausalGraph, node::Symbol)
     backend = materialize_backend!(g)
     node_idx = node_index(g, node)
-    return symbols_from_slice(backend, csr_slice(backend.parents_colptr, backend.parents_rowval, node_idx))
+    return symbols_from_slice(
+        backend,
+        csr_slice(backend.parents_colptr, backend.parents_rowval, node_idx),
+    )
 end
 
 function children(g::CausalGraph, node::Symbol)
     backend = materialize_backend!(g)
     node_idx = node_index(g, node)
-    return symbols_from_slice(backend, csr_slice(backend.children_colptr, backend.children_rowval, node_idx))
+    return symbols_from_slice(
+        backend,
+        csr_slice(backend.children_colptr, backend.children_rowval, node_idx),
+    )
 end
 
 function has_edge(g::CausalGraph, src::Symbol, dst::Symbol)

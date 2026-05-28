@@ -2,7 +2,7 @@
 
 function skeleton(g::DAG)
     edges = CausalEdge[]
-    seen = Set{Tuple{Symbol, Symbol}}()
+    seen = Set{Tuple{Symbol,Symbol}}()
 
     for e in g.edges
         key = _ordered_pair(e.src, e.dst)
@@ -17,7 +17,7 @@ end
 
 function moralize(g::DAG)
     edges = CausalEdge[]
-    seen = Set{Tuple{Symbol, Symbol}}()
+    seen = Set{Tuple{Symbol,Symbol}}()
 
     for e in g.edges
         key = _ordered_pair(e.src, e.dst)
@@ -33,8 +33,8 @@ function moralize(g::DAG)
         if length(pa) < 2
             continue
         end
-        for i in 1:(length(pa) - 1)
-            for j in (i + 1):length(pa)
+        for i = 1:(length(pa)-1)
+            for j = (i+1):length(pa)
                 key = _ordered_pair(pa[i], pa[j])
                 if !(key in seen)
                     push!(seen, key)
@@ -131,5 +131,5 @@ function build_graph(edges::Vector{CausalEdge}; class::Symbol = :DAG)
 end
 
 function caugi(edges::CausalEdge...; class::Symbol = :DAG)
-    return build_graph(collect(edges); class=class)
+    return build_graph(collect(edges); class = class)
 end

@@ -15,7 +15,7 @@ end
 
 struct CSRBackend
     nodes::Vector{Symbol}
-    index::Dict{Symbol, Int}
+    index::Dict{Symbol,Int}
     incident_colptr::Vector{Int}
     incident_rowval::Vector{Int}
     parents_colptr::Vector{Int}
@@ -29,12 +29,11 @@ abstract type CausalGraph end
 struct DAG <: CausalGraph
     nodes::Set{Symbol}
     edges::Vector{CausalEdge}
-    backend::Base.RefValue{Union{Nothing, CSRBackend}}
+    backend::Base.RefValue{Union{Nothing,CSRBackend}}
 
-    function DAG(nodes::Set{Symbol},
-                 edges::Vector{CausalEdge})
+    function DAG(nodes::Set{Symbol}, edges::Vector{CausalEdge})
 
-        g = new(nodes, edges, Base.RefValue{Union{Nothing, CSRBackend}}(nothing))
+        g = new(nodes, edges, Base.RefValue{Union{Nothing,CSRBackend}}(nothing))
 
         validate!(g)
 
@@ -45,12 +44,11 @@ end
 struct UG <: CausalGraph
     nodes::Set{Symbol}
     edges::Vector{CausalEdge}
-    backend::Base.RefValue{Union{Nothing, CSRBackend}}
+    backend::Base.RefValue{Union{Nothing,CSRBackend}}
 
-    function UG(nodes::Set{Symbol},
-        edges::Vector{CausalEdge})
+    function UG(nodes::Set{Symbol}, edges::Vector{CausalEdge})
 
-    g = new(nodes, edges, Base.RefValue{Union{Nothing, CSRBackend}}(nothing))
+        g = new(nodes, edges, Base.RefValue{Union{Nothing,CSRBackend}}(nothing))
 
         validate!(g)
 
@@ -61,12 +59,11 @@ end
 struct PDAG <: CausalGraph
     nodes::Set{Symbol}
     edges::Vector{CausalEdge}
-    backend::Base.RefValue{Union{Nothing, CSRBackend}}
+    backend::Base.RefValue{Union{Nothing,CSRBackend}}
 
-    function PDAG(nodes::Set{Symbol},
-                  edges::Vector{CausalEdge})
+    function PDAG(nodes::Set{Symbol}, edges::Vector{CausalEdge})
 
-        g = new(nodes, edges, Base.RefValue{Union{Nothing, CSRBackend}}(nothing))
+        g = new(nodes, edges, Base.RefValue{Union{Nothing,CSRBackend}}(nothing))
 
         validate!(g)
 

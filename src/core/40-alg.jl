@@ -5,14 +5,14 @@ function topological_sort(g::DAG)
     n = length(backend.nodes)
 
     indegree = zeros(Int, n)
-    for i in 1:n
+    for i = 1:n
         for child_idx in csr_slice(backend.children_colptr, backend.children_rowval, i)
             indegree[child_idx] += 1
         end
     end
 
     queue = Int[]
-    for i in 1:n
+    for i = 1:n
         if indegree[i] == 0
             push!(queue, i)
         end
@@ -77,7 +77,10 @@ end
 
 function exogenous_nodes(g::DAG)
     backend = materialize_backend!(g)
-    return [backend.nodes[i] for i in eachindex(backend.nodes) if isempty(csr_slice(backend.parents_colptr, backend.parents_rowval, i))]
+    return [
+        backend.nodes[i] for i in eachindex(backend.nodes) if
+        isempty(csr_slice(backend.parents_colptr, backend.parents_rowval, i))
+    ]
 end
 
 function markov_blanket(g::DAG, node::Symbol)
@@ -91,7 +94,8 @@ function markov_blanket(g::DAG, node::Symbol)
 
     for child_idx in csr_slice(backend.children_colptr, backend.children_rowval, node_idx)
         seen[child_idx] = true
-        for parent_idx in csr_slice(backend.parents_colptr, backend.parents_rowval, child_idx)
+        for parent_idx in
+            csr_slice(backend.parents_colptr, backend.parents_rowval, child_idx)
             if parent_idx != node_idx
                 seen[parent_idx] = true
             end

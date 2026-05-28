@@ -14,21 +14,20 @@
 using CausalGraphInterface
 
 graph = caugi(
-	directed(:A, :B),
-	directed(:A, :C),
-	directed(:B, :D),
-	directed(:C, :D);
-	class = :DAG,
+ directed(:A, :B),
+ directed(:A, :C),
+ directed(:B, :D),
+ directed(:C, :D);
+ class = :DAG,
 )
 
 ug = caugi(
-	undirected(:A, :B),
-	undirected(:B, :C);
-	class = :UG,
+ undirected(:A, :B),
+ undirected(:B, :C);
+ class = :UG,
 )
 ```
 
 Use `directed`, `undirected`, `bidirected`, `partially_directed`, `partially_undirected`, and `partial` to define edges. `class = :DAG`, `class = :UG`, and `class = :PDAG` are supported; other classes currently error.
 
 `caugi` graph objects are immutable and rebuild their CSR-style adjacency backend lazily on query, or eagerly through `build!` if you want to force materialization. That keeps the graph state consistent, makes adjacency queries fast, and avoids paying rebuild costs before they are needed.
-

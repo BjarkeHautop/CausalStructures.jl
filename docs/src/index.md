@@ -12,17 +12,17 @@ Documentation for [CausalGraphInterface](https://github.com/BjarkeHautop/CausalG
 using CausalGraphInterface
 
 graph = caugi(
-	directed(:A, :B),
-	directed(:A, :C),
-	directed(:B, :D),
-	directed(:C, :D);
-	class = :DAG,
+ directed(:A, :B),
+ directed(:A, :C),
+ directed(:B, :D),
+ directed(:C, :D);
+ class = :DAG,
 )
 
 ug = caugi(
-	undirected(:A, :B),
-	undirected(:B, :C);
-	class = :UG,
+ undirected(:A, :B),
+ undirected(:B, :C);
+ class = :UG,
 )
 ```
 

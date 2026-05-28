@@ -18,7 +18,6 @@ repos:
         args: [--unique]
       - id: mixed-line-ending
         args: [--fix=lf]
-      - id: no-commit-to-branch
       - id: pretty-format-json
         args: [--autofix, --indent=2]
       - id: trailing-whitespace
