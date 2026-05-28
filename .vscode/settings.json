@@ -1,5 +1,5 @@
 {
-    "julia.environmentPath": "c:\\Users\\hwm271\\Documents\\GitHub\\CausalGraphInterface.jl",
+    "julia.environmentPath": "/home/bjarke/GitHub/CausalGraphInterface.jl",
     "chat.tools.terminal.autoApprove": {
         "julia": true
     }
