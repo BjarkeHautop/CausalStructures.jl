@@ -1,11 +1,67 @@
 module CausalGraphInterface
 
-"""
-    hi = hello_world()
-A simple function to return "Hello, World!"
-"""
-function hello_world()
-    return "Hello, World!"
-end
+include("core.jl")
+
+using .CausalGraphCore: CausalEdge,
+                        CausalGraph,
+                        DAG,
+                        UG,
+                        PDAG,
+                        invalidate_backend!,
+                        add_edge!,
+                        add_edges!,
+                        set_edges!,
+                        adjacency,
+                        build!,
+                        topological_sort,
+                        ancestors,
+                        descendants,
+                        exogenous_nodes,
+                        markov_blanket,
+                        skeleton,
+                        moralize,
+                        subgraph,
+                        directed,
+                        neighbors,
+                        parents,
+                        children,
+                        has_edge,
+                        undirected,
+                        bidirected,
+                        partially_directed,
+                        partially_undirected,
+                        partial,
+                        caugi
+
+export CausalEdge,
+       CausalGraph,
+       DAG,
+       UG,
+          PDAG,
+   invalidate_backend!,
+   add_edge!,
+   add_edges!,
+   set_edges!,
+       adjacency,
+         build!,
+   topological_sort,
+   ancestors,
+   descendants,
+   exogenous_nodes,
+   markov_blanket,
+   skeleton,
+   moralize,
+       subgraph,
+    directed,
+    neighbors,
+    parents,
+    children,
+    has_edge,
+    undirected,
+    bidirected,
+    partially_directed,
+    partially_undirected,
+    partial,
+       caugi
 
 end
