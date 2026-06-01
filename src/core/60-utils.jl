@@ -257,6 +257,7 @@ function generate_graph(
     end
 
     graph = DAG(nodes, edges)
+    build!(graph)
     if class == :CPDAG
         # TODO: add a CPDAG graph type and return it here once supported.
         return graph
