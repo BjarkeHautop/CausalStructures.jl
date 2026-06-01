@@ -197,48 +197,108 @@ function is_acyclic(g::CausalGraph; force_check::Bool = false)
     return !directed_cycle_detected(g.nodes, g.edges)
 end
 
-# Simple graph generator (Erdos-Renyi DAG using ordering to avoid cycles)
-function generate_graph(n::Integer, p::Real; class::Symbol = :DAG, rng = Random.GLOBAL_RNG)
+function generate_graph(
+    n::Integer;
+    m::Union{Nothing,Integer} = nothing,
+    p::Union{Nothing,Real} = nothing,
+    class::Symbol = :DAG,
+    seed::Union{Nothing,Integer} = nothing,
+    rng = Random.GLOBAL_RNG,
+)
+    n = Int(n)
     if n <= 0
         error("n must be positive")
     end
 
-    nodes_syms = [Symbol("N$(i)") for i = 1:n]
-    edges = CausalEdge[]
+    if !(class == :DAG || class == :CPDAG)
+        error("Unsupported graph class for generator: $(class)")
+    end
 
-    # ensure acyclicity by only creating edges i -> j for i < j
-    for i = 1:(n-1)
-        for j = (i+1):n
-            if rand(rng) < p
-                if class == :DAG
-                    push!(edges, directed(nodes_syms[i], nodes_syms[j]))
-                elseif class == :PDAG
-                    push!(edges, partially_directed(nodes_syms[i], nodes_syms[j]))
-                elseif class == :UG
-                    push!(edges, undirected(nodes_syms[i], nodes_syms[j]))
-                else
-                    error("Unsupported class for generator: $(class)")
-                end
-            end
+    if xor(m === nothing, p === nothing) == false
+        error("Supply exactly one of m or p")
+    end
+
+    local_rng = seed === nothing ? rng : Random.Xoshiro(seed)
+    node_names = [Symbol("V$(i)") for i = 1:n]
+    nodes = Set(node_names)
+
+    total_edges = n * (n - 1) ÷ 2
+    edge_count = 0
+    if p !== nothing
+        p = Float64(p)
+        if !isfinite(p) || p < 0 || p > 1
+            error("p must be in [0,1]")
+        end
+        edge_count = count(_ -> rand(local_rng) < p, 1:total_edges)
+    else
+        edge_count = Int(m)
+        if edge_count < 0 || edge_count > total_edges
+            error("m must be in 0..$(total_edges)")
         end
     end
 
-    return build_graph(edges; class = class)
+    edges = CausalEdge[]
+    if edge_count > 0
+        ranks = randperm(local_rng, total_edges)[1:edge_count]
+        row_lengths = (n-1):-1:1
+        cum_lengths = cumsum(row_lengths)
+        ordering = randperm(local_rng, n)
+
+        sizehint!(edges, edge_count)
+        for rank in ranks
+            row = searchsortedfirst(cum_lengths, rank)
+            prev_cum = row == 1 ? 0 : cum_lengths[row-1]
+            offset = rank - prev_cum - 1
+            col = row + offset + 1
+            src = node_names[ordering[row]]
+            dst = node_names[ordering[col]]
+            push!(edges, directed(src, dst))
+        end
+    end
+
+    graph = DAG(nodes, edges)
+    if class == :CPDAG
+        # TODO: add a CPDAG graph type and return it here once supported.
+        return graph
+    end
+
+    return graph
 end
 
-# Simulate linear Gaussian data for DAGs. Returns Dict{Symbol, Vector{Float64}}
-function simulate_data(g::DAG, samples::Integer; rng = Random.GLOBAL_RNG)
+function simulate_data(
+    g::DAG;
+    samples::Integer,
+    seed = nothing,
+    standardize::Bool = true,
+    coef_range::Tuple{Float64,Float64} = (-1.0, 1.0),
+    error_sd::Float64 = 1.0,
+    rng = Random.GLOBAL_RNG,
+)
     if samples <= 0
         error("samples must be positive")
+    end
+
+    if isempty(g.nodes)
+        error("Cannot simulate data from an empty graph")
+    end
+
+    # resolve RNG from seed or provided rng
+    local_rng = if seed === nothing
+        rng
+    elseif isa(seed, Integer)
+        Random.MersenneTwister(seed)
+    else
+        seed
     end
 
     ordering = topological_sort(g)
     backend = materialize_backend!(g)
 
-    # random coefficients for each parent->child in [-1,1]
+    # random coefficients for each parent->child sampled uniformly in coef_range
     coeffs = Dict{Tuple{Symbol,Symbol},Float64}()
     for e in g.edges
-        coeffs[(e.src, e.dst)] = rand(rng) * 2.0 - 1.0
+        coeffs[(e.src, e.dst)] =
+            rand(local_rng) * (coef_range[2] - coef_range[1]) + coef_range[1]
     end
 
     data = Dict{Symbol,Vector{Float64}}()
@@ -249,14 +309,26 @@ function simulate_data(g::DAG, samples::Integer; rng = Random.GLOBAL_RNG)
     for node in ordering
         pa = parents(g, node)
         if isempty(pa)
-            data[node] = randn(rng, samples)
+            data[node] = randn(local_rng, samples) .* error_sd
         else
             vals = zeros(Float64, samples)
             for p in pa
                 vals .+= coeffs[(p, node)] .* data[p]
             end
-            vals .+= randn(rng, samples) # noise
+            vals .+= randn(local_rng, samples) .* error_sd # noise
             data[node] = vals
+        end
+    end
+
+    if standardize
+        for (k, v) in data
+            μ = Statistics.mean(v)
+            σ = Statistics.std(v)
+            if σ == 0.0
+                # leave as-is if no variation
+                continue
+            end
+            data[k] = (v .- μ) ./ σ
         end
     end
 

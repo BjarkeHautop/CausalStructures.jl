@@ -1,5 +1,8 @@
 module CausalGraphCore
 
+using Random
+using Statistics
+
 include("core/00-defs.jl")
 include("core/10-validate.jl")
 include("core/20-backend.jl")
