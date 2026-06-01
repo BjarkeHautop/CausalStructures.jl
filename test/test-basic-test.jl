@@ -1,102 +1,82 @@
+using Test
+using CausalGraphInterface
+
 @testitem "constructs a valid DAG" tags=[:unit] begin
-    graph = CausalGraphInterface.caugi(
-        CausalGraphInterface.directed(:A, :B),
-        CausalGraphInterface.directed(:A, :C),
-        CausalGraphInterface.directed(:B, :D),
-        CausalGraphInterface.directed(:C, :D);
-        class = :DAG,
+    graph = caugi(
+        directed(:A, :B),
+        directed(:A, :C),
+        directed(:B, :D),
+        directed(:C, :D);
+        class = DAG,
     )
 
-    @test graph isa CausalGraphInterface.DAG
+    @test graph isa DAG
     @test graph.nodes == Set([:A, :B, :C, :D])
     @test length(graph.edges) == 4
     @test graph.backend[] !== nothing
-    @test CausalGraphInterface.children(graph, :A) == [:B, :C]
-    @test CausalGraphInterface.parents(graph, :D) == [:B, :C]
-    @test CausalGraphInterface.neighbors(graph, :A) == [:B, :C]
-    @test CausalGraphInterface.has_edge(graph, :A, :B)
+    @test children(graph, :A) == [:B, :C]
+    @test parents(graph, :D) == [:B, :C]
+    @test neighbors(graph, :A) == [:B, :C]
+    @test has_edge(graph, :A, :B)
     @test graph.backend[] !== nothing
     @test occursin("A --> B, A --> C, B --> D, C --> D", sprint(show, graph))
 end
 
 @testitem "rejects invalid DAG edges" tags=[:unit, :validation] begin
-    invalid_edge = CausalGraphInterface.partial(:A, :B)
+    invalid_edge = partial(:A, :B)
 
-    @test_throws ErrorException CausalGraphInterface.DAG([invalid_edge])
+    @test_throws ErrorException DAG([invalid_edge])
 end
 
 @testitem "rejects self loops" tags=[:unit, :validation] begin
-    loop_edge = CausalGraphInterface.directed(:A, :A)
+    loop_edge = directed(:A, :A)
 
-    @test_throws ErrorException CausalGraphInterface.DAG([loop_edge])
+    @test_throws ErrorException DAG([loop_edge])
 end
 
 @testitem "rejects directed cycles in DAGs" tags=[:unit, :validation] begin
-    @test_throws ErrorException CausalGraphInterface.caugi(
-        CausalGraphInterface.directed(:A, :B),
-        CausalGraphInterface.directed(:B, :A);
-        class = :DAG,
-    )
+    @test_throws ErrorException caugi(directed(:A, :B), directed(:B, :A); class = DAG)
 end
 
 @testitem "constructs a valid PDAG" tags=[:unit] begin
-    graph = CausalGraphInterface.caugi(
-        CausalGraphInterface.directed(:A, :B),
-        CausalGraphInterface.undirected(:B, :C),
-        CausalGraphInterface.directed(:C, :D);
-        class = :PDAG,
-    )
+    graph = caugi(directed(:A, :B), undirected(:B, :C), directed(:C, :D); class = PDAG)
 
-    @test graph isa CausalGraphInterface.PDAG
+    @test graph isa PDAG
     using TestItemRunner
     include("split/test-constructs.jl")
     include("split/test-algs.jl")
     include("split/test-mutations.jl")
     include("port/test-queries.jl")
-    @test CausalGraphInterface.parents(graph, :B) == [:A]
-    @test CausalGraphInterface.neighbors(graph, :B) == [:A, :C]
+    @test parents(graph, :B) == [:A]
+    @test neighbors(graph, :B) == [:A, :C]
     @test graph.backend[] !== nothing
 end
 
 @testitem "rejects invalid PDAG edges" tags=[:unit, :validation] begin
-    @test_throws ErrorException CausalGraphInterface.caugi(
-        CausalGraphInterface.partially_directed(:A, :B);
-        class = :PDAG,
-    )
+    @test_throws ErrorException caugi(partially_directed(:A, :B); class = PDAG)
 end
 
 @testitem "rejects directed cycles in PDAGs" tags=[:unit, :validation] begin
-    @test_throws ErrorException CausalGraphInterface.caugi(
-        CausalGraphInterface.directed(:A, :B),
-        CausalGraphInterface.directed(:B, :A);
-        class = :PDAG,
-    )
+    @test_throws ErrorException caugi(directed(:A, :B), directed(:B, :A); class = PDAG)
 end
 
 @testitem "constructs a valid UG" tags=[:unit] begin
-    graph = CausalGraphInterface.caugi(
-        CausalGraphInterface.undirected(:A, :B),
-        CausalGraphInterface.undirected(:B, :C);
-        class = :UG,
-    )
+    graph = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
 
-    @test graph isa CausalGraphInterface.UG
+    @test graph isa UG
     @test graph.nodes == Set([:A, :B, :C])
     @test length(graph.edges) == 2
-    @test all(
-        edge -> edge == CausalGraphInterface.undirected(edge.src, edge.dst),
-        graph.edges,
-    )
+    @test all(edge -> edge == undirected(edge.src, edge.dst), graph.edges)
     @test occursin("A --- B, B --- C", sprint(show, graph))
 end
 
 @testitem "prints compact symbols for mixed edge types" tags=[:unit] begin
-    graph = CausalGraphInterface.caugi(
-        CausalGraphInterface.bidirected(:A, :B),
-        CausalGraphInterface.partially_directed(:B, :C),
-        CausalGraphInterface.partially_undirected(:C, :D),
-        CausalGraphInterface.partial(:D, :E);
-        class = :UNKNOWN,
+    graph = caugi(
+        bidirected(:A, :B),
+        partially_directed(:B, :C),
+        partially_undirected(:C, :D),
+        partial(:D, :E);
+        class = UNKNOWN,
     )
 
     rendered = sprint(show, graph)
@@ -107,106 +87,94 @@ end
 end
 
 @testitem "rejects invalid UG edges" tags=[:unit, :validation] begin
-    invalid_edge = CausalGraphInterface.directed(:A, :B)
+    invalid_edge = directed(:A, :B)
 
-    @test_throws ErrorException CausalGraphInterface.UG([invalid_edge])
+    @test_throws ErrorException UG([invalid_edge])
 end
 
 @testitem "constructs a valid UNKNOWN graph" tags=[:unit] begin
-    graph =
-        CausalGraphInterface.caugi(CausalGraphInterface.directed(:A, :B); class = :UNKNOWN)
+    graph = caugi(directed(:A, :B); class = UNKNOWN)
 
-    @test graph isa CausalGraphInterface.UNKNOWN
+    @test graph isa UNKNOWN
     @test graph.simple == true
     @test graph.nodes == Set([:A, :B])
 end
 
 @testitem "dag traversal and transforms" tags=[:unit] begin
-    graph = CausalGraphInterface.caugi(
-        CausalGraphInterface.directed(:A, :B),
-        CausalGraphInterface.directed(:A, :C),
-        CausalGraphInterface.directed(:B, :D),
-        CausalGraphInterface.directed(:C, :D);
-        class = :DAG,
+    graph = caugi(
+        directed(:A, :B),
+        directed(:A, :C),
+        directed(:B, :D),
+        directed(:C, :D);
+        class = DAG,
     )
 
-    @test CausalGraphInterface.topological_sort(graph) == [:A, :B, :C, :D]
-    @test CausalGraphInterface.ancestors(graph, :D) == [:A, :B, :C]
-    @test CausalGraphInterface.descendants(graph, :A) == [:B, :C, :D]
-    @test CausalGraphInterface.exogenous_nodes(graph) == [:A]
-    @test CausalGraphInterface.markov_blanket(graph, :A) == [:B, :C]
+    @test topological_sort(graph) == [:A, :B, :C, :D]
+    @test ancestors(graph, :D) == [:A, :B, :C]
+    @test descendants(graph, :A) == [:B, :C, :D]
+    @test exogenous_nodes(graph) == [:A]
+    @test markov_blanket(graph, :A) == [:B, :C]
 
     skeleton = CausalGraphInterface.skeleton(graph)
-    @test skeleton isa CausalGraphInterface.UG
-    @test CausalGraphInterface.has_edge(skeleton, :A, :B)
-    @test CausalGraphInterface.has_edge(skeleton, :B, :A)
+    @test skeleton isa UG
+    @test has_edge(skeleton, :A, :B)
+    @test has_edge(skeleton, :B, :A)
 
-    moral = CausalGraphInterface.moralize(graph)
-    @test moral isa CausalGraphInterface.UG
-    @test CausalGraphInterface.has_edge(moral, :B, :C)
+    moral = moralize(graph)
+    @test moral isa UG
+    @test has_edge(moral, :B, :C)
 end
 
 @testitem "induced subgraph" tags=[:unit] begin
-    dag = CausalGraphInterface.caugi(
-        CausalGraphInterface.directed(:A, :B),
-        CausalGraphInterface.directed(:A, :C),
-        CausalGraphInterface.directed(:B, :D),
-        CausalGraphInterface.directed(:C, :D);
-        class = :DAG,
+    dag = caugi(
+        directed(:A, :B),
+        directed(:A, :C),
+        directed(:B, :D),
+        directed(:C, :D);
+        class = DAG,
     )
-    dag_sub = CausalGraphInterface.subgraph(dag, [:A, :B, :D])
-    @test dag_sub isa CausalGraphInterface.DAG
+    dag_sub = subgraph(dag, [:A, :B, :D])
+    @test dag_sub isa DAG
     @test dag_sub.nodes == Set([:A, :B, :D])
-    @test CausalGraphInterface.has_edge(dag_sub, :A, :B)
+    @test has_edge(dag_sub, :A, :B)
     @test !(:C in dag_sub.nodes)
 
-    ug = CausalGraphInterface.caugi(
-        CausalGraphInterface.undirected(:A, :B),
-        CausalGraphInterface.undirected(:B, :C);
-        class = :UG,
-    )
-    ug_sub = CausalGraphInterface.subgraph(ug, [:A, :B])
-    @test ug_sub isa CausalGraphInterface.UG
+    ug = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
+    ug_sub = subgraph(ug, [:A, :B])
+    @test ug_sub isa UG
     @test ug_sub.nodes == Set([:A, :B])
-    @test CausalGraphInterface.has_edge(ug_sub, :A, :B)
+    @test has_edge(ug_sub, :A, :B)
 
-    pdag = CausalGraphInterface.caugi(
-        CausalGraphInterface.directed(:A, :B),
-        CausalGraphInterface.undirected(:B, :C);
-        class = :PDAG,
-    )
-    pdag_sub = CausalGraphInterface.subgraph(pdag, [:A, :B])
-    @test pdag_sub isa CausalGraphInterface.PDAG
+    pdag = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG)
+    pdag_sub = subgraph(pdag, [:A, :B])
+    @test pdag_sub isa PDAG
     @test pdag_sub.nodes == Set([:A, :B])
-    @test CausalGraphInterface.has_edge(pdag_sub, :A, :B)
+    @test has_edge(pdag_sub, :A, :B)
 end
 
 @testitem "mutation invalidates and lazily rebuilds backend" tags=[:unit] begin
-    graph = CausalGraphInterface.caugi(CausalGraphInterface.directed(:A, :B); class = :DAG)
+    graph = caugi(directed(:A, :B); class = DAG)
 
-    CausalGraphInterface.children(graph, :A)
+    children(graph, :A)
     @test graph.backend[] !== nothing
 
-    CausalGraphInterface.add_edges!(graph, [CausalGraphInterface.directed(:B, :C)])
+    add_edges!(graph, [directed(:B, :C)])
     @test graph.backend[] === nothing
 
-    @test CausalGraphInterface.children(graph, :B) == [:C]
+    @test children(graph, :B) == [:C]
     @test graph.backend[] !== nothing
 end
 
 @testitem "invalid mutations are rejected at add_edges! time" tags=[:unit, :validation] begin
-    graph = CausalGraphInterface.caugi(CausalGraphInterface.directed(:A, :B); class = :DAG)
+    graph = caugi(directed(:A, :B); class = DAG)
 
-    CausalGraphInterface.children(graph, :A)
+    children(graph, :A)
     @test graph.backend[] !== nothing
 
-    @test_throws ErrorException CausalGraphInterface.add_edges!(
-        graph,
-        [CausalGraphInterface.directed(:B, :A)],
-    )
+    @test_throws ErrorException add_edges!(graph, [directed(:B, :A)])
 
     # Mutation is rolled back on validation failure.
-    @test CausalGraphInterface.children(graph, :A) == [:B]
-    @test CausalGraphInterface.children(graph, :B) == Symbol[]
+    @test children(graph, :A) == [:B]
+    @test children(graph, :B) == Symbol[]
     @test graph.backend[] !== nothing
 end

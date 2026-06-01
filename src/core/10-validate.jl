@@ -8,6 +8,10 @@ function pdag_edge_kind_ok(edge::CausalEdge)
     return is_directed(edge) || is_undirected(edge)
 end
 
+function admg_edge_kind_ok(edge::CausalEdge)
+    return is_directed(edge) || is_bidirected(edge)
+end
+
 function directed_cycle_detected(nodes::Set{Symbol}, edges::Vector{CausalEdge})
     children_map = Dict(node => Set{Symbol}() for node in nodes)
     indegree = Dict(node => 0 for node in nodes)
@@ -102,6 +106,27 @@ function validate!(g::PDAG)
 
     return g
 end
+
+function validate!(g::ADMG)
+    for e in g.edges
+        if e.src == e.dst
+            error("Self-loop detected at $(e.src)")
+        end
+
+        if !admg_edge_kind_ok(e)
+            error(
+                "Invalid ADMG edge detected: $(e.src) $(e.src_end) -> $(e.dst) $(e.dst_end)",
+            )
+        end
+    end
+
+    if directed_cycle_detected(g.nodes, g.edges)
+        error("Directed cycle detected in ADMG")
+    end
+
+    return g
+end
+
 
 function validate!(g::UNKNOWN)
     if g.simple

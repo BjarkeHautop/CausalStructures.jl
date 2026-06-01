@@ -126,29 +126,40 @@ is_directed(edge::CausalEdge) = edge_kind(edge) == (Tail, Arrow)
 
 is_undirected(edge::CausalEdge) = edge_kind(edge) == (Tail, Tail)
 
-function build_graph(edges::Vector{CausalEdge}; class::Symbol = :DAG, simple::Bool = true)
-    if class == :DAG
-        if !simple
-            error("simple = false is only supported for class = :UNKNOWN")
-        end
-        return DAG(edges)
-    elseif class == :UG
-        if !simple
-            error("simple = false is only supported for class = :UNKNOWN")
-        end
-        return UG(edges)
-    elseif class == :PDAG
-        if !simple
-            error("simple = false is only supported for class = :UNKNOWN")
-        end
-        return PDAG(edges)
-    elseif class == :UNKNOWN
-        return UNKNOWN(collect_nodes(edges), edges; simple = simple)
-    end
+is_bidirected(edge::CausalEdge) = edge_kind(edge) == (Arrow, Arrow)
 
-    error("Unsupported graph class: $(class)")
+function build_graph(::Type{DAG}, edges::Vector{CausalEdge}; simple::Bool = true)
+    simple || throw(ArgumentError("simple=false is not supported for DAG"))
+    return DAG(edges)
 end
 
-function caugi(edges::CausalEdge...; class::Symbol = :DAG, simple::Bool = true)
-    return build!(build_graph(collect(edges); class = class, simple = simple))
+function build_graph(::Type{UG}, edges::Vector{CausalEdge}; simple::Bool = true)
+    simple || throw(ArgumentError("simple=false is not supported for UG"))
+    return UG(edges)
+end
+
+function build_graph(::Type{PDAG}, edges::Vector{CausalEdge}; simple::Bool = true)
+    simple || throw(ArgumentError("simple=false is not supported for PDAG"))
+    return PDAG(edges)
+end
+
+function build_graph(::Type{ADMG}, edges::Vector{CausalEdge}; simple::Bool = true)
+    simple || throw(ArgumentError("simple=false is not supported for ADMG"))
+    return ADMG(collect_nodes(edges), edges)
+end
+
+function build_graph(::Type{UNKNOWN}, edges::Vector{CausalEdge}; simple::Bool = true)
+    return UNKNOWN(collect_nodes(edges), edges; simple = simple)
+end
+
+function build_graph(
+    ::Type{T},
+    edges::Vector{CausalEdge};
+    simple::Bool = true,
+) where {T<:CausalGraph}
+    error("Unsupported graph class: $(T)")
+end
+
+function caugi(edges::CausalEdge...; class::Type{<:CausalGraph} = DAG, simple::Bool = true)
+    return build!(build_graph(class, collect(edges); simple = simple))
 end

@@ -18,16 +18,16 @@ graph = caugi(
  directed(:A, :C),
  directed(:B, :D),
  directed(:C, :D);
- class = :DAG,
+ class = DAG,
 )
 
 ug = caugi(
  undirected(:A, :B),
  undirected(:B, :C);
- class = :UG,
+ class = UG,
 )
 ```
 
-Use `directed`, `undirected`, `bidirected`, `partially_directed`, `partially_undirected`, and `partial` to define edges. `class = :DAG`, `class = :UG`, and `class = :PDAG` are supported; other classes currently error.
+Use `directed`, `undirected`, `bidirected`, `partially_directed`, `partially_undirected`, and `partial` to define edges. `class = DAG`, `class = UG`, `class = PDAG`, `class = ADMG`, and `class = UNKNOWN` are supported; other classes currently error.
 
-`caugi` graph objects are immutable and rebuild their CSR-style adjacency backend lazily on query, or eagerly through `build!` if you want to force materialization. That keeps the graph state consistent, makes adjacency queries fast, and avoids paying rebuild costs before they are needed.
+`caugi` graph objects are immutable. `caugi()` eagerly materializes the CSR-style adjacency backend up front, while mutations invalidate that cache and rebuild it on demand through queries or `build!`. That keeps the graph state consistent and makes adjacency queries fast.

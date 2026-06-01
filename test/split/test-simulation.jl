@@ -20,12 +20,12 @@ end
     @test_throws ErrorException generate_graph(5; m = 1, class = :UG)
 
     graph = generate_graph(5; m = 2, class = :CPDAG, seed = 1405)
-    @test graph isa CausalGraphInterface.DAG
+    @test graph isa DAG
 end
 
 @testitem "simulate_data validates its inputs" tags=[:unit, :validation] begin
-    empty_graph = CausalGraphInterface.DAG(Set{Symbol}(), CausalGraphInterface.CausalEdge[])
-    graph = CausalGraphInterface.caugi(CausalGraphInterface.directed(:A, :B); class = :DAG)
+    empty_graph = DAG(Set{Symbol}(), CausalGraphInterface.CausalEdge[])
+    graph = caugi(directed(:A, :B); class = DAG)
 
     @test_throws ErrorException simulate_data(empty_graph; samples = 10)
     @test_throws ErrorException simulate_data(graph; samples = -1)

@@ -71,6 +71,21 @@ struct PDAG <: CausalGraph
     end
 end
 
+struct ADMG <: CausalGraph
+    nodes::Set{Symbol}
+    edges::Vector{CausalEdge}
+    backend::Base.RefValue{Union{Nothing,CSRBackend}}
+
+    function ADMG(nodes::Set{Symbol}, edges::Vector{CausalEdge})
+
+        g = new(nodes, edges, Base.RefValue{Union{Nothing,CSRBackend}}(nothing))
+
+        validate!(g)
+
+        return g
+    end
+end
+
 struct UNKNOWN <: CausalGraph
     nodes::Set{Symbol}
     edges::Vector{CausalEdge}
