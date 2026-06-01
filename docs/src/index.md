@@ -8,6 +8,8 @@ Documentation for [CausalGraphInterface](https://github.com/BjarkeHautop/CausalG
 
 ## Quick Start
 
+The `caugi()` constructor (short for *Cau*sal *G*raph *I*nterface, pronounced "corgi") builds a graph from a collection of edge specifications.
+
 ```julia
 using CausalGraphInterface
 
@@ -26,8 +28,10 @@ ug = caugi(
 )
 ```
 
-`CausalGraph` is the base abstraction, and `DAG`, `UG`, `PDAG`, `ADMG`, and `UNKNOWN` are the supported concrete graph types for now. Use `directed`, `undirected`, `bidirected`, `partially_directed`, `partially_undirected`, and `partial` to define edges.
+`CausalGraph` is the base abstraction, and `DAG`, `UG`, `PDAG`, `ADMG`, and `UNKNOWN` are the currently supported concrete graph types. Use `directed()`, `undirected()`, `bidirected()`, `partially_directed()`, `partially_undirected()`, and `partial()` to define edges.
 
-`caugi` graph objects are immutable. `caugi()` eagerly materializes the CSR-style adjacency backend up front, and later mutations invalidate it so the next query or `build!` call can rebuild it. That keeps queries fast and preserves a consistent graph state.
+Each graph type imposes its own constraints, such as permitted edge types and acyclicity requirements. These constraints are enforced when constructing or modifying a graph.
 
-Use `neighbors`, `parents`, `children`, and `has_edge` when you want slice-based adjacency access without recomputing neighborhood structure every time.
+Graphs are stored using a Compressed Sparse Row (CSR) representation, together with additional slice-based metadata to accelerate common causal-graph queries such as `neighbors()`.
+
+Graphs can be modified using functions such as `add_edges!()`. Structural updates are applied lazily: after a modification, the internal representation is rebuilt only when a query is executed.
