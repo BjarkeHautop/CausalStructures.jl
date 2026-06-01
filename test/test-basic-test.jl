@@ -16,6 +16,7 @@
     @test CausalGraphInterface.neighbors(graph, :A) == [:B, :C]
     @test CausalGraphInterface.has_edge(graph, :A, :B)
     @test graph.backend[] !== nothing
+    @test occursin("A --> B, A --> C, B --> D, C --> D", sprint(show, graph))
 end
 
 @testitem "rejects invalid DAG edges" tags=[:unit, :validation] begin
@@ -86,6 +87,23 @@ end
         edge -> edge == CausalGraphInterface.undirected(edge.src, edge.dst),
         graph.edges,
     )
+    @test occursin("A --- B, B --- C", sprint(show, graph))
+end
+
+@testitem "prints compact symbols for mixed edge types" tags=[:unit] begin
+    graph = CausalGraphInterface.caugi(
+        CausalGraphInterface.bidirected(:A, :B),
+        CausalGraphInterface.partially_directed(:B, :C),
+        CausalGraphInterface.partially_undirected(:C, :D),
+        CausalGraphInterface.partial(:D, :E);
+        class = :UNKNOWN,
+    )
+
+    rendered = sprint(show, graph)
+    @test occursin("A <-> B", rendered)
+    @test occursin("B o-> C", rendered)
+    @test occursin("C o-- D", rendered)
+    @test occursin("D o-o E", rendered)
 end
 
 @testitem "rejects invalid UG edges" tags=[:unit, :validation] begin

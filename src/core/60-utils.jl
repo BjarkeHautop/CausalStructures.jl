@@ -266,13 +266,36 @@ end
 # Pretty printing
 import Base: show
 
+function _edge_display(edge::CausalEdge)
+    if edge.src_end == Tail && edge.dst_end == Arrow
+        return "-->"
+    elseif edge.src_end == Arrow && edge.dst_end == Tail
+        return "<--"
+    elseif edge.src_end == Tail && edge.dst_end == Tail
+        return "---"
+    elseif edge.src_end == Arrow && edge.dst_end == Arrow
+        return "<->"
+    elseif edge.src_end == Circle && edge.dst_end == Arrow
+        return "o->"
+    elseif edge.src_end == Circle && edge.dst_end == Tail
+        return "o--"
+    elseif edge.src_end == Circle && edge.dst_end == Circle
+        return "o-o"
+    end
+
+    return "$(edge.src_end) - $(edge.dst_end)"
+end
+
 function show(io::IO, g::CausalGraph)
     typename = typeof(g)
     nodes_list = sort!(collect(g.nodes))
     println(io, "$(typename) with $(length(nodes_list)) nodes:")
     println(io, "  nodes: ", join(string.(nodes_list), ", "))
     println(io, "  edges:")
-    for e in g.edges
-        println(io, "    $(e.src) $(e.src_end) - $(e.dst) $(e.dst_end)")
+    if isempty(g.edges)
+        println(io, "    ")
+    else
+        edge_strings = ["$(e.src) $(_edge_display(e)) $(e.dst)" for e in g.edges]
+        println(io, "    ", join(edge_strings, ", "))
     end
 end
