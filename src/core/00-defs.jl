@@ -99,7 +99,4 @@ function collect_nodes(edges::AbstractVector{CausalEdge})
     return nodes
 end
 
-backend_ref(g::DAG) = g.backend
-backend_ref(g::UG) = g.backend
-backend_ref(g::PDAG) = g.backend
-backend_ref(g::UNKNOWN) = g.backend
+backend_ref(g::CausalGraph) = g.backend
