@@ -188,8 +188,8 @@ end
 
 # Acyclicity check (fast path by type + optional forced check)
 function is_acyclic(g::CausalGraph; force_check::Bool = false)
-    # If it's a DAG typed object and not forced, assume true
-    if g isa DAG && !force_check
+    # If it's a not UNKNOWN graph we skip
+    if !(g isa UNKNOWN) && !force_check
         return true
     end
 
