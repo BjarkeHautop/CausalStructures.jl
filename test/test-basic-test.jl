@@ -10,7 +10,7 @@
     @test graph isa CausalGraphInterface.DAG
     @test graph.nodes == Set([:A, :B, :C, :D])
     @test length(graph.edges) == 4
-    @test graph.backend[] === nothing
+    @test graph.backend[] !== nothing
     @test CausalGraphInterface.children(graph, :A) == [:B, :C]
     @test CausalGraphInterface.parents(graph, :D) == [:B, :C]
     @test CausalGraphInterface.neighbors(graph, :A) == [:B, :C]
@@ -187,22 +187,22 @@ end
     CausalGraphInterface.children(graph, :A)
     @test graph.backend[] !== nothing
 
-    CausalGraphInterface.add_edge!(graph, CausalGraphInterface.directed(:B, :C))
+    CausalGraphInterface.add_edges!(graph, [CausalGraphInterface.directed(:B, :C)])
     @test graph.backend[] === nothing
 
     @test CausalGraphInterface.children(graph, :B) == [:C]
     @test graph.backend[] !== nothing
 end
 
-@testitem "invalid mutations are rejected at add_edge! time" tags=[:unit, :validation] begin
+@testitem "invalid mutations are rejected at add_edges! time" tags=[:unit, :validation] begin
     graph = CausalGraphInterface.caugi(CausalGraphInterface.directed(:A, :B); class = :DAG)
 
     CausalGraphInterface.children(graph, :A)
     @test graph.backend[] !== nothing
 
-    @test_throws ErrorException CausalGraphInterface.add_edge!(
+    @test_throws ErrorException CausalGraphInterface.add_edges!(
         graph,
-        CausalGraphInterface.directed(:B, :A),
+        [CausalGraphInterface.directed(:B, :A)],
     )
 
     # Mutation is rolled back on validation failure.

@@ -13,7 +13,7 @@ using CausalGraphInterface
     @test graph isa CausalGraphInterface.DAG
     @test graph.nodes == Set([:A, :B, :C, :D])
     @test length(graph.edges) == 4
-    @test graph.backend[] === nothing
+    @test graph.backend[] !== nothing
     @test CausalGraphInterface.children(graph, :A) == [:B, :C]
     @test CausalGraphInterface.parents(graph, :D) == [:B, :C]
     @test CausalGraphInterface.neighbors(graph, :A) == [:B, :C]
@@ -52,7 +52,7 @@ end
     @test graph isa CausalGraphInterface.PDAG
     @test graph.nodes == Set([:A, :B, :C, :D])
     @test length(graph.edges) == 3
-    @test graph.backend[] === nothing
+    @test graph.backend[] !== nothing
     @test CausalGraphInterface.children(graph, :A) == [:B]
     @test CausalGraphInterface.parents(graph, :B) == [:A]
     @test CausalGraphInterface.neighbors(graph, :B) == [:A, :C]
@@ -102,7 +102,7 @@ end
     @test graph.simple == true
     @test graph.nodes == Set([:A, :B, :C, :D])
     @test length(graph.edges) == 3
-    @test graph.backend[] === nothing
+    @test graph.backend[] !== nothing
 end
 
 @testitem "rejects non-simple construction for non-UNKNOWN classes" tags=[

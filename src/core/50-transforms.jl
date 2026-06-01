@@ -150,5 +150,5 @@ function build_graph(edges::Vector{CausalEdge}; class::Symbol = :DAG, simple::Bo
 end
 
 function caugi(edges::CausalEdge...; class::Symbol = :DAG, simple::Bool = true)
-    return build_graph(collect(edges); class = class, simple = simple)
+    return build!(build_graph(collect(edges); class = class, simple = simple))
 end

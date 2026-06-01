@@ -28,9 +28,9 @@ using CausalGraphInterface
 
     unknown_g =
         CausalGraphInterface.caugi(CausalGraphInterface.directed(:X, :Y); class = :UNKNOWN)
-    CausalGraphInterface.add_edge!(
+    CausalGraphInterface.add_edges!(
         unknown_g,
-        CausalGraphInterface.directed(:X, :X);
+        [CausalGraphInterface.directed(:X, :X)];
         validate = false,
     )
     @test CausalGraphInterface.is_simple(unknown_g)

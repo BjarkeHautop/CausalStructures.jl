@@ -12,26 +12,6 @@ function _restore_graph_state!(
     return g
 end
 
-function add_edge!(g::CausalGraph, edge::CausalEdge; validate::Bool = true)
-    edges_snapshot = copy(g.edges)
-    nodes_snapshot = copy(g.nodes)
-
-    push!(g.edges, edge)
-    push!(g.nodes, edge.src)
-    push!(g.nodes, edge.dst)
-
-    if validate
-        try
-            validate!(g)
-        catch err
-            _restore_graph_state!(g, edges_snapshot, nodes_snapshot)
-            rethrow(err)
-        end
-    end
-
-    return invalidate_backend!(g)
-end
-
 function add_edges!(
     g::CausalGraph,
     edges::AbstractVector{CausalEdge};
