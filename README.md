@@ -8,6 +8,8 @@
 [![Docs workflow Status](https://github.com/BjarkeHautop/CausalGraphInterface.jl/actions/workflows/Docs.yml/badge.svg?branch=main)](https://github.com/BjarkeHautop/CausalGraphInterface.jl/actions/workflows/Docs.yml?query=branch%3Amain)
 [![BestieTemplate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JuliaBesties/BestieTemplate.jl/main/docs/src/assets/badge.json)](https://github.com/JuliaBesties/BestieTemplate.jl)
 
+This package is heavily inspired by the R package [caugi](https://caugi.org/), of which I am a coauthor.
+
 ## Quick Start
 
 ```julia
@@ -28,6 +30,6 @@ ug = caugi(
 )
 ```
 
-Use `directed`, `undirected`, `bidirected`, `partially_directed`, `partially_undirected`, and `partial` to define edges. `class = DAG`, `class = UG`, `class = PDAG`, `class = ADMG`, and `class = UNKNOWN` are supported; other classes currently error.
+Use `directed`, `undirected`, `bidirected`, `partially_directed`, `partially_undirected`, and `partial` to define edges. `class = DAG`, `class = UG`, `class = PDAG`, `class = ADMG`, and `class = UNKNOWN` are supported.
 
-`caugi` graph objects are immutable. `caugi()` eagerly materializes the CSR-style adjacency backend up front, while mutations invalidate that cache and rebuild it on demand through queries or `build!`. That keeps the graph state consistent and makes adjacency queries fast.
+See the documentation for more details.
