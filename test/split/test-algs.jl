@@ -68,19 +68,19 @@ end
     )
     dag_sub = subgraph(dag, [:A, :B, :D])
     @test dag_sub isa DAG
-    @test dag_sub.nodes == Set([:A, :B, :D])
+    @test nodes(dag_sub) == Vector([:A, :B, :D])
     @test has_edge(dag_sub, :A, :B)
-    @test !(:C in dag_sub.nodes)
+    @test !(:C in nodes(dag_sub))
 
     ug = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
     ug_sub = subgraph(ug, [:A, :B])
     @test ug_sub isa UG
-    @test ug_sub.nodes == Set([:A, :B])
+    @test nodes(ug_sub) == Vector([:A, :B])
     @test has_edge(ug_sub, :A, :B)
 
     pdag = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG)
     pdag_sub = subgraph(pdag, [:A, :B])
     @test pdag_sub isa PDAG
-    @test pdag_sub.nodes == Set([:A, :B])
+    @test nodes(pdag_sub) == Vector([:A, :B])
     @test has_edge(pdag_sub, :A, :B)
 end

@@ -62,19 +62,19 @@ end
 function subgraph(g::DAG, nodes::AbstractVector{Symbol})
     keep = Set(nodes)
     edges = _subgraph_edges(g.edges, keep)
-    return DAG(keep, edges)
+    return DAG(edges)
 end
 
 function subgraph(g::UG, nodes::AbstractVector{Symbol})
     keep = Set(nodes)
     edges = _subgraph_edges(g.edges, keep)
-    return UG(keep, edges)
+    return UG(edges)
 end
 
 function subgraph(g::PDAG, nodes::AbstractVector{Symbol})
     keep = Set(nodes)
     edges = _subgraph_edges(g.edges, keep)
-    return PDAG(keep, edges)
+    return PDAG(edges)
 end
 
 function _ordered_pair(a::Symbol, b::Symbol)

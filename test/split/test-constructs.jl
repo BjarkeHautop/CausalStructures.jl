@@ -11,7 +11,7 @@ using CausalGraphInterface
     )
 
     @test graph isa DAG
-    @test graph.nodes == Set([:A, :B, :C, :D])
+    @test nodes(graph) == Vector([:A, :B, :C, :D])
     @test length(graph.edges) == 4
     @test children(graph, :A) == [:B, :C]
     @test parents(graph, :D) == [:B, :C]
@@ -39,7 +39,7 @@ end
     graph = caugi(directed(:A, :B), undirected(:B, :C), directed(:C, :D); class = PDAG)
 
     @test graph isa PDAG
-    @test graph.nodes == Set([:A, :B, :C, :D])
+    @test nodes(graph) == Vector([:A, :B, :C, :D])
     @test length(graph.edges) == 3
     @test children(graph, :A) == [:B]
     @test parents(graph, :B) == [:A]
@@ -58,7 +58,7 @@ end
     graph = caugi(directed(:A, :B), bidirected(:B, :C), directed(:C, :D); class = ADMG)
 
     @test graph isa ADMG
-    @test graph.nodes == Set([:A, :B, :C, :D])
+    @test nodes(graph) == Vector([:A, :B, :C, :D])
     @test length(graph.edges) == 3
     @test children(graph, :A) == [:B]
     @test parents(graph, :B) == [:A]
@@ -79,7 +79,7 @@ end
     graph = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
 
     @test graph isa UG
-    @test graph.nodes == Set([:A, :B, :C])
+    @test nodes(graph) == Vector([:A, :B, :C])
     @test length(graph.edges) == 2
     @test all(edge -> edge == undirected(edge.src, edge.dst), graph.edges)
 end
@@ -94,7 +94,7 @@ end
 
     @test graph isa UNKNOWN
     @test graph.simple == true
-    @test graph.nodes == Set([:A, :B, :C, :D])
+    @test nodes(graph) == Vector([:A, :B, :C, :D])
     @test length(graph.edges) == 3
 end
 

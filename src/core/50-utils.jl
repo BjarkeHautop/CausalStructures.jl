@@ -171,7 +171,7 @@ function generate_graph(
         end
     end
 
-    graph = DAG(nodes, edges)
+    graph = DAG(edges)
     if class == :CPDAG
         # TODO: add a CPDAG graph type and return it here once supported.
         return graph
@@ -192,8 +192,8 @@ function simulate_data(
     if samples <= 0
         error("samples must be positive")
     end
-
-    if isempty(g.nodes)
+    B = g.backend
+    if isempty(B.nodes)
         error("Cannot simulate data from an empty graph")
     end
 

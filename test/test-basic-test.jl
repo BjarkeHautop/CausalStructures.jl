@@ -11,7 +11,7 @@ using CausalGraphInterface
     )
 
     @test graph isa DAG
-    @test graph.nodes == Set([:A, :B, :C, :D])
+    @test nodes(graph) == Vector([:A, :B, :C, :D])
     @test length(graph.edges) == 4
     @test children(graph, :A) == [:B, :C]
     @test parents(graph, :D) == [:B, :C]
@@ -48,7 +48,7 @@ end
     graph = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
 
     @test graph isa UG
-    @test graph.nodes == Set([:A, :B, :C])
+    @test nodes(graph) == Vector([:A, :B, :C])
     @test length(graph.edges) == 2
     @test all(edge -> edge == undirected(edge.src, edge.dst), graph.edges)
     @test occursin("A --- B, B --- C", sprint(show, graph))
@@ -81,7 +81,7 @@ end
 
     @test graph isa UNKNOWN
     @test graph.simple == true
-    @test graph.nodes == Set([:A, :B])
+    @test nodes(graph) == Vector([:A, :B])
 end
 
 @testitem "dag traversal and transforms" tags=[:unit] begin
@@ -119,19 +119,19 @@ end
     )
     dag_sub = subgraph(dag, [:A, :B, :D])
     @test dag_sub isa DAG
-    @test dag_sub.nodes == Set([:A, :B, :D])
+    @test nodes(dag_sub) == Vector([:A, :B, :D])
     @test has_edge(dag_sub, :A, :B)
-    @test !(:C in dag_sub.nodes)
+    @test !(:C in nodes(dag_sub))
 
     ug = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
     ug_sub = subgraph(ug, [:A, :B])
     @test ug_sub isa UG
-    @test ug_sub.nodes == Set([:A, :B])
+    @test nodes(ug_sub) == Vector([:A, :B])
     @test has_edge(ug_sub, :A, :B)
 
     pdag = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG)
     pdag_sub = subgraph(pdag, [:A, :B])
     @test pdag_sub isa PDAG
-    @test pdag_sub.nodes == Set([:A, :B])
+    @test nodes(pdag_sub) == Vector([:A, :B])
     @test has_edge(pdag_sub, :A, :B)
 end
