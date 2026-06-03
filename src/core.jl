@@ -1,5 +1,3 @@
-module CausalGraphCore
-
 using Random
 using Statistics
 
@@ -10,5 +8,3 @@ include("core/30-mutation.jl")
 include("core/40-alg.jl")
 include("core/50-transforms.jl")
 include("core/60-utils.jl")
-
-end # module CausalGraphCore
