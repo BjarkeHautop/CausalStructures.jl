@@ -153,12 +153,10 @@ end
     @test Set(neighbors(g, :C)) == Set([:B, :E])
 end
 
-@testitem "parents for UG returns empty (no directed edges)" tags = [:unit] begin
-    # Julia: parents/children don't error for UG — they return empty (no directed edges stored)
-    # R behaviour differs (explicit error). Julia returns empty.
+@testitem "parents/children are not defined for UG" tags = [:unit] begin
     ug = caugi(undirected(:A, :B); class = UG)
-    @test isempty(parents(ug, :A))
-    @test isempty(children(ug, :B))
+    @test_throws MethodError parents(ug, :A)
+    @test_throws MethodError children(ug, :B)
 end
 
 @testitem "neighbors for UG returns undirected adjacency" tags = [:unit] begin
