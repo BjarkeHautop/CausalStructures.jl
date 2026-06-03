@@ -44,5 +44,7 @@ export CausalEdge,
     is_acyclic,
     generate_graph,
     simulate_data,
-    d_separated
+    d_separated,
+    minimal_separator,
+    latent_project
 end

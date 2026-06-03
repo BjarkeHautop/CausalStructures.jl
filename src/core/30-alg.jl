@@ -352,6 +352,153 @@ function d_separated(g::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = S
     return true
 end
 
+# Bayes-ball traversal with direction tracking (Up = arrived from child, Down = arrived from parent).
+# Returns indices of nodes d-connected to start_idxs given cond_idxs, restricted to ancestor_mask.
+function _d_connected_restricted_idxs(
+    B::CSRBackend,
+    start_idxs::Vector{Int},
+    cond_idxs::Vector{Int},
+    ancestor_mask::BitVector,
+)
+    n = length(B.nodes)
+    conditioned = falses(n)
+    for v in cond_idxs
+        conditioned[v] = true
+    end
+
+    # visited[:,1] = Down, visited[:,2] = Up
+    visited = falses(n, 2)
+    reached = falses(n)
+    start_mask = falses(n)
+    for v in start_idxs
+        start_mask[v] = true
+    end
+
+    queue = Tuple{Int,Int}[]
+    for v in start_idxs
+        if !visited[v, 1]
+            visited[v, 1] = true
+            push!(queue, (v, 1))
+        end
+        if !visited[v, 2]
+            visited[v, 2] = true
+            push!(queue, (v, 2))
+        end
+    end
+
+    head = 1
+    while head <= length(queue)
+        v, dir = queue[head]
+        head += 1
+
+        if !conditioned[v]
+            if dir == 1  # Down: arrived from parent → propagate to children
+                for ch in csr_slice(B.children_colptr, B.children_rowval, v)
+                    ancestor_mask[ch] || continue
+                    if !visited[ch, 1]
+                        visited[ch, 1] = true
+                        !start_mask[ch] && (reached[ch] = true)
+                        push!(queue, (ch, 1))
+                    end
+                end
+            else  # Up: arrived from child → propagate to parents + bounce to children
+                for pa in csr_slice(B.parents_colptr, B.parents_rowval, v)
+                    ancestor_mask[pa] || continue
+                    if !visited[pa, 2]
+                        visited[pa, 2] = true
+                        !start_mask[pa] && (reached[pa] = true)
+                        push!(queue, (pa, 2))
+                    end
+                end
+                for ch in csr_slice(B.children_colptr, B.children_rowval, v)
+                    ancestor_mask[ch] || continue
+                    if !visited[ch, 1]
+                        visited[ch, 1] = true
+                        !start_mask[ch] && (reached[ch] = true)
+                        push!(queue, (ch, 1))
+                    end
+                end
+            end
+        else
+            if dir == 1  # Down at conditioned collider → activate, propagate to parents
+                for pa in csr_slice(B.parents_colptr, B.parents_rowval, v)
+                    ancestor_mask[pa] || continue
+                    if !visited[pa, 2]
+                        visited[pa, 2] = true
+                        !start_mask[pa] && (reached[pa] = true)
+                        push!(queue, (pa, 2))
+                    end
+                end
+            end
+            # dir == 2 (Up at conditioned node): blocked
+        end
+    end
+
+    return [i for i in eachindex(reached) if reached[i]]
+end
+
+# Minimal d-separator for x and y in a DAG (van der Zander & Liśkiewicz 2020).
+# Returns nothing if no separator exists within `restrict` that contains `include`.
+# Default restrict is all nodes except x and y.
+function minimal_separator(
+    g::DAG,
+    x::Symbol,
+    y::Symbol;
+    include::AbstractVector{Symbol} = Symbol[],
+    restrict::Union{Nothing,AbstractVector{Symbol}} = nothing,
+)
+    B = g.backend
+    n = length(B.nodes)
+    x_idx = node_index(g, x)
+    y_idx = node_index(g, y)
+    inc_idxs = [node_index(g, v) for v in include]
+    res_idxs = if restrict === nothing
+        [i for i = 1:n if i != x_idx && i != y_idx]
+    else
+        [node_index(g, v) for v in restrict]
+    end
+
+    res_set = Set(res_idxs)
+    for v in inc_idxs
+        v ∈ res_set || return nothing
+    end
+
+    seeds = unique([x_idx; y_idx; inc_idxs])
+    ancestor_mask = _ancestors_bitmask(B, seeds)
+
+    xs_set = Set([x_idx])
+    ys_set = Set([y_idx])
+
+    z0_idxs = [r for r in res_idxs if ancestor_mask[r] && r ∉ xs_set && r ∉ ys_set]
+
+    x_star = _d_connected_restricted_idxs(B, [x_idx], z0_idxs, ancestor_mask)
+    x_star_set = Set(x_star)
+
+    any(y_i ∈ x_star_set for y_i in [y_idx]) && return nothing
+
+    zx_set = Set{Int}()
+    for v in z0_idxs
+        v ∈ x_star_set && push!(zx_set, v)
+    end
+    for v in inc_idxs
+        push!(zx_set, v)
+    end
+    zx_idxs = collect(zx_set)
+
+    y_star = _d_connected_restricted_idxs(B, [y_idx], zx_idxs, ancestor_mask)
+    y_star_set = Set(y_star)
+
+    z_set = Set{Int}()
+    for v in zx_idxs
+        v ∈ y_star_set && push!(z_set, v)
+    end
+    for v in inc_idxs
+        push!(z_set, v)
+    end
+
+    return B.nodes[sort!(collect(z_set))]
+end
+
 function markov_blanket(g::Union{DAG,PDAG}, node::Symbol)
     B = g.backend
     node_idx = node_index(g, node)

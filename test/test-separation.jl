@@ -52,44 +52,35 @@ end
     @test d_separated(g, :smoking, :dyspnea, [:bronchitis, :either])
 end
 
-# ── minimal_separator (not yet implemented) ───────────────────────────────────
+# ── minimal_separator ────────────────────────────────────────────────────────
 
-@testitem "minimal_separator: chain structure (broken)" tags = [:unit] begin
+@testitem "minimal_separator: chain structure" tags = [:unit] begin
     g = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    @test_broken begin
-        sep = minimal_separator(g, :A, :C)
-        sep !== nothing && :B in sep
-    end
+    sep = minimal_separator(g, :A, :C)
+    @test sep !== nothing && :B in sep
 end
 
-@testitem "minimal_separator: fork structure (broken)" tags = [:unit] begin
+@testitem "minimal_separator: fork structure" tags = [:unit] begin
     g = caugi(directed(:A, :B), directed(:A, :C); class = DAG)
-    @test_broken begin
-        sep = minimal_separator(g, :B, :C)
-        sep !== nothing && :A in sep
-    end
+    sep = minimal_separator(g, :B, :C)
+    @test sep !== nothing && :A in sep
 end
 
-@testitem "minimal_separator: collider returns empty separator (broken)" tags = [:unit] begin
+@testitem "minimal_separator: collider returns empty separator" tags = [:unit] begin
     g = caugi(directed(:A, :B), directed(:C, :B); class = DAG)
-    @test_broken begin
-        sep = minimal_separator(g, :A, :C)
-        sep !== nothing && isempty(sep)
-    end
+    sep = minimal_separator(g, :A, :C)
+    @test sep !== nothing && isempty(sep)
 end
 
-@testitem "minimal_separator: returns nothing when no separator exists (broken)" tags =
-    [:unit] begin
+@testitem "minimal_separator: returns nothing when no separator exists" tags = [:unit] begin
     g = caugi(directed(:A, :B); class = DAG)
-    @test_broken minimal_separator(g, :A, :B) === nothing
+    @test minimal_separator(g, :A, :B) === nothing
 end
 
-@testitem "minimal_separator: default R excludes X and Y (broken)" tags = [:unit] begin
+@testitem "minimal_separator: default R excludes X and Y" tags = [:unit] begin
     g = caugi(directed(:A, :B), directed(:B, :C), directed(:C, :D); class = DAG)
-    @test_broken begin
-        sep = minimal_separator(g, :A, :D)
-        sep !== nothing && !(:A in sep) && !(:D in sep)
-    end
+    sep = minimal_separator(g, :A, :D)
+    @test sep !== nothing && !(:A in sep) && !(:D in sep)
 end
 
 # NetworkX d-separation tests (van der Zander & Liśkiewicz 2020)
@@ -105,10 +96,8 @@ end
         class = DAG,
     )
     @test !d_separated(g, :B, :E)
-    @test_broken begin
-        sep = minimal_separator(g, :B, :E)
-        sep !== nothing && Set(sep) == Set([:D])
-    end
+    sep = minimal_separator(g, :B, :E)
+    @test sep !== nothing && Set(sep) == Set([:D])
 end
 
 @testitem "NetworkX Case 2: chain_and_fork_graph" tags = [:unit] begin
@@ -120,25 +109,23 @@ end
         class = DAG,
     )
     @test !d_separated(g, :A, :C)
-    @test_broken begin
-        sep = minimal_separator(g, :A, :C)
-        sep !== nothing && Set(sep) == Set([:B])
-    end
+    sep = minimal_separator(g, :A, :C)
+    @test sep !== nothing && Set(sep) == Set([:B])
 end
 
 @testitem "NetworkX Case 3: no_separating_set_graph" tags = [:unit] begin
     g = caugi(directed(:A, :B); class = DAG)
     @test !d_separated(g, :A, :B)
-    @test_broken minimal_separator(g, :A, :B) === nothing
+    @test minimal_separator(g, :A, :B) === nothing
 end
 
 @testitem "NetworkX Case 4: large_no_separating_set_graph" tags = [:unit] begin
     g = caugi(directed(:A, :B), directed(:C, :A), directed(:C, :B); class = DAG)
     @test !d_separated(g, :A, :B, [:C])
-    @test_broken minimal_separator(g, :A, :B) === nothing
+    @test minimal_separator(g, :A, :B) === nothing
 end
 
-@testitem "paper Fig 4 G1: minimal_separator returns {V2} (broken)" tags = [:unit] begin
+@testitem "paper Fig 4 G1: minimal_separator returns {V2}" tags = [:unit] begin
     g = caugi(
         directed(:V1, :X),
         directed(:V1, :V2),
@@ -147,10 +134,8 @@ end
         directed(:V3, :Y);
         class = DAG,
     )
-    @test_broken begin
-        sep = minimal_separator(g, :X, :Y)
-        sep !== nothing && Set(sep) == Set([:V2])
-    end
+    sep = minimal_separator(g, :X, :Y)
+    @test sep !== nothing && Set(sep) == Set([:V2])
 end
 
 # ── m_separated for ADMG (not yet implemented) ────────────────────────────────

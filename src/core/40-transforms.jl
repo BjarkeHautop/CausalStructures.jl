@@ -85,6 +85,97 @@ is_undirected(edge::CausalEdge) = edge_kind(edge) == (Tail, Tail)
 
 is_bidirected(edge::CausalEdge) = edge_kind(edge) == (Arrow, Arrow)
 
+# Vertex-elimination latent projection: for each latent node v (in index order),
+#   1. add p→c for all p ∈ Pa(v), c ∈ Ch(v)
+#   2. add s↔c for all s ∈ Sib(v), c ∈ Ch(v)
+#   3. add a↔b for all pairs a,b ∈ Ch(v)
+#   4. remove v
+# Returns an ADMG over the observed (non-latent) nodes.
+function latent_project(g::DAG, latents::AbstractVector{Symbol})
+    B = g.backend
+    n = length(B.nodes)
+
+    pa = [Set{Int}() for _ = 1:n]
+    ch = [Set{Int}() for _ = 1:n]
+    bi = [Set{Int}() for _ = 1:n]
+
+    for edge in g.edges
+        s = B.index[edge.src]
+        d = B.index[edge.dst]
+        push!(ch[s], d)
+        push!(pa[d], s)
+    end
+
+    remove = falses(n)
+    elim = Int[]
+    for l in latents
+        idx = node_index(g, l)
+        remove[idx] = true
+        push!(elim, idx)
+    end
+    sort!(unique!(elim))
+
+    for v in elim
+        parents_v = collect(pa[v])
+        children_v = collect(ch[v])
+        siblings_v = collect(bi[v])
+
+        for p in parents_v, c in children_v
+            if p != c
+                push!(ch[p], c)
+                push!(pa[c], p)
+            end
+        end
+        for s in siblings_v, c in children_v
+            if s != c
+                push!(bi[s], c)
+                push!(bi[c], s)
+            end
+        end
+        for i in eachindex(children_v)
+            for j = (i+1):lastindex(children_v)
+                a, b = children_v[i], children_v[j]
+                push!(bi[a], b)
+                push!(bi[b], a)
+            end
+        end
+
+        for p in parents_v
+            delete!(ch[p], v)
+        end
+        for c in children_v
+            delete!(pa[c], v)
+        end
+        for s in siblings_v
+            delete!(bi[s], v)
+        end
+        pa[v] = Set{Int}()
+        ch[v] = Set{Int}()
+        bi[v] = Set{Int}()
+    end
+
+    kept = [i for i = 1:n if !remove[i]]
+    new_nodes = Set(B.nodes[kept])
+    new_edges = CausalEdge[]
+    seen_bi = Set{Tuple{Int,Int}}()
+
+    for old_i in kept
+        for c in ch[old_i]
+            remove[c] && continue
+            push!(new_edges, directed(B.nodes[old_i], B.nodes[c]))
+        end
+        for s in bi[old_i]
+            remove[s] && continue
+            key = minmax(old_i, s)
+            key in seen_bi && continue
+            push!(seen_bi, key)
+            push!(new_edges, bidirected(B.nodes[key[1]], B.nodes[key[2]]))
+        end
+    end
+
+    return ADMG(new_nodes, new_edges)
+end
+
 function build_graph(
     ::Type{T},
     nodes::Set{Symbol},

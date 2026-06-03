@@ -116,25 +116,26 @@ end
     @test !has_ug_edge(mg, :A, :E)
 end
 
-# ── latent_project (not yet implemented) ─────────────────────────────────────
+# ── latent_project ───────────────────────────────────────────────────────────
 
-@testitem "latent_project basic confounding (broken)" tags = [:unit] begin
+@testitem "latent_project basic confounding" tags = [:unit] begin
     dag = caugi(directed(:U, :X), directed(:U, :Y), directed(:X, :Y); class = DAG)
-    @test_broken begin
-        admg = latent_project(dag, [:U])
-        admg isa ADMG && length(nodes(admg)) == 2
-    end
+    admg = latent_project(dag, [:U])
+    @test admg isa ADMG
+    @test length(nodes(admg)) == 2
+    @test has_edge(admg, :X, :Y)
 end
 
-@testitem "latent_project with no latents (broken)" tags = [:unit] begin
+@testitem "latent_project with no latents" tags = [:unit] begin
     dag = caugi(directed(:X, :Y), directed(:Y, :Z); class = DAG)
-    @test_broken begin
-        admg = latent_project(dag, Symbol[])
-        admg isa ADMG && length(nodes(admg)) == 3
-    end
+    admg = latent_project(dag, Symbol[])
+    @test admg isa ADMG
+    @test length(nodes(admg)) == 3
+    @test has_edge(admg, :X, :Y)
+    @test has_edge(admg, :Y, :Z)
 end
 
-@testitem "latent_project with multiple latents (broken)" tags = [:unit] begin
+@testitem "latent_project with multiple latents" tags = [:unit] begin
     dag = caugi(
         directed(:L1, :X),
         directed(:L1, :Y),
@@ -144,18 +145,17 @@ end
         directed(:Y, :Z);
         class = DAG,
     )
-    @test_broken begin
-        admg = latent_project(dag, [:L1, :L2])
-        admg isa ADMG && length(nodes(admg)) == 3
-    end
+    admg = latent_project(dag, [:L1, :L2])
+    @test admg isa ADMG
+    @test length(nodes(admg)) == 3
+    @test Set(nodes(admg)) == Set([:X, :Y, :Z])
 end
 
-@testitem "latent_project all nodes latent returns empty (broken)" tags = [:unit] begin
+@testitem "latent_project all nodes latent returns empty" tags = [:unit] begin
     dag = caugi(directed(:L1, :L2); class = DAG)
-    @test_broken begin
-        admg = latent_project(dag, [:L1, :L2])
-        length(nodes(admg)) == 0
-    end
+    admg = latent_project(dag, [:L1, :L2])
+    @test admg isa ADMG
+    @test length(nodes(admg)) == 0
 end
 
 # ── exogenize (not yet implemented) ──────────────────────────────────────────
