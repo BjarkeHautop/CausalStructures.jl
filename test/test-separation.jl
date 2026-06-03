@@ -140,27 +140,24 @@ end
 
 # ── m_separated for ADMG (not yet implemented) ────────────────────────────────
 
-@testitem "m_separated: chain in ADMG (broken)" tags = [:unit] begin
+@testitem "m_separated: chain in ADMG" tags = [:unit] begin
     admg = caugi(directed(:A, :B), directed(:B, :C); class = ADMG)
-    @test_broken !m_separated(admg, :A, :C)
-    @test_broken m_separated(admg, :A, :C, [:B])
+    @test !m_separated(admg, :A, :C)
+    @test m_separated(admg, :A, :C, [:B])
 end
 
-@testitem "m_separated: bidirected confounding (broken)" tags = [:unit] begin
+@testitem "m_separated: bidirected confounding" tags = [:unit] begin
     admg = caugi(bidirected(:X, :Y); class = ADMG)
-    @test_broken !m_separated(admg, :X, :Y)
+    @test !m_separated(admg, :X, :Y)
 end
 
-@testitem "minimal_separator on ADMG (broken)" tags = [:unit] begin
+@testitem "minimal_separator on ADMG" tags = [:unit] begin
     admg = caugi(directed(:A, :B), directed(:B, :C); class = ADMG)
-    @test_broken begin
-        sep = minimal_separator(admg, :A, :C)
-        sep !== nothing && :B in sep
-    end
+    sep = minimal_separator(admg, :A, :C)
+    @test sep !== nothing && :B in sep
 end
 
-@testitem "minimal_separator returns nothing for unblockable bidirected (broken)" tags =
-    [:unit] begin
+@testitem "minimal_separator returns nothing for unblockable bidirected" tags = [:unit] begin
     admg = caugi(bidirected(:X, :Y); class = ADMG)
-    @test_broken minimal_separator(admg, :X, :Y) === nothing
+    @test minimal_separator(admg, :X, :Y) === nothing
 end

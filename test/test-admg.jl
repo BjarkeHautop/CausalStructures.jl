@@ -92,24 +92,22 @@ end
     @test all(d -> length(d) == 1, dists)
 end
 
-# ── m_separated (not yet implemented) ─────────────────────────────────────────
-
-@testitem "m_separated works for chain (broken)" tags = [:unit] begin
+@testitem "m_separated works for chain" tags = [:unit] begin
     admg = caugi(directed(:A, :B), directed(:B, :C); class = ADMG)
-    @test_broken !m_separated(admg, :A, :C)
-    @test_broken m_separated(admg, :A, :C, [:B])
+    @test !m_separated(admg, :A, :C)
+    @test m_separated(admg, :A, :C, [:B])
 end
 
-@testitem "m_separated works for collider (broken)" tags = [:unit] begin
+@testitem "m_separated works for collider" tags = [:unit] begin
     admg = caugi(directed(:A, :C), directed(:B, :C); class = ADMG)
-    @test_broken m_separated(admg, :A, :B)
-    @test_broken !m_separated(admg, :A, :B, [:C])
+    @test m_separated(admg, :A, :B)
+    @test !m_separated(admg, :A, :B, [:C])
 end
 
-@testitem "m_separated handles bidirected confounding (broken)" tags = [:unit] begin
+@testitem "m_separated handles bidirected confounding" tags = [:unit] begin
     admg = caugi(directed(:L, :X), directed(:L, :Y); class = ADMG)
-    @test_broken !m_separated(admg, :X, :Y)
-    @test_broken m_separated(admg, :X, :Y, [:L])
+    @test !m_separated(admg, :X, :Y)
+    @test m_separated(admg, :X, :Y, [:L])
 end
 
 # ── markov_blanket for ADMG (not yet implemented) ─────────────────────────────
