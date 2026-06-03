@@ -87,3 +87,5 @@ graph = caugi(
 	class = UNKNOWN
 )
 ```
+
+Use `edge(..., directed)` instead of `directed(...)`?
