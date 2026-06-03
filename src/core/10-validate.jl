@@ -4,6 +4,7 @@ struct DAGConstraints <: GraphConstraints end
 struct PDAGConstraints <: GraphConstraints end
 struct UGConstraints <: GraphConstraints end
 struct ADMGConstraints <: GraphConstraints end
+struct AGConstraints <: GraphConstraints end
 struct UNKNOWNConstraints <: GraphConstraints end
 
 function directed_cycle_detected(g::CausalGraph)
@@ -121,10 +122,72 @@ function _class_matches_or_satisfies(
     return _satisfies_constraints(constraints, g)
 end
 
+function validation_errors(::AGConstraints, g::AG)
+    B = g.backend
+    n = length(B.nodes)
+    errors = String[]
+
+    all(e -> is_directed(e) || is_undirected(e) || is_bidirected(e), g.edges) ||
+        push!(errors, "invalid edge type for graph class AG")
+
+    all(e -> e.src != e.dst, g.edges) || push!(errors, "self-loops are not allowed in AG")
+
+    directed_cycle_detected(g) && push!(errors, "directed cycles are not allowed in AG")
+
+    # Undirected constraint: if a node has an undirected edge it must have no arrowheads
+    for i = 1:n
+        if !isempty(_undirected_slice(B, i)) &&
+           (!isempty(_parents_slice(B, i)) || !isempty(_spouses_slice(B, i)))
+            push!(
+                errors,
+                "AG undirected constraint violated at node $(B.nodes[i]): " *
+                "has both undirected edge and arrowhead",
+            )
+        end
+    end
+
+    # Anterior constraint: if arrowhead at v from u, v must not be an anterior of u.
+    if isempty(errors)
+        for v = 1:n
+            for u in _parents_slice(B, v)
+                if _anterior_bitmask(B, [u])[v]
+                    push!(
+                        errors,
+                        "AG anterior constraint violated: $(B.nodes[v]) is anterior of " *
+                        "$(B.nodes[u]) but $(B.nodes[u]) --> $(B.nodes[v]) exists",
+                    )
+                end
+            end
+            for u in _spouses_slice(B, v)
+                u > v || continue  # check each bidirected pair once
+                ant_u = _anterior_bitmask(B, [u])
+                ant_v = _anterior_bitmask(B, [v])
+                if ant_u[v]
+                    push!(
+                        errors,
+                        "AG anterior constraint violated: $(B.nodes[v]) is anterior of " *
+                        "$(B.nodes[u]) in bidirected edge",
+                    )
+                end
+                if ant_v[u]
+                    push!(
+                        errors,
+                        "AG anterior constraint violated: $(B.nodes[u]) is anterior of " *
+                        "$(B.nodes[v]) in bidirected edge",
+                    )
+                end
+            end
+        end
+    end
+
+    return errors
+end
+
 graph_class_name(::DAGConstraints) = "DAG"
 graph_class_name(::PDAGConstraints) = "PDAG"
 graph_class_name(::UGConstraints) = "UG"
 graph_class_name(::ADMGConstraints) = "ADMG"
+graph_class_name(::AGConstraints) = "AG"
 graph_class_name(::UNKNOWNConstraints) = "UNKNOWN"
 
 function validate(g::CausalGraph, c::GraphConstraints)
@@ -143,5 +206,7 @@ validate(g::CausalGraph, ::Type{PDAG}) = validate(g, PDAGConstraints())
 validate(g::CausalGraph, ::Type{UG}) = validate(g, UGConstraints())
 
 validate(g::CausalGraph, ::Type{ADMG}) = validate(g, ADMGConstraints())
+
+validate(g::AG, ::Type{AG}) = validate(g, AGConstraints())
 
 validate(g::CausalGraph, ::Type{UNKNOWN}) = validate(g, UNKNOWNConstraints())

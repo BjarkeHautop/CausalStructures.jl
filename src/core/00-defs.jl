@@ -52,6 +52,15 @@ struct ADMGBackend <: CausalBackend
     rowval::Vector{Int}
 end
 
+# AG backend: 4 buckets — [parents | undirected | spouses | children]
+struct AGBackend <: CausalBackend
+    nodes::Vector{Symbol}
+    index::Dict{Symbol,Int}
+    colptr::Vector{Int}
+    deg::Matrix{Int}       # 4 × n
+    rowval::Vector{Int}
+end
+
 # UNKNOWN backend: 4 buckets — [parents | undirected | spouses | children]
 struct UNKNOWNBackend <: CausalBackend
     nodes::Vector{Symbol}
@@ -81,6 +90,11 @@ end
 struct ADMG <: CausalGraph
     edges::Vector{CausalEdge}
     backend::ADMGBackend
+end
+
+struct AG <: CausalGraph
+    edges::Vector{CausalEdge}
+    backend::AGBackend
 end
 
 struct UNKNOWN <: CausalGraph
@@ -115,6 +129,10 @@ end
 
 function ADMG(nodes, edges::Vector{CausalEdge})
     return _build_graph(ADMG, nodes, edges)
+end
+
+function AG(nodes, edges::Vector{CausalEdge})
+    return _build_graph(AG, nodes, edges)
 end
 
 function UNKNOWN(nodes, edges::Vector{CausalEdge}; simple::Bool = true)

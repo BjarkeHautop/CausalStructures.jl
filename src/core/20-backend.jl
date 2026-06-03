@@ -148,6 +148,36 @@ function build_backend(::Type{ADMG}, nodes, edges::Vector{CausalEdge})
     return ADMGBackend(ordered_nodes, index, colptr, deg, rowval)
 end
 
+function build_backend(::Type{AG}, nodes, edges::Vector{CausalEdge})
+    ordered_nodes = sort!(unique(collect(nodes)))
+    index = Dict(n => i for (i, n) in enumerate(ordered_nodes))
+    n = length(ordered_nodes)
+
+    # [parents, undirected, spouses, children]
+    bucket_rows = [[Int[], Int[], Int[], Int[]] for _ = 1:n]
+
+    for edge in edges
+        si = index[edge.src]
+        di = index[edge.dst]
+        if edge.src_end == Tail && edge.dst_end == Arrow
+            push!(bucket_rows[di][1], si)
+            push!(bucket_rows[si][4], di)
+        elseif edge.src_end == Arrow && edge.dst_end == Tail
+            push!(bucket_rows[si][1], di)
+            push!(bucket_rows[di][4], si)
+        elseif edge.src_end == Tail && edge.dst_end == Tail
+            push!(bucket_rows[si][2], di)
+            push!(bucket_rows[di][2], si)
+        elseif edge.src_end == Arrow && edge.dst_end == Arrow
+            push!(bucket_rows[si][3], di)
+            push!(bucket_rows[di][3], si)
+        end
+    end
+
+    colptr, deg, rowval = _build_packed_csr(n, 4, bucket_rows)
+    return AGBackend(ordered_nodes, index, colptr, deg, rowval)
+end
+
 function build_backend(::Type{UNKNOWN}, nodes, edges::Vector{CausalEdge})
     ordered_nodes = sort!(unique(collect(nodes)))
     index = Dict(n => i for (i, n) in enumerate(ordered_nodes))
@@ -183,7 +213,7 @@ end
 
 # Slice into bucket b (1-indexed) of node i for backends with a deg matrix
 @inline function bucket_slice(
-    B::Union{DAGBackend,PDAGBackend,ADMGBackend,UNKNOWNBackend},
+    B::Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend,UNKNOWNBackend},
     i::Int,
     bucket::Int,
 )
@@ -213,6 +243,11 @@ end
 @inline _spouses_slice(B::ADMGBackend, i::Int) = bucket_slice(B, i, 2)
 @inline _children_slice(B::ADMGBackend, i::Int) = bucket_slice(B, i, 3)
 
+@inline _parents_slice(B::AGBackend, i::Int) = bucket_slice(B, i, 1)
+@inline _undirected_slice(B::AGBackend, i::Int) = bucket_slice(B, i, 2)
+@inline _spouses_slice(B::AGBackend, i::Int) = bucket_slice(B, i, 3)
+@inline _children_slice(B::AGBackend, i::Int) = bucket_slice(B, i, 4)
+
 @inline _parents_slice(B::UNKNOWNBackend, i::Int) = bucket_slice(B, i, 1)
 @inline _undirected_slice(B::UNKNOWNBackend, i::Int) = bucket_slice(B, i, 2)
 @inline _spouses_slice(B::UNKNOWNBackend, i::Int) = bucket_slice(B, i, 3)
@@ -235,14 +270,14 @@ end
 
 neighbors(g::CausalGraph, node::Symbol) = adjacency(g, node)
 
-function parents(g::Union{DAG,PDAG,ADMG,UNKNOWN}, node::Symbol)
+function parents(g::Union{DAG,PDAG,ADMG,AG,UNKNOWN}, node::Symbol)
     B = g.backend
     idx = get(B.index, node, 0)
     idx == 0 && error("Unknown node: $(node)")
     return B.nodes[_parents_slice(B, idx)]
 end
 
-function children(g::Union{DAG,PDAG,ADMG,UNKNOWN}, node::Symbol)
+function children(g::Union{DAG,PDAG,ADMG,AG,UNKNOWN}, node::Symbol)
     B = g.backend
     idx = get(B.index, node, 0)
     idx == 0 && error("Unknown node: $(node)")
