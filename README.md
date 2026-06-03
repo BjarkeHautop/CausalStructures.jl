@@ -60,7 +60,6 @@ See the documentation for additional graph classes, supported operations, and im
 ## To Do
 
 Figure out a better syntax than using `directed(), undirected()`, etc. Ideally, we would support edge operators similar to the syntax used in R:
-
 ```r
 %-->% (directed)
 %---% (undirected)
@@ -69,11 +68,12 @@ Figure out a better syntax than using `directed(), undirected()`, etc. Ideally, 
 %o--% (partially undirected)
 %o-o% (partial)
 ```
-Such operators are easier to read and allow concise specification of multiple edges. For example (using notation from the somewhat hacky [InfixFunctions.jl](https://github.com/Ismael-VC/InfixFunctions.jl)):
+Such operators are easier to read and allow concise specification of multiple edges. Note, that especially for the partial edge types, no close unicode alternative exists.
+For example:
 ```julia
 graph = caugi(
-    :A |-->| :B + :C,
-	:B + :C |o-o| :D,
+    :A %-->% :B + :C,
+	:B + :C %o-o% :D,
     class = UNKNOWN
 )
 ```
@@ -87,5 +87,3 @@ graph = caugi(
 	class = UNKNOWN
 )
 ```
-
-Another option is to eventually propose support for these operators (without `| |` around them) in Julia itself, similar to this issue https://github.com/JuliaLang/julia/issues/36666 (possibly all length 4 if needed)?
