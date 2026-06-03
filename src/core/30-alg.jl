@@ -37,7 +37,7 @@ function topological_sort(g::DAG)
     return ordering
 end
 
-function ancestors(g::Union{DAG,PDAG}, node::Symbol; open::Bool = true)
+function ancestors(g::Union{DAG,PDAG,ADMG}, node::Symbol; open::Bool = true)
     B = g.backend
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))
@@ -64,7 +64,7 @@ function ancestors(g::Union{DAG,PDAG}, node::Symbol; open::Bool = true)
     return [node; result]
 end
 
-function descendants(g::Union{DAG,PDAG}, node::Symbol; open::Bool = true)
+function descendants(g::Union{DAG,PDAG,ADMG}, node::Symbol; open::Bool = true)
     B = g.backend
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))

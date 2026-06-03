@@ -44,20 +44,20 @@ end
 
 # ── ancestors / descendants for ADMG (not yet implemented for ADMG type) ──────
 
-@testitem "ancestors follows directed edges only in ADMG (broken)" tags = [:unit] begin
+@testitem "ancestors follows directed edges only in ADMG" tags = [:unit] begin
     admg = caugi(directed(:A, :B), directed(:B, :C), bidirected(:A, :D); class = ADMG)
-    @test_broken Set(ancestors(admg, :C)) == Set([:A, :B])
+    @test Set(ancestors(admg, :C)) == Set([:A, :B])
 end
 
-@testitem "descendants follows directed edges only in ADMG (broken)" tags = [:unit] begin
+@testitem "descendants follows directed edges only in ADMG" tags = [:unit] begin
     admg = caugi(directed(:A, :B), directed(:B, :C), bidirected(:A, :D); class = ADMG)
-    @test_broken Set(descendants(admg, :A)) == Set([:B, :C])
+    @test Set(descendants(admg, :A)) == Set([:B, :C])
 end
 
-@testitem "no ancestors via bidirected edges in ADMG (broken)" tags = [:unit] begin
+@testitem "no ancestors via bidirected edges in ADMG" tags = [:unit] begin
     admg = caugi(directed(:A, :B), directed(:B, :C), bidirected(:A, :D); class = ADMG)
     # D has no directed parents → no ancestors
-    @test_broken isempty(ancestors(admg, :D))
+    @test isempty(ancestors(admg, :D))
 end
 
 # ── spouses (not yet implemented) ─────────────────────────────────────────────
