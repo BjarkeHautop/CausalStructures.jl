@@ -8,28 +8,68 @@
 [![Docs workflow Status](https://github.com/BjarkeHautop/CausalGraphInterface.jl/actions/workflows/Docs.yml/badge.svg?branch=main)](https://github.com/BjarkeHautop/CausalGraphInterface.jl/actions/workflows/Docs.yml?query=branch%3Amain)
 [![BestieTemplate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JuliaBesties/BestieTemplate.jl/main/docs/src/assets/badge.json)](https://github.com/JuliaBesties/BestieTemplate.jl)
 
-This package is heavily inspired by the R package [caugi](https://caugi.org/), of which I am a coauthor.
+
+provides a common interface for working with causal graphs in Julia. Graphs are validated during construction to ensure they satisfy the constraints of their graph class,
+and the package provides a collection of common causal-graph operations and queries.
+
+The package is heavily inspired by the R package [caugi](https://caugi.org/), which I co-authored, and aims to bring similar functionality to the Julia ecosystem.
+
+Currently supported graph classes include:
+
+* Directed Acyclic Graphs (DAGs)
+* Undirected Graphs (UGs)
+* Partially Directed Acyclic Graphs (PDAGs)
+* Acyclic Directed Mixed Graphs (ADMGs)
+
+If you need a different graph class, you can make an arbitary one using UNKNOWN. We plan to extend this to more graph classes, such as MPDAGs, CPDAGs, etc.
 
 ## Quick Start
+
+Construct graphs by specifying edges and the desired graph class:
 
 ```julia
 using CausalGraphInterface
 
-graph = caugi(
- directed(:A, :B),
- directed(:A, :C),
- directed(:B, :D),
- directed(:C, :D);
- class = DAG,
+dag = caugi(
+    directed(:A, :B),
+    directed(:A, :C),
+    directed(:B, :D),
+    directed(:C, :D);
+    class = DAG,
 )
 
 ug = caugi(
- undirected(:A, :B),
- undirected(:B, :C);
- class = UG,
+    undirected(:A, :B),
+    undirected(:B, :C);
+    class = UG,
 )
 ```
 
-Use `directed`, `undirected`, `bidirected`, `partially_directed`, `partially_undirected`, and `partial` to define edges. `class = DAG`, `class = UG`, `class = PDAG`, `class = ADMG`, and `class = UNKNOWN` are supported.
+Available edge types include:
 
-See the documentation for more details.
+* `directed`
+* `undirected`
+* `bidirected`
+* `partially_directed`
+* `partially_undirected`
+* `partial`
+
+Graphs are validated as they are constructed. For example, a graph declared as a `DAG` cannot contain cycles, and graph classes only permit the edge types that are valid for that class.
+
+See the documentation for additional graph classes, supported operations, and implementation details.
+
+## To Do
+
+Figure out a better syntax than using `directed(), undirected()`, etc. Ideally we do like in R with syntax similar to this
+
+```r
+%-->% (directed)
+%---% (undirected)
+%<->% (bidirected)
+%o->% (partially directed)
+%o--% (partially undirected)
+%o-o% (partial)
+```
+etc.
+
+Could do a hacky solution using https://github.com/Ismael-VC/InfixFunctions.jl or make feature request for them when package more developed in Julia, similar to this https://github.com/JuliaLang/julia/issues/36666 (possibly all length 4 if needed)?
