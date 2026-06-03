@@ -62,34 +62,31 @@ end
 
 # ── spouses (not yet implemented) ─────────────────────────────────────────────
 
-@testitem "spouses returns bidirected neighbors (broken)" tags = [:unit] begin
+@testitem "spouses returns bidirected neighbors" tags = [:unit] begin
     admg = caugi(directed(:A, :B), bidirected(:A, :C), bidirected(:B, :C); class = ADMG)
-    @test_broken spouses(admg, :A) == [:C]
-    @test_broken Set(spouses(admg, :C)) == Set([:A, :B])
+    @test spouses(admg, :A) == [:C]
+    @test Set(spouses(admg, :C)) == Set([:A, :B])
 end
 
-@testitem "spouses returns empty for nodes with no bidirected edges (broken)" tags = [:unit] begin
+@testitem "spouses returns empty for nodes with no bidirected edges" tags = [:unit] begin
     admg = caugi(directed(:A, :B), directed(:B, :C); class = ADMG)
-    @test_broken isempty(spouses(admg, :A))
-    @test_broken isempty(spouses(admg, :B))
+    @test isempty(spouses(admg, :A))
+    @test isempty(spouses(admg, :B))
 end
 
 # ── districts (not yet implemented) ───────────────────────────────────────────
 
-@testitem "districts returns c-components (broken)" tags = [:unit] begin
+@testitem "districts returns c-components" tags = [:unit] begin
     admg = caugi(directed(:A, :B), bidirected(:A, :C), bidirected(:D, :E); class = ADMG)
-    @test_broken begin
-        dists = districts(admg)
-        length(dists) == 3  # {A,C}, {B}, {D,E}
-    end
+    dists = districts(admg)
+    @test length(dists) == 3  # {A,C}, {B}, {D,E}
 end
 
-@testitem "districts with only directed edges gives singletons (broken)" tags = [:unit] begin
+@testitem "districts with only directed edges gives singletons" tags = [:unit] begin
     admg = caugi(directed(:A, :B), directed(:B, :C); class = ADMG)
-    @test_broken begin
-        dists = districts(admg)
-        length(dists) == 3 && all(d -> length(d) == 1, dists)
-    end
+    dists = districts(admg)
+    @test length(dists) == 3
+    @test all(d -> length(d) == 1, dists)
 end
 
 # ── m_separated (not yet implemented) ─────────────────────────────────────────
@@ -114,31 +111,28 @@ end
 
 # ── markov_blanket for ADMG (not yet implemented) ─────────────────────────────
 
-@testitem "markov_blanket district-based for ADMG (broken)" tags = [:unit] begin
+@testitem "markov_blanket district-based for ADMG" tags = [:unit] begin
     admg = caugi(directed(:L, :X), directed(:X, :Y), bidirected(:X, :Z); class = ADMG)
-    @test_broken begin
-        mb = markov_blanket(admg, :X)
-        :L in mb && :Z in mb && !(:Y in mb)
-    end
+    mb = markov_blanket(admg, :X)
+    @test :L in mb
+    @test :Z in mb
+    @test !(:Y in mb)
 end
 
-@testitem "markov_blanket includes parents of district members for ADMG (broken)" tags =
-    [:unit] begin
+@testitem "markov_blanket includes parents of district members for ADMG" tags = [:unit] begin
     admg = caugi(directed(:A, :X), directed(:B, :Y), bidirected(:X, :Y); class = ADMG)
-    @test_broken begin
-        mb = markov_blanket(admg, :X)
-        :A in mb && :B in mb && :Y in mb
-    end
+    mb = markov_blanket(admg, :X)
+    @test :A in mb
+    @test :B in mb
+    @test :Y in mb
 end
 
 # ── exogenous_nodes for ADMG (not yet implemented) ────────────────────────────
 
-@testitem "exogenous_nodes not yet implemented for ADMG (broken)" tags = [:unit] begin
+@testitem "exogenous_nodes works for ADMG" tags = [:unit] begin
     admg = caugi(directed(:A, :B), bidirected(:C, :D); class = ADMG)
-    @test_broken begin
-        exo = exogenous_nodes(admg)
-        :A in exo && :C in exo && :D in exo && !(:B in exo)
-    end
+    exo = exogenous_nodes(admg)
+    @test Set(exo) == Set([:A, :C, :D])
 end
 
 # ── adjustment (not yet implemented) ─────────────────────────────────────────

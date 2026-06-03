@@ -189,7 +189,88 @@ function posteriors(g::PDAG, node::Symbol; open::Bool = true)
     return [node; result]
 end
 
-# TODO: Should also be implemented for ADMGs, AGs, ...
+function _spouses_indices(B::CSRBackend, idx::Int)
+    all_nbrs = csr_slice(B.incident_colptr, B.incident_rowval, idx)
+    exclude = union(
+        csr_slice(B.parents_colptr, B.parents_rowval, idx),
+        csr_slice(B.children_colptr, B.children_rowval, idx),
+    )
+    return [i for i in all_nbrs if i ∉ exclude]
+end
+
+function spouses(g::ADMG, node::Symbol)
+    B = g.backend
+    idx = node_index(g, node)
+    return B.nodes[_spouses_indices(B, idx)]
+end
+
+function _district_of_idx(B::CSRBackend, node_idx::Int)
+    seen = falses(length(B.nodes))
+    seen[node_idx] = true
+    stack = [node_idx]
+    while !isempty(stack)
+        u = pop!(stack)
+        for w in _spouses_indices(B, u)
+            if !seen[w]
+                seen[w] = true
+                push!(stack, w)
+            end
+        end
+    end
+    return [i for i in eachindex(seen) if seen[i]]
+end
+
+function districts(g::ADMG)
+    B = g.backend
+    n = length(B.nodes)
+    comp = zeros(Int, n)
+    cid = 0
+    for s = 1:n
+        comp[s] != 0 && continue
+        cid += 1
+        comp[s] = cid
+        stack = [s]
+        while !isempty(stack)
+            u = pop!(stack)
+            for w in _spouses_indices(B, u)
+                if comp[w] == 0
+                    comp[w] = cid
+                    push!(stack, w)
+                end
+            end
+        end
+    end
+    result = [Symbol[] for _ = 1:cid]
+    for (i, c) in enumerate(comp)
+        push!(result[c], B.nodes[i])
+    end
+    return result
+end
+
+function exogenous_nodes(g::ADMG)
+    B = g.backend
+    return [
+        B.nodes[i] for
+        i in eachindex(B.nodes) if isempty(csr_slice(B.parents_colptr, B.parents_rowval, i))
+    ]
+end
+
+function markov_blanket(g::ADMG, node::Symbol)
+    B = g.backend
+    node_idx = node_index(g, node)
+    seen = falses(length(B.nodes))
+    for d_idx in _district_of_idx(B, node_idx)
+        if d_idx != node_idx
+            seen[d_idx] = true
+        end
+        for p_idx in csr_slice(B.parents_colptr, B.parents_rowval, d_idx)
+            seen[p_idx] = true
+        end
+    end
+    seen[node_idx] = false
+    return [B.nodes[i] for i in eachindex(seen) if seen[i]]
+end
+
 function markov_blanket(g::Union{DAG,PDAG}, node::Symbol)
     B = g.backend
     node_idx = node_index(g, node)

@@ -453,12 +453,12 @@ end
 
 # ── spouses / districts (not yet implemented) ─────────────────────────────────
 
-@testitem "spouses not yet implemented (broken)" tags = [:unit] begin
+@testitem "spouses works for ADMG" tags = [:unit] begin
     g = caugi(directed(:A, :B), bidirected(:B, :C); class = ADMG)
-    @test_broken !isempty(spouses(g, :B))
+    @test !isempty(spouses(g, :B))
 end
 
-@testitem "districts not yet implemented (broken)" tags = [:unit] begin
+@testitem "districts works for ADMG" tags = [:unit] begin
     g = caugi(bidirected(:A, :B), bidirected(:B, :C), directed(:C, :D); class = ADMG)
-    @test_broken length(districts(g)) == 2
+    @test length(districts(g)) == 2
 end
