@@ -20,7 +20,7 @@ Currently supported graph classes include:
 * Partially Directed Acyclic Graphs (PDAGs)
 * Acyclic Directed Mixed Graphs (ADMGs)
 
-If you need a different graph class, you can make an arbitary one using UNKNOWN. We plan to extend this to more graph classes, such as MPDAGs, CPDAGs, etc.
+If you need a different graph class, you can make an arbitary one using UNKNOWN. We plan to extend this to more graph classes, such as PAGs, MPDAGs, CPDAGs, etc.
 
 ## Quick Start
 
