@@ -250,14 +250,32 @@ end
 function show(io::IO, g::CausalGraph)
     B = g.backend
     typename = typeof(g)
+    n_nodes = length(B.nodes)
+    n_edges = length(g.edges)
+    s_n = n_nodes == 1 ? "" : "s"
+    s_e = n_edges == 1 ? "" : "s"
+    println(io, "$(typename) with $(n_nodes) node$(s_n) and $(n_edges) edge$(s_e):")
+
     nodes_list = sort!(collect(B.nodes))
-    println(io, "$(typename) with $(length(nodes_list)) nodes:")
-    println(io, "  nodes: ", join(string.(nodes_list), ", "))
-    println(io, "  edges:")
-    if isempty(g.edges)
-        println(io, "    ")
+    print(io, "  nodes: ")
+    if n_nodes <= 20
+        println(io, join(string.(nodes_list), ", "))
     else
-        edge_strings = ["$(e.src) $(_edge_display(e)) $(e.dst)" for e in g.edges]
-        println(io, "    ", join(edge_strings, ", "))
+        println(io, join(string.(nodes_list[1:10]), ", "), ", … ($(n_nodes - 10) more)")
+    end
+
+    println(io, "  edges:")
+    if n_edges == 0
+        println(io, "    (none)")
+    elseif n_edges <= 20
+        println(
+            io,
+            "    ",
+            join(["$(e.src) $(_edge_display(e)) $(e.dst)" for e in g.edges], ", "),
+        )
+    else
+        sample =
+            join(["$(e.src) $(_edge_display(e)) $(e.dst)" for e in g.edges[1:10]], ", ")
+        println(io, "    ", sample, ", … ($(n_edges - 10) more)")
     end
 end
