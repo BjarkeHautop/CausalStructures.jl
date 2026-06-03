@@ -2,6 +2,9 @@
 # shd and hd are not yet implemented.
 # All tests are marked @test_broken.
 
+using Test
+using CausalGraphInterface
+
 # ── SHD (Structural Hamming Distance) ─────────────────────────────────────────
 
 @testitem "SHD: identical graphs have SHD of 0 (broken)" tags = [:unit] begin

@@ -4,6 +4,8 @@
 #   simulate_data(g; samples=n, seed=s) (Julia uses `samples` not `n`)
 #   simulate_data returns Dict{Symbol,Vector{Float64}}, not data.frame
 
+using Test
+using CausalGraphInterface
 # ── generate_graph ────────────────────────────────────────────────────────────
 
 @testitem "generate_graph: errors on invalid n" tags = [:unit] begin

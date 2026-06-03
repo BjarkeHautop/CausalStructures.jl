@@ -1,6 +1,9 @@
 # Ported from caugi/tests/testthat/test-topological-sort.R
 # (igraph comparison tests skipped — require external dependency)
 
+using Test
+using CausalGraphInterface
+
 @testitem "topological_sort on simple chain DAG" tags = [:unit] begin
     include("helpers.jl")
     g = caugi(directed(:A, :B), directed(:B, :C); class = DAG)

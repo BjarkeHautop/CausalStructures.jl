@@ -1,6 +1,9 @@
 # Ported from caugi/tests/testthat/test-admg.R
 # Unimplemented features are marked @test_broken.
 
+using Test
+using CausalGraphInterface
+
 # ── ADMG construction and validation ─────────────────────────────────────────
 
 @testitem "is_admg identifies ADMG graphs" tags = [:unit] begin
