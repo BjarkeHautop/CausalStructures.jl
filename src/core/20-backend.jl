@@ -1,4 +1,4 @@
-# Backend construction and lightweight lazy materialization (CSR)
+# Backend construction (CSR)
 
 function csr_from_rows(rows::Vector{Vector{Int}})
     colptr = Vector{Int}(undef, length(rows) + 1)
@@ -10,13 +10,13 @@ function csr_from_rows(rows::Vector{Vector{Int}})
         sort!(rows[i])
         unique!(rows[i])
         append!(rowval, rows[i])
-        colptr[i+1] = length(rowval) + 1
+        colptr[i + 1] = length(rowval) + 1
     end
 
     return colptr, rowval
 end
 
-function build_backend(nodes::Set{Symbol}, edges::Vector{CausalEdge})
+function build_csr(nodes::Set{Symbol}, edges::Vector{CausalEdge})
     ordered_nodes = sort!(collect(nodes))
     index = Dict(node => i for (i, node) in enumerate(ordered_nodes))
 
@@ -34,6 +34,7 @@ function build_backend(nodes::Set{Symbol}, edges::Vector{CausalEdge})
         if edge.src_end == Tail && edge.dst_end == Arrow
             push!(child_rows[src_idx], dst_idx)
             push!(parent_rows[dst_idx], src_idx)
+
         elseif edge.src_end == Arrow && edge.dst_end == Tail
             push!(child_rows[dst_idx], src_idx)
             push!(parent_rows[src_idx], dst_idx)
@@ -56,79 +57,73 @@ function build_backend(nodes::Set{Symbol}, edges::Vector{CausalEdge})
     )
 end
 
-function materialize_backend!(g::CausalGraph)
-    backend = backend_ref(g)[]
-
-    if backend === nothing
-        # Re-validate class constraints whenever we need to rebuild the cache.
-        # This enables mutable workflows that only invalidate on edits.
-        validate!(g)
-        backend = build_backend(g.nodes, g.edges)
-        backend_ref(g)[] = backend
-    end
-
-    return backend
-end
-
-function invalidate_backend!(g::CausalGraph)
-    backend_ref(g)[] = nothing
-    return g
-end
-
-function build!(g::CausalGraph)
-    materialize_backend!(g)
-    return g
-end
+csr(g::CausalGraph) = build_csr(g.nodes, g.edges)
 
 function node_index(g::CausalGraph, node::Symbol)
-    backend = materialize_backend!(g)
-    index = get(backend.index, node, 0)
+    B = csr(g)
+    idx = get(B.index, node, 0)
 
-    index == 0 && error("Unknown node: $(node)")
+    idx == 0 && error("Unknown node: $(node)")
 
-    return index
+    return idx
 end
 
-function csr_slice(colptr::Vector{Int}, rowval::Vector{Int}, index::Int)
-    return rowval[colptr[index]:(colptr[index+1]-1)]
+function csr_slice(colptr::Vector{Int}, rowval::Vector{Int}, idx::Int)
+    rowval[colptr[idx]:(colptr[idx + 1] - 1)]
 end
 
-function symbols_from_slice(backend::CSRBackend, row_slice)
-    return backend.nodes[row_slice]
-end
+symbols_from_slice(B::CSRBackend, row_slice) = B.nodes[row_slice]
 
 function adjacency(g::CausalGraph, node::Symbol)
-    backend = materialize_backend!(g)
-    node_idx = node_index(g, node)
-    return symbols_from_slice(
-        backend,
-        csr_slice(backend.incident_colptr, backend.incident_rowval, node_idx),
+    B = csr(g)
+    idx = get(B.index, node, 0)
+
+    idx == 0 && error("Unknown node: $(node)")
+
+    symbols_from_slice(
+        B,
+        csr_slice(B.incident_colptr, B.incident_rowval, idx),
     )
 end
 
 neighbors(g::CausalGraph, node::Symbol) = adjacency(g, node)
 
 function parents(g::CausalGraph, node::Symbol)
-    backend = materialize_backend!(g)
-    node_idx = node_index(g, node)
-    return symbols_from_slice(
-        backend,
-        csr_slice(backend.parents_colptr, backend.parents_rowval, node_idx),
+    B = csr(g)
+    idx = get(B.index, node, 0)
+
+    idx == 0 && error("Unknown node: $(node)")
+
+    symbols_from_slice(
+        B,
+        csr_slice(B.parents_colptr, B.parents_rowval, idx),
     )
 end
 
 function children(g::CausalGraph, node::Symbol)
-    backend = materialize_backend!(g)
-    node_idx = node_index(g, node)
-    return symbols_from_slice(
-        backend,
-        csr_slice(backend.children_colptr, backend.children_rowval, node_idx),
+    B = csr(g)
+    idx = get(B.index, node, 0)
+
+    idx == 0 && error("Unknown node: $(node)")
+
+    symbols_from_slice(
+        B,
+        csr_slice(B.children_colptr, B.children_rowval, idx),
     )
 end
 
 function has_edge(g::CausalGraph, src::Symbol, dst::Symbol)
-    backend = materialize_backend!(g)
-    src_idx = node_index(g, src)
-    dst_idx = node_index(g, dst)
-    return dst_idx in csr_slice(backend.incident_colptr, backend.incident_rowval, src_idx)
+    B = csr(g)
+
+    src_idx = get(B.index, src, 0)
+    dst_idx = get(B.index, dst, 0)
+
+    src_idx == 0 && error("Unknown node: $(src)")
+    dst_idx == 0 && error("Unknown node: $(dst)")
+
+    dst_idx in csr_slice(
+        B.incident_colptr,
+        B.incident_rowval,
+        src_idx,
+    )
 end

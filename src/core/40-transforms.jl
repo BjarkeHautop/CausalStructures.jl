@@ -35,8 +35,7 @@ function moralize(g::DAG)
         end
     end
 
-    backend = materialize_backend!(g)
-    for node in backend.nodes
+    for node in g.nodes
         pa = parents(g, node)
         if length(pa) < 2
             continue
@@ -157,9 +156,13 @@ function build_graph(
     edges::Vector{CausalEdge};
     simple::Bool = true,
 ) where {T<:CausalGraph}
-    error("Unsupported graph class: $(T)")
+    T(collect_nodes(edges), edges)
 end
 
-function caugi(edges::CausalEdge...; class::Type{<:CausalGraph} = DAG, simple::Bool = true)
-    return build!(build_graph(class, collect(edges); simple = simple))
+function caugi(
+    edges::CausalEdge...;
+    class::Type{<:CausalGraph}=DAG,
+    simple::Bool=true,
+)
+    return build_graph(class, collect(edges); simple=simple)
 end

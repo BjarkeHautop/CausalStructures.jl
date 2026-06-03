@@ -1,4 +1,6 @@
-# Basic definitions: endpoints, edge and graph types
+# =========================
+# Basic definitions
+# =========================
 
 @enum Endpoint begin
     Tail
@@ -29,14 +31,12 @@ abstract type CausalGraph end
 struct DAG <: CausalGraph
     nodes::Set{Symbol}
     edges::Vector{CausalEdge}
-    backend::Base.RefValue{Union{Nothing,CSRBackend}}
+    backend::CSRBackend
 
     function DAG(nodes::Set{Symbol}, edges::Vector{CausalEdge})
-
-        g = new(nodes, edges, Base.RefValue{Union{Nothing,CSRBackend}}(nothing))
-
+        backend = build_csr(nodes, edges)
+        g = new(nodes, edges, backend)
         validate!(g)
-
         return g
     end
 end
@@ -44,14 +44,12 @@ end
 struct UG <: CausalGraph
     nodes::Set{Symbol}
     edges::Vector{CausalEdge}
-    backend::Base.RefValue{Union{Nothing,CSRBackend}}
+    backend::CSRBackend
 
     function UG(nodes::Set{Symbol}, edges::Vector{CausalEdge})
-
-        g = new(nodes, edges, Base.RefValue{Union{Nothing,CSRBackend}}(nothing))
-
+        backend = build_csr(nodes, edges)
+        g = new(nodes, edges, backend)
         validate!(g)
-
         return g
     end
 end
@@ -59,14 +57,12 @@ end
 struct PDAG <: CausalGraph
     nodes::Set{Symbol}
     edges::Vector{CausalEdge}
-    backend::Base.RefValue{Union{Nothing,CSRBackend}}
+    backend::CSRBackend
 
     function PDAG(nodes::Set{Symbol}, edges::Vector{CausalEdge})
-
-        g = new(nodes, edges, Base.RefValue{Union{Nothing,CSRBackend}}(nothing))
-
+        backend = build_csr(nodes, edges)
+        g = new(nodes, edges, backend)
         validate!(g)
-
         return g
     end
 end
@@ -74,14 +70,12 @@ end
 struct ADMG <: CausalGraph
     nodes::Set{Symbol}
     edges::Vector{CausalEdge}
-    backend::Base.RefValue{Union{Nothing,CSRBackend}}
+    backend::CSRBackend
 
     function ADMG(nodes::Set{Symbol}, edges::Vector{CausalEdge})
-
-        g = new(nodes, edges, Base.RefValue{Union{Nothing,CSRBackend}}(nothing))
-
+        backend = build_csr(nodes, edges)
+        g = new(nodes, edges, backend)
         validate!(g)
-
         return g
     end
 end
@@ -89,15 +83,13 @@ end
 struct UNKNOWN <: CausalGraph
     nodes::Set{Symbol}
     edges::Vector{CausalEdge}
-    backend::Base.RefValue{Union{Nothing,CSRBackend}}
+    backend::CSRBackend
     simple::Bool
 
-    function UNKNOWN(nodes::Set{Symbol}, edges::Vector{CausalEdge}; simple::Bool = true)
-
-        g = new(nodes, edges, Base.RefValue{Union{Nothing,CSRBackend}}(nothing), simple)
-
+    function UNKNOWN(nodes::Set{Symbol}, edges::Vector{CausalEdge}; simple::Bool=true)
+        backend = build_csr(nodes, edges)
+        g = new(nodes, edges, backend, simple)
         validate!(g)
-
         return g
     end
 end
@@ -113,5 +105,3 @@ function collect_nodes(edges::AbstractVector{CausalEdge})
 
     return nodes
 end
-
-backend_ref(g::CausalGraph) = g.backend

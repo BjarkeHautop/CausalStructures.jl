@@ -13,12 +13,10 @@ using CausalGraphInterface
     @test graph isa DAG
     @test graph.nodes == Set([:A, :B, :C, :D])
     @test length(graph.edges) == 4
-    @test graph.backend[] !== nothing
     @test children(graph, :A) == [:B, :C]
     @test parents(graph, :D) == [:B, :C]
     @test neighbors(graph, :A) == [:B, :C]
     @test has_edge(graph, :A, :B)
-    @test graph.backend[] !== nothing
     @test occursin("A --> B, A --> C, B --> D, C --> D", sprint(show, graph))
 end
 
@@ -36,20 +34,6 @@ end
 
 @testitem "rejects directed cycles in DAGs" tags=[:unit, :validation] begin
     @test_throws ErrorException caugi(directed(:A, :B), directed(:B, :A); class = DAG)
-end
-
-@testitem "constructs a valid PDAG" tags=[:unit] begin
-    graph = caugi(directed(:A, :B), undirected(:B, :C), directed(:C, :D); class = PDAG)
-
-    @test graph isa PDAG
-    using TestItemRunner
-    include("split/test-constructs.jl")
-    include("split/test-algs.jl")
-    include("split/test-mutations.jl")
-    include("port/test-queries.jl")
-    @test parents(graph, :B) == [:A]
-    @test neighbors(graph, :B) == [:A, :C]
-    @test graph.backend[] !== nothing
 end
 
 @testitem "rejects invalid PDAG edges" tags=[:unit, :validation] begin
@@ -150,31 +134,4 @@ end
     @test pdag_sub isa PDAG
     @test pdag_sub.nodes == Set([:A, :B])
     @test has_edge(pdag_sub, :A, :B)
-end
-
-@testitem "mutation invalidates and lazily rebuilds backend" tags=[:unit] begin
-    graph = caugi(directed(:A, :B); class = DAG)
-
-    children(graph, :A)
-    @test graph.backend[] !== nothing
-
-    add_edges!(graph, [directed(:B, :C)])
-    @test graph.backend[] === nothing
-
-    @test children(graph, :B) == [:C]
-    @test graph.backend[] !== nothing
-end
-
-@testitem "invalid mutations are rejected at add_edges! time" tags=[:unit, :validation] begin
-    graph = caugi(directed(:A, :B); class = DAG)
-
-    children(graph, :A)
-    @test graph.backend[] !== nothing
-
-    @test_throws ErrorException add_edges!(graph, [directed(:B, :A)])
-
-    # Mutation is rolled back on validation failure.
-    @test children(graph, :A) == [:B]
-    @test children(graph, :B) == Symbol[]
-    @test graph.backend[] !== nothing
 end

@@ -37,6 +37,13 @@ dag = caugi(
     class = DAG,
 )
 
+graph = caugi(
+    directed(:A, :B),
+    directed(:B, :A),
+    class = UNKNOWN,
+    simple = false
+)
+
 ug = caugi(
     undirected(:A, :B),
     undirected(:B, :C);
@@ -88,4 +95,4 @@ graph = caugi(
 )
 ```
 
-Use `edge(..., directed)` instead of `directed(...)`?
+Use `Edge(..., directed)` instead of `directed(...)`?

@@ -8,9 +8,7 @@ using CausalGraphInterface
     @test !is_caugi(1) # non-graph
 
     # is_acyclic: construct a graph then set cyclic edges without validation
-    g = caugi(directed(:A, :B); class = PDAG)
-    # force an invalid directed cycle by replacing edges without validate
-    set_edges!(g, [directed(:A, :B), directed(:B, :A)]; validate = false)
+    g = caugi(directed(:A, :B), directed(:B, :C), directed(:C, :A); class = UNKNOWN)
     @test !is_acyclic(g; force_check = true)
 
     # is_simple
@@ -18,8 +16,8 @@ using CausalGraphInterface
     @test is_simple(simple_g)
 
     unknown_g = caugi(directed(:X, :Y); class = UNKNOWN)
-    CausalGraphInterface.add_edges!(unknown_g, [directed(:X, :X)]; validate = false)
     @test is_simple(unknown_g)
+    unknown_g = caugi(directed(:X, :Y), directed(:Y, :X); class = UNKNOWN, simple = false)
     @test !is_simple(unknown_g; force_check = true)
 
     # is_dag / is_pdag / is_ug
@@ -54,7 +52,7 @@ using CausalGraphInterface
 
     # nodes accessor
     n = CausalGraphInterface.nodes(simple_g)
-    @test isa(n, Vector{Symbol})
+    @test isa(n, Set{Symbol})
     @test length(n) == 2
 
     # topological sort and traversals

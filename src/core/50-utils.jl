@@ -75,93 +75,9 @@ end
 is_caugi(g::CausalGraph) = g isa CausalGraph
 is_caugi(::Any) = false
 
-# nodes accessor convenience (returns ordered vector)
+# nodes accessor convenience
 function nodes(g::CausalGraph)
-    # preserve the same ordering as backend if available, otherwise sorted
-    backend = backend_ref(g)[]
-    if backend !== nothing
-        return copy(backend.nodes)
-    end
-    return sort!(collect(g.nodes))
-end
-
-# Mutators: remove_edges!, add_nodes!, remove_nodes!
-function remove_edges!(
-    g::CausalGraph,
-    edges_to_remove::AbstractVector{CausalEdge};
-    validate::Bool = true,
-)
-    edges_snapshot = copy(g.edges)
-    nodes_snapshot = copy(g.nodes)
-
-    # Build a set of ordered pairs to remove
-    rem = Set{Tuple{Symbol,Symbol}}()
-    for e in edges_to_remove
-        push!(rem, (e.src, e.dst))
-    end
-
-    # Filter edges
-    new_edges = [e for e in g.edges if !((e.src, e.dst) in rem)]
-    empty!(g.edges)
-    append!(g.edges, new_edges)
-
-    # Reconstruct nodes set
-    empty!(g.nodes)
-    for e in g.edges
-        push!(g.nodes, e.src)
-        push!(g.nodes, e.dst)
-    end
-
-    if validate
-        try
-            validate!(g)
-        catch err
-            _restore_graph_state!(g, edges_snapshot, nodes_snapshot)
-            rethrow(err)
-        end
-    end
-
-    return invalidate_backend!(g)
-end
-
-function add_nodes!(g::CausalGraph, new_nodes::AbstractVector{Symbol})
-    for n in new_nodes
-        push!(g.nodes, n)
-    end
-    return invalidate_backend!(g)
-end
-
-function remove_nodes!(
-    g::CausalGraph,
-    remove::AbstractVector{Symbol};
-    validate::Bool = true,
-)
-    edges_snapshot = copy(g.edges)
-    nodes_snapshot = copy(g.nodes)
-
-    remset = Set(remove)
-    # Remove edges incident to removed nodes
-    new_edges = [e for e in g.edges if !(e.src in remset || e.dst in remset)]
-    empty!(g.edges)
-    append!(g.edges, new_edges)
-
-    # Rebuild nodes
-    empty!(g.nodes)
-    for e in g.edges
-        push!(g.nodes, e.src)
-        push!(g.nodes, e.dst)
-    end
-
-    if validate
-        try
-            validate!(g)
-        catch err
-            _restore_graph_state!(g, edges_snapshot, nodes_snapshot)
-            rethrow(err)
-        end
-    end
-
-    return invalidate_backend!(g)
+    return copy(g.nodes)
 end
 
 # is_simple: no self-loops and no parallel edges
@@ -184,7 +100,6 @@ function is_simple(g::CausalGraph; force_check::Bool = false)
 
     return true
 end
-
 
 # Acyclicity check (fast path by type + optional forced check)
 function is_acyclic(g::CausalGraph; force_check::Bool = false)
@@ -257,7 +172,6 @@ function generate_graph(
     end
 
     graph = DAG(nodes, edges)
-    build!(graph)
     if class == :CPDAG
         # TODO: add a CPDAG graph type and return it here once supported.
         return graph
@@ -293,7 +207,6 @@ function simulate_data(
     end
 
     ordering = topological_sort(g)
-    backend = materialize_backend!(g)
 
     # random coefficients for each parent->child sampled uniformly in coef_range
     coeffs = Dict{Tuple{Symbol,Symbol},Float64}()

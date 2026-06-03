@@ -13,12 +13,10 @@ using CausalGraphInterface
     @test graph isa DAG
     @test graph.nodes == Set([:A, :B, :C, :D])
     @test length(graph.edges) == 4
-    @test graph.backend[] !== nothing
     @test children(graph, :A) == [:B, :C]
     @test parents(graph, :D) == [:B, :C]
     @test neighbors(graph, :A) == [:B, :C]
     @test has_edge(graph, :A, :B)
-    @test graph.backend[] !== nothing
 end
 
 @testitem "rejects invalid DAG edges" tags=[:unit, :validation] begin
@@ -43,11 +41,9 @@ end
     @test graph isa PDAG
     @test graph.nodes == Set([:A, :B, :C, :D])
     @test length(graph.edges) == 3
-    @test graph.backend[] !== nothing
     @test children(graph, :A) == [:B]
     @test parents(graph, :B) == [:A]
     @test neighbors(graph, :B) == [:A, :C]
-    @test graph.backend[] !== nothing
 end
 
 @testitem "rejects invalid PDAG edges" tags=[:unit, :validation] begin
@@ -64,11 +60,9 @@ end
     @test graph isa ADMG
     @test graph.nodes == Set([:A, :B, :C, :D])
     @test length(graph.edges) == 3
-    @test graph.backend[] !== nothing
     @test children(graph, :A) == [:B]
     @test parents(graph, :B) == [:A]
     @test neighbors(graph, :B) == [:A, :C]
-    @test graph.backend[] !== nothing
 end
 
 @testitem "rejects invalid PDAG edges" tags=[:unit, :validation] begin
@@ -102,7 +96,6 @@ end
     @test graph.simple == true
     @test graph.nodes == Set([:A, :B, :C, :D])
     @test length(graph.edges) == 3
-    @test graph.backend[] !== nothing
 end
 
 @testitem "rejects non-simple construction for non-UNKNOWN classes" tags=[
