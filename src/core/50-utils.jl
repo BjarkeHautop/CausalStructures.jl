@@ -145,7 +145,8 @@ function generate_graph(
         end
     end
 
-    graph = caugi(edges; class = DAG)
+    node_items = [node(n) for n in node_names]
+    graph = caugi(edges, node_items...; class = DAG)
     if class == :CPDAG
         # TODO: add a CPDAG graph type and return it here once supported.
         return graph
