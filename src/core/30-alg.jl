@@ -189,6 +189,7 @@ function posteriors(g::PDAG, node::Symbol; open::Bool = true)
     return [node; result]
 end
 
+# TODO: Should also be implemented for ADMGs, AGs, ...
 function markov_blanket(g::Union{DAG,PDAG}, node::Symbol)
     B = g.backend
     node_idx = node_index(g, node)

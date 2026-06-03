@@ -15,11 +15,7 @@ function _skeleton_edges(input_edges::Vector{CausalEdge})
     return skeleton_edges
 end
 
-function skeleton(g::DAG)
-    return UG(nodes(g), _skeleton_edges(g.edges))
-end
-
-function skeleton(g::PDAG)
+function skeleton(g::Union{DAG,PDAG})
     return UG(nodes(g), _skeleton_edges(g.edges))
 end
 
@@ -59,22 +55,10 @@ function _subgraph_edges(edges::Vector{CausalEdge}, keep::Set{Symbol})
     return [edge for edge in edges if edge.src in keep && edge.dst in keep]
 end
 
-function subgraph(g::DAG, nodes::AbstractVector{Symbol})
+function subgraph(g::Union{DAG,UG,PDAG}, nodes::AbstractVector{Symbol})
     keep = Set(nodes)
     edges = _subgraph_edges(g.edges, keep)
-    return DAG(keep, edges)
-end
-
-function subgraph(g::UG, nodes::AbstractVector{Symbol})
-    keep = Set(nodes)
-    edges = _subgraph_edges(g.edges, keep)
-    return UG(keep, edges)
-end
-
-function subgraph(g::PDAG, nodes::AbstractVector{Symbol})
-    keep = Set(nodes)
-    edges = _subgraph_edges(g.edges, keep)
-    return PDAG(keep, edges)
+    return typeof(g)(keep, edges)
 end
 
 function _ordered_pair(a::Symbol, b::Symbol)

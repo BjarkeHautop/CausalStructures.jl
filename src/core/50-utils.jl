@@ -82,6 +82,10 @@ end
 
 # is_simple: no self-loops and no parallel edges
 function is_simple(g::CausalGraph; force_check::Bool = false)
+    if !(g isa UNKNOWN) && !force_check
+        return true
+    end
+
     # self-loops
     for e in g.edges
         if e.src == e.dst
@@ -101,14 +105,11 @@ function is_simple(g::CausalGraph; force_check::Bool = false)
     return true
 end
 
-# Acyclicity check (fast path by type + optional forced check)
 function is_acyclic(g::CausalGraph; force_check::Bool = false)
-    # If it's a not UNKNOWN graph we skip
     if !(g isa UNKNOWN) && !force_check
         return true
     end
 
-    # perform explicit cycle detection on directed edges
     return !directed_cycle_detected(g)
 end
 
