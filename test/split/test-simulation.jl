@@ -24,7 +24,7 @@ end
 end
 
 @testitem "simulate_data validates its inputs" tags=[:unit, :validation] begin
-    empty_graph = DAG(CausalGraphInterface.CausalEdge[])
+    empty_graph = caugi(; class = DAG)
     graph = caugi(directed(:A, :B); class = DAG)
 
     @test_throws ErrorException simulate_data(empty_graph; samples = 10)

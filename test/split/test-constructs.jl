@@ -22,13 +22,13 @@ end
 @testitem "rejects invalid DAG edges" tags=[:unit, :validation] begin
     invalid_edge = partial(:A, :B)
 
-    @test_throws ErrorException DAG([invalid_edge])
+    @test_throws ErrorException caugi(invalid_edge; class = DAG)
 end
 
 @testitem "rejects self loops" tags=[:unit, :validation] begin
     loop_edge = directed(:A, :A)
 
-    @test_throws ErrorException DAG([loop_edge])
+    @test_throws ErrorException caugi(loop_edge; class = DAG)
 end
 
 @testitem "rejects directed cycles in DAGs" tags=[:unit, :validation] begin
@@ -110,7 +110,7 @@ end
 @testitem "rejects invalid UG edges" tags=[:unit, :validation] begin
     invalid_edge = directed(:A, :B)
 
-    @test_throws ErrorException UG([invalid_edge])
+    @test_throws ErrorException caugi(invalid_edge; class = UG)
 end
 
 @testitem "allows non-simple UNKNOWN graphs" tags=[:unit] begin

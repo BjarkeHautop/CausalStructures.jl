@@ -171,7 +171,7 @@ function generate_graph(
         end
     end
 
-    graph = DAG(edges)
+    graph = caugi(edges; class = DAG)
     if class == :CPDAG
         # TODO: add a CPDAG graph type and return it here once supported.
         return graph

@@ -16,11 +16,11 @@ function _skeleton_edges(input_edges::Vector{CausalEdge})
 end
 
 function skeleton(g::DAG)
-    return UG(_skeleton_edges(g.edges))
+    return UG(nodes(g), _skeleton_edges(g.edges))
 end
 
 function skeleton(g::PDAG)
-    return UG(_skeleton_edges(g.edges))
+    return UG(nodes(g), _skeleton_edges(g.edges))
 end
 
 function moralize(g::DAG)
@@ -52,7 +52,7 @@ function moralize(g::DAG)
         end
     end
 
-    return UG(edges)
+    return UG(nodes(g), edges)
 end
 
 function _subgraph_edges(edges::Vector{CausalEdge}, keep::Set{Symbol})
@@ -62,19 +62,19 @@ end
 function subgraph(g::DAG, nodes::AbstractVector{Symbol})
     keep = Set(nodes)
     edges = _subgraph_edges(g.edges, keep)
-    return DAG(edges)
+    return DAG(keep, edges)
 end
 
 function subgraph(g::UG, nodes::AbstractVector{Symbol})
     keep = Set(nodes)
     edges = _subgraph_edges(g.edges, keep)
-    return UG(edges)
+    return UG(keep, edges)
 end
 
 function subgraph(g::PDAG, nodes::AbstractVector{Symbol})
     keep = Set(nodes)
     edges = _subgraph_edges(g.edges, keep)
-    return PDAG(edges)
+    return PDAG(keep, edges)
 end
 
 function _ordered_pair(a::Symbol, b::Symbol)
@@ -101,42 +101,60 @@ is_undirected(edge::CausalEdge) = edge_kind(edge) == (Tail, Tail)
 
 is_bidirected(edge::CausalEdge) = edge_kind(edge) == (Arrow, Arrow)
 
-function build_graph(::Type{DAG}, edges::Vector{CausalEdge}; simple::Bool = true)
-    simple || throw(ArgumentError("simple=false is not supported for DAG"))
-    return DAG(edges)
-end
-
-function build_graph(::Type{UG}, edges::Vector{CausalEdge}; simple::Bool = true)
-    simple || throw(ArgumentError("simple=false is not supported for UG"))
-    return UG(edges)
-end
-
-function build_graph(::Type{PDAG}, edges::Vector{CausalEdge}; simple::Bool = true)
-    simple || throw(ArgumentError("simple=false is not supported for PDAG"))
-    return PDAG(edges)
-end
-
-function build_graph(::Type{ADMG}, edges::Vector{CausalEdge}; simple::Bool = true)
-    simple || throw(ArgumentError("simple=false is not supported for ADMG"))
-    return ADMG(edges)
-end
-
-function build_graph(::Type{UNKNOWN}, edges::Vector{CausalEdge}; simple::Bool = true)
-    return UNKNOWN(edges; simple = simple)
-end
-
 function build_graph(
     ::Type{T},
+    nodes::Set{Symbol},
     edges::Vector{CausalEdge};
     simple::Bool = true,
 ) where {T<:CausalGraph}
-    T(collect_nodes(edges), edges)
+    simple || throw(ArgumentError("simple=false is only supported for UNKNOWN"))
+    return T(nodes, edges)
 end
 
+build_graph(
+    ::Type{UNKNOWN},
+    nodes::Set{Symbol},
+    edges::Vector{CausalEdge};
+    simple::Bool = true,
+) = UNKNOWN(nodes, edges; simple=simple)
+
 function caugi(
-    edges::CausalEdge...;
-    class::Type{<:CausalGraph}=DAG,
-    simple::Bool=true,
+    items...;
+    class::Type{<:CausalGraph} = DAG,
+    simple::Bool = true,
 )
-    return build_graph(class, collect(edges); simple=simple)
+    nodes, edges = _caugi_collect(items...)
+    return build_graph(class, nodes, edges; simple=simple)
+end
+
+function _caugi_collect(items...)
+    nodes = Set{Symbol}()
+    edges = CausalEdge[]
+
+    for item in items
+
+        # single edge
+        if item isa CausalEdge
+            push!(edges, item)
+            push!(nodes, item.src)
+            push!(nodes, item.dst)
+
+        # node wrapper
+        elseif item isa GraphNode
+            push!(nodes, item.name)
+
+        # vector of edges
+        elseif item isa AbstractVector{<:CausalEdge}
+            for e in item
+                push!(edges, e)
+                push!(nodes, e.src)
+                push!(nodes, e.dst)
+            end
+
+        else
+            throw(ArgumentError("Unsupported graph item: $(typeof(item))"))
+        end
+    end
+
+    return nodes, edges
 end

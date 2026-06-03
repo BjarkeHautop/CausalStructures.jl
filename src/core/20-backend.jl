@@ -16,20 +16,16 @@ function csr_from_rows(rows::Vector{Vector{Int}})
     return colptr, rowval
 end
 
-function build_csr(edges::Vector{CausalEdge})
-    nodes = Set{Symbol}()
+function build_csr(nodes, edges::Vector{CausalEdge})
+    ordered_nodes = sort!(unique(collect(nodes)))
 
-    for e in edges
-        push!(nodes, e.src)
-        push!(nodes, e.dst)
-    end
+    index = Dict(n => i for (i, n) in enumerate(ordered_nodes))
 
-    ordered_nodes = sort!(collect(nodes))
-    index = Dict(node => i for (i, node) in enumerate(ordered_nodes))
+    n = length(ordered_nodes)
 
-    incident_rows = [Int[] for _ in ordered_nodes]
-    parent_rows = [Int[] for _ in ordered_nodes]
-    child_rows = [Int[] for _ in ordered_nodes]
+    incident_rows = [Int[] for _ in 1:n]
+    parent_rows   = [Int[] for _ in 1:n]
+    child_rows    = [Int[] for _ in 1:n]
 
     for edge in edges
         src_idx = index[edge.src]
@@ -48,26 +44,17 @@ function build_csr(edges::Vector{CausalEdge})
         end
     end
 
-    incident_colptr, incident_rowval = csr_from_rows(incident_rows)
-    parent_colptr, parent_rowval = csr_from_rows(parent_rows)
-    child_colptr, child_rowval = csr_from_rows(child_rows)
-
     return CSRBackend(
         ordered_nodes,
         index,
-        incident_colptr,
-        incident_rowval,
-        parent_colptr,
-        parent_rowval,
-        child_colptr,
-        child_rowval,
+        csr_from_rows(incident_rows)...,
+        csr_from_rows(parent_rows)...,
+        csr_from_rows(child_rows)...,
     )
 end
 
-csr(g::CausalGraph) = build_csr(g.edges)
-
 function node_index(g::CausalGraph, node::Symbol)
-    B = csr(g)
+    B = g.backend
     idx = get(B.index, node, 0)
 
     idx == 0 && error("Unknown node: $(node)")
@@ -82,7 +69,7 @@ end
 symbols_from_slice(B::CSRBackend, row_slice) = B.nodes[row_slice]
 
 function adjacency(g::CausalGraph, node::Symbol)
-    B = csr(g)
+    B = g.backend
     idx = get(B.index, node, 0)
 
     idx == 0 && error("Unknown node: $(node)")
@@ -96,7 +83,7 @@ end
 neighbors(g::CausalGraph, node::Symbol) = adjacency(g, node)
 
 function parents(g::CausalGraph, node::Symbol)
-    B = csr(g)
+    B = g.backend
     idx = get(B.index, node, 0)
 
     idx == 0 && error("Unknown node: $(node)")
@@ -108,7 +95,7 @@ function parents(g::CausalGraph, node::Symbol)
 end
 
 function children(g::CausalGraph, node::Symbol)
-    B = csr(g)
+    B = g.backend
     idx = get(B.index, node, 0)
 
     idx == 0 && error("Unknown node: $(node)")
@@ -120,7 +107,7 @@ function children(g::CausalGraph, node::Symbol)
 end
 
 function has_edge(g::CausalGraph, src::Symbol, dst::Symbol)
-    B = csr(g)
+    B = g.backend
 
     src_idx = get(B.index, src, 0)
     dst_idx = get(B.index, dst, 0)
