@@ -39,7 +39,7 @@ dag = caugi(
 
 graph = caugi(
     directed(:A, :B),
-    directed(:B, :A),
+    directed(:B, :A);
     class = UNKNOWN,
     simple = false
 )
@@ -80,7 +80,7 @@ For example:
 ```julia
 graph = caugi(
     :A %-->% :B + :C,
-	:B + :C %o-o% :D,
+	:B + :C %o-o% :D;
     class = UNKNOWN
 )
 ```
@@ -90,7 +90,7 @@ graph = caugi(
 	directed(:A, :B),
 	directed(:A, :C),
 	partial(:B, :D),
-	partial(:C, :D),
+	partial(:C, :D);
 	class = UNKNOWN
 )
 ```
