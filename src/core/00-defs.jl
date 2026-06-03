@@ -15,44 +15,77 @@ struct CausalEdge
     dst_end::Endpoint
 end
 
-struct CSRBackend
+abstract type CausalBackend end
+
+# DAG backend: 2 buckets — [parents | children]
+struct DAGBackend <: CausalBackend
     nodes::Vector{Symbol}
     index::Dict{Symbol,Int}
-    incident_colptr::Vector{Int}
-    incident_rowval::Vector{Int}
-    undirected_colptr::Vector{Int}
-    undirected_rowval::Vector{Int}
-    parents_colptr::Vector{Int}
-    parents_rowval::Vector{Int}
-    children_colptr::Vector{Int}
-    children_rowval::Vector{Int}
+    colptr::Vector{Int}
+    deg::Matrix{Int}       # 2 × n
+    rowval::Vector{Int}
+end
+
+# UG backend: 1 bucket — [undirected]; no deg matrix needed
+struct UGBackend <: CausalBackend
+    nodes::Vector{Symbol}
+    index::Dict{Symbol,Int}
+    colptr::Vector{Int}
+    rowval::Vector{Int}
+end
+
+# PDAG backend: 3 buckets — [parents | undirected | children]
+struct PDAGBackend <: CausalBackend
+    nodes::Vector{Symbol}
+    index::Dict{Symbol,Int}
+    colptr::Vector{Int}
+    deg::Matrix{Int}       # 3 × n
+    rowval::Vector{Int}
+end
+
+# ADMG backend: 3 buckets — [parents | spouses | children]
+struct ADMGBackend <: CausalBackend
+    nodes::Vector{Symbol}
+    index::Dict{Symbol,Int}
+    colptr::Vector{Int}
+    deg::Matrix{Int}       # 3 × n
+    rowval::Vector{Int}
+end
+
+# UNKNOWN backend: 4 buckets — [parents | undirected | spouses | children]
+struct UNKNOWNBackend <: CausalBackend
+    nodes::Vector{Symbol}
+    index::Dict{Symbol,Int}
+    colptr::Vector{Int}
+    deg::Matrix{Int}       # 4 × n
+    rowval::Vector{Int}
 end
 
 abstract type CausalGraph end
 
 struct DAG <: CausalGraph
     edges::Vector{CausalEdge}
-    backend::CSRBackend
+    backend::DAGBackend
 end
 
 struct UG <: CausalGraph
     edges::Vector{CausalEdge}
-    backend::CSRBackend
+    backend::UGBackend
 end
 
 struct PDAG <: CausalGraph
     edges::Vector{CausalEdge}
-    backend::CSRBackend
+    backend::PDAGBackend
 end
 
 struct ADMG <: CausalGraph
     edges::Vector{CausalEdge}
-    backend::CSRBackend
+    backend::ADMGBackend
 end
 
 struct UNKNOWN <: CausalGraph
     edges::Vector{CausalEdge}
-    backend::CSRBackend
+    backend::UNKNOWNBackend
     simple::Bool
 end
 
@@ -62,7 +95,7 @@ function _build_graph(
     edges::Vector{CausalEdge},
     backend_kwargs...,
 ) where {T<:CausalGraph}
-    backend = build_csr(nodes, edges)
+    backend = build_backend(T, nodes, edges)
     g = T(edges, backend, backend_kwargs...)
     validate(g, T)
     return g

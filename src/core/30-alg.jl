@@ -6,7 +6,7 @@ function topological_sort(g::DAG)
 
     indegree = zeros(Int, n)
     for i = 1:n
-        for child_idx in csr_slice(B.children_colptr, B.children_rowval, i)
+        for child_idx in _children_slice(B, i)
             indegree[child_idx] += 1
         end
     end
@@ -25,7 +25,7 @@ function topological_sort(g::DAG)
         head += 1
         push!(ordering, B.nodes[i])
 
-        for child_idx in csr_slice(B.children_colptr, B.children_rowval, i)
+        for child_idx in _children_slice(B, i)
             indegree[child_idx] -= 1
             if indegree[child_idx] == 0
                 push!(queue, child_idx)
@@ -41,7 +41,7 @@ function ancestors(g::Union{DAG,PDAG,ADMG}, node::Symbol; open::Bool = true)
     B = g.backend
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))
-    stack = collect(csr_slice(B.parents_colptr, B.parents_rowval, node_idx))
+    stack = collect(_parents_slice(B, node_idx))
 
     while !isempty(stack)
         idx = pop!(stack)
@@ -52,7 +52,7 @@ function ancestors(g::Union{DAG,PDAG,ADMG}, node::Symbol; open::Bool = true)
             continue
         end
         seen[idx] = true
-        append!(stack, csr_slice(B.parents_colptr, B.parents_rowval, idx))
+        append!(stack, _parents_slice(B, idx))
     end
 
     result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
@@ -68,7 +68,7 @@ function descendants(g::Union{DAG,PDAG,ADMG}, node::Symbol; open::Bool = true)
     B = g.backend
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))
-    stack = collect(csr_slice(B.children_colptr, B.children_rowval, node_idx))
+    stack = collect(_children_slice(B, node_idx))
 
     while !isempty(stack)
         idx = pop!(stack)
@@ -76,7 +76,7 @@ function descendants(g::Union{DAG,PDAG,ADMG}, node::Symbol; open::Bool = true)
             continue
         end
         seen[idx] = true
-        append!(stack, csr_slice(B.children_colptr, B.children_rowval, idx))
+        append!(stack, _children_slice(B, idx))
     end
 
     result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
@@ -90,33 +90,17 @@ end
 
 function exogenous_nodes(g::DAG)
     B = g.backend
-    return [
-        B.nodes[i] for
-        i in eachindex(B.nodes) if isempty(csr_slice(B.parents_colptr, B.parents_rowval, i))
-    ]
+    return [B.nodes[i] for i in eachindex(B.nodes) if isempty(_parents_slice(B, i))]
 end
 
 function exogenous_nodes(g::PDAG; undirected_as_parents::Bool = false)
     B = g.backend
     exogenous = Symbol[]
-
     for i in eachindex(B.nodes)
-        pa = csr_slice(B.parents_colptr, B.parents_rowval, i)
-        if !isempty(pa)
-            continue
-        end
-
-        if undirected_as_parents
-            ch = csr_slice(B.children_colptr, B.children_rowval, i)
-            incident = csr_slice(B.incident_colptr, B.incident_rowval, i)
-            if any(neighbor_idx -> !(neighbor_idx in pa || neighbor_idx in ch), incident)
-                continue
-            end
-        end
-
+        isempty(_parents_slice(B, i)) || continue
+        undirected_as_parents && !isempty(_undirected_slice(B, i)) && continue
         push!(exogenous, B.nodes[i])
     end
-
     return exogenous
 end
 
@@ -125,13 +109,12 @@ function anteriors(g::DAG, node::Symbol; open::Bool = true)
     return ancestors(g, node; open)
 end
 
-
 function anteriors(g::PDAG, node::Symbol; open::Bool = true)
     B = g.backend
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))
-    stack = collect(csr_slice(B.parents_colptr, B.parents_rowval, node_idx))
-    append!(stack, csr_slice(B.undirected_colptr, B.undirected_rowval, node_idx))
+    stack = collect(_parents_slice(B, node_idx))
+    append!(stack, _undirected_slice(B, node_idx))
 
     while !isempty(stack)
         idx = pop!(stack)
@@ -142,8 +125,8 @@ function anteriors(g::PDAG, node::Symbol; open::Bool = true)
             continue
         end
         seen[idx] = true
-        append!(stack, csr_slice(B.parents_colptr, B.parents_rowval, idx))
-        append!(stack, csr_slice(B.undirected_colptr, B.undirected_rowval, idx))
+        append!(stack, _parents_slice(B, idx))
+        append!(stack, _undirected_slice(B, idx))
     end
 
     result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
@@ -164,8 +147,8 @@ function posteriors(g::PDAG, node::Symbol; open::Bool = true)
     B = g.backend
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))
-    stack = collect(csr_slice(B.children_colptr, B.children_rowval, node_idx))
-    append!(stack, csr_slice(B.undirected_colptr, B.undirected_rowval, node_idx))
+    stack = collect(_children_slice(B, node_idx))
+    append!(stack, _undirected_slice(B, node_idx))
 
     while !isempty(stack)
         idx = pop!(stack)
@@ -176,8 +159,8 @@ function posteriors(g::PDAG, node::Symbol; open::Bool = true)
             continue
         end
         seen[idx] = true
-        append!(stack, csr_slice(B.children_colptr, B.children_rowval, idx))
-        append!(stack, csr_slice(B.undirected_colptr, B.undirected_rowval, idx))
+        append!(stack, _children_slice(B, idx))
+        append!(stack, _undirected_slice(B, idx))
     end
 
     result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
@@ -189,28 +172,19 @@ function posteriors(g::PDAG, node::Symbol; open::Bool = true)
     return [node; result]
 end
 
-function _spouses_indices(B::CSRBackend, idx::Int)
-    all_nbrs = csr_slice(B.incident_colptr, B.incident_rowval, idx)
-    exclude = union(
-        csr_slice(B.parents_colptr, B.parents_rowval, idx),
-        csr_slice(B.children_colptr, B.children_rowval, idx),
-    )
-    return [i for i in all_nbrs if i ∉ exclude]
-end
-
 function spouses(g::ADMG, node::Symbol)
     B = g.backend
     idx = node_index(g, node)
-    return B.nodes[_spouses_indices(B, idx)]
+    return B.nodes[_spouses_slice(B, idx)]
 end
 
-function _district_of_idx(B::CSRBackend, node_idx::Int)
+function _district_of_idx(B::ADMGBackend, node_idx::Int)
     seen = falses(length(B.nodes))
     seen[node_idx] = true
     stack = [node_idx]
     while !isempty(stack)
         u = pop!(stack)
-        for w in _spouses_indices(B, u)
+        for w in _spouses_slice(B, u)
             if !seen[w]
                 seen[w] = true
                 push!(stack, w)
@@ -232,7 +206,7 @@ function districts(g::ADMG)
         stack = [s]
         while !isempty(stack)
             u = pop!(stack)
-            for w in _spouses_indices(B, u)
+            for w in _spouses_slice(B, u)
                 if comp[w] == 0
                     comp[w] = cid
                     push!(stack, w)
@@ -249,10 +223,55 @@ end
 
 function exogenous_nodes(g::ADMG)
     B = g.backend
-    return [
-        B.nodes[i] for
-        i in eachindex(B.nodes) if isempty(csr_slice(B.parents_colptr, B.parents_rowval, i))
-    ]
+    return [B.nodes[i] for i in eachindex(B.nodes) if isempty(_parents_slice(B, i))]
+end
+
+function markov_blanket(g::DAG, node::Symbol)
+    B = g.backend
+    node_idx = node_index(g, node)
+    seen = falses(length(B.nodes))
+
+    for parent_idx in _parents_slice(B, node_idx)
+        seen[parent_idx] = true
+    end
+
+    for child_idx in _children_slice(B, node_idx)
+        seen[child_idx] = true
+        for parent_idx in _parents_slice(B, child_idx)
+            if parent_idx != node_idx
+                seen[parent_idx] = true
+            end
+        end
+    end
+
+    seen[node_idx] = false
+    return [B.nodes[i] for i in eachindex(seen) if seen[i]]
+end
+
+function markov_blanket(g::PDAG, node::Symbol)
+    B = g.backend
+    node_idx = node_index(g, node)
+    seen = falses(length(B.nodes))
+
+    for parent_idx in _parents_slice(B, node_idx)
+        seen[parent_idx] = true
+    end
+
+    for child_idx in _children_slice(B, node_idx)
+        seen[child_idx] = true
+        for parent_idx in _parents_slice(B, child_idx)
+            if parent_idx != node_idx
+                seen[parent_idx] = true
+            end
+        end
+    end
+
+    for nbr_idx in _undirected_slice(B, node_idx)
+        seen[nbr_idx] = true
+    end
+
+    seen[node_idx] = false
+    return [B.nodes[i] for i in eachindex(seen) if seen[i]]
 end
 
 function markov_blanket(g::ADMG, node::Symbol)
@@ -263,7 +282,7 @@ function markov_blanket(g::ADMG, node::Symbol)
         if d_idx != node_idx
             seen[d_idx] = true
         end
-        for p_idx in csr_slice(B.parents_colptr, B.parents_rowval, d_idx)
+        for p_idx in _parents_slice(B, d_idx)
             seen[p_idx] = true
         end
     end
@@ -271,7 +290,7 @@ function markov_blanket(g::ADMG, node::Symbol)
     return [B.nodes[i] for i in eachindex(seen) if seen[i]]
 end
 
-function _ancestors_bitmask(B::CSRBackend, seeds::Vector{Int})
+function _ancestors_bitmask(B::DAGBackend, seeds::Vector{Int})
     n = length(B.nodes)
     mask = falses(n)
     stack = Int[]
@@ -283,7 +302,7 @@ function _ancestors_bitmask(B::CSRBackend, seeds::Vector{Int})
     end
     while !isempty(stack)
         u = pop!(stack)
-        for p in csr_slice(B.parents_colptr, B.parents_rowval, u)
+        for p in _parents_slice(B, u)
             if !mask[p]
                 mask[p] = true
                 push!(stack, p)
@@ -293,13 +312,12 @@ function _ancestors_bitmask(B::CSRBackend, seeds::Vector{Int})
     return mask
 end
 
-function _moral_adj_in_mask(B::CSRBackend, mask::BitVector)
+function _moral_adj_in_mask(B::DAGBackend, mask::BitVector)
     n = length(B.nodes)
     adj = [Set{Int}() for _ = 1:n]
     for ch = 1:n
         mask[ch] || continue
-        parents_in_mask =
-            [p for p in csr_slice(B.parents_colptr, B.parents_rowval, ch) if mask[p]]
+        parents_in_mask = [p for p in _parents_slice(B, ch) if mask[p]]
         for p in parents_in_mask
             push!(adj[p], ch)
             push!(adj[ch], p)
@@ -355,7 +373,7 @@ end
 # Bayes-ball traversal with direction tracking (Up = arrived from child, Down = arrived from parent).
 # Returns indices of nodes d-connected to start_idxs given cond_idxs, restricted to ancestor_mask.
 function _d_connected_restricted_idxs(
-    B::CSRBackend,
+    B::DAGBackend,
     start_idxs::Vector{Int},
     cond_idxs::Vector{Int},
     ancestor_mask::BitVector,
@@ -393,7 +411,7 @@ function _d_connected_restricted_idxs(
 
         if !conditioned[v]
             if dir == 1  # Down: arrived from parent → propagate to children
-                for ch in csr_slice(B.children_colptr, B.children_rowval, v)
+                for ch in _children_slice(B, v)
                     ancestor_mask[ch] || continue
                     if !visited[ch, 1]
                         visited[ch, 1] = true
@@ -402,7 +420,7 @@ function _d_connected_restricted_idxs(
                     end
                 end
             else  # Up: arrived from child → propagate to parents + bounce to children
-                for pa in csr_slice(B.parents_colptr, B.parents_rowval, v)
+                for pa in _parents_slice(B, v)
                     ancestor_mask[pa] || continue
                     if !visited[pa, 2]
                         visited[pa, 2] = true
@@ -410,7 +428,7 @@ function _d_connected_restricted_idxs(
                         push!(queue, (pa, 2))
                     end
                 end
-                for ch in csr_slice(B.children_colptr, B.children_rowval, v)
+                for ch in _children_slice(B, v)
                     ancestor_mask[ch] || continue
                     if !visited[ch, 1]
                         visited[ch, 1] = true
@@ -421,7 +439,7 @@ function _d_connected_restricted_idxs(
             end
         else
             if dir == 1  # Down at conditioned collider → activate, propagate to parents
-                for pa in csr_slice(B.parents_colptr, B.parents_rowval, v)
+                for pa in _parents_slice(B, v)
                     ancestor_mask[pa] || continue
                     if !visited[pa, 2]
                         visited[pa, 2] = true
@@ -497,31 +515,4 @@ function minimal_separator(
     end
 
     return B.nodes[sort!(collect(z_set))]
-end
-
-function markov_blanket(g::Union{DAG,PDAG}, node::Symbol)
-    B = g.backend
-    node_idx = node_index(g, node)
-    seen = falses(length(B.nodes))
-    B = g.backend
-
-    for parent_idx in csr_slice(B.parents_colptr, B.parents_rowval, node_idx)
-        seen[parent_idx] = true
-    end
-
-    for child_idx in csr_slice(B.children_colptr, B.children_rowval, node_idx)
-        seen[child_idx] = true
-        for parent_idx in csr_slice(B.parents_colptr, B.parents_rowval, child_idx)
-            if parent_idx != node_idx
-                seen[parent_idx] = true
-            end
-        end
-    end
-
-    for neighbor_idx in csr_slice(B.incident_colptr, B.incident_rowval, node_idx)
-        seen[neighbor_idx] = true
-    end
-
-    seen[node_idx] = false
-    return [B.nodes[i] for i in eachindex(seen) if seen[i]]
 end
