@@ -43,5 +43,6 @@ export CausalEdge,
     is_simple,
     is_acyclic,
     generate_graph,
-    simulate_data
+    simulate_data,
+    d_separated
 end

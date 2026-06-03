@@ -271,6 +271,87 @@ function markov_blanket(g::ADMG, node::Symbol)
     return [B.nodes[i] for i in eachindex(seen) if seen[i]]
 end
 
+function _ancestors_bitmask(B::CSRBackend, seeds::Vector{Int})
+    n = length(B.nodes)
+    mask = falses(n)
+    stack = Int[]
+    for s in seeds
+        if !mask[s]
+            mask[s] = true
+            push!(stack, s)
+        end
+    end
+    while !isempty(stack)
+        u = pop!(stack)
+        for p in csr_slice(B.parents_colptr, B.parents_rowval, u)
+            if !mask[p]
+                mask[p] = true
+                push!(stack, p)
+            end
+        end
+    end
+    return mask
+end
+
+function _moral_adj_in_mask(B::CSRBackend, mask::BitVector)
+    n = length(B.nodes)
+    adj = [Set{Int}() for _ = 1:n]
+    for ch = 1:n
+        mask[ch] || continue
+        parents_in_mask =
+            [p for p in csr_slice(B.parents_colptr, B.parents_rowval, ch) if mask[p]]
+        for p in parents_in_mask
+            push!(adj[p], ch)
+            push!(adj[ch], p)
+        end
+        for i in eachindex(parents_in_mask)
+            for j = (i+1):lastindex(parents_in_mask)
+                p1, p2 = parents_in_mask[i], parents_in_mask[j]
+                push!(adj[p1], p2)
+                push!(adj[p2], p1)
+            end
+        end
+    end
+    return adj
+end
+
+# d-separation via ancestral reduction + moralization + BFS (Bayes Ball on moral graph).
+# Returns true iff x is d-separated from y given z in DAG g.
+function d_separated(g::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
+    B = g.backend
+    x_idx = node_index(g, x)
+    y_idx = node_index(g, y)
+    z_idxs = [node_index(g, v) for v in z]
+
+    seeds = unique([x_idx; y_idx; z_idxs])
+    mask = _ancestors_bitmask(B, seeds)
+    adj = _moral_adj_in_mask(B, mask)
+
+    blocked = falses(length(B.nodes))
+    for v in z_idxs
+        blocked[v] = true
+    end
+
+    blocked[x_idx] && return true
+
+    visited = falses(length(B.nodes))
+    visited[x_idx] = true
+    queue = [x_idx]
+    head = 1
+    while head <= length(queue)
+        u = queue[head]
+        head += 1
+        for w in adj[u]
+            if !visited[w] && !blocked[w]
+                w == y_idx && return false
+                visited[w] = true
+                push!(queue, w)
+            end
+        end
+    end
+    return true
+end
+
 function markov_blanket(g::Union{DAG,PDAG}, node::Symbol)
     B = g.backend
     node_idx = node_index(g, node)

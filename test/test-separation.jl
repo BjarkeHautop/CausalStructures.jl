@@ -1,29 +1,29 @@
 # Ported from caugi/tests/testthat/test-separation.R
-# d_separated, m_separated, and minimal_separator are not yet implemented.
-# All tests are marked @test_broken.
+# m_separated and minimal_separator are not yet implemented.
 
-# ── d_separated (not yet implemented) ────────────────────────────────────────
+using Test
+using CausalGraphInterface
+# ── d_separated ───────────────────────────────────────────────────────────────
 
-@testitem "d_separated: chain structure (broken)" tags = [:unit] begin
+@testitem "d_separated: chain structure" tags = [:unit] begin
     g = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    @test_broken !d_separated(g, :A, :C)
-    @test_broken d_separated(g, :A, :C, [:B])
+    @test !d_separated(g, :A, :C)
+    @test d_separated(g, :A, :C, [:B])
 end
 
-@testitem "d_separated: fork structure (broken)" tags = [:unit] begin
+@testitem "d_separated: fork structure" tags = [:unit] begin
     g = caugi(directed(:A, :B), directed(:A, :C); class = DAG)
-    @test_broken !d_separated(g, :B, :C)
-    @test_broken d_separated(g, :B, :C, [:A])
+    @test !d_separated(g, :B, :C)
+    @test d_separated(g, :B, :C, [:A])
 end
 
-@testitem "d_separated: collider structure (broken)" tags = [:unit] begin
+@testitem "d_separated: collider structure" tags = [:unit] begin
     g = caugi(directed(:A, :C), directed(:B, :C); class = DAG)
-    @test_broken d_separated(g, :A, :B)
-    @test_broken !d_separated(g, :A, :B, [:C])
+    @test d_separated(g, :A, :B)
+    @test !d_separated(g, :A, :B, [:C])
 end
 
-@testitem "d_separated: naive Bayes conditional independence pattern (broken)" tags =
-    [:unit] begin
+@testitem "d_separated: naive Bayes conditional independence pattern" tags = [:unit] begin
     g = caugi(
         directed(:A, :B),
         directed(:A, :C),
@@ -31,12 +31,12 @@ end
         directed(:A, :E);
         class = DAG,
     )
-    @test_broken d_separated(g, :B, :C, [:A])
-    @test_broken d_separated(g, :B, :D, [:A])
-    @test_broken !d_separated(g, :B, :C)
+    @test d_separated(g, :B, :C, [:A])
+    @test d_separated(g, :B, :D, [:A])
+    @test !d_separated(g, :B, :C)
 end
 
-@testitem "d_separated: Asia-style fixture (broken)" tags = [:unit] begin
+@testitem "d_separated: Asia-style fixture" tags = [:unit] begin
     g = caugi(
         directed(:asia, :tuberculosis),
         directed(:smoking, :cancer),
@@ -48,8 +48,8 @@ end
         directed(:bronchitis, :dyspnea);
         class = DAG,
     )
-    @test_broken d_separated(g, :asia, :dyspnea, [:bronchitis, :either])
-    @test_broken d_separated(g, :smoking, :dyspnea, [:bronchitis, :either])
+    @test d_separated(g, :asia, :dyspnea, [:bronchitis, :either])
+    @test d_separated(g, :smoking, :dyspnea, [:bronchitis, :either])
 end
 
 # ── minimal_separator (not yet implemented) ───────────────────────────────────
@@ -94,7 +94,7 @@ end
 
 # NetworkX d-separation tests (van der Zander & Liśkiewicz 2020)
 
-@testitem "NetworkX Case 1: large_collider_graph (broken)" tags = [:unit] begin
+@testitem "NetworkX Case 1: large_collider_graph" tags = [:unit] begin
     g = caugi(
         directed(:A, :B),
         directed(:C, :B),
@@ -104,14 +104,14 @@ end
         directed(:G, :E);
         class = DAG,
     )
-    @test_broken !d_separated(g, :B, :E)
+    @test !d_separated(g, :B, :E)
     @test_broken begin
         sep = minimal_separator(g, :B, :E)
         sep !== nothing && Set(sep) == Set([:D])
     end
 end
 
-@testitem "NetworkX Case 2: chain_and_fork_graph (broken)" tags = [:unit] begin
+@testitem "NetworkX Case 2: chain_and_fork_graph" tags = [:unit] begin
     g = caugi(
         directed(:A, :B),
         directed(:B, :C),
@@ -119,22 +119,22 @@ end
         directed(:D, :C);
         class = DAG,
     )
-    @test_broken !d_separated(g, :A, :C)
+    @test !d_separated(g, :A, :C)
     @test_broken begin
         sep = minimal_separator(g, :A, :C)
         sep !== nothing && Set(sep) == Set([:B])
     end
 end
 
-@testitem "NetworkX Case 3: no_separating_set_graph (broken)" tags = [:unit] begin
+@testitem "NetworkX Case 3: no_separating_set_graph" tags = [:unit] begin
     g = caugi(directed(:A, :B); class = DAG)
-    @test_broken !d_separated(g, :A, :B)
+    @test !d_separated(g, :A, :B)
     @test_broken minimal_separator(g, :A, :B) === nothing
 end
 
-@testitem "NetworkX Case 4: large_no_separating_set_graph (broken)" tags = [:unit] begin
+@testitem "NetworkX Case 4: large_no_separating_set_graph" tags = [:unit] begin
     g = caugi(directed(:A, :B), directed(:C, :A), directed(:C, :B); class = DAG)
-    @test_broken !d_separated(g, :A, :B, [:C])
+    @test !d_separated(g, :A, :B, [:C])
     @test_broken minimal_separator(g, :A, :B) === nothing
 end
 
