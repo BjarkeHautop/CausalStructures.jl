@@ -52,7 +52,7 @@ using CausalGraphInterface
 
     # nodes accessor
     n = CausalGraphInterface.nodes(simple_g)
-    @test isa(n, Set{Symbol})
+    @test isa(n, Vector{Symbol})
     @test length(n) == 2
 
     # topological sort and traversals

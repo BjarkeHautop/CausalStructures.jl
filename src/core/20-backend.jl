@@ -16,7 +16,14 @@ function csr_from_rows(rows::Vector{Vector{Int}})
     return colptr, rowval
 end
 
-function build_csr(nodes::Set{Symbol}, edges::Vector{CausalEdge})
+function build_csr(edges::Vector{CausalEdge})
+    nodes = Set{Symbol}()
+
+    for e in edges
+        push!(nodes, e.src)
+        push!(nodes, e.dst)
+    end
+
     ordered_nodes = sort!(collect(nodes))
     index = Dict(node => i for (i, node) in enumerate(ordered_nodes))
 
@@ -57,7 +64,7 @@ function build_csr(nodes::Set{Symbol}, edges::Vector{CausalEdge})
     )
 end
 
-csr(g::CausalGraph) = build_csr(g.nodes, g.edges)
+csr(g::CausalGraph) = build_csr(g.edges)
 
 function node_index(g::CausalGraph, node::Symbol)
     B = csr(g)

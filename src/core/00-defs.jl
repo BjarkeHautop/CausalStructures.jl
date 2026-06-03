@@ -29,70 +29,79 @@ end
 abstract type CausalGraph end
 
 struct DAG <: CausalGraph
-    nodes::Set{Symbol}
     edges::Vector{CausalEdge}
     backend::CSRBackend
-
-    function DAG(nodes::Set{Symbol}, edges::Vector{CausalEdge})
-        backend = build_csr(nodes, edges)
-        g = new(nodes, edges, backend)
-        validate!(g)
-        return g
-    end
 end
+
+function DAG(edges::Vector{CausalEdge})
+    backend = build_csr(edges)
+    g = DAG(edges, backend)
+    validate!(g)
+    return g
+end
+
+DAG(edges::AbstractVector{CausalEdge}) = DAG(collect(edges))
+DAG(edges::CausalEdge...) = DAG(collect(edges))
 
 struct UG <: CausalGraph
-    nodes::Set{Symbol}
     edges::Vector{CausalEdge}
     backend::CSRBackend
-
-    function UG(nodes::Set{Symbol}, edges::Vector{CausalEdge})
-        backend = build_csr(nodes, edges)
-        g = new(nodes, edges, backend)
-        validate!(g)
-        return g
-    end
 end
+
+function UG(edges::Vector{CausalEdge})
+    backend = build_csr(edges)
+    g = UG(edges, backend)
+    validate!(g)
+    return g
+end
+
+UG(edges::AbstractVector{CausalEdge}) = UG(collect(edges))
+UG(edges::CausalEdge...) = UG(collect(edges))
 
 struct PDAG <: CausalGraph
-    nodes::Set{Symbol}
     edges::Vector{CausalEdge}
     backend::CSRBackend
-
-    function PDAG(nodes::Set{Symbol}, edges::Vector{CausalEdge})
-        backend = build_csr(nodes, edges)
-        g = new(nodes, edges, backend)
-        validate!(g)
-        return g
-    end
 end
+
+function PDAG(edges::Vector{CausalEdge})
+    backend = build_csr(edges)
+    g = PDAG(edges, backend)
+    validate!(g)
+    return g
+end
+
+PDAG(edges::AbstractVector{CausalEdge}) = PDAG(collect(edges))
+PDAG(edges::CausalEdge...) = PDAG(collect(edges))
 
 struct ADMG <: CausalGraph
-    nodes::Set{Symbol}
     edges::Vector{CausalEdge}
     backend::CSRBackend
-
-    function ADMG(nodes::Set{Symbol}, edges::Vector{CausalEdge})
-        backend = build_csr(nodes, edges)
-        g = new(nodes, edges, backend)
-        validate!(g)
-        return g
-    end
 end
 
+function ADMG(edges::Vector{CausalEdge})
+    backend = build_csr(edges)
+    g = ADMG(edges, backend)
+    validate!(g)
+    return g
+end
+
+ADMG(edges::AbstractVector{CausalEdge}) = ADMG(collect(edges))
+ADMG(edges::CausalEdge...) = ADMG(collect(edges))
+
 struct UNKNOWN <: CausalGraph
-    nodes::Set{Symbol}
     edges::Vector{CausalEdge}
     backend::CSRBackend
     simple::Bool
-
-    function UNKNOWN(nodes::Set{Symbol}, edges::Vector{CausalEdge}; simple::Bool=true)
-        backend = build_csr(nodes, edges)
-        g = new(nodes, edges, backend, simple)
-        validate!(g)
-        return g
-    end
 end
+
+function UNKNOWN(edges::Vector{CausalEdge}; simple::Bool = true)
+    backend = build_csr(edges)
+    g = UNKNOWN(edges, backend, simple)
+    validate!(g)
+    return g
+end
+UNKNOWN(edges::AbstractVector{CausalEdge}; simple::Bool = true) = UNKNOWN(collect(edges); simple = simple)
+UNKNOWN(edges::CausalEdge...; simple::Bool = true) = UNKNOWN(collect(edges); simple = simple)
 
 function collect_nodes(edges::AbstractVector{CausalEdge})
     nodes = Set{Symbol}()

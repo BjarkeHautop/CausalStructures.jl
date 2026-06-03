@@ -12,7 +12,10 @@ function admg_edge_kind_ok(edge::CausalEdge)
     return is_directed(edge) || is_bidirected(edge)
 end
 
-function directed_cycle_detected(nodes::Set{Symbol}, edges::Vector{CausalEdge})
+function directed_cycle_detected(g::CausalGraph)
+    nodes = g.backend.nodes
+    edges = g.edges
+
     children_map = Dict(node => Set{Symbol}() for node in nodes)
     indegree = Dict(node => 0 for node in nodes)
 
@@ -23,12 +26,7 @@ function directed_cycle_detected(nodes::Set{Symbol}, edges::Vector{CausalEdge})
         end
     end
 
-    queue = Symbol[]
-    for node in nodes
-        if indegree[node] == 0
-            push!(queue, node)
-        end
-    end
+    queue = [node for node in nodes if indegree[node] == 0]
 
     visited = 0
 
@@ -64,7 +62,7 @@ function validate!(g::DAG)
         end
     end
 
-    if directed_cycle_detected(g.nodes, g.edges)
+    if directed_cycle_detected(g)
         error("Directed cycle detected in DAG")
     end
 
@@ -100,7 +98,7 @@ function validate!(g::PDAG)
         end
     end
 
-    if directed_cycle_detected(g.nodes, g.edges)
+    if directed_cycle_detected(g)
         error("Directed cycle detected in PDAG")
     end
 
@@ -120,7 +118,7 @@ function validate!(g::ADMG)
         end
     end
 
-    if directed_cycle_detected(g.nodes, g.edges)
+    if directed_cycle_detected(g)
         error("Directed cycle detected in ADMG")
     end
 

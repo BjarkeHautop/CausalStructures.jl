@@ -16,14 +16,15 @@ function _skeleton_edges(input_edges::Vector{CausalEdge})
 end
 
 function skeleton(g::DAG)
-    return UG(g.nodes, _skeleton_edges(g.edges))
+    return UG(_skeleton_edges(g.edges))
 end
 
 function skeleton(g::PDAG)
-    return UG(g.nodes, _skeleton_edges(g.edges))
+    return UG(_skeleton_edges(g.edges))
 end
 
 function moralize(g::DAG)
+    B = g.backend
     edges = CausalEdge[]
     seen = Set{Tuple{Symbol,Symbol}}()
 
@@ -35,7 +36,7 @@ function moralize(g::DAG)
         end
     end
 
-    for node in g.nodes
+    for node in B.nodes
         pa = parents(g, node)
         if length(pa) < 2
             continue
@@ -51,7 +52,7 @@ function moralize(g::DAG)
         end
     end
 
-    return UG(g.nodes, edges)
+    return UG(edges)
 end
 
 function _subgraph_edges(edges::Vector{CausalEdge}, keep::Set{Symbol})
@@ -74,33 +75,6 @@ function subgraph(g::PDAG, nodes::AbstractVector{Symbol})
     keep = Set(nodes)
     edges = _subgraph_edges(g.edges, keep)
     return PDAG(keep, edges)
-end
-
-function DAG(edges::AbstractVector{CausalEdge})
-    edge_vector = edges isa Vector{CausalEdge} ? edges : collect(edges)
-    return DAG(collect_nodes(edge_vector), edge_vector)
-end
-
-function DAG(edges::CausalEdge...)
-    return DAG(collect(edges))
-end
-
-function UG(edges::AbstractVector{CausalEdge})
-    edge_vector = edges isa Vector{CausalEdge} ? edges : collect(edges)
-    return UG(collect_nodes(edge_vector), edge_vector)
-end
-
-function UG(edges::CausalEdge...)
-    return UG(collect(edges))
-end
-
-function PDAG(edges::AbstractVector{CausalEdge})
-    edge_vector = edges isa Vector{CausalEdge} ? edges : collect(edges)
-    return PDAG(collect_nodes(edge_vector), edge_vector)
-end
-
-function PDAG(edges::CausalEdge...)
-    return PDAG(collect(edges))
 end
 
 function _ordered_pair(a::Symbol, b::Symbol)
@@ -144,11 +118,11 @@ end
 
 function build_graph(::Type{ADMG}, edges::Vector{CausalEdge}; simple::Bool = true)
     simple || throw(ArgumentError("simple=false is not supported for ADMG"))
-    return ADMG(collect_nodes(edges), edges)
+    return ADMG(edges)
 end
 
 function build_graph(::Type{UNKNOWN}, edges::Vector{CausalEdge}; simple::Bool = true)
-    return UNKNOWN(collect_nodes(edges), edges; simple = simple)
+    return UNKNOWN(edges; simple = simple)
 end
 
 function build_graph(

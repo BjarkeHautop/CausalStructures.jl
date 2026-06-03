@@ -8,12 +8,12 @@ struct PDAGConstraints <: GraphConstraints end
 struct UGConstraints <: GraphConstraints end
 
 function _satisfies_constraints(::DAGConstraints, g::CausalGraph)
-    return all(is_directed, g.edges) && !directed_cycle_detected(g.nodes, g.edges)
+    return all(is_directed, g.edges) && !directed_cycle_detected(g)
 end
 
 function _satisfies_constraints(::PDAGConstraints, g::CausalGraph)
     return all(e -> is_directed(e) || is_undirected(e), g.edges) &&
-           !directed_cycle_detected(g.nodes, g.edges)
+           !directed_cycle_detected(g)
 end
 
 function _satisfies_constraints(::UGConstraints, g::CausalGraph)
@@ -77,7 +77,7 @@ is_caugi(::Any) = false
 
 # nodes accessor convenience
 function nodes(g::CausalGraph)
-    return copy(g.nodes)
+    return copy(g.backend.nodes)
 end
 
 # is_simple: no self-loops and no parallel edges
@@ -109,7 +109,7 @@ function is_acyclic(g::CausalGraph; force_check::Bool = false)
     end
 
     # perform explicit cycle detection on directed edges
-    return !directed_cycle_detected(g.nodes, g.edges)
+    return !directed_cycle_detected(g)
 end
 
 function generate_graph(
@@ -273,8 +273,9 @@ function _edge_display(edge::CausalEdge)
 end
 
 function show(io::IO, g::CausalGraph)
+    B = g.backend
     typename = typeof(g)
-    nodes_list = sort!(collect(g.nodes))
+    nodes_list = sort!(collect(B.nodes))
     println(io, "$(typename) with $(length(nodes_list)) nodes:")
     println(io, "  nodes: ", join(string.(nodes_list), ", "))
     println(io, "  edges:")
