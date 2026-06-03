@@ -1,0 +1,398 @@
+# Separation algorithms: d_separated and m_separated.
+
+# ── Shared ancestor / anterior masks ──────────────────────────────────────────
+
+# Ancestor bitmask: nodes reachable from seeds via directed parents only.
+function _ancestors_bitmask(B::Union{DAGBackend,ADMGBackend,AGBackend}, seeds::Vector{Int})
+    n = length(B.nodes)
+    mask = falses(n)
+    stack = Int[]
+    for s in seeds
+        if !mask[s]
+            mask[s] = true
+            push!(stack, s)
+        end
+    end
+    while !isempty(stack)
+        u = pop!(stack)
+        for p in _parents_slice(B, u)
+            if !mask[p]
+                mask[p] = true
+                push!(stack, p)
+            end
+        end
+    end
+    return mask
+end
+
+# Anterior bitmask (AG): nodes reachable from seeds via directed parents OR undirected edges.
+function _anterior_bitmask(B::AGBackend, seeds::Vector{Int})
+    n = length(B.nodes)
+    mask = falses(n)
+    stack = Int[]
+    for s in seeds
+        if !mask[s]
+            mask[s] = true
+            push!(stack, s)
+        end
+    end
+    while !isempty(stack)
+        u = pop!(stack)
+        for p in _parents_slice(B, u)
+            if !mask[p]
+                mask[p] = true
+                push!(stack, p)
+            end
+        end
+        for w in _undirected_slice(B, u)
+            if !mask[w]
+                mask[w] = true
+                push!(stack, w)
+            end
+        end
+    end
+    return mask
+end
+
+# ── d_separated (DAG) ─────────────────────────────────────────────────────────
+
+function _moral_adj_in_mask(B::DAGBackend, mask::BitVector)
+    n = length(B.nodes)
+    adj = [Set{Int}() for _ = 1:n]
+    for ch = 1:n
+        mask[ch] || continue
+        parents_in_mask = [p for p in _parents_slice(B, ch) if mask[p]]
+        for p in parents_in_mask
+            push!(adj[p], ch)
+            push!(adj[ch], p)
+        end
+        for i in eachindex(parents_in_mask)
+            for j = (i+1):lastindex(parents_in_mask)
+                p1, p2 = parents_in_mask[i], parents_in_mask[j]
+                push!(adj[p1], p2)
+                push!(adj[p2], p1)
+            end
+        end
+    end
+    return adj
+end
+
+# Returns true iff x ⊥_d y | z in DAG g.
+function d_separated(g::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
+    B = g.backend
+    x_idx = node_index(g, x)
+    y_idx = node_index(g, y)
+    z_idxs = [node_index(g, v) for v in z]
+
+    seeds = unique([x_idx; y_idx; z_idxs])
+    mask = _ancestors_bitmask(B, seeds)
+    adj = _moral_adj_in_mask(B, mask)
+
+    blocked = falses(length(B.nodes))
+    for v in z_idxs
+        blocked[v] = true
+    end
+    blocked[x_idx] && return true
+
+    visited = falses(length(B.nodes))
+    visited[x_idx] = true
+    queue = [x_idx]
+    head = 1
+    while head <= length(queue)
+        u = queue[head]
+        head += 1
+        for w in adj[u]
+            if !visited[w] && !blocked[w]
+                w == y_idx && return false
+                visited[w] = true
+                push!(queue, w)
+            end
+        end
+    end
+    return true
+end
+
+m_separated(g::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[]) =
+    d_separated(g, x, y, z)
+
+# ── m_separated (ADMG) ────────────────────────────────────────────────────────
+
+# ADMG moralization: for each v, add undirected edges for pa(v) and sp(v),
+# then form a clique on pa(v) ∪ sp(v) (all arrowhead endpoints at v).
+function _admg_moral_adj(B::ADMGBackend, mask::BitVector)
+    n = length(B.nodes)
+    adj = [Int[] for _ = 1:n]
+    for v = 1:n
+        mask[v] || continue
+        pa = [p for p in _parents_slice(B, v) if mask[p]]
+        sp = [s for s in _spouses_slice(B, v) if mask[s]]
+        for p in pa
+            push!(adj[v], p)
+            push!(adj[p], v)
+        end
+        for s in sp
+            push!(adj[v], s)  # reverse added when s is processed
+        end
+        heads = sort!(unique!(vcat(pa, sp)))
+        for i in eachindex(heads)
+            for j = (i+1):lastindex(heads)
+                push!(adj[heads[i]], heads[j])
+                push!(adj[heads[j]], heads[i])
+            end
+        end
+    end
+    for v = 1:n
+        sort!(unique!(adj[v]))
+    end
+    return adj
+end
+
+# Returns true iff x ⊥_m y | z in ADMG g.
+function m_separated(g::ADMG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
+    B = g.backend
+    x_idx = node_index(g, x)
+    y_idx = node_index(g, y)
+    z_idxs = [node_index(g, v) for v in z]
+
+    seeds = unique([x_idx; y_idx; z_idxs])
+    mask = _ancestors_bitmask(B, seeds)
+    adj = _admg_moral_adj(B, mask)
+
+    blocked = falses(length(B.nodes))
+    for v in z_idxs
+        blocked[v] = true
+    end
+    blocked[x_idx] && return true
+
+    visited = falses(length(B.nodes))
+    visited[x_idx] = true
+    queue = [x_idx]
+    head = 1
+    while head <= length(queue)
+        u = queue[head]
+        head += 1
+        for w in adj[u]
+            if !visited[w] && !blocked[w]
+                w == y_idx && return false
+                visited[w] = true
+                push!(queue, w)
+            end
+        end
+    end
+    return true
+end
+
+# ── m_separated (AG) ──────────────────────────────────────────────────────────
+
+# True if `from` has an arrowhead pointing into `at` (from is a parent or spouse of at).
+@inline function _arrowhead_at(B::AGBackend, at::Int, from::Int)
+    from ∈ _parents_slice(B, at) || from ∈ _spouses_slice(B, at)
+end
+
+# Augmented adjacency for AG m-separation (Richardson & Spirtes 2002).
+# For each source s, connects s to every node reachable via a collider path
+# (a path where every intermediate node is a collider: arrowheads from both sides).
+# Uses a per-source stamp to avoid clearing the visited array O(n) times.
+function _ag_augmented_adj(B::AGBackend, mask::BitVector)
+    n = length(B.nodes)
+    adj = [Int[] for _ = 1:n]
+    visited = zeros(Int, n * n)
+    stamp = 0
+
+    for s = 1:n
+        mask[s] || continue
+        stamp += 1
+        if stamp == typemax(Int)
+            fill!(visited, 0)
+            stamp = 1
+        end
+
+        q = Tuple{Int,Int}[]
+
+        for v in _all_nbrs_slice(B, s)
+            mask[v] || continue
+            push!(adj[s], v)
+            push!(adj[v], s)
+            key = (s - 1) * n + v
+            if visited[key] != stamp
+                visited[key] = stamp
+                push!(q, (s, v))
+            end
+        end
+
+        head = 1
+        while head <= length(q)
+            prev, curr = q[head]
+            head += 1
+            for nxt in _all_nbrs_slice(B, curr)
+                nxt == prev && continue
+                mask[nxt] || continue
+                _arrowhead_at(B, curr, prev) || continue
+                _arrowhead_at(B, curr, nxt) || continue
+
+                key = (curr - 1) * n + nxt
+                visited[key] == stamp && continue
+                visited[key] = stamp
+                push!(q, (curr, nxt))
+
+                if nxt != s
+                    push!(adj[s], nxt)
+                    push!(adj[nxt], s)
+                end
+            end
+        end
+    end
+
+    for v = 1:n
+        sort!(unique!(adj[v]))
+    end
+    return adj
+end
+
+# Returns true iff x ⊥_m y | z in AG g.
+function m_separated(g::AG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
+    B = g.backend
+    x_idx = node_index(g, x)
+    y_idx = node_index(g, y)
+    z_idxs = [node_index(g, v) for v in z]
+
+    seeds = unique([x_idx; y_idx; z_idxs])
+    mask = _anterior_bitmask(B, seeds)
+    adj = _ag_augmented_adj(B, mask)
+
+    blocked = falses(length(B.nodes))
+    for v in z_idxs
+        blocked[v] = true
+    end
+    blocked[x_idx] && return true
+
+    visited = falses(length(B.nodes))
+    visited[x_idx] = true
+    queue = [x_idx]
+    head = 1
+    while head <= length(queue)
+        u = queue[head]
+        head += 1
+        for w in adj[u]
+            if !visited[w] && !blocked[w]
+                w == y_idx && return false
+                visited[w] = true
+                push!(queue, w)
+            end
+        end
+    end
+    return true
+end
+
+# ── Shared Bayes-ball primitive ────────────────────────────────────────────────
+#
+# Used by minimal_separator for both ADMG and AG.
+# Marks: 1=Tail, 2=Head, 3=Undir.
+# Pass rule at node v with in_mark m, out_mark o toward neighbor nbr:
+#   collider = (m == Head && o == Head)
+#   pass if v ∈ Z: collider; pass if v ∉ Z: !collider
+
+@inline function _relax_mixed!(
+    q::Vector{Tuple{Int,Int}},
+    visited::BitMatrix,
+    a_mask::BitVector,
+    v_in_z::Bool,
+    in_m::Int,
+    out_m::Int,
+    nbr::Int,
+    nbr_in_m::Int,
+)
+    a_mask[nbr] || return
+    collider = (in_m == 2 && out_m == 2)
+    (v_in_z ? collider : !collider) || return
+    if !visited[nbr, nbr_in_m]
+        visited[nbr, nbr_in_m] = true
+        push!(q, (nbr, nbr_in_m))
+    end
+end
+
+# REACHABLE for ADMG (2 marks: Tail, Head).
+function _reachable_admg(
+    B::ADMGBackend,
+    xs::Vector{Int},
+    a_mask::BitVector,
+    z_mask::BitVector,
+)
+    n = length(B.nodes)
+    visited = falses(n, 2)
+    q = Tuple{Int,Int}[]
+
+    for x in xs
+        a_mask[x] || continue
+        for m = 1:2
+            if !visited[x, m]
+                visited[x, m] = true
+                push!(q, (x, m))
+            end
+        end
+    end
+
+    head = 1
+    while head <= length(q)
+        v, in_m = q[head]
+        head += 1
+        v_in_z = z_mask[v]
+        for p in _parents_slice(B, v)   # p→v: out=Head(2), nbr_in=Tail(1)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, p, 1)
+        end
+        for c in _children_slice(B, v)  # v→c: out=Tail(1), nbr_in=Head(2)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 1, c, 2)
+        end
+        for s in _spouses_slice(B, v)   # v↔s: out=Head(2), nbr_in=Head(2)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, s, 2)
+        end
+    end
+
+    reached = falses(n)
+    for v = 1:n
+        reached[v] = visited[v, 1] || visited[v, 2]
+    end
+    return reached
+end
+
+# REACHABLE for AG (3 marks: Tail, Head, Undir).
+function _reachable_ag(B::AGBackend, xs::Vector{Int}, a_mask::BitVector, z_mask::BitVector)
+    n = length(B.nodes)
+    visited = falses(n, 3)
+    q = Tuple{Int,Int}[]
+
+    for x in xs
+        a_mask[x] || continue
+        for m = 1:3
+            if !visited[x, m]
+                visited[x, m] = true
+                push!(q, (x, m))
+            end
+        end
+    end
+
+    head = 1
+    while head <= length(q)
+        v, in_m = q[head]
+        head += 1
+        v_in_z = z_mask[v]
+        for p in _parents_slice(B, v)       # p→v: out=Head(2), nbr_in=Tail(1)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, p, 1)
+        end
+        for c in _children_slice(B, v)      # v→c: out=Tail(1), nbr_in=Head(2)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 1, c, 2)
+        end
+        for s in _spouses_slice(B, v)       # v↔s: out=Head(2), nbr_in=Head(2)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, s, 2)
+        end
+        for w in _undirected_slice(B, v)    # v---w: out=Undir(3), nbr_in=Undir(3)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 3, w, 3)
+        end
+    end
+
+    reached = falses(n)
+    for v = 1:n
+        reached[v] = visited[v, 1] || visited[v, 2] || visited[v, 3]
+    end
+    return reached
+end
