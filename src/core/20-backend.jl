@@ -24,6 +24,7 @@ function build_csr(nodes, edges::Vector{CausalEdge})
     n = length(ordered_nodes)
 
     incident_rows = [Int[] for _ = 1:n]
+    undirected_rows = [Int[] for _ = 1:n]
     parent_rows = [Int[] for _ = 1:n]
     child_rows = [Int[] for _ = 1:n]
 
@@ -41,6 +42,10 @@ function build_csr(nodes, edges::Vector{CausalEdge})
         elseif edge.src_end == Arrow && edge.dst_end == Tail
             push!(child_rows[dst_idx], src_idx)
             push!(parent_rows[src_idx], dst_idx)
+
+        elseif edge.src_end == Tail && edge.dst_end == Tail
+            push!(undirected_rows[src_idx], dst_idx)
+            push!(undirected_rows[dst_idx], src_idx)
         end
     end
 
@@ -48,6 +53,7 @@ function build_csr(nodes, edges::Vector{CausalEdge})
         ordered_nodes,
         index,
         csr_from_rows(incident_rows)...,
+        csr_from_rows(undirected_rows)...,
         csr_from_rows(parent_rows)...,
         csr_from_rows(child_rows)...,
     )

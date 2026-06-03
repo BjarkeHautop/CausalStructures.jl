@@ -131,7 +131,7 @@ function anteriors(g::PDAG, node::Symbol; open::Bool = true)
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))
     stack = collect(csr_slice(B.parents_colptr, B.parents_rowval, node_idx))
-    append!(stack, csr_slice(B.incident_colptr, B.incident_rowval, node_idx))
+    append!(stack, csr_slice(B.undirected_colptr, B.undirected_rowval, node_idx))
 
     while !isempty(stack)
         idx = pop!(stack)
@@ -143,7 +143,7 @@ function anteriors(g::PDAG, node::Symbol; open::Bool = true)
         end
         seen[idx] = true
         append!(stack, csr_slice(B.parents_colptr, B.parents_rowval, idx))
-        append!(stack, csr_slice(B.incident_colptr, B.incident_rowval, idx))
+        append!(stack, csr_slice(B.undirected_colptr, B.undirected_rowval, idx))
     end
 
     result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
@@ -165,7 +165,7 @@ function posteriors(g::PDAG, node::Symbol; open::Bool = true)
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))
     stack = collect(csr_slice(B.children_colptr, B.children_rowval, node_idx))
-    append!(stack, csr_slice(B.incident_colptr, B.incident_rowval, node_idx))
+    append!(stack, csr_slice(B.undirected_colptr, B.undirected_rowval, node_idx))
 
     while !isempty(stack)
         idx = pop!(stack)
@@ -177,7 +177,7 @@ function posteriors(g::PDAG, node::Symbol; open::Bool = true)
         end
         seen[idx] = true
         append!(stack, csr_slice(B.children_colptr, B.children_rowval, idx))
-        append!(stack, csr_slice(B.incident_colptr, B.incident_rowval, idx))
+        append!(stack, csr_slice(B.undirected_colptr, B.undirected_rowval, idx))
     end
 
     result = [B.nodes[i] for i in eachindex(seen) if seen[i]]

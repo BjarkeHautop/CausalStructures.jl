@@ -20,6 +20,8 @@ struct CSRBackend
     index::Dict{Symbol,Int}
     incident_colptr::Vector{Int}
     incident_rowval::Vector{Int}
+    undirected_colptr::Vector{Int}
+    undirected_rowval::Vector{Int}
     parents_colptr::Vector{Int}
     parents_rowval::Vector{Int}
     children_colptr::Vector{Int}
