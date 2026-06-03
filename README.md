@@ -8,8 +8,7 @@
 [![Docs workflow Status](https://github.com/BjarkeHautop/CausalGraphInterface.jl/actions/workflows/Docs.yml/badge.svg?branch=main)](https://github.com/BjarkeHautop/CausalGraphInterface.jl/actions/workflows/Docs.yml?query=branch%3Amain)
 [![BestieTemplate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JuliaBesties/BestieTemplate.jl/main/docs/src/assets/badge.json)](https://github.com/JuliaBesties/BestieTemplate.jl)
 
-
-provides a common interface for working with causal graphs in Julia. Graphs are validated during construction to ensure they satisfy the constraints of their graph class,
+CausalGraphInterface provides a common interface for working with causal graphs in Julia. Graphs are validated during construction to ensure they satisfy the constraints of their graph class,
 and the package provides a collection of common causal-graph operations and queries.
 
 The package is heavily inspired by the R package [caugi](https://caugi.org/), which I co-authored, and aims to bring similar functionality to the Julia ecosystem.
@@ -60,7 +59,7 @@ See the documentation for additional graph classes, supported operations, and im
 
 ## To Do
 
-Figure out a better syntax than using `directed(), undirected()`, etc. Ideally we do like in R with syntax similar to this
+Figure out a better syntax than using `directed(), undirected()`, etc. Ideally, we would support edge operators similar to the syntax used in R:
 
 ```r
 %-->% (directed)
@@ -70,6 +69,23 @@ Figure out a better syntax than using `directed(), undirected()`, etc. Ideally w
 %o--% (partially undirected)
 %o-o% (partial)
 ```
-etc.
+Such operators are easier to read and allow concise specification of multiple edges. For example (using notation from the somewhat hacky [InfixFunctions.jl](https://github.com/Ismael-VC/InfixFunctions.jl)):
+```julia
+graph = caugi(
+    :A |-->| :B + :C,
+	:B + :C |o-o| :D,
+    class = UNKNOWN
+)
+```
+would be equivalent to:
+```julia
+graph = caugi(
+	directed(:A, :B),
+	directed(:A, :C),
+	partial(:B, :D),
+	partial(:C, :D),
+	class = UNKNOWN
+)
+```
 
-Could do a hacky solution using https://github.com/Ismael-VC/InfixFunctions.jl or make feature request for them when package more developed in Julia, similar to this https://github.com/JuliaLang/julia/issues/36666 (possibly all length 4 if needed)?
+Another option is to eventually propose support for these operators (without `| |` around them) in Julia itself, similar to this issue https://github.com/JuliaLang/julia/issues/36666 (possibly all length 4 if needed)?
