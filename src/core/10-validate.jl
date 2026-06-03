@@ -1,15 +1,84 @@
 # Validation logic: edge-kind checks and directed-cycle detection
 
-function _unordered_edge_key(edge::CausalEdge)
-    return isless(edge.src, edge.dst) ? (edge.src, edge.dst) : (edge.dst, edge.src)
+abstract type GraphConstraints end
+
+struct DAGConstraints <: GraphConstraints end
+struct PDAGConstraints <: GraphConstraints end
+struct UGConstraints <: GraphConstraints end
+struct ADMGConstraints <: GraphConstraints end
+struct UNKNOWNConstraints <: GraphConstraints end
+
+function _satisfies_constraints(::DAGConstraints, g::CausalGraph)
+    all_directed = all(g.edges) do e
+        e.src_end == Tail && e.dst_end == Arrow
+    end
+
+    no_self_loops = all(g.edges) do e
+        e.src != e.dst
+    end
+
+    acyclic = !directed_cycle_detected(g)
+
+    return all_directed && no_self_loops && acyclic
 end
 
-function pdag_edge_kind_ok(edge::CausalEdge)
-    return is_directed(edge) || is_undirected(edge)
+function _satisfies_constraints(::PDAGConstraints, g::CausalGraph)
+    valid_edges = all(g.edges) do e
+        is_directed(e) || is_undirected(e)
+    end
+
+    no_self_loops = all(e -> e.src != e.dst, g.edges)
+
+    acyclic = !directed_cycle_detected(g)
+
+    return valid_edges && no_self_loops && acyclic
 end
 
-function admg_edge_kind_ok(edge::CausalEdge)
-    return is_directed(edge) || is_bidirected(edge)
+function _satisfies_constraints(::UGConstraints, g::CausalGraph)
+    valid_edges = all(g.edges) do e
+        is_undirected(e)
+    end
+
+    no_self_loops = all(e -> e.src != e.dst, g.edges)
+
+    return valid_edges && no_self_loops
+end
+
+function _satisfies_constraints(::ADMGConstraints, g::CausalGraph)
+    valid_edges = all(g.edges) do e
+        is_directed(e) || is_bidirected(e)
+    end
+
+    no_self_loops = all(e -> e.src != e.dst, g.edges)
+
+    acyclic = !directed_cycle_detected(g)
+
+    return valid_edges && no_self_loops && acyclic
+end
+
+function _satisfies_constraints(::UNKNOWNConstraints, g::UNKNOWN)
+    if g.simple
+        return is_simple(g; force_check = true)
+    end
+
+    return true
+end
+
+function _class_matches_or_satisfies(
+    g::CausalGraph,
+    ::Type{T},
+    constraints::GraphConstraints;
+    force_check::Bool = false,
+) where {T<:CausalGraph}
+    if g isa T && !force_check
+        return true
+    end
+
+    return _satisfies_constraints(constraints, g)
+end
+
+function is_dag(g::CausalGraph; force_check::Bool = false)
+    return _class_matches_or_satisfies(g, DAG, DAGConstraints(); force_check = force_check)
 end
 
 function directed_cycle_detected(g::CausalGraph)
@@ -45,103 +114,42 @@ function directed_cycle_detected(g::CausalGraph)
     return visited != length(nodes)
 end
 
-function validate!(g::CausalGraph)
-    error("Unsupported graph type: $(typeof(g))")
-end
-
-function validate!(g::DAG)
-    for e in g.edges
-        if e.src == e.dst
-            error("Self-loop detected at $(e.src)")
-        end
-
-        if !(e.src_end == Tail && e.dst_end == Arrow)
-            error(
-                "Invalid DAG edge detected: $(e.src) $(e.src_end) -> $(e.dst) $(e.dst_end)",
-            )
-        end
-    end
-
-    if directed_cycle_detected(g)
-        error("Directed cycle detected in DAG")
-    end
+function validate(g::CausalGraph, ::DAGConstraints)
+    _satisfies_constraints(DAGConstraints(), g) ||
+        error("Invalid DAG: failed DAG constraints")
 
     return g
 end
 
-function validate!(g::UG)
-    for e in g.edges
-        if e.src == e.dst
-            error("Self-loop detected at $(e.src)")
-        end
-
-        if !(e.src_end == Tail && e.dst_end == Tail)
-            error(
-                "Invalid UG edge detected: $(e.src) $(e.src_end) -> $(e.dst) $(e.dst_end)",
-            )
-        end
-    end
+function validate(g::CausalGraph, ::PDAGConstraints)
+    _satisfies_constraints(PDAGConstraints(), g) ||
+        error("Invalid PDAG: failed PDAG constraints")
 
     return g
 end
 
-function validate!(g::PDAG)
-    for e in g.edges
-        if e.src == e.dst
-            error("Self-loop detected at $(e.src)")
-        end
-
-        if !pdag_edge_kind_ok(e)
-            error(
-                "Invalid PDAG edge detected: $(e.src) $(e.src_end) -> $(e.dst) $(e.dst_end)",
-            )
-        end
-    end
-
-    if directed_cycle_detected(g)
-        error("Directed cycle detected in PDAG")
-    end
+function validate(g::CausalGraph, ::UGConstraints)
+    _satisfies_constraints(UGConstraints(), g) || error("Invalid UG: failed UG constraints")
 
     return g
 end
 
-function validate!(g::ADMG)
-    for e in g.edges
-        if e.src == e.dst
-            error("Self-loop detected at $(e.src)")
-        end
-
-        if !admg_edge_kind_ok(e)
-            error(
-                "Invalid ADMG edge detected: $(e.src) $(e.src_end) -> $(e.dst) $(e.dst_end)",
-            )
-        end
-    end
-
-    if directed_cycle_detected(g)
-        error("Directed cycle detected in ADMG")
-    end
+function validate(g::CausalGraph, ::ADMGConstraints)
+    _satisfies_constraints(ADMGConstraints(), g) ||
+        error("Invalid ADMG: failed ADMG constraints")
 
     return g
 end
 
-
-function validate!(g::UNKNOWN)
-    if g.simple
-        seen = Set{Tuple{Symbol,Symbol}}()
-
-        for e in g.edges
-            if e.src == e.dst
-                error("Self-loop detected at $(e.src)")
-            end
-
-            key = _unordered_edge_key(e)
-            if key in seen
-                error("Parallel edge detected between $(key[1]) and $(key[2])")
-            end
-            push!(seen, key)
-        end
-    end
+function validate(g::CausalGraph, ::UNKNOWNConstraints)
+    _satisfies_constraints(UNKNOWNConstraints(), g) ||
+        error("Invalid UNKNOWN: failed UNKNOWN constraints")
 
     return g
 end
+
+validate(g::CausalGraph, ::Type{DAG}) = validate(g, DAGConstraints())
+validate(g::CausalGraph, ::Type{PDAG}) = validate(g, PDAGConstraints())
+validate(g::CausalGraph, ::Type{UG}) = validate(g, UGConstraints())
+validate(g::CausalGraph, ::Type{ADMG}) = validate(g, ADMGConstraints())
+validate(g::CausalGraph, ::Type{UNKNOWN}) = validate(g, UNKNOWNConstraints())

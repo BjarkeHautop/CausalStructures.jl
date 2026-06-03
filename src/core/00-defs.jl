@@ -62,7 +62,7 @@ function _build_graph(
 ) where {T<:CausalGraph}
     backend = build_csr(nodes, edges)
     g = T(edges, backend, backend_kwargs...)
-    validate!(g)
+    validate(g, T)
     return g
 end
 
