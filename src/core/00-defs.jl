@@ -33,23 +33,9 @@ struct DAG <: CausalGraph
     backend::CSRBackend
 end
 
-function DAG(nodes, edges::Vector{CausalEdge})
-    backend = build_csr(nodes, edges)
-    g = DAG(edges, backend)
-    validate!(g)
-    return g
-end
-
 struct UG <: CausalGraph
     edges::Vector{CausalEdge}
     backend::CSRBackend
-end
-
-function UG(nodes, edges::Vector{CausalEdge})
-    backend = build_csr(nodes, edges)
-    g = UG(edges, backend)
-    validate!(g)
-    return g
 end
 
 struct PDAG <: CausalGraph
@@ -57,23 +43,9 @@ struct PDAG <: CausalGraph
     backend::CSRBackend
 end
 
-function PDAG(nodes, edges::Vector{CausalEdge})
-    backend = build_csr(nodes, edges)
-    g = PDAG(edges, backend)
-    validate!(g)
-    return g
-end
-
 struct ADMG <: CausalGraph
     edges::Vector{CausalEdge}
     backend::CSRBackend
-end
-
-function ADMG(nodes, edges::Vector{CausalEdge})
-    backend = build_csr(nodes, edges)
-    g = ADMG(edges, backend)
-    validate!(g)
-    return g
 end
 
 struct UNKNOWN <: CausalGraph
@@ -82,11 +54,36 @@ struct UNKNOWN <: CausalGraph
     simple::Bool
 end
 
-function UNKNOWN(nodes, edges::Vector{CausalEdge}; simple::Bool = true)
+function _build_graph(
+    ::Type{T},
+    nodes,
+    edges::Vector{CausalEdge},
+    backend_kwargs...,
+) where {T<:CausalGraph}
     backend = build_csr(nodes, edges)
-    g = UNKNOWN(edges, backend, simple)
+    g = T(edges, backend, backend_kwargs...)
     validate!(g)
     return g
+end
+
+function DAG(nodes, edges::Vector{CausalEdge})
+    return _build_graph(DAG, nodes, edges)
+end
+
+function UG(nodes, edges::Vector{CausalEdge})
+    return _build_graph(UG, nodes, edges)
+end
+
+function PDAG(nodes, edges::Vector{CausalEdge})
+    return _build_graph(PDAG, nodes, edges)
+end
+
+function ADMG(nodes, edges::Vector{CausalEdge})
+    return _build_graph(ADMG, nodes, edges)
+end
+
+function UNKNOWN(nodes, edges::Vector{CausalEdge}; simple::Bool = true)
+    return _build_graph(UNKNOWN, nodes, edges, simple)
 end
 
 struct GraphNode
