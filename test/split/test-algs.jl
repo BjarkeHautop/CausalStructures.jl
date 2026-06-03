@@ -19,7 +19,7 @@ using CausalGraphInterface
     @test exogenous_nodes(graph) == [:A]
     @test markov_blanket(graph, :A) == [:B, :C]
 
-    skeleton = CausalGraphInterface.skeleton(graph)
+    skeleton = skeleton(graph)
     @test skeleton isa UG
     @test has_edge(skeleton, :A, :B)
     @test has_edge(skeleton, :B, :A)
@@ -50,7 +50,7 @@ end
     @test exogenous_nodes(graph) == [:A, :C]
     @test exogenous_nodes(graph; undirected_as_parents = true) == [:A]
 
-    skeleton = CausalGraphInterface.skeleton(graph)
+    skeleton = skeleton(graph)
     @test skeleton isa UG
     @test has_edge(skeleton, :A, :B)
     @test has_edge(skeleton, :B, :C)

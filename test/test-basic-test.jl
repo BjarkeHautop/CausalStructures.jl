@@ -115,10 +115,10 @@ end
     @test exogenous_nodes(graph) == [:A]
     @test markov_blanket(graph, :A) == [:B, :C]
 
-    skeleton = CausalGraphInterface.skeleton(graph)
-    @test skeleton isa UG
-    @test has_edge(skeleton, :A, :B)
-    @test has_edge(skeleton, :B, :A)
+    skeleton_graph = skeleton(graph)
+    @test skeleton_graph isa UG
+    @test has_edge(skeleton_graph, :A, :B)
+    @test has_edge(skeleton_graph, :B, :A)
 
     moral = moralize(graph)
     @test moral isa UG
