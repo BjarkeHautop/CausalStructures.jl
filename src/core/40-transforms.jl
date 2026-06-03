@@ -116,15 +116,11 @@ build_graph(
     nodes::Set{Symbol},
     edges::Vector{CausalEdge};
     simple::Bool = true,
-) = UNKNOWN(nodes, edges; simple=simple)
+) = UNKNOWN(nodes, edges; simple = simple)
 
-function caugi(
-    items...;
-    class::Type{<:CausalGraph} = DAG,
-    simple::Bool = true,
-)
+function caugi(items...; class::Type{<:CausalGraph} = DAG, simple::Bool = true)
     nodes, edges = _caugi_collect(items...)
-    return build_graph(class, nodes, edges; simple=simple)
+    return build_graph(class, nodes, edges; simple = simple)
 end
 
 function _caugi_collect(items...)
@@ -139,11 +135,11 @@ function _caugi_collect(items...)
             push!(nodes, item.src)
             push!(nodes, item.dst)
 
-        # node wrapper
+            # node wrapper
         elseif item isa GraphNode
             push!(nodes, item.name)
 
-        # vector of edges
+            # vector of edges
         elseif item isa AbstractVector{<:CausalEdge}
             for e in item
                 push!(edges, e)

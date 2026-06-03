@@ -67,6 +67,7 @@ See the documentation for additional graph classes, supported operations, and im
 ## To Do
 
 Figure out a better syntax than using `directed(), undirected()`, etc. Ideally, we would support edge operators similar to the syntax used in R:
+
 ```r
 %-->% (directed)
 %---% (undirected)
@@ -75,23 +76,27 @@ Figure out a better syntax than using `directed(), undirected()`, etc. Ideally, 
 %o--% (partially undirected)
 %o-o% (partial)
 ```
+
 Such operators are easier to read and allow concise specification of multiple edges. Note, that especially for the partial edge types, no close unicode alternative exists.
 For example:
+
 ```julia
 graph = caugi(
     :A %-->% :B + :C,
-	:B + :C %o-o% :D;
+ :B + :C %o-o% :D;
     class = UNKNOWN
 )
 ```
+
 would be equivalent to:
+
 ```julia
 graph = caugi(
-	directed(:A, :B),
-	directed(:A, :C),
-	partial(:B, :D),
-	partial(:C, :D);
-	class = UNKNOWN
+ directed(:A, :B),
+ directed(:A, :C),
+ partial(:B, :D),
+ partial(:C, :D);
+ class = UNKNOWN
 )
 ```
 

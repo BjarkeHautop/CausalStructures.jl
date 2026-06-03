@@ -10,7 +10,7 @@ function csr_from_rows(rows::Vector{Vector{Int}})
         sort!(rows[i])
         unique!(rows[i])
         append!(rowval, rows[i])
-        colptr[i + 1] = length(rowval) + 1
+        colptr[i+1] = length(rowval) + 1
     end
 
     return colptr, rowval
@@ -23,9 +23,9 @@ function build_csr(nodes, edges::Vector{CausalEdge})
 
     n = length(ordered_nodes)
 
-    incident_rows = [Int[] for _ in 1:n]
-    parent_rows   = [Int[] for _ in 1:n]
-    child_rows    = [Int[] for _ in 1:n]
+    incident_rows = [Int[] for _ = 1:n]
+    parent_rows = [Int[] for _ = 1:n]
+    child_rows = [Int[] for _ = 1:n]
 
     for edge in edges
         src_idx = index[edge.src]
@@ -63,7 +63,7 @@ function node_index(g::CausalGraph, node::Symbol)
 end
 
 function csr_slice(colptr::Vector{Int}, rowval::Vector{Int}, idx::Int)
-    rowval[colptr[idx]:(colptr[idx + 1] - 1)]
+    rowval[colptr[idx]:(colptr[idx+1]-1)]
 end
 
 symbols_from_slice(B::CSRBackend, row_slice) = B.nodes[row_slice]
@@ -74,10 +74,7 @@ function adjacency(g::CausalGraph, node::Symbol)
 
     idx == 0 && error("Unknown node: $(node)")
 
-    symbols_from_slice(
-        B,
-        csr_slice(B.incident_colptr, B.incident_rowval, idx),
-    )
+    symbols_from_slice(B, csr_slice(B.incident_colptr, B.incident_rowval, idx))
 end
 
 neighbors(g::CausalGraph, node::Symbol) = adjacency(g, node)
@@ -88,10 +85,7 @@ function parents(g::CausalGraph, node::Symbol)
 
     idx == 0 && error("Unknown node: $(node)")
 
-    symbols_from_slice(
-        B,
-        csr_slice(B.parents_colptr, B.parents_rowval, idx),
-    )
+    symbols_from_slice(B, csr_slice(B.parents_colptr, B.parents_rowval, idx))
 end
 
 function children(g::CausalGraph, node::Symbol)
@@ -100,10 +94,7 @@ function children(g::CausalGraph, node::Symbol)
 
     idx == 0 && error("Unknown node: $(node)")
 
-    symbols_from_slice(
-        B,
-        csr_slice(B.children_colptr, B.children_rowval, idx),
-    )
+    symbols_from_slice(B, csr_slice(B.children_colptr, B.children_rowval, idx))
 end
 
 function has_edge(g::CausalGraph, src::Symbol, dst::Symbol)
@@ -115,9 +106,5 @@ function has_edge(g::CausalGraph, src::Symbol, dst::Symbol)
     src_idx == 0 && error("Unknown node: $(src)")
     dst_idx == 0 && error("Unknown node: $(dst)")
 
-    dst_idx in csr_slice(
-        B.incident_colptr,
-        B.incident_rowval,
-        src_idx,
-    )
+    dst_idx in csr_slice(B.incident_colptr, B.incident_rowval, src_idx)
 end
