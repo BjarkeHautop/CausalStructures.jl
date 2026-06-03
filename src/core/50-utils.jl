@@ -6,6 +6,7 @@ abstract type GraphConstraints end
 struct DAGConstraints <: GraphConstraints end
 struct PDAGConstraints <: GraphConstraints end
 struct UGConstraints <: GraphConstraints end
+struct ADMGConstraints <: GraphConstraints end
 
 function _satisfies_constraints(::DAGConstraints, g::CausalGraph)
     return all(is_directed, g.edges) && !directed_cycle_detected(g)
@@ -18,6 +19,11 @@ end
 
 function _satisfies_constraints(::UGConstraints, g::CausalGraph)
     return all(is_undirected, g.edges)
+end
+
+function _satisfies_constraints(::ADMGConstraints, g::CausalGraph)
+    return all(e -> is_directed(e) || is_bidirected(e), g.edges) &&
+           !directed_cycle_detected(g)
 end
 
 function _class_matches_or_satisfies(
@@ -47,6 +53,14 @@ end
 
 function is_ug(g::CausalGraph; force_check::Bool = false)
     return _class_matches_or_satisfies(g, UG, UGConstraints(); force_check = force_check)
+end
+
+function is_admg(g::CausalGraph; force_check::Bool = false)
+    if (g isa DAG || g isa ADMG) && !force_check
+        return true
+    end
+
+    return _satisfies_constraints(ADMGConstraints(), g)
 end
 
 function is_simple(g::UNKNOWN; force_check::Bool = false)
