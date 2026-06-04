@@ -597,11 +597,8 @@ end
 end
 
 @testitem "is_cpdag: generate_graph(CPDAG) produces valid CPDAGs" tags = [:unit] begin
-    # TODO: generate_graph(CPDAG) needs to compute the proper CPDAG of the
-    # equivalence class (skeleton + v-structures + meek_closure) rather than
-    # wrapping raw DAG edges. Mark broken until that is implemented.
     for seed = 1:10
         g = generate_graph(6; m = 5, class = CPDAG, seed = seed)
-        @test_broken is_cpdag(g)
+        @test is_cpdag(g)
     end
 end

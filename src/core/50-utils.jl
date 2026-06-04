@@ -78,7 +78,7 @@ function generate_graph(
     n::Integer;
     m::Union{Nothing,Integer} = nothing,
     p::Union{Nothing,Real} = nothing,
-    class::Type = DAG,
+    class::Union{Type{DAG},Type{CPDAG}} = DAG,
     seed::Union{Nothing,Integer} = nothing,
     rng = Random.GLOBAL_RNG,
 )
@@ -135,8 +135,10 @@ end
 _finalize_generate_graph(::Type{DAG}, node_set, node_items, edges) =
     caugi(edges, node_items...; class = DAG)
 
-_finalize_generate_graph(::Type{CPDAG}, node_set, node_items, edges) =
-    CPDAG(node_set, edges)
+function _finalize_generate_graph(::Type{CPDAG}, node_set, node_items, edges)
+    dag = DAG(node_set, edges)
+    return dag_to_cpdag(dag)
+end
 
 function simulate_data(
     g::DAG;

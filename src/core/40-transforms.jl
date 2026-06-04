@@ -510,6 +510,58 @@ function meek_closure(g::AbstractPDAG)
     return PDAG(Set(B.nodes), new_edges)
 end
 
+function dag_to_cpdag(g::DAG)
+    B = g.backend
+    n = length(B.nodes)
+
+    # Skeleton adjacency (symmetric, by node index)
+    adj = [Set{Int}() for _ = 1:n]
+    for i = 1:n
+        for p in _parents_slice(B, i)
+            push!(adj[i], p)
+            push!(adj[p], i)
+        end
+    end
+
+    # V-structure detection: orient a→b and c→b whenever a,c are both parents of b
+    # but a and c are not adjacent in the skeleton.
+    oriented = [Set{Int}() for _ = 1:n]
+    for b = 1:n
+        pa_b = collect(_parents_slice(B, b))
+        for i in eachindex(pa_b)
+            for j = (i+1):length(pa_b)
+                a, c = pa_b[i], pa_b[j]
+                c in adj[a] && continue
+                push!(oriented[a], b)
+                push!(oriented[c], b)
+            end
+        end
+    end
+
+    # Build initial PDAG: directed edges for compelled v-structure orientations,
+    # undirected edges for the remaining skeleton edges.
+    edges = CausalEdge[]
+    for a = 1:n
+        for b in oriented[a]
+            push!(edges, directed(B.nodes[a], B.nodes[b]))
+        end
+    end
+    seen_und = Set{Tuple{Int,Int}}()
+    for i = 1:n
+        for j in adj[i]
+            key = minmax(i, j)
+            key in seen_und && continue
+            push!(seen_und, key)
+            (j in oriented[i] || i in oriented[j]) && continue
+            push!(edges, undirected(B.nodes[key[1]], B.nodes[key[2]]))
+        end
+    end
+
+    pdag = PDAG(Set(B.nodes), edges)
+    result = meek_closure(pdag)
+    return CPDAG(Set(result.backend.nodes), result.edges)
+end
+
 # ── condition_marginalize ─────────────────────────────────────────────────────
 
 # Returns true iff a and b cannot be m-separated by any Z ⊆ other_nodes,
