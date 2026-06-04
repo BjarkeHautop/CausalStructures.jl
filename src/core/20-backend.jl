@@ -99,6 +99,9 @@ end
 build_backend(::Type{CPDAG}, nodes, edges::Vector{CausalEdge}) =
     build_backend(PDAG, nodes, edges)
 
+build_backend(::Type{MPDAG}, nodes, edges::Vector{CausalEdge}) =
+    build_backend(PDAG, nodes, edges)
+
 function build_backend(::Type{PDAG}, nodes, edges::Vector{CausalEdge})
     ordered_nodes = sort!(unique(collect(nodes)))
     index = Dict(n => i for (i, n) in enumerate(ordered_nodes))

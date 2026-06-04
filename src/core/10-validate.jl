@@ -6,6 +6,7 @@ struct UGConstraints <: GraphConstraints end
 struct ADMGConstraints <: GraphConstraints end
 struct AGConstraints <: GraphConstraints end
 struct CPDAGConstraints <: GraphConstraints end
+struct MPDAGConstraints <: GraphConstraints end
 struct UNKNOWNConstraints <: GraphConstraints end
 
 function directed_cycle_detected(g::CausalGraph)
@@ -113,6 +114,7 @@ end
 _fast_skip(g::CausalGraph, ::DAGConstraints) = g isa DAG
 _fast_skip(g::CausalGraph, ::PDAGConstraints) = g isa AbstractPDAG || g isa DAG || g isa UG
 _fast_skip(g::CausalGraph, ::CPDAGConstraints) = g isa CPDAG
+_fast_skip(g::CausalGraph, ::MPDAGConstraints) = g isa MPDAG || g isa CPDAG
 _fast_skip(g::CausalGraph, ::UGConstraints) = g isa UG
 _fast_skip(g::CausalGraph, ::ADMGConstraints) = g isa ADMG || g isa DAG
 _fast_skip(g::CausalGraph, ::AGConstraints) = g isa AG || g isa DAG
@@ -463,6 +465,19 @@ function _cpdag_arrows_protected(B::PDAGBackend, n::Int)
     return true
 end
 
+function validation_errors(::MPDAGConstraints, g::CausalGraph)
+    errors = validation_errors(PDAGConstraints(), g)
+    isempty(errors) || return errors
+
+    B = g.backend isa PDAGBackend ? g.backend : build_backend(PDAG, nodes(g), g.edges)
+    n = length(B.nodes)
+    n <= 1 && return errors
+
+    !_cpdag_meek_closed(B, n) && push!(errors, "Meek orientation rules would still fire")
+
+    return errors
+end
+
 function validation_errors(::CPDAGConstraints, g::CausalGraph)
     errors = validation_errors(PDAGConstraints(), g)
     isempty(errors) || return errors
@@ -489,6 +504,7 @@ end
 graph_class_name(::DAGConstraints) = "DAG"
 graph_class_name(::PDAGConstraints) = "PDAG"
 graph_class_name(::CPDAGConstraints) = "CPDAG"
+graph_class_name(::MPDAGConstraints) = "MPDAG"
 graph_class_name(::UGConstraints) = "UG"
 graph_class_name(::ADMGConstraints) = "ADMG"
 graph_class_name(::AGConstraints) = "AG"
@@ -508,6 +524,8 @@ validate(g::CausalGraph, ::Type{DAG}) = validate(g, DAGConstraints())
 validate(g::CausalGraph, ::Type{PDAG}) = validate(g, PDAGConstraints())
 
 validate(g::CausalGraph, ::Type{CPDAG}) = validate(g, CPDAGConstraints())
+
+validate(g::CausalGraph, ::Type{MPDAG}) = validate(g, MPDAGConstraints())
 
 validate(g::CausalGraph, ::Type{UG}) = validate(g, UGConstraints())
 

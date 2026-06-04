@@ -91,7 +91,7 @@ abstract type CausalGraph end
     AbstractPDAG <: CausalGraph
 
 Abstract supertype for partially directed acyclic graphs. Concrete subtypes:
-[`PDAG`](@ref) and [`CPDAG`](@ref).
+[`PDAG`](@ref), [`CPDAG`](@ref), and [`MPDAG`](@ref).
 """
 abstract type AbstractPDAG <: CausalGraph end
 
@@ -145,6 +145,20 @@ invariant within the MEC.
 See [`caugi`](@ref) for construction of graphs.
 """
 struct CPDAG <: AbstractPDAG
+    edges::Vector{CausalEdge}
+    backend::PDAGBackend
+end
+
+"""
+    MPDAG
+
+A Maximally Partially Directed Acyclic Graph. A PDAG that is closed under Meek's
+orientation rules R1-R4: no further edge orientation can be implied. MPDAGs arise
+when background knowledge (forced edge orientations) is present.
+
+See [`caugi`](@ref) for construction of graphs.
+"""
+struct MPDAG <: AbstractPDAG
     edges::Vector{CausalEdge}
     backend::PDAGBackend
 end
@@ -219,6 +233,10 @@ end
 
 function CPDAG(nodes, edges::Vector{CausalEdge})
     return _build_graph(CPDAG, nodes, edges)
+end
+
+function MPDAG(nodes, edges::Vector{CausalEdge})
+    return _build_graph(MPDAG, nodes, edges)
 end
 
 function ADMG(nodes, edges::Vector{CausalEdge})

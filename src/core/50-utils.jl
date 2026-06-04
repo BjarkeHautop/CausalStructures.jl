@@ -50,6 +50,31 @@ false
 is_cpdag(g::CausalGraph) = _class_matches_or_satisfies(g, CPDAGConstraints())
 
 """
+    is_mpdag(g::CausalGraph) -> Bool
+
+Check whether `g` satisfies the structural constraints of an MPDAG
+(a PDAG closed under Meek's orientation rules R1–R4), independent of its
+declared graph class.
+
+Every [`CPDAG`](@ref) is also an MPDAG; the converse does not hold in general.
+
+# Examples
+
+```jldoctest
+julia> mpdag = caugi(directed(:A, :B), directed(:B, :C); class = MPDAG);
+
+julia> is_mpdag(mpdag)
+true
+
+julia> pdag = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG);
+
+julia> is_mpdag(pdag)
+false
+```
+"""
+is_mpdag(g::CausalGraph) = _class_matches_or_satisfies(g, MPDAGConstraints())
+
+"""
     is_ug(g::CausalGraph) -> Bool
 
 Check whether `g` satisfies the structural constraints of the given graph class,
