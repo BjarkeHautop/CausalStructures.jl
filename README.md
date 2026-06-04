@@ -10,7 +10,7 @@
 
 CausalGraphInterface.jl provides a type-driven interface for representing, validating, and manipulating causal graphs. Rather than treating every graph as an arbitrary collection of nodes and edges, graph classes explicitly encode their structural assumptions and invariants.
 
-The package is inspired by the R package [caugi](https://caugi.org/), which I co-authored, and aims to provide a similarly expressive and extensible foundation for causal graph analysis in Julia.
+The package is inspired by the R package [caugi](https://caugi.org/) and aims to provide a similarly expressive and extensible foundation for causal graphs in Julia.
 
 ## Design Philosophy
 
@@ -20,21 +20,30 @@ Different causal graph classes represent different assumptions, both on the allo
 
 Currently implemented:
 
-- Directed Acyclic Graph (`DAG`)
-- Undirected Graph (`UG`)
-- Partially Directed Acyclic Graph (`PDAG`)
-- Completed Partially Directed Acyclic Graph (`CPDAG`)
-- Acyclic Directed Mixed Graph (`ADMG`)
+- Directed Acyclic Graphs (`DAG`)
+- Undirected Graphs (`UG`)
+- Partially Directed Acyclic Graphs (`PDAG`)
+- Completed Partially Directed Acyclic Graphs (`CPDAG`)
+- Acyclic Directed Mixed Graphs (`ADMG`)
 - Ancestral Graphs (`AG`)
 - Arbitrary graphs (`UNKNOWN`)
 
-`UNKNOWN` can be used when a graph does not fit an existing causal graph class or when experimenting with new graph types.
+`UNKNOWN` can be used for currently unsupported graph classes.
 
-We plan on extending to more graphs, such as
+Planned future additions include
 
-- Maximally Oriented Partially Directed Acyclic Graph (`MPDAG`)
-- Maximal Ancestral Graph (`MAG`)
-- Partial Ancestral Graph (`PAG`)
+- Maximally Oriented Partially Directed Acyclic Graphs (`MPDAG`)
+- Maximal Ancestral Graphs (`MAG`)
+- Partial Ancestral Graphs (`PAG`)
+
+The following edge types exists:
+
+- `directed()`
+- `undirected()`
+- `bidirected()`
+- `partially_directed()`
+- `partially_undirected()`
+- `partial()`
 
 ## Quick Start
 
