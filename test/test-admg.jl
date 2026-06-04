@@ -9,7 +9,7 @@ using CausalGraphInterface
 @testitem "is_admg identifies ADMG graphs" tags = [:unit] begin
     # Pure DAG is also a valid ADMG
     dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    @test is_admg(dag; force_check = true)
+    @test is_admg(dag)
 
     admg = caugi(directed(:A, :B), bidirected(:A, :C); class = ADMG)
     @test is_admg(admg)

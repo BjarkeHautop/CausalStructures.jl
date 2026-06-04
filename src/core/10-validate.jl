@@ -112,13 +112,9 @@ end
 function _class_matches_or_satisfies(
     g::CausalGraph,
     ::Type{T},
-    constraints::GraphConstraints;
-    force_check::Bool = false,
+    constraints::GraphConstraints,
 ) where {T<:CausalGraph}
-    if g isa T && !force_check
-        return true
-    end
-
+    g isa T && return true
     return _satisfies_constraints(constraints, g)
 end
 

@@ -74,7 +74,7 @@ end
 @testitem "is_ug works" tags = [:unit] begin
     g = caugi(undirected(:A, :B), undirected(:B, :C), undirected(:C, :D); class = UG)
     @test is_ug(g)
-    @test is_ug(g; force_check = true)
+    @test is_ug(g)
 
     g2 = caugi(directed(:A, :B), undirected(:B, :C), undirected(:C, :D); class = PDAG)
     @test !is_ug(g2)
@@ -91,14 +91,14 @@ end
 @testitem "is_admg works" tags = [:unit] begin
     # A pure DAG is also a valid ADMG
     g = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    @test is_admg(g; force_check = true)
+    @test is_admg(g)
 
     g2 = caugi(directed(:A, :B), bidirected(:A, :C); class = ADMG)
     @test is_admg(g2)
 
     # UG with only undirected edges is NOT an ADMG
     g3 = caugi(undirected(:A, :B); class = UG)
-    @test !is_admg(g3; force_check = true)
+    @test !is_admg(g3)
 end
 
 # ── parents / children / neighbors ───────────────────────────────────────────

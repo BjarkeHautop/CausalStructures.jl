@@ -1,35 +1,24 @@
-function is_dag(g::CausalGraph; force_check::Bool = false)
-    return _class_matches_or_satisfies(g, DAG, DAGConstraints(); force_check = force_check)
+function is_dag(g::CausalGraph)
+    return _class_matches_or_satisfies(g, DAG, DAGConstraints())
 end
 
-function is_pdag(g::CausalGraph; force_check::Bool = false)
-    if (g isa DAG || g isa PDAG) && !force_check
-        return true
-    end
-
+function is_pdag(g::CausalGraph)
+    (g isa DAG || g isa PDAG) && return true
     return _satisfies_constraints(PDAGConstraints(), g)
 end
 
-function is_ug(g::CausalGraph; force_check::Bool = false)
-    return _class_matches_or_satisfies(g, UG, UGConstraints(); force_check = force_check)
+function is_ug(g::CausalGraph)
+    return _class_matches_or_satisfies(g, UG, UGConstraints())
 end
 
-function is_admg(g::CausalGraph; force_check::Bool = false)
-    if (g isa DAG || g isa ADMG) && !force_check
-        return true
-    end
-
+function is_admg(g::CausalGraph)
+    (g isa DAG || g isa ADMG) && return true
     return _satisfies_constraints(ADMGConstraints(), g)
 end
 
-function is_ag(g::CausalGraph; force_check::Bool = false)
-    (g isa AG || g isa DAG) && !force_check && return true
-    try
-        AG(Set(nodes(g)), g.edges)
-        return true
-    catch
-        return false
-    end
+function is_ag(g::CausalGraph)
+    (g isa AG || g isa DAG) && return true
+    return _satisfies_constraints(AGConstraints(), g)
 end
 
 function is_simple(g::UNKNOWN; force_check::Bool = false)
