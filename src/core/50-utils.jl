@@ -1,13 +1,84 @@
 is_dag(g::CausalGraph) = _class_matches_or_satisfies(g, DAGConstraints())
 
+"""
+    is_pdag(g::CausalGraph) -> Bool
+
+Check whether `g` satisfies the structural constraints of the given graph class,
+independent of its declared graph class.
+
+# Examples
+
+```jldoctest
+julia> pdag = caugi(directed(:A, :B), directed(:B, :C); class = PDAG);
+
+julia> is_dag(pdag)
+true
+```
+"""
 is_pdag(g::CausalGraph) = _class_matches_or_satisfies(g, PDAGConstraints())
 
+"""
+    is_cpdag(g::CausalGraph) -> Bool
+
+Check whether `g` satisfies the structural constraints of the given graph class,
+independent of its declared graph class.
+
+# Examples
+
+```jldoctest
+julia> dag = caugi(directed(:A, :B); class = DAG);
+julia> is_cpdag(dag)
+false
+```
+"""
 is_cpdag(g::CausalGraph) = _class_matches_or_satisfies(g, CPDAGConstraints())
 
+"""
+    is_ug(g::CausalGraph) -> Bool
+
+Check whether `g` satisfies the structural constraints of the given graph class,
+independent of its declared graph class.
+
+# Examples
+
+```jldoctest
+julia> pdag = caugi(undirected(:A, :B); class = PDAG);
+julia> is_ug(pdag)
+true
+```
+"""
 is_ug(g::CausalGraph) = _class_matches_or_satisfies(g, UGConstraints())
 
+"""
+    is_admg(g::CausalGraph) -> Bool
+
+Check whether `g` satisfies the structural constraints of the given graph class,
+independent of its declared graph class.
+
+# Examples
+
+```jldoctest
+julia> pdag = caugi(bidirected(:A, :B); class = UNKNOWN);
+julia> is_admg(pdag)
+true
+```
+"""
 is_admg(g::CausalGraph) = _class_matches_or_satisfies(g, ADMGConstraints())
 
+"""
+    is_ag(g::CausalGraph) -> Bool
+
+Check whether `g` satisfies the structural constraints of the given graph class,
+independent of its declared graph class.
+
+# Examples
+
+```jldoctest
+julia> pdag = caugi(bidirected(:A, :B); class = UNKNOWN);
+julia> is_ag(pdag)
+true
+```
+"""
 is_ag(g::CausalGraph) = _class_matches_or_satisfies(g, AGConstraints())
 
 function is_simple(g::UNKNOWN; force_check::Bool = false)
