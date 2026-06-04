@@ -2,7 +2,7 @@ using Preferences
 using Random
 using Statistics
 
-# When true (default), traversal functions use the open definition: the queried
+# When true, traversal functions use the open definition: the queried
 # node itself is not included in the result. Set to false via
 #   set_preferences!(CausalGraphInterface, "open" => false)
 # then restart Julia to use the closed definition by default.
