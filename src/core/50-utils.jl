@@ -18,7 +18,14 @@ end
 
 function is_ag(g::CausalGraph)
     (g isa AG || g isa DAG) && return true
-    return _satisfies_constraints(AGConstraints(), g)
+    # Need to explicitly promote to AG, since _anterior_bitmask expects an
+    # AG type for bitmask checks.
+    try
+        AG(Set(nodes(g)), g.edges)
+        return true
+    catch
+        return false
+    end
 end
 
 function is_simple(g::UNKNOWN; force_check::Bool = false)
