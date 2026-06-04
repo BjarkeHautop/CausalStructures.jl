@@ -169,6 +169,29 @@ is_bidirected(edge::CausalEdge) = edge_kind(edge) == (Arrow, Arrow)
 #   3. add a↔b for all pairs a,b ∈ Ch(v)
 #   4. remove v
 # Returns an ADMG over the observed (non-latent) nodes.
+"""
+    latent_project(g::DAG, latents::AbstractVector{Symbol}) -> ADMG
+
+Project out latent (unobserved) variables from `g` to produce an
+[`ADMG`](@ref) over the observed variables only.
+
+Each latent node `v` is eliminated by vertex substitution: directed edges
+`p --> c` are added for every parent `p` and child `c` of `v`, and bidirected
+edges `s <-> c` are added for every sibling `s` (bidirected neighbor) and child
+`c` of `v`. All pairs of children of `v` also become bidirected-connected.
+
+# Examples
+
+```jldoctest
+julia> dag = caugi(directed(:U, :X), directed(:U, :Y), directed(:X, :Y); class = DAG);
+
+julia> latent_project(dag, [:U])
+ADMG with 2 nodes and 2 edges:
+  nodes: X, Y
+  edges:
+    X --> Y, X <-> Y
+```
+"""
 function latent_project(g::DAG, latents::AbstractVector{Symbol})
     B = g.backend
     n = length(B.nodes)
