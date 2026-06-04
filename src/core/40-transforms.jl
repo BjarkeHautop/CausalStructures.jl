@@ -277,6 +277,25 @@ function latent_project(g::DAG, latents::AbstractVector{Symbol})
     return ADMG(new_nodes, new_edges)
 end
 
+"""
+    exogenize(g::DAG, nodes::AbstractVector{Symbol}) -> DAG
+
+Return a copy of `g` with each node in `nodes` made exogenous: all incoming
+edges to that node are removed, and its parents are connected directly to its
+children to preserve reachability.
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+
+julia> g2 = exogenize(g, [:B])
+DAG with 3 nodes and 2 edges:
+  nodes: A, B, C
+  edges:
+    A --> C, B --> C
+```
+"""
 function exogenize(g::DAG, nodes_to_exo::AbstractVector{Symbol})
     B = g.backend
     n = length(B.nodes)
