@@ -342,6 +342,45 @@ end
 
 # ── normalize_latent_structure ────────────────────────────────────────────────
 
+"""
+    normalize_latent_structure(g::DAG, latents::AbstractVector{Symbol}) -> DAG
+
+Normalize the latent structure of `g` while preserving the induced marginal
+model over the observed variables. Applies the following steps (Evans 2016,
+Lemmas 1-3):
+
+1. Exogenize all latent nodes (remove their incoming edges, rerouting through
+   their parents).
+2. Remove latent nodes with at most one active child (they induce no
+   confounding).
+3. Remove latent nodes whose child set is a strict subset of another latent
+   node's child set.
+
+# References
+
+Evans, R. J. (2016). Graphs for margins of Bayesian networks. *Scandinavian
+Journal of Statistics*, 43(3):625-648.
+
+# Examples
+
+```jldoctest
+julia> dag = caugi(
+    directed(:A, :U),
+    directed(:U, :X),
+    directed(:U, :Y),
+    directed(:U, :Z),
+    directed(:U2,:Y),
+    directed(:U2, :Z);
+    class = DAG,
+);
+
+julia> result = normalize_latent_structure(dag, [:U, :U2])
+DAG with 5 nodes and 6 edges:
+  nodes: A, U, X, Y, Z
+  edges:
+    A --> X, A --> Y, A --> Z, U --> X, U --> Y, U --> Z
+```
+"""
 function normalize_latent_structure(g::DAG, latents::AbstractVector{Symbol})
     B = g.backend
     n = length(B.nodes)
