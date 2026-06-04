@@ -270,6 +270,26 @@ function anteriors(g::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     return open ? result : [node; result]
 end
 
+function anteriors(g::AG, node::Symbol; open::Bool = _OPEN_DEFAULT)
+    B = g.backend
+    node_idx = node_index(g, node)
+    seen = falses(length(B.nodes))
+    stack = collect(_parents_slice(B, node_idx))
+    append!(stack, _undirected_slice(B, node_idx))
+
+    while !isempty(stack)
+        idx = pop!(stack)
+        idx == node_idx && continue
+        seen[idx] && continue
+        seen[idx] = true
+        append!(stack, _parents_slice(B, idx))
+        append!(stack, _undirected_slice(B, idx))
+    end
+
+    result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
+    return open ? result : [node; result]
+end
+
 """
     posteriors(g::Union{DAG,AbstractPDAG,AG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
 
@@ -311,6 +331,26 @@ julia> posteriors(pdag, :C)  # C reaches B via undirected edge only
 posteriors(g::DAG, node::Symbol; open::Bool = _OPEN_DEFAULT) = descendants(g, node; open)
 
 function posteriors(g::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
+    B = g.backend
+    node_idx = node_index(g, node)
+    seen = falses(length(B.nodes))
+    stack = collect(_children_slice(B, node_idx))
+    append!(stack, _undirected_slice(B, node_idx))
+
+    while !isempty(stack)
+        idx = pop!(stack)
+        idx == node_idx && continue
+        seen[idx] && continue
+        seen[idx] = true
+        append!(stack, _children_slice(B, idx))
+        append!(stack, _undirected_slice(B, idx))
+    end
+
+    result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
+    return open ? result : [node; result]
+end
+
+function posteriors(g::AG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = g.backend
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))
@@ -414,6 +454,31 @@ function markov_blanket(g::ADMG, node::Symbol)
     return [B.nodes[i] for i in eachindex(seen) if seen[i]]
 end
 
+function markov_blanket(g::AG, node::Symbol)
+    B = g.backend
+    node_idx = node_index(g, node)
+    seen = falses(length(B.nodes))
+
+    for parent_idx in _parents_slice(B, node_idx)
+        seen[parent_idx] = true
+    end
+    for child_idx in _children_slice(B, node_idx)
+        seen[child_idx] = true
+        for parent_idx in _parents_slice(B, child_idx)
+            parent_idx != node_idx && (seen[parent_idx] = true)
+        end
+    end
+    for spouse_idx in _spouses_slice(B, node_idx)
+        seen[spouse_idx] = true
+    end
+    for nbr_idx in _undirected_slice(B, node_idx)
+        seen[nbr_idx] = true
+    end
+
+    seen[node_idx] = false
+    return [B.nodes[i] for i in eachindex(seen) if seen[i]]
+end
+
 """
     spouses(g::Union{ADMG,AG}, node::Symbol) -> Vector{Symbol}
 
@@ -502,73 +567,4 @@ function districts(g::ADMG)
         push!(result[c], B.nodes[i])
     end
     return result
-end
-
-# ── AG traversal ───────────────────────────────────────────────────────────────
-
-# Anteriors: nodes reachable from `node` via directed parents or undirected edges.
-function anteriors(g::AG, node::Symbol; open::Bool = _OPEN_DEFAULT)
-    B = g.backend
-    node_idx = node_index(g, node)
-    seen = falses(length(B.nodes))
-    stack = collect(_parents_slice(B, node_idx))
-    append!(stack, _undirected_slice(B, node_idx))
-
-    while !isempty(stack)
-        idx = pop!(stack)
-        idx == node_idx && continue
-        seen[idx] && continue
-        seen[idx] = true
-        append!(stack, _parents_slice(B, idx))
-        append!(stack, _undirected_slice(B, idx))
-    end
-
-    result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
-    return open ? result : [node; result]
-end
-
-# Posteriors: nodes reachable from `node` via directed children or undirected edges.
-function posteriors(g::AG, node::Symbol; open::Bool = _OPEN_DEFAULT)
-    B = g.backend
-    node_idx = node_index(g, node)
-    seen = falses(length(B.nodes))
-    stack = collect(_children_slice(B, node_idx))
-    append!(stack, _undirected_slice(B, node_idx))
-
-    while !isempty(stack)
-        idx = pop!(stack)
-        idx == node_idx && continue
-        seen[idx] && continue
-        seen[idx] = true
-        append!(stack, _children_slice(B, idx))
-        append!(stack, _undirected_slice(B, idx))
-    end
-
-    result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
-    return open ? result : [node; result]
-end
-
-function markov_blanket(g::AG, node::Symbol)
-    B = g.backend
-    node_idx = node_index(g, node)
-    seen = falses(length(B.nodes))
-
-    for parent_idx in _parents_slice(B, node_idx)
-        seen[parent_idx] = true
-    end
-    for child_idx in _children_slice(B, node_idx)
-        seen[child_idx] = true
-        for parent_idx in _parents_slice(B, child_idx)
-            parent_idx != node_idx && (seen[parent_idx] = true)
-        end
-    end
-    for spouse_idx in _spouses_slice(B, node_idx)
-        seen[spouse_idx] = true
-    end
-    for nbr_idx in _undirected_slice(B, node_idx)
-        seen[nbr_idx] = true
-    end
-
-    seen[node_idx] = false
-    return [B.nodes[i] for i in eachindex(seen) if seen[i]]
 end
