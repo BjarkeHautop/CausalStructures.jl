@@ -24,6 +24,7 @@ Currently implemented:
 - Undirected Graphs (`UG`)
 - Partially Directed Acyclic Graphs (`PDAG`)
 - Completed Partially Directed Acyclic Graphs (`CPDAG`)
+- Maximally Oriented Partially Directed Acyclic Graphs (`MPDAG`)
 - Acyclic Directed Mixed Graphs (`ADMG`)
 - Ancestral Graphs (`AG`)
 - Arbitrary graphs (`UNKNOWN`)
@@ -32,7 +33,6 @@ Currently implemented:
 
 Planned future additions include
 
-- Maximally Oriented Partially Directed Acyclic Graphs (`MPDAG`)
 - Maximal Ancestral Graphs (`MAG`)
 - Partial Ancestral Graphs (`PAG`)
 
