@@ -696,6 +696,58 @@ build_graph(
     simple::Bool = true,
 ) = UNKNOWN(nodes, edges; simple = simple)
 
+"""
+    caugi(items...; class::Type{<:CausalGraph}=DAG, simple::Bool=true) -> CausalGraph
+
+Construct a causal graph from edges and optionally isolated nodes.
+
+`items` may be any combination of:
+- [`CausalEdge`](@ref) values from edge constructors (`directed`, `undirected`,
+  `bidirected`, `partially_directed`, `partially_undirected`, `partial`)
+- Values from [`node`](@ref) (to include isolated nodes)
+- `AbstractVector{<:CausalEdge}` (a pre-collected vector of edges)
+
+The `class` keyword selects the graph type, which determines which edge types are
+valid and what structural invariants are enforced on construction. Defaults to `DAG`.
+
+`simple` only applies to [`UNKNOWN`](@ref) graphs; set `simple = false` to allow
+multiple edges between the same pair of nodes.
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+
+julia> nodes(g)
+3-element Vector{Symbol}:
+ :A
+ :B
+ :C
+
+julia> admg = caugi(directed(:X, :Y), bidirected(:X, :Y); class = ADMG);
+
+julia> nodes(admg)
+2-element Vector{Symbol}:
+ :X
+ :Y
+
+julia> g_iso = caugi(directed(:A, :B), node(:C); class = DAG);
+
+julia> nodes(g_iso)
+3-element Vector{Symbol}:
+ :A
+ :B
+ :C
+
+julia> ug = caugi(undirected(:A, :B), undirected(:B, :C); class = UG);
+
+julia> nodes(ug)
+3-element Vector{Symbol}:
+ :A
+ :B
+ :C
+```
+"""
 function caugi(items...; class::Type{<:CausalGraph} = DAG, simple::Bool = true)
     nodes, edges = _caugi_collect(items...)
     return build_graph(class, nodes, edges; simple = simple)

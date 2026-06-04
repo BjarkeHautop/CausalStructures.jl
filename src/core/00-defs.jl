@@ -8,6 +8,14 @@
     Circle
 end
 
+"""
+    CausalEdge
+
+An edge between two nodes, specified by source (`src`), destination (`dst`), and
+endpoint marks at each end (`src_end`, `dst_end`). Use the edge constructor functions
+(`directed`, `undirected`, `bidirected`, etc.) rather than constructing `CausalEdge`
+directly.
+"""
 struct CausalEdge
     src::Symbol
     dst::Symbol
@@ -70,40 +78,115 @@ struct UNKNOWNBackend <: CausalBackend
     rowval::Vector{Int}
 end
 
+"""
+    CausalGraph
+
+Abstract supertype for all causal graph classes. Concrete subtypes: [`DAG`](@ref),
+[`UG`](@ref), [`PDAG`](@ref), [`CPDAG`](@ref), [`ADMG`](@ref), [`AG`](@ref),
+and [`UNKNOWN`](@ref).
+"""
 abstract type CausalGraph end
 
+"""
+    AbstractPDAG <: CausalGraph
+
+Abstract supertype for partially directed acyclic graphs. Concrete subtypes:
+[`PDAG`](@ref) and [`CPDAG`](@ref).
+"""
 abstract type AbstractPDAG <: CausalGraph end
 
+"""
+    DAG
+
+A Directed Acyclic Graph. Directed edges only, and no directed cycles allowed.
+
+See [`caugi`](@ref) for construction of graphs.
+"""
 struct DAG <: CausalGraph
     edges::Vector{CausalEdge}
     backend::DAGBackend
 end
 
+"""
+    UG
+
+An Undirected Graph. Undirected edges only.
+
+See [`caugi`](@ref) for construction of graphs.
+"""
 struct UG <: CausalGraph
     edges::Vector{CausalEdge}
     backend::UGBackend
 end
 
+"""
+    PDAG
+
+A Partially Directed Acyclic Graph.
+Directed and undirected edges only, and no directed cycles allowed.
+
+See [`caugi`](@ref) for construction of graphs.
+"""
 struct PDAG <: AbstractPDAG
     edges::Vector{CausalEdge}
     backend::PDAGBackend
 end
 
+"""
+    CPDAG
+
+A Completed Partially Directed Acyclic Graph. The unique graph representing a Markov
+equivalence class (MEC) of DAGs. Directed edges represent compelled orientations shared
+by all DAGs in the class. Undirected edges represent adjacencies whose orientation
+differs across DAGs in the class.
+Consequently, every edge is directed exactly when its orientation is
+invariant within the MEC.
+
+See [`caugi`](@ref) for construction of graphs.
+"""
 struct CPDAG <: AbstractPDAG
     edges::Vector{CausalEdge}
     backend::PDAGBackend
 end
 
+"""
+    ADMG
+
+An Acyclic Directed Mixed Graph. Directed and bidirected edges only,
+and no directed cycles allowed.
+
+See [`caugi`](@ref) for construction of graphs.
+"""
 struct ADMG <: CausalGraph
     edges::Vector{CausalEdge}
     backend::ADMGBackend
 end
 
+"""
+    AG
+
+An Ancestral Graph. Directed, undirected, and bidirected edges only.
+It contains no directed cycles, and if `X <-> Y` then neither `X` is an ancestor of
+`Y` nor `Y` of `X`. Additionally, vertices incident to an undirected edge have no
+arrowheads pointing at them on any adjacent edge (i.e., no parents or spouses).
+
+See [`caugi`](@ref) for construction of graphs.
+"""
 struct AG <: CausalGraph
     edges::Vector{CausalEdge}
     backend::AGBackend
 end
 
+"""
+    UNKNOWN
+
+A graph with no structural constraints enforced. Accepts all edge types. Intended as a
+fallback for graph classes not yet natively supported.
+
+Set `simple = false` to allow multiple edges between the same pair of nodes.
+
+See [`caugi`](@ref) for construction of graphs.
+"""
 struct UNKNOWN <: CausalGraph
     edges::Vector{CausalEdge}
     backend::UNKNOWNBackend
@@ -154,4 +237,9 @@ struct GraphNode
     name::Symbol
 end
 
+"""
+    node(name::Symbol) -> GraphNode
+
+Wrap a symbol as an isolated node for inclusion in [`caugi`](@ref).
+"""
 node(x::Symbol) = GraphNode(x)
