@@ -166,9 +166,12 @@ end
 """
     exogenous_nodes(g::Union{DAG,ADMG,AG}) -> Vector{Symbol}
     exogenous_nodes(g::AbstractPDAG; undirected_as_parents = false) -> Vector{Symbol}
+    exogenous_nodes(g::UG) -> Vector{Symbol}
 
-Return all exogenous nodes in `g`: nodes that have no parents (no incoming
-directed edges).
+Return all exogenous nodes in `g`: nodes with no incoming directed edges.
+
+For [`UG`](@ref), where no directed edges exist, a node is considered exogenous
+if and only if it is isolated (no neighbors at all).
 
 For [`PDAG`](@ref) and [`CPDAG`](@ref), the `undirected_as_parents` keyword
 controls how undirected edges are treated. When `true`, a node incident to any
@@ -182,6 +185,12 @@ julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 julia> exogenous_nodes(g)
 1-element Vector{Symbol}:
  :A
+
+julia> ug = caugi(undirected(:A, :B), node(:C); class = UG);
+
+julia> exogenous_nodes(ug)  # only the isolated node C
+1-element Vector{Symbol}:
+ :C
 
 julia> pdag = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG);
 
@@ -198,6 +207,11 @@ julia> exogenous_nodes(pdag, undirected_as_parents = true)
 function exogenous_nodes(g::Union{DAG,ADMG,AG})
     B = g.backend
     return [B.nodes[i] for i in eachindex(B.nodes) if isempty(_parents_slice(B, i))]
+end
+
+function exogenous_nodes(g::UG)
+    B = g.backend
+    return [B.nodes[i] for i in eachindex(B.nodes) if isempty(_undirected_slice(B, i))]
 end
 
 function exogenous_nodes(g::AbstractPDAG; undirected_as_parents::Bool = false)

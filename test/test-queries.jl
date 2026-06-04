@@ -301,9 +301,11 @@ end
     @test Set(exogenous_nodes(g)) == Set([:B, :C])
 end
 
-@testitem "exogenous_nodes not implemented for UG (broken)" tags = [:unit] begin
+@testitem "exogenous_nodes works on UG" tags = [:unit] begin
     g = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
-    @test_broken !isempty(exogenous_nodes(g))
+    @test isempty(exogenous_nodes(g))
+    g_iso = caugi(undirected(:A, :B), node(:C); class = UG)
+    @test exogenous_nodes(g_iso) == [:C]
 end
 
 # ── anteriors / posteriors ────────────────────────────────────────────────────
