@@ -185,7 +185,7 @@ end
 # ── m_separated (AG) ──────────────────────────────────────────────────────────
 
 # True if `from` has an arrowhead pointing into `at` (from is a parent or spouse of at).
-@inline function _arrowhead_at(B::AGBackend, at::Int, from::Int)
+function _arrowhead_at(B::AGBackend, at::Int, from::Int)
     from ∈ _parents_slice(B, at) || from ∈ _spouses_slice(B, at)
 end
 
@@ -292,7 +292,7 @@ end
 #   collider = (m == Head && o == Head)
 #   pass if v ∈ Z: collider; pass if v ∉ Z: !collider
 
-@inline function _relax_mixed!(
+function _relax_mixed!(
     q::Vector{Tuple{Int,Int}},
     visited::BitMatrix,
     a_mask::BitVector,

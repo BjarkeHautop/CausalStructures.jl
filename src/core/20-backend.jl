@@ -215,7 +215,7 @@ function build_backend(::Type{UNKNOWN}, nodes, edges::Vector{CausalEdge})
 end
 
 # Slice into bucket b (1-indexed) of node i for backends with a deg matrix
-@inline function bucket_slice(
+function bucket_slice(
     B::Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend,UNKNOWNBackend},
     i::Int,
     bucket::Int,
@@ -228,33 +228,32 @@ end
 end
 
 # All neighbors of node i across all buckets
-@inline _all_nbrs_slice(B::CausalBackend, i::Int) =
-    @view B.rowval[B.colptr[i]:(B.colptr[i+1]-1)]
+_all_nbrs_slice(B::CausalBackend, i::Int) = @view B.rowval[B.colptr[i]:(B.colptr[i+1]-1)]
 
 # Named bucket accessors — the bucket index is statically known per backend type
 
-@inline _parents_slice(B::DAGBackend, i::Int) = bucket_slice(B, i, 1)
-@inline _children_slice(B::DAGBackend, i::Int) = bucket_slice(B, i, 2)
+_parents_slice(B::DAGBackend, i::Int) = bucket_slice(B, i, 1)
+_children_slice(B::DAGBackend, i::Int) = bucket_slice(B, i, 2)
 
-@inline _undirected_slice(B::UGBackend, i::Int) = _all_nbrs_slice(B, i)
+_undirected_slice(B::UGBackend, i::Int) = _all_nbrs_slice(B, i)
 
-@inline _parents_slice(B::PDAGBackend, i::Int) = bucket_slice(B, i, 1)
-@inline _undirected_slice(B::PDAGBackend, i::Int) = bucket_slice(B, i, 2)
-@inline _children_slice(B::PDAGBackend, i::Int) = bucket_slice(B, i, 3)
+_parents_slice(B::PDAGBackend, i::Int) = bucket_slice(B, i, 1)
+_undirected_slice(B::PDAGBackend, i::Int) = bucket_slice(B, i, 2)
+_children_slice(B::PDAGBackend, i::Int) = bucket_slice(B, i, 3)
 
-@inline _parents_slice(B::ADMGBackend, i::Int) = bucket_slice(B, i, 1)
-@inline _spouses_slice(B::ADMGBackend, i::Int) = bucket_slice(B, i, 2)
-@inline _children_slice(B::ADMGBackend, i::Int) = bucket_slice(B, i, 3)
+_parents_slice(B::ADMGBackend, i::Int) = bucket_slice(B, i, 1)
+_spouses_slice(B::ADMGBackend, i::Int) = bucket_slice(B, i, 2)
+_children_slice(B::ADMGBackend, i::Int) = bucket_slice(B, i, 3)
 
-@inline _parents_slice(B::AGBackend, i::Int) = bucket_slice(B, i, 1)
-@inline _undirected_slice(B::AGBackend, i::Int) = bucket_slice(B, i, 2)
-@inline _spouses_slice(B::AGBackend, i::Int) = bucket_slice(B, i, 3)
-@inline _children_slice(B::AGBackend, i::Int) = bucket_slice(B, i, 4)
+_parents_slice(B::AGBackend, i::Int) = bucket_slice(B, i, 1)
+_undirected_slice(B::AGBackend, i::Int) = bucket_slice(B, i, 2)
+_spouses_slice(B::AGBackend, i::Int) = bucket_slice(B, i, 3)
+_children_slice(B::AGBackend, i::Int) = bucket_slice(B, i, 4)
 
-@inline _parents_slice(B::UNKNOWNBackend, i::Int) = bucket_slice(B, i, 1)
-@inline _undirected_slice(B::UNKNOWNBackend, i::Int) = bucket_slice(B, i, 2)
-@inline _spouses_slice(B::UNKNOWNBackend, i::Int) = bucket_slice(B, i, 3)
-@inline _children_slice(B::UNKNOWNBackend, i::Int) = bucket_slice(B, i, 4)
+_parents_slice(B::UNKNOWNBackend, i::Int) = bucket_slice(B, i, 1)
+_undirected_slice(B::UNKNOWNBackend, i::Int) = bucket_slice(B, i, 2)
+_spouses_slice(B::UNKNOWNBackend, i::Int) = bucket_slice(B, i, 3)
+_children_slice(B::UNKNOWNBackend, i::Int) = bucket_slice(B, i, 4)
 
 # Public query functions
 
