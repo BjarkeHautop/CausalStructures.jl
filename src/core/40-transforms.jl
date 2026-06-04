@@ -15,10 +15,49 @@ function _skeleton_edges(input_edges::Vector{CausalEdge})
     return skeleton_edges
 end
 
+"""
+    skeleton(g::Union{DAG,AbstractPDAG}) -> UG
+
+Return the skeleton of `g`: the undirected graph obtained by replacing every
+directed or partially-directed edge with an undirected edge.
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+
+julia> sk = skeleton(g);
+
+julia> neighbors(sk, :B)
+2-element Vector{Symbol}:
+ :A
+ :C
+```
+"""
 function skeleton(g::Union{DAG,AbstractPDAG})
     return UG(nodes(g), _skeleton_edges(g.edges))
 end
 
+"""
+    moralize(g::DAG) -> UG
+
+Return the moral graph of `g`: the undirected graph obtained by connecting all
+pairs of parents that share a common child (adding a "marriage" edge), then
+replacing every directed edge with an undirected edge.
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :C), directed(:B, :C); class = DAG);
+
+julia> m = moralize(g);
+
+julia> neighbors(m, :C)   # A and B are now married
+2-element Vector{Symbol}:
+ :A
+ :B
+```
+"""
 function moralize(g::DAG)
     B = g.backend
     edges = CausalEdge[]
