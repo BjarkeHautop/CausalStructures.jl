@@ -72,8 +72,8 @@ end
     @test length(nodes(g)) == 6
 end
 
-@testitem "generate_graph: unsupported class gives MethodError" tags = [:unit] begin
-    @test_throws MethodError generate_graph(4; m = 2, class = UG)
+@testitem "generate_graph: unsupported class gives TypeError" tags = [:unit] begin
+    @test_throws TypeError generate_graph(4; m = 2, class = UG)
 end
 
 # ── simulate_data ─────────────────────────────────────────────────────────────
