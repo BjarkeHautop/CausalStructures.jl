@@ -94,6 +94,32 @@ function _subgraph_edges(edges::Vector{CausalEdge}, keep::Set{Symbol})
     return [edge for edge in edges if edge.src in keep && edge.dst in keep]
 end
 
+"""
+    subgraph(g, nodes::AbstractVector{Symbol}) -> CausalGraph
+
+Return the subgraph of `g` induced by `nodes`: the same graph class restricted
+to the given node set, keeping only edges whose both endpoints are in `nodes`.
+
+Applicable to [`DAG`](@ref), [`UG`](@ref), [`PDAG`](@ref), [`CPDAG`](@ref),
+and [`AG`](@ref).
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:B, :C), directed(:A, :C); class = DAG);
+
+julia> sg = subgraph(g, [:A, :B]);
+
+julia> nodes(sg)
+2-element Vector{Symbol}:
+ :A
+ :B
+
+julia> children(sg, :A)
+1-element Vector{Symbol}:
+ :B
+```
+"""
 function subgraph(g::Union{DAG,UG,AbstractPDAG,AG}, nodes::AbstractVector{Symbol})
     keep = Set(nodes)
     edges = _subgraph_edges(g.edges, keep)
