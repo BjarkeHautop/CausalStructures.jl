@@ -93,9 +93,7 @@ function _d_connected_restricted_idxs(
 end
 
 """
-    minimal_separator(g::DAG, x, y; include=Symbol[], restrict=nothing)
-    minimal_separator(g::ADMG, x, y; include=Symbol[], restrict=nothing)
-    minimal_separator(g::AG, x, y; include=Symbol[], restrict=nothing)
+    minimal_separator(g::Union{DAG,ADMG,AG}, x, y; include=Symbol[], restrict=nothing)
 
 Find a minimal d-separator (DAG) or m-separator (ADMG, AG) between nodes `x` and `y`.
 
