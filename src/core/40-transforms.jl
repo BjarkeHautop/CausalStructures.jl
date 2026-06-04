@@ -570,10 +570,10 @@ function dag_from_pdag(g::AbstractPDAG)
 end
 
 """
-    meek_closure(g::AbstractPDAG) -> PDAG
+    meek_closure(g::AbstractPDAG) -> MPDAG
 
 Apply Meek's orientation rules (R1-R4) to `g` until no further orientations
-are implied, returning the resulting [`PDAG`](@ref).
+are implied, returning the resulting [`MPDAG`](@ref).
 
 The four rules are:
 - **R1**: `a --> b --- c`, `a` not adjacent to `c` → orient `b --> c`
@@ -593,7 +593,7 @@ knowledge. *Proceedings of UAI-95*, pp. 403-411.
 julia> pdag = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG);
 
 julia> result = meek_closure(pdag)
-PDAG with 3 nodes and 2 edges:
+MPDAG with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
     A --> B, B --> C
@@ -715,7 +715,7 @@ function meek_closure(g::AbstractPDAG)
         end
     end
 
-    return PDAG(Set(B.nodes), new_edges)
+    return MPDAG(Set(B.nodes), new_edges)
 end
 
 """

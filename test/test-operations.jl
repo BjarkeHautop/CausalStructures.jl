@@ -275,7 +275,7 @@ end
         class = PDAG,
     )
     closed = meek_closure(g)
-    @test closed isa PDAG
+    @test closed isa MPDAG
     @test :D in children(closed, :B)
     @test :B in parents(closed, :D)
     # preserved directed edges
@@ -289,7 +289,7 @@ end
     # would create unshielded collider D → C ← B (D not adj B) — guard blocks it.
     pdag = caugi(directed(:A, :B), directed(:D, :C), undirected(:B, :C); class = PDAG)
     closed = meek_closure(pdag)
-    @test closed isa PDAG
+    @test closed isa MPDAG
     @test has_edge(closed, :B, :C) || has_edge(closed, :C, :B)  # some edge exists
     @test !(:C in children(closed, :B))  # B → C must NOT be oriented
 end
@@ -298,7 +298,7 @@ end
     # A → C → B and A --- B → orient A → B
     g = caugi(undirected(:A, :B), directed(:A, :C), directed(:C, :B); class = PDAG)
     closed = meek_closure(g)
-    @test closed isa PDAG
+    @test closed isa MPDAG
     @test :B in children(closed, :A)
     @test :B in children(closed, :C)
 end
@@ -318,7 +318,7 @@ end
         class = PDAG,
     )
     closed = meek_closure(g)
-    @test closed isa PDAG
+    @test closed isa MPDAG
     @test :D in children(closed, :B)
     @test :E in children(closed, :D)
     @test :E in children(closed, :C)
