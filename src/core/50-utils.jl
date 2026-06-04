@@ -33,9 +33,6 @@ function is_simple(g::UNKNOWN; force_check::Bool = false)
     return true
 end
 
-is_caugi(g::CausalGraph) = g isa CausalGraph
-is_caugi(::Any) = false
-
 # nodes accessor convenience
 function nodes(g::CausalGraph)
     return copy(g.backend.nodes)

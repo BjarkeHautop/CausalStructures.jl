@@ -3,14 +3,6 @@
 
 using Test
 using CausalGraphInterface
-# ── is_caugi ──────────────────────────────────────────────────────────────────
-
-@testitem "is_caugi works" tags = [:unit] begin
-    g = caugi(directed(:A, :B), directed(:B, :C), undirected(:C, :D); class = PDAG)
-    @test is_caugi(g)
-    @test !is_caugi(42)
-    @test !is_caugi("not a graph")
-end
 
 # ── is_acyclic / is_simple ────────────────────────────────────────────────────
 
