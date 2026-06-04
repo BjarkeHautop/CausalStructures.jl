@@ -2,6 +2,26 @@
 # topological_sort, ancestors, descendants, anteriors, posteriors,
 # exogenous_nodes, markov_blanket, spouses, districts
 
+"""
+    topological_sort(g::DAG) -> Vector{Symbol}
+
+Return the nodes of `g` in topological order.
+
+For every directed edge `u --> v` in `g`, `u` appears before `v` in the
+returned vector.
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+
+julia> topological_sort(g)
+3-element Vector{Symbol}:
+ :A
+ :B
+ :C
+```
+"""
 function topological_sort(g::DAG)
     B = g.backend
     n = length(B.nodes)
@@ -34,6 +54,38 @@ function topological_sort(g::DAG)
     return ordering
 end
 
+"""
+    ancestors(g, node::Symbol; open::Bool = true) -> Vector{Symbol}
+
+Return the ancestors of `node` in `g`: all nodes from which `node` is
+reachable by following directed edges forward.
+
+When `open = true` (open definition, default), `node` itself is excluded from
+the result. When `open = false` (closed definition), `node` is included. The
+default can be changed project-wide via Preferences.jl:
+`set_preferences!(CausalGraphInterface, "open" => false)` (restart Julia after).
+
+Applicable to [`DAG`](@ref), [`PDAG`](@ref), [`CPDAG`](@ref),
+[`ADMG`](@ref), and [`AG`](@ref).
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+
+julia> ancestors(g, :A)
+Symbol[]
+
+julia> ancestors(g, :A, open = false)
+1-element Vector{Symbol}:
+ :A
+
+julia> ancestors(g, :C)
+2-element Vector{Symbol}:
+ :A
+ :B
+```
+"""
 function ancestors(
     g::Union{DAG,AbstractPDAG,ADMG,AG},
     node::Symbol;
@@ -56,6 +108,40 @@ function ancestors(
     return open ? result : [node; result]
 end
 
+"""
+    descendants(g, node::Symbol; open::Bool = true) -> Vector{Symbol}
+
+Return the descendants of `node` in `g`: all nodes reachable from `node` by
+following directed edges forward.
+
+When `open = true` (open definition, default), `node` itself is excluded from
+the result. When `open = false` (closed definition), `node` is included. The
+default can be changed project-wide via Preferences.jl:
+`set_preferences!(CausalGraphInterface, "open" => false)` (restart Julia after).
+
+Applicable to [`DAG`](@ref), [`PDAG`](@ref), [`CPDAG`](@ref),
+[`ADMG`](@ref), and [`AG`](@ref).
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+
+julia> descendants(g, :A)
+2-element Vector{Symbol}:
+ :B
+ :C
+
+julia> descendants(g, :C)
+Symbol[]
+
+julia> descendants(g, :A, open = false)
+3-element Vector{Symbol}:
+ :A
+ :B
+ :C
+```
+"""
 function descendants(
     g::Union{DAG,AbstractPDAG,ADMG,AG},
     node::Symbol;
@@ -77,6 +163,38 @@ function descendants(
     return open ? result : [node; result]
 end
 
+"""
+    exogenous_nodes(g::Union{DAG,ADMG,AG}) -> Vector{Symbol}
+    exogenous_nodes(g::AbstractPDAG; undirected_as_parents = false) -> Vector{Symbol}
+
+Return all exogenous nodes in `g`: nodes that have no parents (no incoming
+directed edges).
+
+For [`PDAG`](@ref) and [`CPDAG`](@ref), the `undirected_as_parents` keyword
+controls how undirected edges are treated. When `true`, a node incident to any
+undirected edge is not considered exogenous.
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+
+julia> exogenous_nodes(g)
+1-element Vector{Symbol}:
+ :A
+
+julia> pdag = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG);
+
+julia> exogenous_nodes(pdag)
+2-element Vector{Symbol}:
+ :A
+ :C
+
+julia> exogenous_nodes(pdag, undirected_as_parents = true)
+1-element Vector{Symbol}:
+ :A
+```
+"""
 function exogenous_nodes(g::Union{DAG,ADMG,AG})
     B = g.backend
     return [B.nodes[i] for i in eachindex(B.nodes) if isempty(_parents_slice(B, i))]
@@ -93,6 +211,43 @@ function exogenous_nodes(g::AbstractPDAG; undirected_as_parents::Bool = false)
     return exogenous
 end
 
+"""
+    anteriors(g::Union{DAG,AbstractPDAG,AG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
+
+Return the anteriors of `node` in `g`: all nodes from which `node` is reachable
+by following directed edges backward or traversing undirected edges.
+
+Applicable to [`DAG`](@ref), [`PDAG`](@ref), [`CPDAG`](@ref), and [`AG`](@ref).
+For a [`DAG`](@ref), anteriors are equivalent to [`ancestors`](@ref) (no
+undirected edges exist). For [`PDAG`](@ref), [`CPDAG`](@ref), and [`AG`](@ref),
+undirected edges extend the reachable set beyond strict ancestors.
+
+When `open = true` (open definition, default), `node` itself is excluded from
+the result. When `open = false` (closed definition), `node` is included. The
+default can be changed project-wide via Preferences.jl:
+`set_preferences!(CausalGraphInterface, "open" => false)` (restart Julia after).
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+
+julia> anteriors(g, :C)  # same as ancestors for a DAG
+2-element Vector{Symbol}:
+ :A
+ :B
+
+julia> pdag = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG);
+
+julia> anteriors(pdag, :A)
+Symbol[]
+
+julia> anteriors(pdag, :C)  # C reaches B via undirected edge, then A via directed
+2-element Vector{Symbol}:
+ :A
+ :B
+```
+"""
 anteriors(g::DAG, node::Symbol; open::Bool = _OPEN_DEFAULT) = ancestors(g, node; open)
 
 function anteriors(g::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
@@ -115,6 +270,44 @@ function anteriors(g::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     return open ? result : [node; result]
 end
 
+"""
+    posteriors(g::Union{DAG,AbstractPDAG,AG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
+
+Return the posteriors of `node` in `g`: all nodes reachable from `node` by
+following directed edges forward or traversing undirected edges.
+
+Applicable to [`DAG`](@ref), [`PDAG`](@ref), [`CPDAG`](@ref), and [`AG`](@ref).
+For a [`DAG`](@ref), posteriors are equivalent to [`descendants`](@ref) (no
+undirected edges exist). For [`PDAG`](@ref), [`CPDAG`](@ref), and [`AG`](@ref),
+undirected edges extend the reachable set beyond strict descendants.
+
+When `open = true` (open definition, default), `node` itself is excluded from
+the result. When `open = false` (closed definition), `node` is included. The
+default can be changed project-wide via Preferences.jl:
+`set_preferences!(CausalGraphInterface, "open" => false)` (restart Julia after).
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+
+julia> posteriors(g, :A)  # same as descendants for a DAG
+2-element Vector{Symbol}:
+ :B
+ :C
+
+julia> pdag = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG);
+
+julia> posteriors(pdag, :A)  # B via directed edge, C via undirected edge from B
+2-element Vector{Symbol}:
+ :B
+ :C
+
+julia> posteriors(pdag, :C)  # C reaches B via undirected edge only
+1-element Vector{Symbol}:
+ :B
+```
+"""
 posteriors(g::DAG, node::Symbol; open::Bool = _OPEN_DEFAULT) = descendants(g, node; open)
 
 function posteriors(g::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
@@ -137,6 +330,35 @@ function posteriors(g::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     return open ? result : [node; result]
 end
 
+"""
+    markov_blanket(g, node::Symbol) -> Vector{Symbol}
+
+Return the Markov blanket of `node` in `g`.
+
+For a [`DAG`](@ref), the Markov blanket is the set of parents, children, and
+co-parents (other parents of `node`'s children). For a [`PDAG`](@ref) or
+[`CPDAG`](@ref), undirected neighbors are also included. For an [`ADMG`](@ref),
+the blanket is the union of the parents of every node in `node`'s district
+(excluding `node` itself). For an [`AG`](@ref), it is parents, children,
+co-parents, spouses, and undirected neighbors.
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:B, :C), directed(:D, :C); class = DAG);
+
+julia> markov_blanket(g, :B)
+3-element Vector{Symbol}:
+ :A
+ :C
+ :D
+
+julia> markov_blanket(g, :C)
+2-element Vector{Symbol}:
+ :B
+ :D
+```
+"""
 function markov_blanket(g::DAG, node::Symbol)
     B = g.backend
     node_idx = node_index(g, node)
@@ -192,6 +414,27 @@ function markov_blanket(g::ADMG, node::Symbol)
     return [B.nodes[i] for i in eachindex(seen) if seen[i]]
 end
 
+"""
+    spouses(g::Union{ADMG,AG}, node::Symbol) -> Vector{Symbol}
+
+Return the spouses of `node` in `g`: nodes connected to `node` via a
+bidirected edge (`node <-> spouse`).
+
+Applicable to [`ADMG`](@ref) and [`AG`](@ref).
+
+# Examples
+
+```jldoctest
+julia> admg = caugi(directed(:A, :B), bidirected(:A, :C); class = ADMG);
+
+julia> spouses(admg, :A)
+1-element Vector{Symbol}:
+ :C
+
+julia> spouses(admg, :B)
+Symbol[]
+```
+"""
 function spouses(g::Union{ADMG,AG}, node::Symbol)
     B = g.backend
     idx = node_index(g, node)
@@ -214,6 +457,26 @@ function _district_of_idx(B::ADMGBackend, node_idx::Int)
     return [i for i in eachindex(seen) if seen[i]]
 end
 
+"""
+    districts(g::ADMG) -> Vector{Vector{Symbol}}
+
+Return all districts (c-components) of `g`.
+
+A district is a maximal set of nodes connected via bidirected edges. Singleton
+nodes with no bidirected edges each form their own district.
+
+# Examples
+
+```jldoctest
+julia> admg = caugi(directed(:A, :B), bidirected(:A, :C), bidirected(:D, :E); class = ADMG);
+
+julia> districts(admg)
+3-element Vector{Vector{Symbol}}:
+ [:A, :C]
+ [:B]
+ [:D, :E]
+```
+"""
 function districts(g::ADMG)
     B = g.backend
     n = length(B.nodes)
@@ -242,7 +505,6 @@ function districts(g::ADMG)
 end
 
 # ── AG traversal ───────────────────────────────────────────────────────────────
-# exogenous_nodes and spouses are unified with ADMG above.
 
 # Anteriors: nodes reachable from `node` via directed parents or undirected edges.
 function anteriors(g::AG, node::Symbol; open::Bool = _OPEN_DEFAULT)
