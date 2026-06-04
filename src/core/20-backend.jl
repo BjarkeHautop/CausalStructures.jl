@@ -96,6 +96,9 @@ function build_backend(::Type{UG}, nodes, edges::Vector{CausalEdge})
     return UGBackend(ordered_nodes, index, colptr, rowval)
 end
 
+build_backend(::Type{CPDAG}, nodes, edges::Vector{CausalEdge}) =
+    build_backend(PDAG, nodes, edges)
+
 function build_backend(::Type{PDAG}, nodes, edges::Vector{CausalEdge})
     ordered_nodes = sort!(unique(collect(nodes)))
     index = Dict(n => i for (i, n) in enumerate(ordered_nodes))
@@ -270,14 +273,14 @@ end
 
 neighbors(g::CausalGraph, node::Symbol) = adjacency(g, node)
 
-function parents(g::Union{DAG,PDAG,ADMG,AG,UNKNOWN}, node::Symbol)
+function parents(g::Union{DAG,AbstractPDAG,ADMG,AG,UNKNOWN}, node::Symbol)
     B = g.backend
     idx = get(B.index, node, 0)
     idx == 0 && error("Unknown node: $(node)")
     return B.nodes[_parents_slice(B, idx)]
 end
 
-function children(g::Union{DAG,PDAG,ADMG,AG,UNKNOWN}, node::Symbol)
+function children(g::Union{DAG,AbstractPDAG,ADMG,AG,UNKNOWN}, node::Symbol)
     B = g.backend
     idx = get(B.index, node, 0)
     idx == 0 && error("Unknown node: $(node)")

@@ -72,6 +72,8 @@ end
 
 abstract type CausalGraph end
 
+abstract type AbstractPDAG <: CausalGraph end
+
 struct DAG <: CausalGraph
     edges::Vector{CausalEdge}
     backend::DAGBackend
@@ -82,7 +84,12 @@ struct UG <: CausalGraph
     backend::UGBackend
 end
 
-struct PDAG <: CausalGraph
+struct PDAG <: AbstractPDAG
+    edges::Vector{CausalEdge}
+    backend::PDAGBackend
+end
+
+struct CPDAG <: AbstractPDAG
     edges::Vector{CausalEdge}
     backend::PDAGBackend
 end
@@ -125,6 +132,10 @@ end
 
 function PDAG(nodes, edges::Vector{CausalEdge})
     return _build_graph(PDAG, nodes, edges)
+end
+
+function CPDAG(nodes, edges::Vector{CausalEdge})
+    return _build_graph(CPDAG, nodes, edges)
 end
 
 function ADMG(nodes, edges::Vector{CausalEdge})

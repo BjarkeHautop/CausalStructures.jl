@@ -199,6 +199,8 @@ validate(g::CausalGraph, ::Type{DAG}) = validate(g, DAGConstraints())
 
 validate(g::CausalGraph, ::Type{PDAG}) = validate(g, PDAGConstraints())
 
+validate(g::CausalGraph, ::Type{CPDAG}) = validate(g, PDAGConstraints())
+
 validate(g::CausalGraph, ::Type{UG}) = validate(g, UGConstraints())
 
 validate(g::CausalGraph, ::Type{ADMG}) = validate(g, ADMGConstraints())

@@ -3,7 +3,7 @@ function is_dag(g::CausalGraph)
 end
 
 function is_pdag(g::CausalGraph)
-    (g isa DAG || g isa PDAG) && return true
+    (g isa DAG || g isa AbstractPDAG) && return true
     return _satisfies_constraints(PDAGConstraints(), g)
 end
 
@@ -96,7 +96,7 @@ function generate_graph(
     n::Integer;
     m::Union{Nothing,Integer} = nothing,
     p::Union{Nothing,Real} = nothing,
-    class::Symbol = :DAG,
+    class::Type = DAG,
     seed::Union{Nothing,Integer} = nothing,
     rng = Random.GLOBAL_RNG,
 )
@@ -105,17 +105,12 @@ function generate_graph(
         error("n must be positive")
     end
 
-    if !(class == :DAG || class == :CPDAG)
-        error("Unsupported graph class for generator: $(class)")
-    end
-
     if xor(m === nothing, p === nothing) == false
         error("Supply exactly one of m or p")
     end
 
     local_rng = seed === nothing ? rng : Random.Xoshiro(seed)
     node_names = [Symbol("V$(i)") for i = 1:n]
-    nodes = Set(node_names)
 
     total_edges = n * (n - 1) ÷ 2
     edge_count = 0
@@ -151,15 +146,15 @@ function generate_graph(
         end
     end
 
-    node_items = [node(n) for n in node_names]
-    graph = caugi(edges, node_items...; class = DAG)
-    if class == :CPDAG
-        # TODO: add a CPDAG graph type and return it here once supported.
-        return graph
-    end
-
-    return graph
+    node_items = [node(v) for v in node_names]
+    return _finalize_generate_graph(class, Set(node_names), node_items, edges)
 end
+
+_finalize_generate_graph(::Type{DAG}, node_set, node_items, edges) =
+    caugi(edges, node_items...; class = DAG)
+
+_finalize_generate_graph(::Type{CPDAG}, node_set, node_items, edges) =
+    CPDAG(node_set, edges)
 
 function simulate_data(
     g::DAG;

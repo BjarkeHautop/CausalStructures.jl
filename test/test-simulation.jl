@@ -1,6 +1,6 @@
 # Ported from caugi/tests/testthat/test-simulation.R
 # API differences vs R:
-#   generate_graph(n; m=m, class=:DAG)  (Julia uses keyword args + Symbol class)
+#   generate_graph(n; m=m, class=DAG)  (Julia uses type, not string/symbol)
 #   simulate_data(g; samples=n, seed=s) (Julia uses `samples` not `n`)
 #   simulate_data returns Dict{Symbol,Vector{Float64}}, not data.frame
 
@@ -34,7 +34,7 @@ end
 
 @testitem "generate_graph: DAG with m=0 yields 0 edges and correct nodes" tags = [:unit] begin
     n = 5
-    g = generate_graph(n; m = 0, class = :DAG)
+    g = generate_graph(n; m = 0, class = DAG)
     @test g isa DAG
     @test length(nodes(g)) == n
     @test isempty(g.edges)
@@ -42,14 +42,14 @@ end
 end
 
 @testitem "generate_graph: DAG with p=0 yields 0 edges" tags = [:unit] begin
-    g = generate_graph(6; p = 0.0, class = :DAG)
+    g = generate_graph(6; p = 0.0, class = DAG)
     @test isempty(g.edges)
 end
 
 @testitem "generate_graph: m=tot yields full tournament DAG" tags = [:unit] begin
     n = 6
     tot = n * (n - 1) ÷ 2
-    g = generate_graph(n; m = tot, seed = 11, class = :DAG)
+    g = generate_graph(n; m = tot, seed = 11, class = DAG)
     @test length(g.edges) == tot
     @test all(
         e ->
@@ -60,17 +60,20 @@ end
 end
 
 @testitem "generate_graph: reproducible with same seed" tags = [:unit] begin
-    g1 = generate_graph(7; m = 8, seed = 42, class = :DAG)
-    g2 = generate_graph(7; m = 8, seed = 42, class = :DAG)
+    g1 = generate_graph(7; m = 8, seed = 42, class = DAG)
+    g2 = generate_graph(7; m = 8, seed = 42, class = DAG)
     @test Set(nodes(g1)) == Set(nodes(g2))
     @test length(g1.edges) == length(g2.edges)
 end
 
-@testitem "generate_graph: CPDAG class returns DAG for now" tags = [:unit] begin
-    # Julia: CPDAG support is TODO; generate_graph currently returns a DAG
-    g = generate_graph(6; m = 5, class = :CPDAG)
-    @test g isa DAG
+@testitem "generate_graph: CPDAG class returns CPDAG" tags = [:unit] begin
+    g = generate_graph(6; m = 5, class = CPDAG)
+    @test g isa CPDAG
     @test length(nodes(g)) == 6
+end
+
+@testitem "generate_graph: unsupported class gives MethodError" tags = [:unit] begin
+    @test_throws MethodError generate_graph(4; m = 2, class = UG)
 end
 
 # ── simulate_data ─────────────────────────────────────────────────────────────

@@ -4,9 +4,11 @@ include("core.jl")
 
 export CausalEdge,
     CausalGraph,
+    AbstractPDAG,
     DAG,
     UG,
     PDAG,
+    CPDAG,
     ADMG,
     AG,
     UNKNOWN,

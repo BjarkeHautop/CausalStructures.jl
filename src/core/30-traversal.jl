@@ -34,7 +34,7 @@ function topological_sort(g::DAG)
     return ordering
 end
 
-function ancestors(g::Union{DAG,PDAG,ADMG,AG}, node::Symbol; open::Bool = true)
+function ancestors(g::Union{DAG,AbstractPDAG,ADMG,AG}, node::Symbol; open::Bool = true)
     B = g.backend
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))
@@ -52,7 +52,7 @@ function ancestors(g::Union{DAG,PDAG,ADMG,AG}, node::Symbol; open::Bool = true)
     return open ? result : [node; result]
 end
 
-function descendants(g::Union{DAG,PDAG,ADMG,AG}, node::Symbol; open::Bool = true)
+function descendants(g::Union{DAG,AbstractPDAG,ADMG,AG}, node::Symbol; open::Bool = true)
     B = g.backend
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))
@@ -74,7 +74,7 @@ function exogenous_nodes(g::Union{DAG,ADMG,AG})
     return [B.nodes[i] for i in eachindex(B.nodes) if isempty(_parents_slice(B, i))]
 end
 
-function exogenous_nodes(g::PDAG; undirected_as_parents::Bool = false)
+function exogenous_nodes(g::AbstractPDAG; undirected_as_parents::Bool = false)
     B = g.backend
     exogenous = Symbol[]
     for i in eachindex(B.nodes)
@@ -87,7 +87,7 @@ end
 
 anteriors(g::DAG, node::Symbol; open::Bool = true) = ancestors(g, node; open)
 
-function anteriors(g::PDAG, node::Symbol; open::Bool = true)
+function anteriors(g::AbstractPDAG, node::Symbol; open::Bool = true)
     B = g.backend
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))
@@ -109,7 +109,7 @@ end
 
 posteriors(g::DAG, node::Symbol; open::Bool = true) = descendants(g, node; open)
 
-function posteriors(g::PDAG, node::Symbol; open::Bool = true)
+function posteriors(g::AbstractPDAG, node::Symbol; open::Bool = true)
     B = g.backend
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))
@@ -148,7 +148,7 @@ function markov_blanket(g::DAG, node::Symbol)
     return [B.nodes[i] for i in eachindex(seen) if seen[i]]
 end
 
-function markov_blanket(g::PDAG, node::Symbol)
+function markov_blanket(g::AbstractPDAG, node::Symbol)
     B = g.backend
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))

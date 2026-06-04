@@ -15,7 +15,7 @@ function _skeleton_edges(input_edges::Vector{CausalEdge})
     return skeleton_edges
 end
 
-function skeleton(g::Union{DAG,PDAG})
+function skeleton(g::Union{DAG,AbstractPDAG})
     return UG(nodes(g), _skeleton_edges(g.edges))
 end
 
@@ -55,7 +55,7 @@ function _subgraph_edges(edges::Vector{CausalEdge}, keep::Set{Symbol})
     return [edge for edge in edges if edge.src in keep && edge.dst in keep]
 end
 
-function subgraph(g::Union{DAG,UG,PDAG,AG}, nodes::AbstractVector{Symbol})
+function subgraph(g::Union{DAG,UG,AbstractPDAG,AG}, nodes::AbstractVector{Symbol})
     keep = Set(nodes)
     edges = _subgraph_edges(g.edges, keep)
     return typeof(g)(keep, edges)
@@ -324,7 +324,7 @@ function normalize_latent_structure(g::DAG, latents::AbstractVector{Symbol})
     return DAG(kept_syms, new_edges)
 end
 
-function dag_from_pdag(g::PDAG)
+function dag_from_pdag(g::AbstractPDAG)
     B = g.backend
     n = length(B.nodes)
 
@@ -391,7 +391,7 @@ function dag_from_pdag(g::PDAG)
     return DAG(Set(B.nodes), new_edges)
 end
 
-function meek_closure(g::PDAG)
+function meek_closure(g::AbstractPDAG)
     B = g.backend
     n = length(B.nodes)
 
