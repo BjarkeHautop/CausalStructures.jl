@@ -471,7 +471,8 @@ end
     result = condition_marginalize(f11; marg_vars = [:L1, :L2])
     @test result isa AG
     @test Set(nodes(result)) == Set([:A, :B, :C, :D, :S])
-    has_dir(g, u, v) = any(e -> e.src == u && e.dst == v && is_directed(e), g.edges)
+    has_dir(g, u, v) =
+        any(e -> e.src == u && e.dst == v && CausalGraphInterface.is_directed(e), g.edges)
     @test has_dir(result, :A, :B)
     @test has_dir(result, :B, :S)
     @test has_dir(result, :S, :D)

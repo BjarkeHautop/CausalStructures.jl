@@ -110,18 +110,19 @@ function _satisfies_constraints(::UNKNOWNConstraints, g::UNKNOWN)
     return true
 end
 
-function _class_matches_or_satisfies(
-    g::CausalGraph,
-    ::Type{T},
-    constraints::GraphConstraints,
-) where {T<:CausalGraph}
-    g isa T && return true
+_fast_skip(g::CausalGraph, ::DAGConstraints) = g isa DAG
+_fast_skip(g::CausalGraph, ::PDAGConstraints) = g isa AbstractPDAG || g isa DAG || g isa UG
+_fast_skip(g::CausalGraph, ::CPDAGConstraints) = g isa CPDAG
+_fast_skip(g::CausalGraph, ::UGConstraints) = g isa UG
+_fast_skip(g::CausalGraph, ::ADMGConstraints) = g isa ADMG || g isa DAG
+_fast_skip(g::CausalGraph, ::AGConstraints) = g isa AG || g isa DAG
+
+function _class_matches_or_satisfies(g::CausalGraph, constraints::GraphConstraints)
+    _fast_skip(g, constraints) && return true
     return _satisfies_constraints(constraints, g)
 end
 
-function validation_errors(::AGConstraints, g::AG)
-    B = g.backend
-    n = length(B.nodes)
+function validation_errors(::AGConstraints, g::CausalGraph)
     errors = String[]
 
     all(e -> is_directed(e) || is_undirected(e) || is_bidirected(e), g.edges) ||
@@ -130,6 +131,12 @@ function validation_errors(::AGConstraints, g::AG)
     all(e -> e.src != e.dst, g.edges) || push!(errors, "self-loops are not allowed in AG")
 
     directed_cycle_detected(g) && push!(errors, "directed cycles are not allowed in AG")
+
+    isempty(errors) || return errors
+
+    # Need AGBackend for structural constraint checks
+    B = g.backend isa AGBackend ? g.backend : build_backend(AG, nodes(g), g.edges)
+    n = length(B.nodes)
 
     # Undirected constraint: if a node has an undirected edge it must have no arrowheads
     for i = 1:n
@@ -456,11 +463,11 @@ function _cpdag_arrows_protected(B::PDAGBackend, n::Int)
     return true
 end
 
-function validation_errors(::CPDAGConstraints, g::AbstractPDAG)
+function validation_errors(::CPDAGConstraints, g::CausalGraph)
     errors = validation_errors(PDAGConstraints(), g)
     isempty(errors) || return errors
 
-    B = g.backend
+    B = g.backend isa PDAGBackend ? g.backend : build_backend(PDAG, nodes(g), g.edges)
     n = length(B.nodes)
     n <= 1 && return errors
 
@@ -500,12 +507,12 @@ validate(g::CausalGraph, ::Type{DAG}) = validate(g, DAGConstraints())
 
 validate(g::CausalGraph, ::Type{PDAG}) = validate(g, PDAGConstraints())
 
-validate(g::AbstractPDAG, ::Type{CPDAG}) = validate(g, CPDAGConstraints())
+validate(g::CausalGraph, ::Type{CPDAG}) = validate(g, CPDAGConstraints())
 
 validate(g::CausalGraph, ::Type{UG}) = validate(g, UGConstraints())
 
 validate(g::CausalGraph, ::Type{ADMG}) = validate(g, ADMGConstraints())
 
-validate(g::AG, ::Type{AG}) = validate(g, AGConstraints())
+validate(g::CausalGraph, ::Type{AG}) = validate(g, AGConstraints())
 
 validate(g::CausalGraph, ::Type{UNKNOWN}) = validate(g, UNKNOWNConstraints())

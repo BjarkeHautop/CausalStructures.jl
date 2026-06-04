@@ -1,32 +1,14 @@
-function is_dag(g::CausalGraph)
-    return _class_matches_or_satisfies(g, DAG, DAGConstraints())
-end
+is_dag(g::CausalGraph) = _class_matches_or_satisfies(g, DAGConstraints())
 
-function is_pdag(g::CausalGraph)
-    (g isa DAG || g isa AbstractPDAG) && return true
-    return _satisfies_constraints(PDAGConstraints(), g)
-end
+is_pdag(g::CausalGraph) = _class_matches_or_satisfies(g, PDAGConstraints())
 
-function is_ug(g::CausalGraph)
-    return _class_matches_or_satisfies(g, UG, UGConstraints())
-end
+is_cpdag(g::CausalGraph) = _class_matches_or_satisfies(g, CPDAGConstraints())
 
-function is_admg(g::CausalGraph)
-    (g isa DAG || g isa ADMG) && return true
-    return _satisfies_constraints(ADMGConstraints(), g)
-end
+is_ug(g::CausalGraph) = _class_matches_or_satisfies(g, UGConstraints())
 
-function is_ag(g::CausalGraph)
-    (g isa AG || g isa DAG) && return true
-    # Need to explicitly promote to AG, since _anterior_bitmask expects an
-    # AG type for bitmask checks.
-    try
-        AG(nodes(g), g.edges)
-        return true
-    catch
-        return false
-    end
-end
+is_admg(g::CausalGraph) = _class_matches_or_satisfies(g, ADMGConstraints())
+
+is_ag(g::CausalGraph) = _class_matches_or_satisfies(g, AGConstraints())
 
 function is_simple(g::UNKNOWN; force_check::Bool = false)
     if !force_check
