@@ -205,6 +205,36 @@ end
 
 # ── public API ────────────────────────────────────────────────────────────────
 
+"""
+    is_valid_adjustment_admg(g::ADMG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+
+Return `true` if `z` is a valid adjustment set for estimating the total causal
+effect of `x` on `y` in `g` using the Generalized Adjustment Criterion (GAC).
+
+A set `z` is valid if it contains no forbidden node (no node in
+`De(cn(x,y) \\ {y}) ∪ {x}`, where `cn(x,y)` are the proper causal nodes from
+`x` to `y`) and `x` and `y` are m-separated by `z` in the proper backdoor graph
+of `g`.
+
+# References
+
+Perković, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete
+graphical characterization and construction of adjustment sets in Markov
+equivalence classes of ancestral graphs. *Journal of Machine Learning Research*,
+19(84):1-62.
+
+# Examples
+
+```jldoctest
+julia> admg = caugi(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG);
+
+julia> is_valid_adjustment_admg(admg, :X, :Y)       # empty Z does not block L --> Y
+false
+
+julia> is_valid_adjustment_admg(admg, :X, :Y, [:L]) # conditioning on L blocks the backdoor path
+true
+```
+"""
 function is_valid_adjustment_admg(
     g::ADMG,
     x::Symbol,
@@ -223,6 +253,28 @@ function is_valid_adjustment_admg(
     return _m_separated_pbg(B, xs, ys, z_idxs, removed)
 end
 
+"""
+    all_adjustment_sets_admg(g::ADMG, x::Symbol, y::Symbol;
+                             minimal::Bool = true, max_size::Int = 3)
+        -> Vector{Vector{Symbol}}
+
+Return all valid adjustment sets for the total causal effect of `x` on `y` in
+`g`, up to size `max_size`.
+
+Sets are validated using the Generalized Adjustment Criterion (GAC); see
+[`is_valid_adjustment_admg`](@ref). When `minimal = true` (default), only
+inclusion-minimal sets are returned.
+
+# Examples
+
+```jldoctest
+julia> admg = caugi(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG);
+
+julia> all_adjustment_sets_admg(admg, :X, :Y)
+1-element Vector{Vector{Symbol}}:
+ [:L]
+```
+"""
 function all_adjustment_sets_admg(
     g::ADMG,
     x::Symbol,
@@ -272,6 +324,28 @@ end
 
 # ── Backdoor criterion (DAG) ──────────────────────────────────────────────────
 
+"""
+    is_valid_backdoor(g::DAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+
+Return `true` if `z` satisfies the backdoor criterion for the causal effect of
+`x` on `y` in `g`.
+
+`z` is a valid backdoor set if (1) no node in `z` is a descendant of `x`, and
+(2) `z` blocks every backdoor path from `x` to `y`. Equivalently, every parent
+of `x` is d-separated from `y` given `z ∪ {x}`.
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG);
+
+julia> is_valid_backdoor(g, :X, :Y)       # empty Z leaves the backdoor path A --> Y open
+false
+
+julia> is_valid_backdoor(g, :X, :Y, [:A]) # conditioning on A blocks the backdoor path
+true
+```
+"""
 # z must not contain any descendant of x, and each parent of x must be
 # d-separated from y given z ∪ {x}.
 function is_valid_backdoor(
@@ -293,6 +367,28 @@ function is_valid_backdoor(
     return true
 end
 
+"""
+    all_backdoor_sets(g::DAG, x::Symbol, y::Symbol;
+                      minimal::Bool = true, max_size::Int = 3)
+        -> Vector{Vector{Symbol}}
+
+Return all sets satisfying the backdoor criterion for the causal effect of `x`
+on `y` in `g`, up to size `max_size`.
+
+Sets are validated using [`is_valid_backdoor`](@ref). When `minimal = true`
+(default), only inclusion-minimal sets are returned. Descendants of `x` and `y`
+itself are never candidates.
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG);
+
+julia> all_backdoor_sets(g, :X, :Y)
+1-element Vector{Vector{Symbol}}:
+ [:A]
+```
+"""
 function all_backdoor_sets(
     g::DAG,
     x::Symbol,
