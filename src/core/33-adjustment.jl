@@ -3,7 +3,7 @@
 
 # ── descendants bitmask ───────────────────────────────────────────────────────
 
-function _descendants_bitmask(B::ADMGBackend, seeds::Vector{Int})
+function _descendants_bitmask(B::Union{DAGBackend,ADMGBackend}, seeds::Vector{Int})
     n = length(B.nodes)
     mask = falses(n)
     stack = Int[]
@@ -253,6 +253,68 @@ function all_adjustment_sets_admg(
             if _m_separated_pbg(B, xs, ys, cur, removed)
                 push!(valid_sets, sort([B.nodes[v] for v in cur]))
             end
+            return
+        end
+        for i = start:length(universe)
+            push!(cur, universe[i])
+            enumerate!(i + 1, k_rem - 1)
+            pop!(cur)
+        end
+    end
+
+    for k = 0:min(max_size, length(universe))
+        enumerate!(1, k)
+    end
+
+    minimal && _prune_minimal!(valid_sets)
+    return valid_sets
+end
+
+# ── Backdoor criterion (DAG) ──────────────────────────────────────────────────
+
+# z must not contain any descendant of x, and each parent of x must be
+# d-separated from y given z ∪ {x}.
+function is_valid_backdoor(
+    g::DAG,
+    x::Symbol,
+    y::Symbol,
+    z::AbstractVector{Symbol} = Symbol[],
+)
+    B = g.backend
+    x_idx = node_index(g, x)
+    de_x = _descendants_bitmask(B, [x_idx])
+    for v in z
+        de_x[node_index(g, v)] && return false
+    end
+    obs = [z; x]
+    for p_idx in _parents_slice(B, x_idx)
+        d_separated(g, B.nodes[p_idx], y, obs) || return false
+    end
+    return true
+end
+
+function all_backdoor_sets(
+    g::DAG,
+    x::Symbol,
+    y::Symbol;
+    minimal::Bool = true,
+    max_size::Int = 3,
+)
+    B = g.backend
+    n = length(B.nodes)
+    x_idx = node_index(g, x)
+    y_idx = node_index(g, y)
+
+    de_x = _descendants_bitmask(B, [x_idx])
+    universe = [v for v = 1:n if v != x_idx && v != y_idx && !de_x[v]]
+
+    valid_sets = Vector{Vector{Symbol}}()
+    cur = Int[]
+
+    function enumerate!(start, k_rem)
+        if k_rem == 0
+            z = [B.nodes[v] for v in cur]
+            is_valid_backdoor(g, x, y, z) && push!(valid_sets, sort(z))
             return
         end
         for i = start:length(universe)

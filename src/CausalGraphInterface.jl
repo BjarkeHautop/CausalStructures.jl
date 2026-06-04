@@ -53,5 +53,7 @@ export CausalEdge,
     dag_from_pdag,
     meek_closure,
     is_valid_adjustment_admg,
-    all_adjustment_sets_admg
+    all_adjustment_sets_admg,
+    is_valid_backdoor,
+    all_backdoor_sets
 end
