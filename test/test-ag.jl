@@ -49,7 +49,7 @@ end
     )
 end
 
-# ── parents / children / adjacency ────────────────────────────────────────────
+# ── parents / children / neighbors ───────────────────────────────────────────
 
 @testitem "AG: parents and children" tags = [:unit] begin
     ag = caugi(directed(:A, :B), directed(:A, :C); class = AG)
@@ -58,10 +58,10 @@ end
     @test isempty(parents(ag, :A))
 end
 
-@testitem "AG: adjacency includes all edge types" tags = [:unit] begin
+@testitem "AG: neighbors includes all edge types" tags = [:unit] begin
     ag = caugi(directed(:A, :B), bidirected(:B, :C), undirected(:A, :D); class = AG)
-    @test Set(adjacency(ag, :A)) == Set([:B, :D])
-    @test Set(adjacency(ag, :B)) == Set([:A, :C])
+    @test Set(neighbors(ag, :A)) == Set([:B, :D])
+    @test Set(neighbors(ag, :B)) == Set([:A, :C])
 end
 
 # ── ancestors / descendants ───────────────────────────────────────────────────

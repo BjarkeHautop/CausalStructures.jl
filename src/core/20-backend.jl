@@ -255,37 +255,147 @@ _undirected_slice(B::UNKNOWNBackend, i::Int) = bucket_slice(B, i, 2)
 _spouses_slice(B::UNKNOWNBackend, i::Int) = bucket_slice(B, i, 3)
 _children_slice(B::UNKNOWNBackend, i::Int) = bucket_slice(B, i, 4)
 
-# Public query functions
-
 function node_index(g::CausalGraph, node::Symbol)
     idx = get(g.backend.index, node, 0)
     idx == 0 && error("Unknown node: $(node)")
     return idx
 end
 
-function adjacency(g::CausalGraph, node::Symbol)
+"""
+    neighbors(g::CausalGraph, node::Symbol; mode::Symbol = :all) -> Vector{Symbol}
+
+Return neighbors of `node` in `g`, filtered by edge type via `mode`.
+
+`mode` values:
+
+- `:all`: all adjacent nodes (default; all graph classes)
+- `:in`: parents: nodes `p` with `p --> node` (DAG, PDAG, CPDAG, ADMG, AG, UNKNOWN)
+- `:out`: children: nodes `c` with `node --> c` (DAG, PDAG, CPDAG, ADMG, AG, UNKNOWN)
+- `:undirected`: undirected neighbors `node --- c` (UG, PDAG, CPDAG, AG, UNKNOWN)
+- `:bidirected`: bidirected neighbors `node <-> c` (ADMG, AG, UNKNOWN)
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:C, :B); class = DAG);
+
+julia> neighbors(g, :B)
+2-element Vector{Symbol}:
+ :A
+ :C
+
+julia> neighbors(g, :B, mode = :in)
+2-element Vector{Symbol}:
+ :A
+ :C
+
+julia> neighbors(g, :A, mode = :out)
+1-element Vector{Symbol}:
+ :B
+
+julia> pdag = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG);
+
+julia> neighbors(pdag, :B, mode = :undirected)
+1-element Vector{Symbol}:
+ :C
+```
+"""
+function neighbors(g::CausalGraph, node::Symbol; mode::Symbol = :all)
     B = g.backend
     idx = get(B.index, node, 0)
     idx == 0 && error("Unknown node: $(node)")
-    return B.nodes[_all_nbrs_slice(B, idx)]
+    if mode === :all
+        return B.nodes[_all_nbrs_slice(B, idx)]
+    elseif mode === :in
+        B isa Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend,UNKNOWNBackend} ||
+            error("mode :in is not supported for $(nameof(typeof(g)))")
+        return B.nodes[_parents_slice(B, idx)]
+    elseif mode === :out
+        B isa Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend,UNKNOWNBackend} ||
+            error("mode :out is not supported for $(nameof(typeof(g)))")
+        return B.nodes[_children_slice(B, idx)]
+    elseif mode === :undirected
+        B isa Union{UGBackend,PDAGBackend,AGBackend,UNKNOWNBackend} ||
+            error("mode :undirected is not supported for $(nameof(typeof(g)))")
+        return B.nodes[_undirected_slice(B, idx)]
+    elseif mode === :bidirected
+        B isa Union{ADMGBackend,AGBackend,UNKNOWNBackend} ||
+            error("mode :bidirected is not supported for $(nameof(typeof(g)))")
+        return B.nodes[_spouses_slice(B, idx)]
+    else
+        error(
+            "Unknown mode :$(mode). Valid modes: :all, :in, :out, :undirected, :bidirected",
+        )
+    end
 end
 
-neighbors(g::CausalGraph, node::Symbol) = adjacency(g, node)
+"""
+    parents(g, node::Symbol) -> Vector{Symbol}
 
-function parents(g::Union{DAG,AbstractPDAG,ADMG,AG,UNKNOWN}, node::Symbol)
-    B = g.backend
-    idx = get(B.index, node, 0)
-    idx == 0 && error("Unknown node: $(node)")
-    return B.nodes[_parents_slice(B, idx)]
-end
+Return the parents of `node` in `g`: nodes `p` such that `p --> node` is an edge in `g`.
 
-function children(g::Union{DAG,AbstractPDAG,ADMG,AG,UNKNOWN}, node::Symbol)
-    B = g.backend
-    idx = get(B.index, node, 0)
-    idx == 0 && error("Unknown node: $(node)")
-    return B.nodes[_children_slice(B, idx)]
-end
+Equivalent to `neighbors(g, node; mode = :in)`. Applicable to [`DAG`](@ref),
+[`PDAG`](@ref), [`CPDAG`](@ref), [`ADMG`](@ref), [`AG`](@ref), and [`UNKNOWN`](@ref).
 
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:C, :B); class = DAG);
+
+julia> parents(g, :B)
+2-element Vector{Symbol}:
+ :A
+ :C
+
+julia> parents(g, :A)
+Symbol[]
+```
+"""
+parents(g::Union{DAG,AbstractPDAG,ADMG,AG,UNKNOWN}, node::Symbol) =
+    neighbors(g, node; mode = :in)
+
+"""
+    children(g, node::Symbol) -> Vector{Symbol}
+
+Return the children of `node` in `g`: nodes `c` such that `node --> c` is an edge in `g`.
+
+Equivalent to `neighbors(g, node; mode = :out)`. Applicable to [`DAG`](@ref),
+[`PDAG`](@ref), [`CPDAG`](@ref), [`ADMG`](@ref), [`AG`](@ref), and [`UNKNOWN`](@ref).
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:A, :C); class = DAG);
+
+julia> children(g, :A)
+2-element Vector{Symbol}:
+ :B
+ :C
+
+julia> children(g, :B)
+Symbol[]
+```
+"""
+children(g::Union{DAG,AbstractPDAG,ADMG,AG,UNKNOWN}, node::Symbol) =
+    neighbors(g, node; mode = :out)
+
+"""
+    has_edge(g::CausalGraph, src::Symbol, dst::Symbol) -> Bool
+
+Return `true` if there is any edge between `src` and `dst` in `g`.
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B); class = DAG);
+
+julia> has_edge(g, :A, :B)
+true
+
+julia> has_edge(g, :B, :A)
+false
+```
+"""
 function has_edge(g::CausalGraph, src::Symbol, dst::Symbol)
     B = g.backend
     src_idx = get(B.index, src, 0)

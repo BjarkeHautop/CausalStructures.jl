@@ -662,7 +662,7 @@ function condition_marginalize(
         for j = (i+1):n_rem
             a, b = remaining[i], remaining[j]
 
-            adj_orig = b in adjacency(g, a)
+            adj_orig = b in neighbors(g, a)
             is_adj = if adj_orig
                 true
             else

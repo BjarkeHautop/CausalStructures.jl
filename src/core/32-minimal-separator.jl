@@ -108,7 +108,7 @@ exists within the allowed candidate set.
 
 # Arguments
 
-- `g`: A `DAG`, `ADMG`, or `AG`.
+- `g`: A [`DAG`](@ref), [`ADMG`](@ref), or [`AG`](@ref).
 - `x`, `y`: The two nodes to separate.
 - `include`: Nodes forced into the separator. Must be a subset of `restrict` (or
   the default candidate set).
