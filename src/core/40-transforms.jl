@@ -135,7 +135,7 @@ end
 """
 directed(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Tail, Arrow)
 """
-    undirected(src, dst) -> CausalEdge   # src -- dst
+    undirected(src, dst) -> CausalEdge   # src --- dst
 """
 undirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Tail, Tail)
 """
