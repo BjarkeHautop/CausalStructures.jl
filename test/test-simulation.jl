@@ -183,7 +183,7 @@ end
     @test all(v -> length(v) == 100, values(data))
 end
 
-@testitem "simulate_data: collider structure — A and B independent" tags = [:unit] begin
+@testitem "simulate_data: collider structure A and B independent" tags = [:unit] begin
     using Statistics
     g = caugi(directed(:A, :C), directed(:B, :C); class = DAG)
     data = simulate_data(g; samples = 10_000, standardize = false, seed = 1)

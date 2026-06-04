@@ -25,7 +25,7 @@ end
 
 abstract type CausalBackend end
 
-# DAG backend: 2 buckets — [parents | children]
+# DAG backend: 2 buckets [parents | children]
 struct DAGBackend <: CausalBackend
     nodes::Vector{Symbol}
     index::Dict{Symbol,Int}
@@ -34,7 +34,7 @@ struct DAGBackend <: CausalBackend
     rowval::Vector{Int}
 end
 
-# UG backend: 1 bucket — [undirected]; no deg matrix needed
+# UG backend: 1 bucket [undirected]; no deg matrix needed
 struct UGBackend <: CausalBackend
     nodes::Vector{Symbol}
     index::Dict{Symbol,Int}
@@ -42,7 +42,7 @@ struct UGBackend <: CausalBackend
     rowval::Vector{Int}
 end
 
-# PDAG backend: 3 buckets — [parents | undirected | children]
+# PDAG backend: 3 buckets [parents | undirected | children]
 struct PDAGBackend <: CausalBackend
     nodes::Vector{Symbol}
     index::Dict{Symbol,Int}
@@ -51,7 +51,7 @@ struct PDAGBackend <: CausalBackend
     rowval::Vector{Int}
 end
 
-# ADMG backend: 3 buckets — [parents | spouses | children]
+# ADMG backend: 3 buckets [parents | spouses | children]
 struct ADMGBackend <: CausalBackend
     nodes::Vector{Symbol}
     index::Dict{Symbol,Int}
@@ -60,7 +60,7 @@ struct ADMGBackend <: CausalBackend
     rowval::Vector{Int}
 end
 
-# AG backend: 4 buckets — [parents | undirected | spouses | children]
+# AG backend: 4 buckets [parents | undirected | spouses | children]
 struct AGBackend <: CausalBackend
     nodes::Vector{Symbol}
     index::Dict{Symbol,Int}
@@ -69,7 +69,7 @@ struct AGBackend <: CausalBackend
     rowval::Vector{Int}
 end
 
-# UNKNOWN backend: 4 buckets — [parents | undirected | spouses | children]
+# UNKNOWN backend: 4 buckets [parents | undirected | spouses | children]
 struct UNKNOWNBackend <: CausalBackend
     nodes::Vector{Symbol}
     index::Dict{Symbol,Int}

@@ -148,7 +148,7 @@ end
     @test "B,Z" in set_strings
 end
 
-@testitem "is_valid_backdoor: chain graph — empty set valid" tags = [:unit] begin
+@testitem "is_valid_backdoor: chain graph empty set valid" tags = [:unit] begin
     g = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
     @test is_valid_backdoor(g, :A, :C)
     @test !is_valid_backdoor(g, :A, :C, [:B])  # B is a descendant of A

@@ -34,13 +34,6 @@ end
 end
 
 @testitem "AG: rejects anterior constraint violation (directed)" tags = [:unit] begin
-    # A --> B --> C and C --> A: acyclic but C is an anterior of A because C --> A.
-    # Wait — actually in this case it's a directed cycle A→B→C→A, which is caught first.
-    # Real anterior violation: A --> B (B is anterior of nothing), B <-> A would be
-    # anterior violation if A is anterior of B (it's not via undirected).
-    # Use: A --> B --> C and A <-> C: A is anterior of C (A-->B-->C path? No — anterior
-    # follows parents going UP). Let me think: Ant(C) = {C, B, A} via directed parents.
-    # A <-> C: arrowhead at A from C → check A ∉ Ant(C). Ant(C) = {C, B, A}. A ∈ Ant(C)!
     @test_throws Exception caugi(
         directed(:A, :B),
         directed(:B, :C),
@@ -145,8 +138,6 @@ end
 end
 
 @testitem "is_ag: ADMG with anterior violation is not an AG" tags = [:unit] begin
-    # A --> B and A <-> B: arrowhead at A from B, but B ∈ An(A)? No — An(A)={A}.
-    # arrowhead at B from A: A ∈ An(B) = {A,B}. VIOLATION.
     admg = caugi(directed(:A, :B), bidirected(:A, :B); class = ADMG)
     @test !is_ag(admg)
 end

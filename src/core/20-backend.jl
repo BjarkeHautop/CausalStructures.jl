@@ -230,7 +230,7 @@ end
 # All neighbors of node i across all buckets
 _all_nbrs_slice(B::CausalBackend, i::Int) = @view B.rowval[B.colptr[i]:(B.colptr[i+1]-1)]
 
-# Named bucket accessors — the bucket index is statically known per backend type
+# Named bucket accessors
 
 _parents_slice(B::DAGBackend, i::Int) = bucket_slice(B, i, 1)
 _children_slice(B::DAGBackend, i::Int) = bucket_slice(B, i, 2)

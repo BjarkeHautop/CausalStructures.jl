@@ -1,5 +1,4 @@
 # Ported from caugi/tests/testthat/test-admg.R
-# Unimplemented features are marked @test_broken.
 
 using Test
 using CausalGraphInterface

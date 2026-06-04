@@ -1,6 +1,5 @@
 # Ported from caugi/tests/testthat/test-operations.R
 # Verb-based tests (add_edge, set_edges, etc.) are skipped.
-# Unimplemented operations are marked @test_broken.
 
 using Test
 using CausalGraphInterface

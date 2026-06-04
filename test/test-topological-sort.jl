@@ -1,5 +1,4 @@
 # Ported from caugi/tests/testthat/test-topological-sort.R
-# (igraph comparison tests skipped — require external dependency)
 
 using Test
 using CausalGraphInterface

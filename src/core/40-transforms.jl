@@ -357,7 +357,7 @@ function dag_from_pdag(g::AbstractPDAG)
             end
             clique || continue
 
-            # x is a valid sink — orient all undirected edges toward x
+            # x is a valid sink. Orient all undirected edges toward x
             for u in nbrs
                 push!(out_pa[x], u)
             end
