@@ -243,6 +243,125 @@ function dag_from_pdag(g::PDAG)
     return DAG(Set(B.nodes), new_edges)
 end
 
+function meek_closure(g::PDAG)
+    B = g.backend
+    n = length(B.nodes)
+
+    pa = [Set{Int}(_parents_slice(B, i)) for i = 1:n]
+    ch = [Set{Int}(_children_slice(B, i)) for i = 1:n]
+    und = [Set{Int}(_undirected_slice(B, i)) for i = 1:n]
+
+    adjacent(a, b) = b in pa[a] || b in ch[a] || b in und[a]
+
+    # BFS reachability over directed edges
+    function has_dir_path(src, tgt)
+        src == tgt && return true
+        seen = falses(n)
+        queue = Int[src]
+        head = 1
+        while head <= length(queue)
+            u = queue[head];
+            head += 1
+            u == tgt && return true
+            seen[u] && continue
+            seen[u] = true
+            for v in ch[u]
+                ;
+                !seen[v] && push!(queue, v);
+            end
+        end
+        return false
+    end
+
+    function orient!(a, b)
+        delete!(und[a], b);
+        delete!(und[b], a)
+        push!(ch[a], b);
+        push!(pa[b], a)
+    end
+
+    # Orient a → b only if edge is still undirected and doing so won't create a cycle
+    function try_orient!(a, b)
+        b in und[a] || return false
+        has_dir_path(b, a) && return false
+        orient!(a, b)
+        return true
+    end
+
+    # R1 collider guard: would orienting b → c create a new unshielded collider at c?
+    creates_collider(b, c) = any(p -> p != b && !adjacent(p, b), pa[c])
+
+    changed = true
+    while changed
+        changed = false
+
+        # R1: a → b --- c, a not adj c, no new unshielded collider at c → orient b → c
+        for b = 1:n
+            (isempty(pa[b]) || isempty(und[b])) && continue
+            pb = collect(pa[b])
+            for c in collect(und[b])
+                any(a -> !adjacent(a, c), pb) || continue
+                creates_collider(b, c) && continue
+                try_orient!(b, c) && (changed = true)
+            end
+        end
+
+        # R2: a --- b, ∃w: a → w → b → orient a → b  (or b → a)
+        for a = 1:n
+            for b in collect(und[a])
+                if any(w -> b in ch[w], ch[a])
+                    try_orient!(a, b) && (changed = true)
+                elseif any(w -> a in ch[w], ch[b])
+                    try_orient!(b, a) && (changed = true)
+                end
+            end
+        end
+
+        # R3: a --- b, ∃c,d ∈ pa[b]: c not adj d, a --- c, a --- d → orient a → b
+        for a = 1:n
+            for b in collect(und[a])
+                pb = collect(pa[b])
+                for i in eachindex(pb), j = (i+1):length(pb)
+                    c, d = pb[i], pb[j]
+                    if !adjacent(c, d) && c in und[a] && d in und[a]
+                        if try_orient!(a, b)
+                            changed = true
+                        end
+                        break
+                    end
+                end
+            end
+        end
+
+        # R4: a --- b and directed path a →⁺ b → orient a → b  (or b → a)
+        for a = 1:n
+            for b in collect(und[a])
+                if has_dir_path(a, b)
+                    try_orient!(a, b) && (changed = true)
+                elseif has_dir_path(b, a)
+                    try_orient!(b, a) && (changed = true)
+                end
+            end
+        end
+    end
+
+    new_edges = CausalEdge[]
+    seen_und = Set{Tuple{Int,Int}}()
+    for i = 1:n
+        for p in pa[i]
+            push!(new_edges, directed(B.nodes[p], B.nodes[i]))
+        end
+        for u in und[i]
+            key = minmax(i, u)
+            key in seen_und && continue
+            push!(seen_und, key)
+            push!(new_edges, undirected(B.nodes[key[1]], B.nodes[key[2]]))
+        end
+    end
+
+    return PDAG(Set(B.nodes), new_edges)
+end
+
 function build_graph(
     ::Type{T},
     nodes::Set{Symbol},

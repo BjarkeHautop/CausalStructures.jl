@@ -50,5 +50,6 @@ export CausalEdge,
     m_separated,
     minimal_separator,
     latent_project,
-    dag_from_pdag
+    dag_from_pdag,
+    meek_closure
 end

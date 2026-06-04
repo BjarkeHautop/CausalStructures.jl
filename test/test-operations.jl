@@ -231,9 +231,10 @@ end
     @test length(dag.edges) == 3
 end
 
-# ── meek_closure (not yet implemented) ────────────────────────────────────────
+# ── meek_closure ──────────────────────────────────────────────────────────────
 
-@testitem "meek_closure R1: orient compelled edge (broken)" tags = [:unit] begin
+@testitem "meek_closure R1: orient compelled edge" tags = [:unit] begin
+    # C → B --- D, C not adjacent to D → orient B → D
     g = caugi(
         directed(:A, :B),
         directed(:C, :B),
@@ -241,21 +242,39 @@ end
         undirected(:A, :D);
         class = PDAG,
     )
-    @test_broken begin
-        closed = meek_closure(g)
-        :D in children(closed, :B)
-    end
+    closed = meek_closure(g)
+    @test closed isa PDAG
+    @test :D in children(closed, :B)
+    @test :B in parents(closed, :D)
+    # preserved directed edges
+    @test :B in children(closed, :A)
+    @test :B in children(closed, :C)
 end
 
-@testitem "meek_closure R2: orient along directed path (broken)" tags = [:unit] begin
+@testitem "meek_closure R1 collider guard: do not create new unshielded collider" tags =
+    [:unit] begin
+    # A → B, D → C, B --- C: R1 would fire (A not adj C), but orienting B → C
+    # would create unshielded collider D → C ← B (D not adj B) — guard blocks it.
+    pdag = caugi(directed(:A, :B), directed(:D, :C), undirected(:B, :C); class = PDAG)
+    closed = meek_closure(pdag)
+    @test closed isa PDAG
+    @test has_edge(closed, :B, :C) || has_edge(closed, :C, :B)  # some edge exists
+    @test !(:C in children(closed, :B))  # B → C must NOT be oriented
+end
+
+@testitem "meek_closure R2: orient along directed path" tags = [:unit] begin
+    # A → C → B and A --- B → orient A → B
     g = caugi(undirected(:A, :B), directed(:A, :C), directed(:C, :B); class = PDAG)
-    @test_broken begin
-        closed = meek_closure(g)
-        :B in children(closed, :A)
-    end
+    closed = meek_closure(g)
+    @test closed isa PDAG
+    @test :B in children(closed, :A)
+    @test :B in children(closed, :C)
 end
 
-@testitem "meek_closure matches causal-learn regression (broken)" tags = [:unit] begin
+@testitem "meek_closure matches causal-learn regression" tags = [:unit] begin
+    # R3 fires: B → D (B is undirected nbr of A,C ∈ pa[D], A-C not adjacent)
+    # R1 fires: D → E (parent A of D not adjacent to E)
+    # R2 fires: C → E (C → D → E and C --- E)
     g = caugi(
         undirected(:A, :B),
         undirected(:B, :C),
@@ -266,12 +285,18 @@ end
         undirected(:C, :E);
         class = PDAG,
     )
-    @test_broken begin
-        closed = meek_closure(g)
-        :D in children(closed, :B) &&
-            :E in children(closed, :D) &&
-            :E in children(closed, :C)
-    end
+    closed = meek_closure(g)
+    @test closed isa PDAG
+    @test :D in children(closed, :B)
+    @test :E in children(closed, :D)
+    @test :E in children(closed, :C)
+    # skeleton preserved
+    has_edge_either(g, u, v) = has_edge(g, u, v) || has_edge(g, v, u)
+    @test has_edge_either(closed, :A, :B)
+    @test has_edge_either(closed, :B, :C)
+    # preserved original directed edges
+    @test :D in children(closed, :A)
+    @test :D in children(closed, :C)
 end
 
 # ── condition_marginalize (not yet implemented) ───────────────────────────────
