@@ -407,9 +407,12 @@ end
     @test mg isa AG
     @test Set(nodes(mg)) == Set([:A, :B, :X, :Y])
     has_edge_type(g, u, v, f) = any(e -> e.src == u && e.dst == v && f(e), g.edges)
-    @test has_edge_type(mg, :A, :X, e -> is_directed(e))
-    @test has_edge_type(mg, :B, :Y, e -> is_directed(e))
-    @test any(e -> is_bidirected(e) && Set([e.src, e.dst]) == Set([:X, :Y]), mg.edges)
+    @test has_edge_type(mg, :A, :X, e -> CausalGraphInterface.is_directed(e))
+    @test has_edge_type(mg, :B, :Y, e -> CausalGraphInterface.is_directed(e))
+    @test any(
+        e -> CausalGraphInterface.is_bidirected(e) && Set([e.src, e.dst]) == Set([:X, :Y]),
+        mg.edges,
+    )
 end
 
 @testitem "condition_marginalize: conditioning removes node, keeps structure" tags = [:unit] begin
