@@ -483,6 +483,33 @@ function normalize_latent_structure(g::DAG, latents::AbstractVector{Symbol})
     return DAG(kept_syms, new_edges)
 end
 
+"""
+    dag_from_pdag(g::AbstractPDAG) -> DAG
+
+Extend `g` to a consistent [`DAG`](@ref) by orienting all undirected
+edges, using the Dor-Tarsi algorithm.
+
+The algorithm repeatedly finds a sink node `x` (no directed children, and whose
+undirected neighbors form a clique), orients all undirected edges toward `x`,
+and removes it. Raises an error if no valid DAG extension exists.
+
+# References
+
+Dor, D. & Tarsi, M. (1992). A simple algorithm to construct a consistent
+extension of a partially oriented acyclic graph.
+
+# Examples
+
+```jldoctest
+julia> pdag = caugi(undirected(:A, :B), undirected(:B, :C); class = PDAG);
+
+julia> dag = dag_from_pdag(pdag)
+DAG with 3 nodes and 2 edges:
+  nodes: A, B, C
+  edges:
+    A --> B, B --> C
+```
+"""
 function dag_from_pdag(g::AbstractPDAG)
     B = g.backend
     n = length(B.nodes)
@@ -550,6 +577,36 @@ function dag_from_pdag(g::AbstractPDAG)
     return DAG(Set(B.nodes), new_edges)
 end
 
+"""
+    meek_closure(g::AbstractPDAG) -> PDAG
+
+Apply Meek's orientation rules (R1-R4) to `g` until no further orientations
+are implied, returning the resulting [`PDAG`](@ref).
+
+The four rules are:
+- **R1**: `a --> b --- c`, `a` not adjacent to `c` → orient `b --> c`
+- **R2**: `a --- b`, directed path `a --> w --> b` exists → orient `a --> b`
+- **R3**: `a --- b`, two parents `c, d` of `b` with `c` not adjacent to `d`,
+  and `a --- c`, `a --- d` → orient `a --> b`
+- **R4**: `a --- b`, directed path `a -->+ b` exists → orient `a --> b`
+
+# References
+
+Meek, C. (1995). Causal inference and causal explanation with background
+knowledge. *Proceedings of UAI-95*, pp. 403-411.
+
+# Examples
+
+```jldoctest
+julia> pdag = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG);
+
+julia> result = meek_closure(pdag)
+PDAG with 3 nodes and 2 edges:
+  nodes: A, B, C
+  edges:
+    A --> B, B --> C
+```
+"""
 function meek_closure(g::AbstractPDAG)
     B = g.backend
     n = length(B.nodes)
@@ -669,6 +726,28 @@ function meek_closure(g::AbstractPDAG)
     return PDAG(Set(B.nodes), new_edges)
 end
 
+"""
+    dag_to_cpdag(g::DAG) -> CPDAG
+
+Return the [`CPDAG`](@ref) representing the Markov equivalence class (MEC) of
+`g`.
+
+The algorithm detects v-structures (unshielded colliders) to determine
+compelled edge orientations, builds an initial PDAG from the skeleton, then
+applies [`meek_closure`](@ref) to propagate all implied orientations.
+
+# Examples
+
+```jldoctest
+julia> dag = caugi(directed(:A, :B); class = DAG);
+
+julia> cpdag = dag_to_cpdag(dag)
+CPDAG with 2 nodes and 1 edge:
+  nodes: A, B
+  edges:
+    A --- B
+```
+"""
 function dag_to_cpdag(g::DAG)
     B = g.backend
     n = length(B.nodes)
