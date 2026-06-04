@@ -9,7 +9,6 @@ using CausalGraphInterface
 @testitem "is_acyclic returns true for DAG/PDAG by class" tags = [:unit] begin
     g = caugi(directed(:A, :B), directed(:B, :C), directed(:C, :D); class = DAG)
     @test is_acyclic(g)
-    @test is_acyclic(g; force_check = true)
 end
 
 @testitem "is_acyclic detects cycles in UNKNOWN graphs" tags = [:unit] begin
@@ -20,12 +19,10 @@ end
 @testitem "is_simple reflects declared state" tags = [:unit] begin
     g_simple = caugi(directed(:A, :B); class = DAG)
     @test is_simple(g_simple)
-    @test is_simple(g_simple; force_check = true)
 
     g_nonsimple =
         caugi(directed(:A, :B), bidirected(:A, :B); class = UNKNOWN, simple = false)
     @test !is_simple(g_nonsimple)
-    @test !is_simple(g_nonsimple; force_check = true)
 end
 
 # ── is_dag / is_pdag / is_ug / is_admg ───────────────────────────────────────

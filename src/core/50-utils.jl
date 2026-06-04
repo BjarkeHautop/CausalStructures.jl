@@ -1,3 +1,18 @@
+"""
+    is_dag(g::CausalGraph)   -> Bool
+
+Check whether `g` satisfies the structural constraints of the given graph class,
+independent of its declared graph class.
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:B, :C); class = PDAG);
+
+julia> is_dag(g)
+true
+```
+"""
 is_dag(g::CausalGraph) = _class_matches_or_satisfies(g, DAGConstraints())
 
 """
@@ -81,37 +96,47 @@ true
 """
 is_ag(g::CausalGraph) = _class_matches_or_satisfies(g, AGConstraints())
 
-function is_simple(g::UNKNOWN; force_check::Bool = false)
-    if !force_check
-        return g.simple
-    end
+"""
+    nodes(g::CausalGraph) -> Vector{Symbol}
 
-    for e in g.edges
-        if e.src == e.dst
-            return false
-        end
-    end
+Return the nodes of `g` in alphabetical order.
 
-    seen = Set{Tuple{Symbol,Symbol}}()
-    for e in g.edges
-        key = _ordered_pair(e.src, e.dst)
-        if key in seen
-            return false
-        end
-        push!(seen, key)
-    end
+# Examples
 
-    return true
-end
+```jldoctest
+julia> g = caugi(directed(:B, :A), directed(:A, :C); class = DAG);
 
-# nodes accessor convenience
+julia> nodes(g)
+3-element Vector{Symbol}:
+ :A
+ :B
+ :C
+```
+"""
 function nodes(g::CausalGraph)
     return copy(g.backend.nodes)
 end
 
-# is_simple: no self-loops and no parallel edges
-function is_simple(g::CausalGraph; force_check::Bool = false)
-    if !(g isa UNKNOWN) && !force_check
+"""
+    is_simple(g::CausalGraph) -> Bool
+
+Return `true` if `g` has no self-loops and no parallel edges between the same
+pair of nodes.
+
+For all graph classes except [`UNKNOWN`](@ref), simplicity is guaranteed by
+construction.
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B); class = DAG);
+
+julia> is_simple(g)
+true
+```
+"""
+function is_simple(g::CausalGraph)
+    if !(g isa UNKNOWN)
         return true
     end
 
@@ -134,14 +159,61 @@ function is_simple(g::CausalGraph; force_check::Bool = false)
     return true
 end
 
-function is_acyclic(g::CausalGraph; force_check::Bool = false)
-    if !(g isa UNKNOWN) && !force_check
+"""
+    is_acyclic(g::CausalGraph) -> Bool
+
+Return `true` if `g` contains no directed cycle.
+
+For all graph classes except [`UNKNOWN`](@ref), acyclicity is guaranteed by
+construction.
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+
+julia> is_acyclic(g)
+true
+
+julia> unk = caugi(directed(:A, :B), directed(:B, :A); class = UNKNOWN);
+
+julia> is_acyclic(unk)
+false
+```
+"""
+function is_acyclic(g::CausalGraph)
+    if !(g isa UNKNOWN)
         return true
     end
 
     return !directed_cycle_detected(g)
 end
 
+"""
+    generate_graph(n; m=nothing, p=nothing, class=DAG, seed=nothing, rng=GLOBAL_RNG)
+        -> CausalGraph
+
+Generate a random graph on `n` nodes named `V1, …, Vn`.
+
+Exactly one of `m` (exact edge count) or `p` (edge probability) must be given.
+Edges are sampled uniformly at random over all `n(n-1)/2` possible pairs and
+oriented by a random topological ordering, guaranteeing acyclicity.
+
+`class` may be [`DAG`](@ref) (default) or [`CPDAG`](@ref); for CPDAG the
+sampled DAG is converted via [`dag_to_cpdag`](@ref).
+
+# Examples
+
+```jldoctest
+julia> g = generate_graph(4; m = 3, seed = 1);
+
+julia> isa(g, DAG)
+true
+
+julia> length(nodes(g))
+4
+```
+"""
 function generate_graph(
     n::Integer;
     m::Union{Nothing,Integer} = nothing,
@@ -208,6 +280,33 @@ function _finalize_generate_graph(::Type{CPDAG}, node_set, node_items, edges)
     return dag_to_cpdag(dag)
 end
 
+"""
+    simulate_data(g::DAG; samples, seed=nothing, standardize=true,
+                  coef_range=(-1.0, 1.0), error_sd=1.0, rng=GLOBAL_RNG)
+        -> Dict{Symbol, Vector{Float64}}
+
+Simulate observational data from a linear Gaussian structural causal model over
+`g`. Each node is a linear function of its parents plus independent Gaussian
+noise with standard deviation `error_sd`. Edge coefficients are drawn uniformly
+from `coef_range`. If `standardize = true` (default), each variable is
+standardized to zero mean and unit variance.
+
+Returns a `Dict` mapping each node name to a length-`samples` vector.
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+
+julia> data = simulate_data(g; samples = 100, seed = 42);
+
+julia> haskey(data, :A)
+true
+
+julia> length(data[:B])
+100
+```
+"""
 function simulate_data(
     g::DAG;
     samples::Integer,

@@ -92,7 +92,7 @@ end
 function validation_errors(::UNKNOWNConstraints, g::UNKNOWN)
     errors = String[]
 
-    if g.simple && !is_simple(g; force_check = true)
+    if g.simple && !is_simple(g)
         push!(errors, "graph marked simple=true but contains self-loops or parallel edges")
     end
 
@@ -104,7 +104,7 @@ _satisfies_constraints(c::GraphConstraints, g::CausalGraph) =
 
 function _satisfies_constraints(::UNKNOWNConstraints, g::UNKNOWN)
     if g.simple
-        return is_simple(g; force_check = true)
+        return is_simple(g)
     end
 
     return true
