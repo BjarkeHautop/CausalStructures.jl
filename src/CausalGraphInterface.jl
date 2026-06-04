@@ -60,5 +60,6 @@ export CausalEdge,
     is_valid_adjustment_admg,
     all_adjustment_sets_admg,
     is_valid_backdoor,
-    all_backdoor_sets
+    all_backdoor_sets,
+    adjustment_set
 end

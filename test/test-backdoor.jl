@@ -153,3 +153,79 @@ end
     @test is_valid_backdoor(g, :A, :C)
     @test !is_valid_backdoor(g, :A, :C, [:B])  # B is a descendant of A
 end
+
+# ── adjustment_set ─────────────────────────────────────────────────────────────
+
+@testitem "adjustment_set: parents type returns Pa(X) \\ {X,Y}" tags = [:unit] begin
+    g = caugi(
+        directed(:C, :X),
+        directed(:X, :F),
+        directed(:X, :D),
+        directed(:A, :X),
+        directed(:A, :K),
+        directed(:K, :Y),
+        directed(:D, :Y),
+        directed(:D, :G),
+        directed(:Y, :H);
+        class = DAG,
+    )
+    z = adjustment_set(g, :X, :Y; type = :parents)
+    @test Set(z) == Set([:A, :C])
+end
+
+@testitem "adjustment_set: backdoor type returns a valid backdoor set" tags = [:unit] begin
+    g = caugi(
+        directed(:C, :X),
+        directed(:X, :F),
+        directed(:X, :D),
+        directed(:A, :X),
+        directed(:A, :K),
+        directed(:K, :Y),
+        directed(:D, :Y),
+        directed(:D, :G),
+        directed(:Y, :H);
+        class = DAG,
+    )
+    z = adjustment_set(g, :X, :Y; type = :backdoor)
+    @test is_valid_backdoor(g, :X, :Y, z)
+    @test :D ∉ z  # descendant of X must not appear
+end
+
+@testitem "adjustment_set: optimal type returns K on ECI graph" tags = [:unit] begin
+    g = caugi(
+        directed(:C, :X),
+        directed(:X, :F),
+        directed(:X, :D),
+        directed(:A, :X),
+        directed(:A, :K),
+        directed(:K, :Y),
+        directed(:D, :Y),
+        directed(:D, :G),
+        directed(:Y, :H);
+        class = DAG,
+    )
+    z = adjustment_set(g, :X, :Y; type = :optimal)
+    @test is_valid_backdoor(g, :X, :Y, z)
+    @test z == [:K]
+end
+
+@testitem "adjustment_set: optimal default on simple confounder" tags = [:unit] begin
+    # A→X, X→Y, A→Y: optimal set should be {A}
+    g = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG)
+    z = adjustment_set(g, :X, :Y)  # default :optimal
+    @test is_valid_backdoor(g, :X, :Y, z)
+    @test Set(z) == Set([:A])
+end
+
+@testitem "adjustment_set: optimal empty on chain" tags = [:unit] begin
+    # X→Y: no confounders, optimal set is empty
+    g = caugi(directed(:X, :Y); class = DAG)
+    @test adjustment_set(g, :X, :Y; type = :optimal) == Symbol[]
+    @test adjustment_set(g, :X, :Y; type = :parents) == Symbol[]
+    @test adjustment_set(g, :X, :Y; type = :backdoor) == Symbol[]
+end
+
+@testitem "adjustment_set: unknown type throws ArgumentError" tags = [:unit] begin
+    g = caugi(directed(:X, :Y); class = DAG)
+    @test_throws ArgumentError adjustment_set(g, :X, :Y; type = :unknown)
+end

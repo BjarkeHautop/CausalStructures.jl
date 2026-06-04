@@ -425,3 +425,98 @@ function all_backdoor_sets(
     minimal && _prune_minimal!(valid_sets)
     return valid_sets
 end
+
+"""
+    adjustment_set(g::DAG, x::Symbol, y::Symbol; type::Symbol = :optimal) -> Vector{Symbol}
+
+Compute an adjustment set for the causal effect of `x` on `y` in `g`.
+
+Three types are supported:
+
+- `:parents`: ``\\bigcup \\mathrm{Pa}(x) \\setminus \\{x, y\\}``.
+- `:backdoor`: Pearl backdoor formula.
+- `:optimal`: O-set.
+
+# Examples
+
+```jldoctest
+julia> g = caugi(
+           directed(:C, :X), directed(:X, :F), directed(:X, :D),
+           directed(:A, :X), directed(:A, :K), directed(:K, :Y),
+           directed(:D, :Y), directed(:D, :G), directed(:Y, :H);
+           class = DAG);
+
+julia> sort(adjustment_set(g, :X, :Y; type = :parents))
+2-element Vector{Symbol}:
+ :A
+ :C
+
+julia> is_valid_backdoor(g, :X, :Y, adjustment_set(g, :X, :Y; type = :backdoor))
+true
+
+julia> adjustment_set(g, :X, :Y; type = :optimal)
+1-element Vector{Symbol}:
+ :K
+```
+"""
+function adjustment_set(g::DAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
+    B = g.backend
+    n = length(B.nodes)
+    x_idx = node_index(g, x)
+    y_idx = node_index(g, y)
+
+    if type === :parents
+        keep = falses(n)
+        for p in _parents_slice(B, x_idx)
+            keep[p] = true
+        end
+        keep[x_idx] = false
+        keep[y_idx] = false
+        return [B.nodes[v] for v = 1:n if keep[v]]
+
+    elseif type === :backdoor
+        an_y = _ancestors_bitmask(B, [y_idx])
+        keep = falses(n)
+        for p in _parents_slice(B, x_idx)
+            an_y[p] && (keep[p] = true)
+        end
+        de_x = _descendants_bitmask(B, [x_idx])  # includes x_idx
+        for v = 1:n
+            de_x[v] && (keep[v] = false)
+        end
+        keep[y_idx] = false
+        return [B.nodes[v] for v = 1:n if keep[v]]
+
+    elseif type === :optimal
+        de_x = _descendants_bitmask(B, [x_idx])
+        de_x[x_idx] = false  # exclude x itself
+
+        an_y = _ancestors_bitmask(B, [y_idx])  # includes y_idx
+
+        cn_mask = falses(n)
+        for v = 1:n
+            de_x[v] && an_y[v] && (cn_mask[v] = true)
+        end
+        de_x[y_idx] && (cn_mask[y_idx] = true)  # add y if y ∈ De(x)
+
+        pacn_mask = falses(n)
+        for v = 1:n
+            cn_mask[v] || continue
+            for p in _parents_slice(B, v)
+                pacn_mask[p] = true
+            end
+        end
+        pacn_mask[x_idx] = false
+        for v = 1:n
+            cn_mask[v] && (pacn_mask[v] = false)
+        end
+        return [B.nodes[v] for v = 1:n if pacn_mask[v]]
+
+    else
+        throw(
+            ArgumentError(
+                "Unknown adjustment_set type $type. Use :parents, :backdoor, or :optimal.",
+            ),
+        )
+    end
+end
