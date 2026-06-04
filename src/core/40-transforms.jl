@@ -176,6 +176,154 @@ function latent_project(g::DAG, latents::AbstractVector{Symbol})
     return ADMG(new_nodes, new_edges)
 end
 
+function exogenize(g::DAG, nodes_to_exo::AbstractVector{Symbol})
+    B = g.backend
+    n = length(B.nodes)
+
+    for v in nodes_to_exo
+        haskey(B.index, v) || error("Node $(v) not in graph")
+    end
+
+    pa = [Set{Int}() for _ = 1:n]
+    ch = [Set{Int}() for _ = 1:n]
+
+    for edge in g.edges
+        si = B.index[edge.src]
+        di = B.index[edge.dst]
+        push!(ch[si], di)
+        push!(pa[di], si)
+    end
+
+    for v_sym in nodes_to_exo
+        v = B.index[v_sym]
+        parents_v = collect(pa[v])
+        children_v = collect(ch[v])
+
+        for p in parents_v, c in children_v
+            p == c && continue
+            push!(ch[p], c)
+            push!(pa[c], p)
+        end
+        for p in parents_v
+            delete!(ch[p], v)
+        end
+        pa[v] = Set{Int}()
+    end
+
+    new_edges = CausalEdge[]
+    for i = 1:n
+        for c in sort(collect(ch[i]))
+            push!(new_edges, directed(B.nodes[i], B.nodes[c]))
+        end
+    end
+
+    return DAG(Set(B.nodes), new_edges)
+end
+
+# ── normalize_latent_structure ────────────────────────────────────────────────
+
+function normalize_latent_structure(g::DAG, latents::AbstractVector{Symbol})
+    B = g.backend
+    n = length(B.nodes)
+
+    for l in latents
+        haskey(B.index, l) || error("Unknown latent node: $(l)")
+    end
+
+    isempty(latents) && return g
+
+    latent_idxs = unique([B.index[l] for l in latents])
+
+    pa = [Set{Int}() for _ = 1:n]
+    ch = [Set{Int}() for _ = 1:n]
+    active = trues(n)
+
+    for edge in g.edges
+        si = B.index[edge.src]
+        di = B.index[edge.dst]
+        push!(ch[si], di)
+        push!(pa[di], si)
+    end
+
+    # Step 1: Exogenize all latents
+    for v in latent_idxs
+        parents_v = collect(pa[v])
+        children_v = collect(ch[v])
+        for p in parents_v, c in children_v
+            p == c && continue
+            push!(ch[p], c)
+            push!(pa[c], p)
+        end
+        for p in parents_v
+            delete!(ch[p], v)
+        end
+        pa[v] = Set{Int}()
+    end
+
+    function remove_node!(u)
+        active[u] = false
+        for p in collect(pa[u])
+            delete!(ch[p], u)
+        end
+        for c in collect(ch[u])
+            delete!(pa[c], u)
+        end
+        pa[u] = Set{Int}()
+        ch[u] = Set{Int}()
+    end
+
+    changed = true
+    while changed
+        changed = false
+        current_latents = [u for u in latent_idxs if active[u]]
+        isempty(current_latents) && break
+
+        # Step 2: remove latents with ≤1 active child
+        to_drop = [u for u in current_latents if count(c -> active[c], ch[u]) <= 1]
+        if !isempty(to_drop)
+            for u in to_drop
+                remove_node!(u)
+            end
+            changed = true
+            continue
+        end
+
+        # Step 3: remove one latent whose child set is a strict subset of another's
+        length(current_latents) < 2 && break
+
+        child_sets = [sort([c for c in ch[u] if active[c]]) for u in current_latents]
+        drop_one = nothing
+        for i in eachindex(current_latents)
+            drop_one !== nothing && break
+            for j in eachindex(current_latents)
+                i == j && continue
+                ch_i, ch_j = child_sets[i], child_sets[j]
+                if length(ch_i) < length(ch_j) && all(c -> c in ch_j, ch_i)
+                    drop_one = current_latents[i]
+                    break
+                end
+            end
+        end
+
+        if drop_one !== nothing
+            remove_node!(drop_one)
+            changed = true
+        end
+    end
+
+    kept_syms = Set(B.nodes[i] for i = 1:n if active[i])
+    new_edges = CausalEdge[]
+    for i = 1:n
+        active[i] || continue
+        for c in sort(collect(ch[i]))
+            active[c] || continue
+            push!(new_edges, directed(B.nodes[i], B.nodes[c]))
+        end
+    end
+
+    return DAG(kept_syms, new_edges)
+end
+
 function dag_from_pdag(g::PDAG)
     B = g.backend
     n = length(B.nodes)
@@ -360,6 +508,123 @@ function meek_closure(g::PDAG)
     end
 
     return PDAG(Set(B.nodes), new_edges)
+end
+
+# ── condition_marginalize ─────────────────────────────────────────────────────
+
+# Returns true iff a and b cannot be m-separated by any Z ⊆ other_nodes,
+# when cond_vars are always included in the conditioning set.
+function _not_m_separated_for_all_subsets(
+    g::Union{DAG,AG},
+    a::Symbol,
+    b::Symbol,
+    other_nodes::Vector{Symbol},
+    cond_vars::AbstractVector{Symbol},
+)
+    n = length(other_nodes)
+    for mask = 0:(2^n-1)
+        z = collect(cond_vars)
+        for k = 0:(n-1)
+            (mask >> k) & 1 == 1 && push!(z, other_nodes[k+1])
+        end
+        m_separated(g, a, b, z) && return false
+    end
+    return true
+end
+
+# Infer directed/undirected/bidirected edge type from anterior relationships.
+# Edge type between a and b is determined by:
+#   a ∈ Ant({b} ∪ S)?  b ∈ Ant({a} ∪ S)?  →  edge
+#   no                  no                  →  a ↔ b
+#   yes                 yes                 →  a --- b
+#   yes                 no                  →  a → b
+#   no                  yes                 →  b → a
+# ant_dict maps each node to its anterior set (open=true, node itself excluded).
+function _edge_from_anteriors(
+    a::Symbol,
+    b::Symbol,
+    cond_vars::AbstractVector{Symbol},
+    ant_dict::Dict{Symbol,Set{Symbol}},
+)
+    ant_b_S = Set{Symbol}([b; collect(cond_vars)])
+    for v in [b; collect(cond_vars)]
+        haskey(ant_dict, v) && union!(ant_b_S, ant_dict[v])
+    end
+    a_in_ant_b_S = a in ant_b_S
+
+    ant_a_S = Set{Symbol}([a; collect(cond_vars)])
+    for v in [a; collect(cond_vars)]
+        haskey(ant_dict, v) && union!(ant_a_S, ant_dict[v])
+    end
+    b_in_ant_a_S = b in ant_a_S
+
+    if !a_in_ant_b_S && !b_in_ant_a_S
+        return bidirected(a, b)
+    elseif a_in_ant_b_S && b_in_ant_a_S
+        return undirected(a, b)
+    elseif a_in_ant_b_S
+        return directed(a, b)
+    else
+        return directed(b, a)
+    end
+end
+
+# Marginalize and/or condition on variables in a DAG or AG (Definition 4.2.1,
+# Richardson & Spirtes 2002). Returns an AG over the remaining nodes.
+function condition_marginalize(
+    g::Union{DAG,AG};
+    cond_vars::AbstractVector{Symbol} = Symbol[],
+    marg_vars::AbstractVector{Symbol} = Symbol[],
+)
+    all_ns = Set(nodes(g))
+
+    for v in cond_vars
+        v in all_ns || error("Unknown node in cond_vars: $(v)")
+    end
+    for v in marg_vars
+        v in all_ns || error("Unknown node in marg_vars: $(v)")
+    end
+
+    isempty(cond_vars) &&
+        isempty(marg_vars) &&
+        error("Either cond_vars or marg_vars must be non-empty")
+
+    !isempty(intersect(cond_vars, marg_vars)) &&
+        error("cond_vars and marg_vars must be disjoint")
+
+    removed = Set([cond_vars; marg_vars])
+    remaining = [v for v in nodes(g) if !(v in removed)]
+    n_rem = length(remaining)
+
+    n_rem < 2 && return AG(Set(remaining), CausalEdge[])
+
+    # Pre-compute anteriors for all remaining nodes and cond_vars on the original graph.
+    nodes_for_ant = unique([remaining; collect(cond_vars)])
+    ant_dict = Dict{Symbol,Set{Symbol}}()
+    for v in nodes_for_ant
+        ant_dict[v] = Set(anteriors(g, v))  # open=true: v itself excluded
+    end
+
+    new_edges = CausalEdge[]
+    for i = 1:(n_rem-1)
+        for j = (i+1):n_rem
+            a, b = remaining[i], remaining[j]
+
+            adj_orig = b in adjacency(g, a)
+            is_adj = if adj_orig
+                true
+            else
+                other = [remaining[k] for k = 1:n_rem if k != i && k != j]
+                _not_m_separated_for_all_subsets(g, a, b, other, cond_vars)
+            end
+
+            if is_adj
+                push!(new_edges, _edge_from_anteriors(a, b, cond_vars, ant_dict))
+            end
+        end
+    end
+
+    return AG(Set(remaining), new_edges)
 end
 
 function build_graph(

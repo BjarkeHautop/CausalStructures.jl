@@ -158,14 +158,47 @@ end
     @test length(nodes(admg)) == 0
 end
 
-# ── exogenize (not yet implemented) ──────────────────────────────────────────
+# ── latent_project edge cases ────────────────────────────────────────────────
 
-@testitem "exogenize (broken)" tags = [:unit] begin
+@testitem "latent_project rejects unknown node name" tags = [:unit] begin
+    dag = caugi(directed(:X, :Y); class = DAG)
+    @test_throws ErrorException latent_project(dag, [:Z])
+end
+
+@testitem "latent_project rejects non-DAG graph" tags = [:unit] begin
+    g_pdag = caugi(undirected(:A, :B); class = PDAG)
+    @test_throws MethodError latent_project(g_pdag, [:A])
+end
+
+# ── exogenize ─────────────────────────────────────────────────────────────────
+
+@testitem "exogenize makes node exogenous, adds parent-to-child edges" tags = [:unit] begin
     g = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    @test_broken begin
-        g2 = exogenize(g, [:B])
-        isempty(parents(g2, :B)) && !isempty(parents(g2, :C))
-    end
+    g2 = exogenize(g, [:B])
+    @test isempty(parents(g2, :B))
+    @test :C in children(g2, :B)  # B→C preserved
+    @test :C in children(g2, :A)  # A→C added (A was parent of B, C was child of B)
+end
+
+@testitem "exogenize is idempotent for repeated nodes" tags = [:unit] begin
+    g = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    g_once = exogenize(g, [:B])
+    g_twice = exogenize(g, [:B, :B])
+    @test Set(nodes(g_once)) == Set(nodes(g_twice))
+    @test length(g_once.edges) == length(g_twice.edges)
+end
+
+@testitem "exogenize rejects unknown node" tags = [:unit] begin
+    g = caugi(directed(:A, :B); class = DAG)
+    @test_throws ErrorException exogenize(g, [:Z])
+end
+
+@testitem "exogenize multiple nodes" tags = [:unit] begin
+    g = caugi(directed(:A, :B), directed(:B, :C), directed(:C, :D); class = DAG)
+    g2 = exogenize(g, [:B, :C])
+    @test isempty(parents(g2, :B))
+    @test isempty(parents(g2, :C))
+    @test :D in children(g2, :A)  # A→D added via chain
 end
 
 # ── dag_from_pdag (not yet implemented) ───────────────────────────────────────
@@ -299,23 +332,70 @@ end
     @test :D in children(closed, :C)
 end
 
-# ── condition_marginalize (not yet implemented) ───────────────────────────────
+# ── normalize_latent_structure ────────────────────────────────────────────────
 
-@testitem "condition_marginalize marginalization (broken)" tags = [:unit] begin
-    g = caugi(
-        directed(:U, :X),
-        directed(:U, :Y),
-        directed(:A, :X),
-        directed(:B, :Y);
-        class = DAG,
-    )
-    @test_broken begin
-        mg = condition_marginalize(g; marg_vars = [:U])
-        mg isa ADMG
-    end
+@testitem "normalize_latent_structure drops singleton latent" tags = [:unit] begin
+    # U→X only: U has ≤1 child → removed
+    dag = caugi(directed(:U, :X); class = DAG)
+    norm = normalize_latent_structure(dag, [:U])
+    @test :U ∉ nodes(norm)
+    @test :X in nodes(norm)
 end
 
-@testitem "condition_marginalize conditioning (broken)" tags = [:unit] begin
+@testitem "normalize_latent_structure exogenizes then keeps latent with 2+ children" tags =
+    [:unit] begin
+    # A→U→X, U→Y: U has 2 children → kept; A→X, A→Y added by exogenize
+    dag = caugi(directed(:A, :U), directed(:U, :X), directed(:U, :Y); class = DAG)
+    norm = normalize_latent_structure(dag, [:U])
+    @test :U in nodes(norm)
+    @test isempty(parents(norm, :U))   # exogenized
+    @test :X in children(norm, :A)
+    @test :Y in children(norm, :A)
+end
+
+@testitem "normalize_latent_structure removes nested child set" tags = [:unit] begin
+    # U→{X,Y,Z}, W→{X,Y}: W's child set ⊂ U's → W dropped
+    dag = caugi(
+        directed(:U, :X),
+        directed(:U, :Y),
+        directed(:U, :Z),
+        directed(:W, :X),
+        directed(:W, :Y);
+        class = DAG,
+    )
+    norm = normalize_latent_structure(dag, [:U, :W])
+    @test :U in nodes(norm)
+    @test :W ∉ nodes(norm)
+end
+
+@testitem "normalize_latent_structure rejects unknown latent" tags = [:unit] begin
+    dag = caugi(directed(:X, :Y); class = DAG)
+    @test_throws ErrorException normalize_latent_structure(dag, [:Z])
+end
+
+@testitem "normalize_latent_structure empty latent list returns same graph" tags = [:unit] begin
+    dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    norm = normalize_latent_structure(dag, Symbol[])
+    @test Set(nodes(norm)) == Set(nodes(dag))
+end
+
+@testitem "normalize_latent_structure preserves latent_project equivalence" tags = [:unit] begin
+    # latent_project on dag and norm should give same ADMG
+    dag = caugi(directed(:A, :U), directed(:U, :X), directed(:U, :Y); class = DAG)
+    norm = normalize_latent_structure(dag, [:U])
+    admg1 = latent_project(dag, [:U])
+    admg2 = latent_project(norm, [:U])
+    @test Set(nodes(admg1)) == Set(nodes(admg2))
+    # Both should have X↔Y (shared latent)
+    @test :Y in spouses(admg1, :X)
+    @test :Y in spouses(admg2, :X)
+end
+
+# ── condition_marginalize ─────────────────────────────────────────────────────
+
+@testitem "condition_marginalize: marginalize yields bidirected edge" tags = [:unit] begin
+    # Figure 10 (Richardson & Spirtes 2002): U→X, U→Y, A→X, B→Y
+    # Marginalizing U: X↔Y added, A→X and B→Y preserved
     g = caugi(
         directed(:U, :X),
         directed(:U, :Y),
@@ -323,8 +403,105 @@ end
         directed(:B, :Y);
         class = DAG,
     )
-    @test_broken begin
-        mg = condition_marginalize(g; cond_vars = [:U])
-        length(nodes(mg)) == 4
-    end
+    mg = condition_marginalize(g; marg_vars = [:U])
+    @test mg isa AG
+    @test Set(nodes(mg)) == Set([:A, :B, :X, :Y])
+    has_edge_type(g, u, v, f) = any(e -> e.src == u && e.dst == v && f(e), g.edges)
+    @test has_edge_type(mg, :A, :X, e -> is_directed(e))
+    @test has_edge_type(mg, :B, :Y, e -> is_directed(e))
+    @test any(e -> is_bidirected(e) && Set([e.src, e.dst]) == Set([:X, :Y]), mg.edges)
+end
+
+@testitem "condition_marginalize: conditioning removes node, keeps structure" tags = [:unit] begin
+    # Conditioning on U: removes U from graph, remaining nodes A,B,X,Y
+    g = caugi(
+        directed(:U, :X),
+        directed(:U, :Y),
+        directed(:A, :X),
+        directed(:B, :Y);
+        class = DAG,
+    )
+    mg = condition_marginalize(g; cond_vars = [:U])
+    @test mg isa AG
+    @test Set(nodes(mg)) == Set([:A, :B, :X, :Y])
+    @test :U ∉ nodes(mg)
+end
+
+@testitem "condition_marginalize: Figure 11 conditioning on S" tags = [:unit] begin
+    # Richardson & Spirtes Figure 11:
+    # A→L1→B, L2→B, L2→C, B→S, S→D, D→C (DAG)
+    # Condition on S → edges become undirected for nodes sharing S in anterior
+    f11 = caugi(
+        directed(:A, :L1),
+        directed(:L1, :B),
+        directed(:L2, :B),
+        directed(:L2, :C),
+        directed(:B, :S),
+        directed(:S, :D),
+        directed(:D, :C);
+        class = DAG,
+    )
+    result = condition_marginalize(f11; cond_vars = [:S])
+    @test result isa AG
+    @test Set(nodes(result)) == Set([:A, :B, :C, :D, :L1, :L2])
+    has_e(g, u, v) = has_edge(g, u, v) || has_edge(g, v, u)
+    # Undirected edges expected
+    @test has_e(result, :A, :L1)
+    @test has_e(result, :L1, :B)
+    @test has_e(result, :L1, :L2)
+    @test has_e(result, :L2, :B)
+    # Directed edges expected
+    @test has_edge(result, :L2, :C) || has_edge(result, :D, :C)
+end
+
+@testitem "condition_marginalize: Figure 11 marginalizing L1,L2" tags = [:unit] begin
+    f11 = caugi(
+        directed(:A, :L1),
+        directed(:L1, :B),
+        directed(:L2, :B),
+        directed(:L2, :C),
+        directed(:B, :S),
+        directed(:S, :D),
+        directed(:D, :C);
+        class = DAG,
+    )
+    result = condition_marginalize(f11; marg_vars = [:L1, :L2])
+    @test result isa AG
+    @test Set(nodes(result)) == Set([:A, :B, :C, :D, :S])
+    has_dir(g, u, v) = any(e -> e.src == u && e.dst == v && is_directed(e), g.edges)
+    @test has_dir(result, :A, :B)
+    @test has_dir(result, :B, :S)
+    @test has_dir(result, :S, :D)
+    @test has_dir(result, :D, :C)
+end
+
+@testitem "condition_marginalize: errors on empty cond/marg" tags = [:unit] begin
+    g = caugi(directed(:A, :B); class = DAG)
+    @test_throws ErrorException condition_marginalize(g)
+end
+
+@testitem "condition_marginalize: errors on overlapping cond/marg" tags = [:unit] begin
+    g = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    @test_throws ErrorException condition_marginalize(g; cond_vars = [:B], marg_vars = [:B])
+end
+
+@testitem "condition_marginalize: single remaining node returns empty AG" tags = [:unit] begin
+    g = caugi(directed(:A, :B); class = DAG)
+    result = condition_marginalize(g; marg_vars = [:B])
+    @test result isa AG
+    @test length(nodes(result)) <= 1
+end
+
+@testitem "condition_marginalize: accepts AG input" tags = [:unit] begin
+    g = caugi(
+        directed(:U, :X),
+        directed(:U, :Y),
+        directed(:A, :X),
+        directed(:B, :Y),
+        bidirected(:X, :Z);
+        class = AG,
+    )
+    mg = condition_marginalize(g; cond_vars = [:U])
+    @test mg isa AG
+    @test :U ∉ nodes(mg)
 end
