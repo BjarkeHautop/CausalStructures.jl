@@ -22,6 +22,16 @@ function is_admg(g::CausalGraph; force_check::Bool = false)
     return _satisfies_constraints(ADMGConstraints(), g)
 end
 
+function is_ag(g::CausalGraph; force_check::Bool = false)
+    (g isa AG || g isa DAG) && !force_check && return true
+    try
+        AG(Set(nodes(g)), g.edges)
+        return true
+    catch
+        return false
+    end
+end
+
 function is_simple(g::UNKNOWN; force_check::Bool = false)
     if !force_check
         return g.simple

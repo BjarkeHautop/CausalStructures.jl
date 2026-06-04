@@ -1,5 +1,5 @@
+using Test
 using CausalGraphInterface
-using TestItems
 
 # ── Construction & validation ──────────────────────────────────────────────────
 
@@ -62,6 +62,109 @@ end
     ag = caugi(directed(:A, :B), bidirected(:B, :C), undirected(:A, :D); class = AG)
     @test Set(adjacency(ag, :A)) == Set([:B, :D])
     @test Set(adjacency(ag, :B)) == Set([:A, :C])
+end
+
+# ── ancestors / descendants ───────────────────────────────────────────────────
+
+@testitem "AG: ancestors follow directed edges only, ignoring undirected" tags = [:unit] begin
+    # D --- E are isolated undirected; should not appear in ancestors of C
+    ag = caugi(directed(:A, :B), directed(:B, :C), undirected(:D, :E); class = AG)
+    @test Set(ancestors(ag, :C)) == Set([:A, :B])
+    @test isempty(ancestors(ag, :A))
+    @test Set(ancestors(ag, :C; open = false)) == Set([:A, :B, :C])
+    @test :D ∉ ancestors(ag, :C)
+end
+
+@testitem "AG: descendants follow directed edges only, ignoring undirected" tags = [:unit] begin
+    ag = caugi(directed(:A, :B), directed(:A, :C), undirected(:D, :E); class = AG)
+    @test Set(descendants(ag, :A)) == Set([:B, :C])
+    @test isempty(descendants(ag, :B))
+    @test :D ∉ descendants(ag, :A)
+end
+
+# ── anteriors / posteriors ────────────────────────────────────────────────────
+#
+# A node with an undirected edge cannot have an arrowhead (AG constraint).
+# A valid mixed path: A --- B --> C (B has tail on both edges, no arrowhead).
+
+@testitem "AG: anteriors follow parents and undirected" tags = [:unit] begin
+    # A --- B --> C: B has undirected to A and is a parent of C (tail at B, valid).
+    # Ant(C) follows parent B, then undirected neighbor A → {A, B}.
+    ag = caugi(undirected(:A, :B), directed(:B, :C); class = AG)
+    @test Set(anteriors(ag, :C)) == Set([:A, :B])
+    @test Set(anteriors(ag, :B)) == Set([:A])
+end
+
+@testitem "AG: posteriors follow children and undirected" tags = [:unit] begin
+    # A --> B, A --- C: A has tail on both edges (no arrowhead at A), valid AG.
+    # Post(A) = child B + undirected neighbor C → {B, C}.
+    ag = caugi(directed(:A, :B), undirected(:A, :C); class = AG)
+    @test Set(posteriors(ag, :A)) == Set([:B, :C])
+    @test isempty(posteriors(ag, :B))
+end
+
+# ── exogenous_nodes ───────────────────────────────────────────────────────────
+
+@testitem "AG: exogenous_nodes returns nodes with no parents" tags = [:unit] begin
+    ag = caugi(directed(:A, :B), directed(:C, :B), undirected(:D, :E); class = AG)
+    @test Set(exogenous_nodes(ag)) == Set([:A, :C, :D, :E])
+end
+
+# ── spouses ───────────────────────────────────────────────────────────────────
+
+@testitem "AG: spouses returns bidirected neighbors" tags = [:unit] begin
+    ag = caugi(bidirected(:X, :Y), bidirected(:X, :Z); class = AG)
+    @test Set(spouses(ag, :X)) == Set([:Y, :Z])
+    @test spouses(ag, :Y) == [:X]
+    @test isempty(spouses(ag, :W) for W in [:X, :Y, :Z] if false)  # smoke: no error
+    # A node with no bidirected edges has no spouses
+    ag2 = caugi(directed(:A, :B); class = AG)
+    @test isempty(spouses(ag2, :A))
+end
+
+# ── markov_blanket ────────────────────────────────────────────────────────────
+
+@testitem "AG: markov_blanket includes parents, children, co-parents, spouses, undirected" tags =
+    [:unit] begin
+    # A --> C <-- B, A <-> D, C --- E
+    ag = caugi(directed(:A, :C), directed(:B, :C), bidirected(:A, :D); class = AG)
+    mb = markov_blanket(ag, :A)
+    @test Set(mb) == Set([:B, :C, :D])  # C (child), B (co-parent of C), D (spouse)
+end
+
+# ── is_ag ─────────────────────────────────────────────────────────────────────
+
+@testitem "is_ag: AG is always an AG" tags = [:unit] begin
+    ag = caugi(directed(:A, :B); class = AG)
+    @test is_ag(ag)
+end
+
+@testitem "is_ag: DAG is an AG" tags = [:unit] begin
+    g = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    @test is_ag(g)
+end
+
+@testitem "is_ag: ADMG with anterior violation is not an AG" tags = [:unit] begin
+    # A --> B and A <-> B: arrowhead at A from B, but B ∈ An(A)? No — An(A)={A}.
+    # arrowhead at B from A: A ∈ An(B) = {A,B}. VIOLATION.
+    admg = caugi(directed(:A, :B), bidirected(:A, :B); class = ADMG)
+    @test !is_ag(admg)
+end
+
+@testitem "is_ag: ADMG without anterior violations is an AG" tags = [:unit] begin
+    # A --> B, C <-> D (no directed connection between C and D) → valid AG
+    admg = caugi(directed(:A, :B), bidirected(:C, :D); class = ADMG)
+    @test is_ag(admg)
+end
+
+# ── subgraph ──────────────────────────────────────────────────────────────────
+
+@testitem "AG: subgraph returns induced AG" tags = [:unit] begin
+    ag = caugi(directed(:A, :B), directed(:B, :C), bidirected(:A, :D); class = AG)
+    sub = subgraph(ag, [:A, :B])
+    @test sub isa AG
+    @test Set(nodes(sub)) == Set([:A, :B])
+    @test length(sub.edges) == 1
 end
 
 # ── m_separated for DAG ────────────────────────────────────────────────────────

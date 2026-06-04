@@ -55,7 +55,7 @@ function _subgraph_edges(edges::Vector{CausalEdge}, keep::Set{Symbol})
     return [edge for edge in edges if edge.src in keep && edge.dst in keep]
 end
 
-function subgraph(g::Union{DAG,UG,PDAG}, nodes::AbstractVector{Symbol})
+function subgraph(g::Union{DAG,UG,PDAG,AG}, nodes::AbstractVector{Symbol})
     keep = Set(nodes)
     edges = _subgraph_edges(g.edges, keep)
     return typeof(g)(keep, edges)
