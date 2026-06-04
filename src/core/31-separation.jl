@@ -109,7 +109,6 @@ julia> d_separated(coll, :A, :B, [:C])  # conditioning on collider C opens the p
 false
 ```
 """
-# Returns true iff x ⊥_d y | z in DAG g.
 function d_separated(g::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
     B = g.backend
     x_idx = node_index(g, x)

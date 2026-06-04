@@ -346,8 +346,6 @@ julia> is_valid_backdoor(g, :X, :Y, [:A]) # conditioning on A blocks the backdoo
 true
 ```
 """
-# z must not contain any descendant of x, and each parent of x must be
-# d-separated from y given z ∪ {x}.
 function is_valid_backdoor(
     g::DAG,
     x::Symbol,
