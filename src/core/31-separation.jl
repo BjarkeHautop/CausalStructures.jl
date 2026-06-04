@@ -77,6 +77,38 @@ function _moral_adj_in_mask(B::DAGBackend, mask::BitVector)
     return adj
 end
 
+"""
+    d_separated(g::DAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+
+Return `true` if `x` and `y` are d-separated given `z` in `g`.
+
+Two nodes are d-separated given a conditioning set `z` if every path between
+them is blocked. A path is blocked if it contains either a non-collider node
+in `z`, or a collider node (and all its descendants) not in `z`.
+
+The algorithm restricts to the ancestor graph of `x`, `y`, and `z`, moralizes
+it, then checks connectivity after removing `z`.
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+
+julia> d_separated(g, :A, :C)        # chain A --> B --> C is open
+false
+
+julia> d_separated(g, :A, :C, [:B]) # conditioning on B blocks the chain
+true
+
+julia> coll = caugi(directed(:A, :C), directed(:B, :C); class = DAG);
+
+julia> d_separated(coll, :A, :B)         # collider A --> C <-- B: blocked without conditioning
+true
+
+julia> d_separated(coll, :A, :B, [:C])  # conditioning on collider C opens the path
+false
+```
+"""
 # Returns true iff x ⊥_d y | z in DAG g.
 function d_separated(g::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
     B = g.backend
@@ -112,6 +144,43 @@ function d_separated(g::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = S
     return true
 end
 
+"""
+    m_separated(g, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+
+Return `true` if `x` and `y` are m-separated given `z` in `g`.
+
+M-separation generalizes d-separation to graphs with bidirected and undirected
+edges. For a [`DAG`](@ref), m-separation is equivalent to [`d_separated`](@ref).
+
+Applicable to [`DAG`](@ref), [`ADMG`](@ref), and [`AG`](@ref).
+
+**DAG / ADMG**: restricts to the ancestor graph of `x`, `y`, and `z`, then
+builds a moralized graph (parents and spouses of each node at each arrowhead
+form a clique), and checks connectivity after removing `z`.
+
+**AG**: uses the augmented graph of Richardson & Spirtes (2002) restricted to
+the anterior set of `x`, `y`, and `z`.
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+
+julia> m_separated(g, :A, :C)        # equivalent to d_separated on a DAG
+false
+
+julia> m_separated(g, :A, :C, [:B])
+true
+
+julia> admg = caugi(directed(:A, :B), bidirected(:A, :C); class = ADMG);
+
+julia> m_separated(admg, :B, :C)        # B and C are connected via the bidirected edge at A
+false
+
+julia> m_separated(admg, :B, :C, [:A]) # conditioning on A blocks the path
+true
+```
+"""
 m_separated(g::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[]) =
     d_separated(g, x, y, z)
 
