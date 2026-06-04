@@ -861,6 +861,40 @@ end
 
 # Marginalize and/or condition on variables in a DAG or AG (Definition 4.2.1,
 # Richardson & Spirtes 2002). Returns an AG over the remaining nodes.
+"""
+    condition_marginalize(g::Union{DAG,AG};
+                          cond_vars = Symbol[], marg_vars = Symbol[]) -> AG
+
+Return the [`AG`](@ref) over the remaining nodes after conditioning on
+`cond_vars` and marginalizing out `marg_vars`, following Definition 4.2.1 of
+Richardson & Spirtes (2002).
+
+Two remaining nodes are adjacent if and only if they cannot be m-separated by
+any subset of the other remaining nodes given `cond_vars`. The edge type is
+determined by the anterior relationships: `a --> b` if `a` is anterior to `b`
+but not vice versa; `a <-> b` if neither is anterior to the other; `a --- b`
+if each is anterior to the other.
+
+At least one of `cond_vars` or `marg_vars` must be non-empty, and they must
+be disjoint.
+
+# References
+
+Richardson, T. & Spirtes, P. (2002). Ancestral graph Markov models.
+*Annals of Statistics*, 30(4):962-1030.
+
+# Examples
+
+```jldoctest
+julia> dag = caugi(directed(:U, :X), directed(:U, :Y); class = DAG);
+
+julia> ag = condition_marginalize(dag; marg_vars = [:U])
+AG with 2 nodes and 1 edge:
+  nodes: X, Y
+  edges:
+    X <-> Y
+```
+"""
 function condition_marginalize(
     g::Union{DAG,AG};
     cond_vars::AbstractVector{Symbol} = Symbol[],
