@@ -72,4 +72,6 @@ Figure out a better syntax than using `directed(), undirected()`, etc. Ideally, 
 
 Maybe use `Edge(..., directed)` instead of `directed(...)`, and similar for the rest?
 
+Allow one of the arguments to be a vector (but not both at the same time)? I.e. `directed([:U, :Y], :X)` to mean `directed(:U, :X)` and `directed(:Y, :X)`?
+
 Figure out plotting of causal graphs.
