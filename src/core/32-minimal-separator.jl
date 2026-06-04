@@ -92,6 +92,89 @@ function _d_connected_restricted_idxs(
     return [i for i in eachindex(reached) if reached[i]]
 end
 
+"""
+    minimal_separator(g::DAG, x, y; include=Symbol[], restrict=nothing)
+    minimal_separator(g::ADMG, x, y; include=Symbol[], restrict=nothing)
+    minimal_separator(g::AG, x, y; include=Symbol[], restrict=nothing)
+
+Find a minimal d-separator (DAG) or m-separator (ADMG, AG) between nodes `x` and `y`.
+
+A set ``Z`` separates ``x`` from ``y`` if conditioning on ``Z`` renders them
+d/m-independent. The returned set is *minimal*: no proper subset (excluding forced
+`include` nodes) still separates ``x`` from ``y``.
+
+Returns a `Vector{Symbol}` of node names, or `nothing` when no valid separator
+exists within the allowed candidate set.
+
+# Arguments
+
+- `g`: A `DAG`, `ADMG`, or `AG`.
+- `x`, `y`: The two nodes to separate.
+- `include`: Nodes forced into the separator. Must be a subset of `restrict` (or
+  the default candidate set).
+- `restrict`: Candidate pool from which the separator is drawn. Defaults to all
+  nodes except `x` and `y`.
+
+# Algorithm
+
+Implements FINDMINSEP from van der Zander & Liśkiewicz (UAI 2020), running in
+``O(n + m)`` time. FINDNEARESTSEP is called twice; once from `x`, once from `y`
+restricted to the first result, and the outputs are intersected.
+
+- **DAG**: directional Bayes-ball restricted to ancestors of `{x, y} ∪ include`.
+- **ADMG**: mark-based Bayes-ball over directed and bidirected edges,
+  restricted to ancestors.
+- **AG**: same as ADMG but uses anteriors (ancestors reachable via directed
+  or undirected edges) and handles undirected edge marks.
+
+# References
+
+van der Zander, B. & Liśkiewicz, M. (2020). Finding minimal d-separators in linear
+time and applications. *Proceedings of the 35th Conference on Uncertainty in Artificial
+Intelligence (UAI 2020)*, PMLR 115:637-647.
+[https://proceedings.mlr.press/v115/van-der-zander20a.html](https://proceedings.mlr.press/v115/van-der-zander20a.html)
+
+# Examples
+
+```jldoctest
+julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+
+julia> minimal_separator(g, :A, :C)  # chain A --> B --> C: separator is {B}
+1-element Vector{Symbol}:
+ :B
+
+julia> g_coll = caugi(directed(:A, :C), directed(:B, :C); class = DAG);
+
+julia> minimal_separator(g_coll, :A, :B)  # collider A --> C <-- B: already d-separated
+Symbol[]
+
+julia> g_edge = caugi(directed(:A, :B); class = DAG);
+
+julia> minimal_separator(g_edge, :A, :B) === nothing  # direct edge: no separator exists
+true
+
+julia> g4 = caugi(directed(:A, :X), directed(:X, :M), directed(:M, :Y), directed(:A, :Y); class = DAG);
+
+julia> minimal_separator(g4, :X, :Y)  # two paths require both A and M
+2-element Vector{Symbol}:
+ :A
+ :M
+
+julia> minimal_separator(g4, :X, :Y, include = [:M])  # force M in; A still needed
+2-element Vector{Symbol}:
+ :A
+ :M
+
+julia> minimal_separator(g4, :X, :Y, restrict = [:M]) === nothing  # M alone cannot block X <-- A --> Y
+true
+
+julia> admg = caugi(directed(:A, :B), directed(:B, :C); class = ADMG);
+
+julia> minimal_separator(admg, :A, :C)  # ADMG: returns a minimal m-separator
+1-element Vector{Symbol}:
+ :B
+```
+"""
 function minimal_separator(
     g::DAG,
     x::Symbol,
