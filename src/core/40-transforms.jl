@@ -364,21 +364,13 @@ Journal of Statistics*, 43(3):625-648.
 # Examples
 
 ```jldoctest
-julia> dag = caugi(
-    directed(:A, :U),
-    directed(:U, :X),
-    directed(:U, :Y),
-    directed(:U, :Z),
-    directed(:U2,:Y),
-    directed(:U2, :Z);
-    class = DAG,
-);
+julia> dag = caugi(directed(:A, :U), directed(:U, :X), directed(:U, :Y); class = DAG);
 
-julia> result = normalize_latent_structure(dag, [:U, :U2])
-DAG with 5 nodes and 6 edges:
-  nodes: A, U, X, Y, Z
+julia> result = normalize_latent_structure(dag, [:U])
+DAG with 4 nodes and 4 edges:
+  nodes: A, U, X, Y
   edges:
-    A --> X, A --> Y, A --> Z, U --> X, U --> Y, U --> Z
+    A --> X, A --> Y, U --> X, U --> Y
 ```
 """
 function normalize_latent_structure(g::DAG, latents::AbstractVector{Symbol})

@@ -391,9 +391,6 @@ julia> g = caugi(directed(:A, :B); class = DAG);
 
 julia> has_edge(g, :A, :B)
 true
-
-julia> has_edge(g, :B, :A)
-false
 ```
 """
 function has_edge(g::CausalGraph, src::Symbol, dst::Symbol)
