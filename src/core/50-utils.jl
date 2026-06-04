@@ -21,7 +21,7 @@ function is_ag(g::CausalGraph)
     # Need to explicitly promote to AG, since _anterior_bitmask expects an
     # AG type for bitmask checks.
     try
-        AG(Set(nodes(g)), g.edges)
+        AG(nodes(g), g.edges)
         return true
     catch
         return false
