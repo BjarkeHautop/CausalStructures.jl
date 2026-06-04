@@ -130,16 +130,29 @@ function _ordered_pair(a::Symbol, b::Symbol)
     return isless(a, b) ? (a, b) : (b, a)
 end
 
+"""
+    directed(src, dst) -> CausalEdge   # src --> dst
+"""
 directed(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Tail, Arrow)
-
+"""
+    undirected(src, dst) -> CausalEdge   # src -- dst
+"""
 undirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Tail, Tail)
-
+"""
+    bidirected(src, dst) -> CausalEdge   # src <-> dst
+"""
 bidirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Arrow, Arrow)
-
+"""
+    partially_directed(src, dst) -> CausalEdge   # src o-> dst
+"""
 partially_directed(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Circle, Arrow)
-
-partially_undirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Circle, Tail)
-
+"""
+    partially_undirected(src, dst) -> CausalEdge   # src --o dst
+"""
+partially_undirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Tail, Circle)
+"""
+    partial(src, dst) -> CausalEdge   # src o-o dst
+"""
 partial(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Circle, Circle)
 
 edge_kind(edge::CausalEdge) = (edge.src_end, edge.dst_end)
