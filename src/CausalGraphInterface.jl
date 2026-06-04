@@ -51,5 +51,7 @@ export CausalEdge,
     minimal_separator,
     latent_project,
     dag_from_pdag,
-    meek_closure
+    meek_closure,
+    is_valid_adjustment_admg,
+    all_adjustment_sets_admg
 end
