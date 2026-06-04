@@ -176,6 +176,73 @@ function latent_project(g::DAG, latents::AbstractVector{Symbol})
     return ADMG(new_nodes, new_edges)
 end
 
+function dag_from_pdag(g::PDAG)
+    B = g.backend
+    n = length(B.nodes)
+
+    pa = [Set{Int}(_parents_slice(B, i)) for i = 1:n]
+    ch = [Set{Int}(_children_slice(B, i)) for i = 1:n]
+    und = [Set{Int}(_undirected_slice(B, i)) for i = 1:n]
+
+    # out_pa[i] accumulates the final parent set for node i (directed edges)
+    out_pa = [Set{Int}(copy(pa[i])) for i = 1:n]
+
+    nodes_left = Set(1:n)
+
+    while !isempty(nodes_left)
+        found_sink = false
+
+        for x in nodes_left
+            # Condition (a): x has no children in working graph
+            isempty(ch[x]) || continue
+
+            # Condition (b): undirected neighbors of x form a clique
+            nbrs = collect(und[x])
+            clique = true
+            for i in eachindex(nbrs), j = (i+1):length(nbrs)
+                a, b = nbrs[i], nbrs[j]
+                # adjacent if any edge type connects a and b
+                if b ∉ pa[a] && b ∉ ch[a] && b ∉ und[a]
+                    clique = false
+                    break
+                end
+            end
+            clique || continue
+
+            # x is a valid sink — orient all undirected edges toward x
+            for u in nbrs
+                push!(out_pa[x], u)
+            end
+
+            # Remove x from working graph
+            for p in pa[x]
+                ;
+                delete!(ch[p], x);
+            end
+            for u in nbrs
+                ;
+                delete!(und[u], x);
+            end
+            pa[x] = Set{Int}()
+            ch[x] = Set{Int}()
+            und[x] = Set{Int}()
+
+            delete!(nodes_left, x)
+            found_sink = true
+            break
+        end
+
+        found_sink || error("PDAG cannot be extended to a DAG (Dor-Tarsi failed)")
+    end
+
+    new_edges = CausalEdge[]
+    for i = 1:n, p in out_pa[i]
+        push!(new_edges, directed(B.nodes[p], B.nodes[i]))
+    end
+
+    return DAG(Set(B.nodes), new_edges)
+end
+
 function build_graph(
     ::Type{T},
     nodes::Set{Symbol},

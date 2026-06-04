@@ -49,5 +49,6 @@ export CausalEdge,
     d_separated,
     m_separated,
     minimal_separator,
-    latent_project
+    latent_project,
+    dag_from_pdag
 end

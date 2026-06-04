@@ -170,22 +170,65 @@ end
 
 # ── dag_from_pdag (not yet implemented) ───────────────────────────────────────
 
-@testitem "dag_from_pdag converts a valid PDAG to a DAG (broken)" tags = [:unit] begin
+@testitem "dag_from_pdag converts a valid PDAG to a DAG" tags = [:unit] begin
     pdag = caugi(undirected(:A, :B), undirected(:B, :C); class = PDAG)
-    @test_broken begin
-        dag = dag_from_pdag(pdag)
-        all(
-            e ->
-                e.src_end == CausalGraphInterface.Tail &&
-                e.dst_end == CausalGraphInterface.Arrow,
-            dag.edges,
-        )
-    end
+    dag = dag_from_pdag(pdag)
+    @test dag isa DAG
+    @test all(
+        e ->
+            e.src_end == CausalGraphInterface.Tail &&
+            e.dst_end == CausalGraphInterface.Arrow,
+        dag.edges,
+    )
+    @test Set(nodes(dag)) == Set(nodes(pdag))
+    @test length(dag.edges) == 2
 end
 
-@testitem "dag_from_pdag errors on non-PDAG (broken)" tags = [:unit] begin
-    g = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    @test_broken dag_from_pdag(g) isa DAG
+@testitem "dag_from_pdag errors on non-extendable PDAG" tags = [:unit] begin
+    # 4-cycle A-B-C-D-A: cannot be oriented into a DAG
+    pdag = caugi(
+        undirected(:A, :B),
+        undirected(:A, :D),
+        undirected(:B, :C),
+        undirected(:C, :D);
+        class = PDAG,
+    )
+    @test_throws ErrorException dag_from_pdag(pdag)
+end
+
+@testitem "dag_from_pdag preserves directed edges in mixed graph" tags = [:unit] begin
+    pdag = caugi(
+        directed(:A, :B),
+        directed(:C, :B),
+        undirected(:C, :D),
+        undirected(:D, :A);
+        class = PDAG,
+    )
+    dag = dag_from_pdag(pdag)
+    @test dag isa DAG
+    has_dir(g, u, v) = any(e -> e.src == u && e.dst == v, g.edges)
+    @test has_dir(dag, :A, :B)
+    @test has_dir(dag, :C, :B)
+    @test xor(has_dir(dag, :A, :D), has_dir(dag, :D, :A))
+    @test xor(has_dir(dag, :C, :D), has_dir(dag, :D, :C))
+    @test length(dag.edges) == 4
+end
+
+@testitem "dag_from_pdag orients each undirected edge exactly once" tags = [:unit] begin
+    pdag = caugi(directed(:A, :C), directed(:B, :C), undirected(:A, :D); class = PDAG)
+    dag = dag_from_pdag(pdag)
+    @test dag isa DAG
+    has_dir(g, u, v) = any(e -> e.src == u && e.dst == v, g.edges)
+    @test has_dir(dag, :A, :C)
+    @test has_dir(dag, :B, :C)
+    @test xor(has_dir(dag, :A, :D), has_dir(dag, :D, :A))
+    @test !any(
+        e ->
+            e.src_end == CausalGraphInterface.Tail &&
+            e.dst_end == CausalGraphInterface.Tail,
+        dag.edges,
+    )
+    @test length(dag.edges) == 3
 end
 
 # ── meek_closure (not yet implemented) ────────────────────────────────────────
