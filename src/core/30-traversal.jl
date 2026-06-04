@@ -34,7 +34,11 @@ function topological_sort(g::DAG)
     return ordering
 end
 
-function ancestors(g::Union{DAG,AbstractPDAG,ADMG,AG}, node::Symbol; open::Bool = true)
+function ancestors(
+    g::Union{DAG,AbstractPDAG,ADMG,AG},
+    node::Symbol;
+    open::Bool = _OPEN_DEFAULT,
+)
     B = g.backend
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))
@@ -52,7 +56,11 @@ function ancestors(g::Union{DAG,AbstractPDAG,ADMG,AG}, node::Symbol; open::Bool 
     return open ? result : [node; result]
 end
 
-function descendants(g::Union{DAG,AbstractPDAG,ADMG,AG}, node::Symbol; open::Bool = true)
+function descendants(
+    g::Union{DAG,AbstractPDAG,ADMG,AG},
+    node::Symbol;
+    open::Bool = _OPEN_DEFAULT,
+)
     B = g.backend
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))
@@ -85,9 +93,9 @@ function exogenous_nodes(g::AbstractPDAG; undirected_as_parents::Bool = false)
     return exogenous
 end
 
-anteriors(g::DAG, node::Symbol; open::Bool = true) = ancestors(g, node; open)
+anteriors(g::DAG, node::Symbol; open::Bool = _OPEN_DEFAULT) = ancestors(g, node; open)
 
-function anteriors(g::AbstractPDAG, node::Symbol; open::Bool = true)
+function anteriors(g::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = g.backend
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))
@@ -107,9 +115,9 @@ function anteriors(g::AbstractPDAG, node::Symbol; open::Bool = true)
     return open ? result : [node; result]
 end
 
-posteriors(g::DAG, node::Symbol; open::Bool = true) = descendants(g, node; open)
+posteriors(g::DAG, node::Symbol; open::Bool = _OPEN_DEFAULT) = descendants(g, node; open)
 
-function posteriors(g::AbstractPDAG, node::Symbol; open::Bool = true)
+function posteriors(g::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = g.backend
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))
@@ -237,7 +245,7 @@ end
 # exogenous_nodes and spouses are unified with ADMG above.
 
 # Anteriors: nodes reachable from `node` via directed parents or undirected edges.
-function anteriors(g::AG, node::Symbol; open::Bool = true)
+function anteriors(g::AG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = g.backend
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))
@@ -258,7 +266,7 @@ function anteriors(g::AG, node::Symbol; open::Bool = true)
 end
 
 # Posteriors: nodes reachable from `node` via directed children or undirected edges.
-function posteriors(g::AG, node::Symbol; open::Bool = true)
+function posteriors(g::AG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = g.backend
     node_idx = node_index(g, node)
     seen = falses(length(B.nodes))
