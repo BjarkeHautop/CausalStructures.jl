@@ -42,6 +42,7 @@ independent of its declared graph class.
 
 ```jldoctest
 julia> dag = caugi(directed(:A, :B); class = DAG);
+
 julia> is_cpdag(dag)
 false
 ```
@@ -58,6 +59,7 @@ independent of its declared graph class.
 
 ```jldoctest
 julia> pdag = caugi(undirected(:A, :B); class = PDAG);
+
 julia> is_ug(pdag)
 true
 ```
@@ -74,6 +76,7 @@ independent of its declared graph class.
 
 ```jldoctest
 julia> pdag = caugi(bidirected(:A, :B); class = UNKNOWN);
+
 julia> is_admg(pdag)
 true
 ```
@@ -90,6 +93,7 @@ independent of its declared graph class.
 
 ```jldoctest
 julia> pdag = caugi(bidirected(:A, :B); class = UNKNOWN);
+
 julia> is_ag(pdag)
 true
 ```
@@ -175,7 +179,7 @@ julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 julia> is_acyclic(g)
 true
 
-julia> unk = caugi(directed(:A, :B), directed(:B, :A); class = UNKNOWN);
+julia> unk = caugi(directed(:A, :B), directed(:B, :A); simple = false, class = UNKNOWN);
 
 julia> is_acyclic(unk)
 false
