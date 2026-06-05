@@ -9,6 +9,8 @@ using Statistics
 const _OPEN_DEFAULT::Bool = @load_preference("open", true)
 
 include("core/00-defs.jl")
+include("core/05-edges.jl")
+include("core/06-constructors.jl")
 include("core/10-validate.jl")
 include("core/20-backend.jl")
 include("core/30-traversal.jl")
