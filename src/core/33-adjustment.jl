@@ -475,15 +475,11 @@ function adjustment_set(g::DAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
         return [B.nodes[v] for v = 1:n if keep[v]]
 
     elseif type === :backdoor
-        an_y = _ancestors_bitmask(B, [y_idx])
         keep = falses(n)
         for p in _parents_slice(B, x_idx)
-            an_y[p] && (keep[p] = true)
+            keep[p] = true
         end
-        de_x = _descendants_bitmask(B, [x_idx])  # includes x_idx
-        for v = 1:n
-            de_x[v] && (keep[v] = false)
-        end
+        keep[x_idx] = false
         keep[y_idx] = false
         return [B.nodes[v] for v = 1:n if keep[v]]
 

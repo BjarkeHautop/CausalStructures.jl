@@ -191,6 +191,18 @@ end
     @test :D ∉ z  # descendant of X must not appear
 end
 
+@testitem "adjustment_set: backdoor type valid when parent is not ancestor of Y" tags =
+    [:unit] begin
+    # C --> B --> X, C --> Y
+    # B is a parent of X but NOT an ancestor of Y.
+    # Backdoor path: X <-- B <-- C --> Y must be
+    # blocked by including B (or C).
+    g = caugi(directed(:C, :B), directed(:B, :X), directed(:C, :Y); class = DAG)
+    z = adjustment_set(g, :X, :Y; type = :backdoor)
+    @test is_valid_backdoor(g, :X, :Y, z)
+    @test :B ∈ z || :C ∈ z
+end
+
 @testitem "adjustment_set: optimal type returns K on ECI graph" tags = [:unit] begin
     g = caugi(
         directed(:C, :X),
