@@ -85,6 +85,8 @@ latent_project
 exogenize
 normalize_latent_structure
 condition_marginalize
+enumerate_dags
+count_dags
 ```
 
 ## Separation & Adjustment

@@ -7,3 +7,11 @@ function verify_topo_order(cg, order::Vector{Symbol})
     end
     return true
 end
+
+function directed_pairs(d::DAG)
+    pairs = Set{Tuple{Symbol,Symbol}}()
+    for n in nodes(d), c in children(d, n)
+        push!(pairs, (n, c))
+    end
+    return pairs
+end
