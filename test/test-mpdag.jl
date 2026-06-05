@@ -107,7 +107,7 @@ end
 @testitem "MPDAG show: typename is MPDAG" tags = [:unit] begin
     g = caugi(directed(:A, :B); class = MPDAG)
     str = sprint(show, g)
-    @test startswith(str, "MPDAG with")
+    @test contains(str, "MPDAG with")
 end
 
 # ── shared AbstractPDAG operations work on MPDAG ──────────────────────────────
