@@ -351,7 +351,7 @@ function _cpdag_components_chordal(B::PDAGBackend, n::Int, comp::Vector{Int}, c:
             end
         end
 
-        # pos[v] = rank in reverse order (last MCS pick → rank 1)
+        # pos[v] = rank in reverse order (last MCS pick --> rank 1)
         for (i, v) in enumerate(Iterators.reverse(order))
             pos[v] = i
         end
@@ -386,7 +386,7 @@ end
 # True if no Meek orientation rule (R1–R4) would fire.
 # Mirrors the safeguards in meek_closure so this is consistent with it.
 function _cpdag_meek_closed(B::PDAGBackend, n::Int)
-    # R1: u→v, v—w, u ⊄ w  ⇒  v→w  (unless cycle or new collider)
+    # R1: u-->v, v—w, u ⊄ w  ⇒  v-->w  (unless cycle or new collider)
     for v = 1:n
         pa = _parents_slice(B, v)
         isempty(pa) && continue
@@ -402,7 +402,7 @@ function _cpdag_meek_closed(B::PDAGBackend, n::Int)
         end
     end
 
-    # R2: u—v, ∃ w: u→w→v  ⇒  u→v
+    # R2: u—v, ∃ w: u-->w-->v  ⇒  u-->v
     for v = 1:n
         pa_v = _parents_slice(B, v)
         for u in _undirected_slice(B, v)
@@ -410,7 +410,7 @@ function _cpdag_meek_closed(B::PDAGBackend, n::Int)
         end
     end
 
-    # R3: u—v, ∃ w,x: w→v, x→v, w ⊄ x, u—w, u—x  ⇒  u→v
+    # R3: u—v, ∃ w,x: w-->v, x-->v, w ⊄ x, u—w, u—x  ⇒  u-->v
     for v = 1:n
         pv = _parents_slice(B, v)
         length(pv) < 2 && continue
@@ -438,18 +438,18 @@ function _cpdag_meek_closed(B::PDAGBackend, n::Int)
     return true
 end
 
-# True if every directed edge a→b is strongly protected (VS, SP1, SP2, SP3).
+# True if every directed edge a-->b is strongly protected (VS, SP1, SP2, SP3).
 function _cpdag_arrows_protected(B::PDAGBackend, n::Int)
     for a = 1:n
         for b in _children_slice(B, a)
             pa_b = _parents_slice(B, b)
-            # VS: ∃ c→b, c ≠ a, c ⊄ a
+            # VS: ∃ c-->b, c ≠ a, c ⊄ a
             any(c -> c != a && !_cpdag_adjacent(B, c, a), pa_b) && continue
-            # SP1: ∃ c→a, c ⊄ b
+            # SP1: ∃ c-->a, c ⊄ b
             any(c -> !_cpdag_adjacent(B, c, b), _parents_slice(B, a)) && continue
-            # SP2: ∃ c: a→c, c→b
+            # SP2: ∃ c: a-->c, c-->b
             _cpdag_intersects(_children_slice(B, a), pa_b) && continue
-            # SP3: ∃ c,d→b, c ⊄ d, a—c, a—d
+            # SP3: ∃ c,d-->b, c ⊄ d, a—c, a—d
             und_a = _undirected_slice(B, a)
             sp3 = false
             for i in eachindex(pa_b), j = (i+1):lastindex(pa_b)

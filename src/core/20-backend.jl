@@ -189,7 +189,7 @@ function build_backend(::Type{UNKNOWN}, nodes, edges::Vector{CausalEdge})
     index = Dict(n => i for (i, n) in enumerate(ordered_nodes))
     n = length(ordered_nodes)
 
-    # [parents, undirected, spouses, children]; Circle-endpoint edges → undirected bucket
+    # [parents, undirected, spouses, children]; Circle-endpoint edges --> undirected bucket
     bucket_rows = [[Int[], Int[], Int[], Int[]] for _ = 1:n]
 
     for edge in edges

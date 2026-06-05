@@ -467,7 +467,7 @@ end
 end
 
 @testitem "is_cpdag: PDAG single directed edge is not a CPDAG" tags = [:unit] begin
-    # A→B has no v-structure protecting it
+    # A-->B has no v-structure protecting it
     pdag = caugi(directed(:A, :B); class = PDAG)
     @test !is_cpdag(pdag)
 end
@@ -493,7 +493,7 @@ end
 end
 
 @testitem "is_cpdag: triangle with adjacent parents is not a CPDAG" tags = [:unit] begin
-    # A→C, B→C, A—B: A and B are adjacent so no v-structure at C; arrows not protected
+    # A-->C, B-->C, A—B: A and B are adjacent so no v-structure at C; arrows not protected
     pdag = caugi(directed(:A, :C), directed(:B, :C), undirected(:A, :B); class = PDAG)
     @test !is_cpdag(pdag)
 end
@@ -520,19 +520,19 @@ end
 end
 
 @testitem "is_cpdag: rejects Meek R1 violation" tags = [:unit] begin
-    # A→B, B—C, A not adjacent to C: R1 would orient B→C
+    # A-->B, B—C, A not adjacent to C: R1 would orient B-->C
     pdag = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG)
     @test !is_cpdag(pdag)
 end
 
 @testitem "is_cpdag: rejects Meek R2 violation" tags = [:unit] begin
-    # A—B with A→C→B: R2 would orient A→B
+    # A—B with A-->C-->B: R2 would orient A-->B
     pdag = caugi(undirected(:A, :B), directed(:A, :C), directed(:C, :B); class = PDAG)
     @test !is_cpdag(pdag)
 end
 
 @testitem "is_cpdag: rejects Meek R3 violation" tags = [:unit] begin
-    # A—B, C→B, D→B, C not adj D, A—C, A—D: R3 would orient A→B
+    # A—B, C-->B, D-->B, C not adj D, A—C, A—D: R3 would orient A-->B
     cg = caugi(
         undirected(:A, :B),
         directed(:C, :B),
@@ -545,7 +545,7 @@ end
 end
 
 @testitem "is_cpdag: rejects Meek R4 violation" tags = [:unit] begin
-    # A—B with directed path A→C→D→B: R4 would orient A→B
+    # A—B with directed path A-->C-->D-->B: R4 would orient A-->B
     cg = caugi(
         undirected(:A, :B),
         directed(:A, :C),
@@ -558,7 +558,7 @@ end
 
 @testitem "is_cpdag: complex valid CPDAG with v-structure + undirected components" tags =
     [:unit] begin
-    # B—A, B—D, C→E←B, D→F←E
+    # B—A, B—D, C-->E←B, D-->F←E
     cg = caugi(
         undirected(:B, :A),
         undirected(:B, :D),
@@ -571,14 +571,14 @@ end
     @test is_cpdag(cg)
 end
 
-@testitem "is_cpdag: v-structure with R1 cascade (C→E←B, E→F) is valid" tags = [:unit] begin
-    # C→E, B→E protects both; E→F is protected by SP2 (B→E→F)
+@testitem "is_cpdag: v-structure with R1 cascade (C-->E←B, E-->F) is valid" tags = [:unit] begin
+    # C-->E, B-->E protects both; E-->F is protected by SP2 (B-->E-->F)
     pdag = caugi(directed(:A, :C), directed(:B, :C), directed(:C, :D); class = PDAG)
     @test is_cpdag(pdag)
 end
 
-@testitem "is_cpdag: PDAG with B→A and B→C (fork) is not a CPDAG" tags = [:unit] begin
-    # B→A, B→C: neither edge is protected (no v-structure)
+@testitem "is_cpdag: PDAG with B-->A and B-->C (fork) is not a CPDAG" tags = [:unit] begin
+    # B-->A, B-->C: neither edge is protected (no v-structure)
     pdag = caugi(directed(:B, :A), directed(:B, :C); class = PDAG)
     @test !is_cpdag(pdag)
 end

@@ -25,11 +25,11 @@ end
 
 @testitem "AG: rejects undirected + arrowhead at same node" tags = [:unit] begin
     # A --- B and A --> C: A has undirected edge and is a parent (tail, not arrowhead).
-    # Arrowhead constraint is at the target: C has an arrowhead, but C has no undirected edge → fine.
+    # Arrowhead constraint is at the target: C has an arrowhead, but C has no undirected edge --> fine.
     ag = caugi(undirected(:A, :B), directed(:A, :C); class = AG)
     @test ag isa AG
 
-    # B --> A and A --- C: A receives an arrowhead AND has an undirected edge → invalid.
+    # B --> A and A --- C: A receives an arrowhead AND has an undirected edge --> invalid.
     @test_throws Exception caugi(directed(:B, :A), undirected(:A, :C); class = AG)
 end
 
@@ -82,7 +82,7 @@ end
 
 @testitem "AG: anteriors follow parents and undirected" tags = [:unit] begin
     # A --- B --> C: B has undirected to A and is a parent of C (tail at B, valid).
-    # Ant(C) follows parent B, then undirected neighbor A → {A, B}.
+    # Ant(C) follows parent B, then undirected neighbor A --> {A, B}.
     ag = caugi(undirected(:A, :B), directed(:B, :C); class = AG)
     @test Set(anteriors(ag, :C)) == Set([:A, :B])
     @test Set(anteriors(ag, :B)) == Set([:A])
@@ -90,7 +90,7 @@ end
 
 @testitem "AG: posteriors follow children and undirected" tags = [:unit] begin
     # A --> B, A --- C: A has tail on both edges (no arrowhead at A), valid AG.
-    # Post(A) = child B + undirected neighbor C → {B, C}.
+    # Post(A) = child B + undirected neighbor C --> {B, C}.
     ag = caugi(directed(:A, :B), undirected(:A, :C); class = AG)
     @test Set(posteriors(ag, :A)) == Set([:B, :C])
     @test isempty(posteriors(ag, :B))
@@ -143,7 +143,7 @@ end
 end
 
 @testitem "is_ag: ADMG without anterior violations is an AG" tags = [:unit] begin
-    # A --> B, C <-> D (no directed connection between C and D) → valid AG
+    # A --> B, C <-> D (no directed connection between C and D) --> valid AG
     admg = caugi(directed(:A, :B), bidirected(:C, :D); class = ADMG)
     @test is_ag(admg)
 end
@@ -217,7 +217,7 @@ end
 @testitem "m_separated AG: empty conditioning set" tags = [:unit] begin
     ag = caugi(directed(:A, :B); class = AG)
     @test !m_separated(ag, :A, :B)
-    @test m_separated(ag, :A, :B, [:A])  # x itself blocked → trivially separated
+    @test m_separated(ag, :A, :B, [:A])  # x itself blocked --> trivially separated
 end
 
 # ── minimal_separator for AG ──────────────────────────────────────────────────

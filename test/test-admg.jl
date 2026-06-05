@@ -58,7 +58,7 @@ end
 
 @testitem "no ancestors via bidirected edges in ADMG" tags = [:unit] begin
     admg = caugi(directed(:A, :B), directed(:B, :C), bidirected(:A, :D); class = ADMG)
-    # D has no directed parents → no ancestors
+    # D has no directed parents --> no ancestors
     @test isempty(ancestors(admg, :D))
 end
 
@@ -137,7 +137,7 @@ end
 
 # ── adjustment ────────────────────────────────────────────────────────────────
 
-@testitem "is_valid_adjustment_admg: classic confounding L→X→Y, L→Y" tags = [:unit] begin
+@testitem "is_valid_adjustment_admg: classic confounding L-->X-->Y, L-->Y" tags = [:unit] begin
     admg = caugi(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG)
     @test !is_valid_adjustment_admg(admg, :X, :Y)
     @test !is_valid_adjustment_admg(admg, :X, :Y, Symbol[])
@@ -179,7 +179,7 @@ end
 
 @testitem "all_adjustment_sets_admg: no valid set when all paths blocked by collider" tags =
     [:unit] begin
-    # Instrumental variable + bidirected: Z→X→Y, X↔Y — cannot block all paths
+    # Instrumental variable + bidirected: Z-->X-->Y, X<->Y — cannot block all paths
     admg = caugi(directed(:Z, :X), directed(:X, :Y), bidirected(:X, :Y); class = ADMG)
     sets = all_adjustment_sets_admg(admg, :X, :Y; minimal = true, max_size = 3)
     @test isempty(sets)

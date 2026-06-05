@@ -4,7 +4,7 @@ using Test
 using CausalGraphInterface
 
 # Figure 6.5 from Elements of Causal Inference (p. 115)
-# C→X, X→F, X→D, A→X, A→K, K→Y, D→Y, D→G, Y→H
+# C-->X, X-->F, X-->D, A-->X, A-->K, K-->Y, D-->Y, D-->G, Y-->H
 function _eci_graph()
     caugi(
         directed(:C, :X),
@@ -37,7 +37,7 @@ end
     @test is_valid_backdoor(cg, :X, :Y, [:K])
     @test !is_valid_backdoor(cg, :X, :Y, [:D])       # D is a descendant of X
     @test !is_valid_backdoor(cg, :X, :Y, [:A, :D])   # D is a descendant of X
-    @test !is_valid_backdoor(cg, :X, :Y)             # empty set: backdoor path A→X open
+    @test !is_valid_backdoor(cg, :X, :Y)             # empty set: backdoor path A-->X open
 end
 
 @testitem "all_backdoor_sets: minimal sets on ECI graph" tags = [:unit] begin
@@ -84,7 +84,7 @@ end
 
 @testitem "all_backdoor_sets: empty set valid when v-structure blocks backdoor" tags =
     [:unit] begin
-    # A→L, K→L forms a collider on L, blocking A→X backdoor path
+    # A-->L, K-->L forms a collider on L, blocking A-->X backdoor path
     cg = caugi(
         directed(:C, :X),
         directed(:X, :F),
@@ -222,7 +222,7 @@ end
 end
 
 @testitem "adjustment_set: optimal default on simple confounder" tags = [:unit] begin
-    # A→X, X→Y, A→Y: optimal set should be {A}
+    # A-->X, X-->Y, A-->Y: optimal set should be {A}
     cg = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG)
     z = adjustment_set(cg, :X, :Y)  # default :optimal
     @test is_valid_backdoor(cg, :X, :Y, z)
@@ -230,7 +230,7 @@ end
 end
 
 @testitem "adjustment_set: optimal empty on chain" tags = [:unit] begin
-    # X→Y: no confounders, optimal set is empty
+    # X-->Y: no confounders, optimal set is empty
     cg = caugi(directed(:X, :Y); class = DAG)
     @test adjustment_set(cg, :X, :Y; type = :optimal) == Symbol[]
     @test adjustment_set(cg, :X, :Y; type = :parents) == Symbol[]

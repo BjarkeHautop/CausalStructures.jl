@@ -106,7 +106,7 @@ function _admg_moral_adj_filtered(
     return adj
 end
 
-# Compute PBG removed edges: x → v with x ∈ X, v ∉ X, v ∈ An(Y).
+# Compute PBG removed edges: x --> v with x ∈ X, v ∉ X, v ∈ An(Y).
 function _pbg_removed(B::ADMGBackend, xs::Vector{Int}, ys::Vector{Int})
     n = length(B.nodes)
     an_y = _ancestors_bitmask(B, ys)
@@ -388,7 +388,7 @@ function is_valid_backdoor(
     sizehint!(queue, n)
 
     for p_idx in parents_x
-        blocked[p_idx] && continue  # p is in obs → trivially d-separated
+        blocked[p_idx] && continue  # p is in obs --> trivially d-separated
         fill!(visited, false)
         empty!(queue)
         visited[p_idx] = true

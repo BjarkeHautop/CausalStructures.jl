@@ -24,7 +24,7 @@ end
 end
 
 @testitem "MPDAG: rejects graph where Meek R1 would fire" tags = [:unit] begin
-    # A → B --- C, A not adjacent to C: R1 would orient B → C
+    # A --> B --- C, A not adjacent to C: R1 would orient B --> C
     @test_throws Exception caugi(directed(:A, :B), undirected(:B, :C); class = MPDAG)
 end
 

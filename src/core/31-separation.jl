@@ -408,13 +408,13 @@ function _reachable_admg(
         v, in_m = q[head]
         head += 1
         v_in_z = z_mask[v]
-        for p in _parents_slice(B, v)   # p→v: out=Head(2), nbr_in=Tail(1)
+        for p in _parents_slice(B, v)   # p-->v: out=Head(2), nbr_in=Tail(1)
             _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, p, 1)
         end
-        for c in _children_slice(B, v)  # v→c: out=Tail(1), nbr_in=Head(2)
+        for c in _children_slice(B, v)  # v-->c: out=Tail(1), nbr_in=Head(2)
             _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 1, c, 2)
         end
-        for s in _spouses_slice(B, v)   # v↔s: out=Head(2), nbr_in=Head(2)
+        for s in _spouses_slice(B, v)   # v<->s: out=Head(2), nbr_in=Head(2)
             _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, s, 2)
         end
     end
@@ -447,13 +447,13 @@ function _reachable_ag(B::AGBackend, xs::Vector{Int}, a_mask::BitVector, z_mask:
         v, in_m = q[head]
         head += 1
         v_in_z = z_mask[v]
-        for p in _parents_slice(B, v)       # p→v: out=Head(2), nbr_in=Tail(1)
+        for p in _parents_slice(B, v)       # p-->v: out=Head(2), nbr_in=Tail(1)
             _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, p, 1)
         end
-        for c in _children_slice(B, v)      # v→c: out=Tail(1), nbr_in=Head(2)
+        for c in _children_slice(B, v)      # v-->c: out=Tail(1), nbr_in=Head(2)
             _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 1, c, 2)
         end
-        for s in _spouses_slice(B, v)       # v↔s: out=Head(2), nbr_in=Head(2)
+        for s in _spouses_slice(B, v)       # v<->s: out=Head(2), nbr_in=Head(2)
             _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, s, 2)
         end
         for w in _undirected_slice(B, v)    # v---w: out=Undir(3), nbr_in=Undir(3)

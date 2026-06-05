@@ -127,9 +127,9 @@ function subgraph(cg::Union{DAG,UG,AbstractPDAG,AG}, nodes::AbstractVector{Symbo
 end
 
 # Vertex-elimination latent projection: for each latent node v (in index order),
-#   1. add p→c for all p ∈ Pa(v), c ∈ Ch(v)
-#   2. add s↔c for all s ∈ Sib(v), c ∈ Ch(v)
-#   3. add a↔b for all pairs a,b ∈ Ch(v)
+#   1. add p-->c for all p ∈ Pa(v), c ∈ Ch(v)
+#   2. add s<->c for all s ∈ Sib(v), c ∈ Ch(v)
+#   3. add a<->b for all pairs a,b ∈ Ch(v)
 #   4. remove v
 # Returns an ADMG over the observed (non-latent) nodes.
 """
@@ -539,11 +539,11 @@ Apply Meek's orientation rules (R1-R4) to `cg` until no further orientations
 are implied, returning the resulting [`MPDAG`](@ref).
 
 The four rules are:
-- **R1**: `a --> b --- c`, `a` not adjacent to `c` → orient `b --> c`
-- **R2**: `a --- b`, directed path `a --> w --> b` exists → orient `a --> b`
+- **R1**: `a --> b --- c`, `a` not adjacent to `c` --> orient `b --> c`
+- **R2**: `a --- b`, directed path `a --> w --> b` exists --> orient `a --> b`
 - **R3**: `a --- b`, two parents `c, d` of `b` with `c` not adjacent to `d`,
-  and `a --- c`, `a --- d` → orient `a --> b`
-- **R4**: `a --- b`, directed path `a -->+ b` exists → orient `a --> b`
+  and `a --- c`, `a --- d` --> orient `a --> b`
+- **R4**: `a --- b`, directed path `a -->+ b` exists --> orient `a --> b`
 
 # References
 
@@ -599,7 +599,7 @@ function meek_closure(cg::AbstractPDAG)
         push!(pa[b], a)
     end
 
-    # Orient a → b only if edge is still undirected and doing so won't create a cycle
+    # Orient a --> b only if edge is still undirected and doing so won't create a cycle
     function try_orient!(a, b)
         b in und[a] || return false
         has_dir_path(b, a) && return false
@@ -607,14 +607,14 @@ function meek_closure(cg::AbstractPDAG)
         return true
     end
 
-    # R1 collider guard: would orienting b → c create a new unshielded collider at c?
+    # R1 collider guard: would orienting b --> c create a new unshielded collider at c?
     creates_collider(b, c) = any(p -> p != b && !adjacent(p, b), pa[c])
 
     changed = true
     while changed
         changed = false
 
-        # R1: a → b --- c, a not adj c, no new unshielded collider at c → orient b → c
+        # R1: a --> b --- c, a not adj c, no new unshielded collider at c --> orient b --> c
         for b = 1:n
             (isempty(pa[b]) || isempty(und[b])) && continue
             pb = collect(pa[b])
@@ -625,7 +625,7 @@ function meek_closure(cg::AbstractPDAG)
             end
         end
 
-        # R2: a --- b, ∃w: a → w → b → orient a → b  (or b → a)
+        # R2: a --- b, ∃w: a --> w --> b --> orient a --> b  (or b --> a)
         for a = 1:n
             for b in collect(und[a])
                 if any(w -> b in ch[w], ch[a])
@@ -636,7 +636,7 @@ function meek_closure(cg::AbstractPDAG)
             end
         end
 
-        # R3: a --- b, ∃c,d ∈ pa[b]: c not adj d, a --- c, a --- d → orient a → b
+        # R3: a --- b, ∃c,d ∈ pa[b]: c not adj d, a --- c, a --- d --> orient a --> b
         for a = 1:n
             for b in collect(und[a])
                 pb = collect(pa[b])
@@ -652,7 +652,7 @@ function meek_closure(cg::AbstractPDAG)
             end
         end
 
-        # R4: a --- b and directed path a →⁺ b → orient a → b  (or b → a)
+        # R4: a --- b and directed path a -->⁺ b --> orient a --> b  (or b --> a)
         for a = 1:n
             for b in collect(und[a])
                 if has_dir_path(a, b)
@@ -716,7 +716,7 @@ function dag_to_cpdag(cg::DAG)
         end
     end
 
-    # V-structure detection: orient a→b and c→b whenever a,c are both parents of b
+    # V-structure detection: orient a-->b and c-->b whenever a,c are both parents of b
     # but a and c are not adjacent in the skeleton.
     oriented = [Set{Int}() for _ = 1:n]
     for b = 1:n
@@ -779,11 +779,11 @@ end
 
 # Infer directed/undirected/bidirected edge type from anterior relationships.
 # Edge type between a and b is determined by:
-#   a ∈ Ant({b} ∪ S)?  b ∈ Ant({a} ∪ S)?  →  edge
-#   no                  no                  →  a ↔ b
-#   yes                 yes                 →  a --- b
-#   yes                 no                  →  a → b
-#   no                  yes                 →  b → a
+#   a ∈ Ant({b} ∪ S)?  b ∈ Ant({a} ∪ S)?  -->  edge
+#   no                  no                  -->  a <-> b
+#   yes                 yes                 -->  a --- b
+#   yes                 no                  -->  a --> b
+#   no                  yes                 -->  b --> a
 # ant_dict maps each node to its anterior set (open=true, node itself excluded).
 function _edge_from_anteriors(
     a::Symbol,
