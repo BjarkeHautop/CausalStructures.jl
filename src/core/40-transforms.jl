@@ -287,9 +287,9 @@ children to preserve reachability.
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> g2 = exogenize(cg, [:B])
+julia> dag2 = exogenize(dag, [:B])
 DAG with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
@@ -995,9 +995,9 @@ julia> nodes(admg)
  :X
  :Y
 
-julia> g_iso = caugi(directed(:A, :B), node(:C); class = DAG);
+julia> dag_iso = caugi(directed(:A, :B), node(:C); class = DAG);
 
-julia> nodes(g_iso)
+julia> nodes(dag_iso)
 3-element Vector{Symbol}:
  :A
  :B

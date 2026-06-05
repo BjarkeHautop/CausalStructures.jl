@@ -135,40 +135,40 @@ Intelligence (UAI 2020)*, PMLR 115:637-647.
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> minimal_separator(cg, :A, :C)  # chain A --> B --> C: separator is {B}
+julia> minimal_separator(dag, :A, :C)  # chain A --> B --> C: separator is {B}
 1-element Vector{Symbol}:
  :B
 
-julia> g_coll = caugi(directed(:A, :C), directed(:B, :C); class = DAG);
+julia> dag_coll = caugi(directed(:A, :C), directed(:B, :C); class = DAG);
 
-julia> minimal_separator(g_coll, :A, :B)  # collider A --> C <-- B: already d-separated
+julia> minimal_separator(dag_coll, :A, :B)  # collider A --> C <-- B: already d-separated
 Symbol[]
 
-julia> g_edge = caugi(directed(:A, :B); class = DAG);
+julia> dag_edge = caugi(directed(:A, :B); class = DAG);
 
-julia> minimal_separator(g_edge, :A, :B) === nothing  # direct edge: no separator exists
+julia> minimal_separator(dag_edge, :A, :B) === nothing  # direct edge: no separator exists
 true
 
-julia> g4 = caugi(directed(:A, :X), directed(:X, :M), directed(:M, :Y), directed(:A, :Y); class = DAG);
+julia> dag4 = caugi(directed(:A, :X), directed(:X, :M), directed(:M, :Y), directed(:A, :Y); class = DAG);
 
-julia> minimal_separator(g4, :X, :Y)  # two paths require both A and M
+julia> minimal_separator(dag4, :X, :Y)  # two paths require both A and M
 2-element Vector{Symbol}:
  :A
  :M
 
-julia> minimal_separator(g4, :X, :Y, include = [:M])  # force M in; A still needed
+julia> minimal_separator(dag4, :X, :Y, include = [:M])  # force M in; A still needed
 2-element Vector{Symbol}:
  :A
  :M
 
-julia> minimal_separator(g4, :X, :Y, restrict = [:M]) === nothing  # M alone cannot block X <-- A --> Y
+julia> minimal_separator(dag4, :X, :Y, restrict = [:M]) === nothing  # M alone cannot block X <-- A --> Y
 true
 
 julia> admg = caugi(directed(:A, :B), directed(:B, :C); class = ADMG);
 
-julia> minimal_separator(admg, :A, :C)  # ADMG: returns a minimal m-separator
+julia> minimal_separator(admg, :A, :C)
 1-element Vector{Symbol}:
  :B
 ```
