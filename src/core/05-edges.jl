@@ -15,6 +15,7 @@ DAG with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
     A --> B, B --> C
+```
 """
 directed(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Tail, Arrow)
 """
@@ -28,6 +29,7 @@ UG with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
     A --- B, B --- C
+```
 """
 undirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Tail, Tail)
 """
@@ -41,6 +43,7 @@ ADMG with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
     A <-> B, B <-> C
+```
 """
 bidirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Arrow, Arrow)
 """
@@ -54,6 +57,7 @@ UNKNOWN with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
     A o-> B, B o-> C
+```
 """
 partially_directed(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Circle, Arrow)
 """
@@ -67,6 +71,7 @@ UNKNOWN with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
     A --o B, B --o C
+```
 """
 partially_undirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Tail, Circle)
 """
@@ -80,6 +85,7 @@ UNKNOWN with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
     A o-o B, B o-o C
+```
 """
 partial(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Circle, Circle)
 
