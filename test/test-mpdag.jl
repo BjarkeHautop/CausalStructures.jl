@@ -7,20 +7,20 @@ using CausalGraphInterface
 # ── construction ──────────────────────────────────────────────────────────────
 
 @testitem "MPDAG: all-directed graph is valid (trivially Meek-closed)" tags = [:unit] begin
-    cg = caugi(directed(:A, :B), directed(:B, :C); class = MPDAG)
-    @test cg isa MPDAG
-    @test Set(nodes(cg)) == Set([:A, :B, :C])
+    mpdag = caugi(directed(:A, :B), directed(:B, :C); class = MPDAG)
+    @test mpdag isa MPDAG
+    @test Set(nodes(mpdag)) == Set([:A, :B, :C])
 end
 
 @testitem "MPDAG: all-undirected chain is valid" tags = [:unit] begin
-    cg = caugi(undirected(:A, :B), undirected(:B, :C); class = MPDAG)
-    @test cg isa MPDAG
+    mpdag = caugi(undirected(:A, :B), undirected(:B, :C); class = MPDAG)
+    @test mpdag isa MPDAG
 end
 
 @testitem "MPDAG: empty graph is valid" tags = [:unit] begin
-    cg = caugi(node(:A), node(:B); class = MPDAG)
-    @test cg isa MPDAG
-    @test length(nodes(cg)) == 2
+    mpdag = caugi(node(:A), node(:B); class = MPDAG)
+    @test mpdag isa MPDAG
+    @test length(nodes(mpdag)) == 2
 end
 
 @testitem "MPDAG: rejects graph where Meek R1 would fire" tags = [:unit] begin
@@ -39,22 +39,22 @@ end
 # ── AbstractPDAG subtyping ─────────────────────────────────────────────────────
 
 @testitem "MPDAG <: AbstractPDAG" tags = [:unit] begin
-    cg = caugi(directed(:A, :B); class = MPDAG)
-    @test cg isa AbstractPDAG
-    @test cg isa CausalGraph
+    mpdag = caugi(directed(:A, :B); class = MPDAG)
+    @test mpdag isa AbstractPDAG
+    @test mpdag isa CausalGraph
 end
 
 # ── is_mpdag predicate ────────────────────────────────────────────────────────
 
 @testitem "is_mpdag: MPDAG instance returns true" tags = [:unit] begin
-    cg = caugi(directed(:A, :B), directed(:B, :C); class = MPDAG)
-    @test is_mpdag(cg)
+    mpdag = caugi(directed(:A, :B), directed(:B, :C); class = MPDAG)
+    @test is_mpdag(mpdag)
 end
 
 @testitem "is_mpdag: CPDAG returns true (every CPDAG is an MPDAG)" tags = [:unit] begin
     # A chain DAG: its CPDAG is A --- B --- C, which is Meek-closed
-    cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    cp = dag_to_cpdag(cg)
+    dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    cp = dag_to_cpdag(dag)
     @test is_mpdag(cp)
 end
 
@@ -69,8 +69,8 @@ end
 end
 
 @testitem "is_mpdag: DAG is always Meek-closed" tags = [:unit] begin
-    cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    @test is_mpdag(cg)
+    dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    @test is_mpdag(dag)
 end
 
 # ── meek_closure ────────────────────────────────────────────────
@@ -105,32 +105,32 @@ end
 # ── MPDAG show ─────────────────────────────────────────────────────────────────
 
 @testitem "MPDAG show: typename is MPDAG" tags = [:unit] begin
-    cg = caugi(directed(:A, :B); class = MPDAG)
-    str = sprint(show, cg)
+    mpdag = caugi(directed(:A, :B); class = MPDAG)
+    str = sprint(show, mpdag)
     @test contains(str, "MPDAG with")
 end
 
 # ── shared AbstractPDAG operations work on MPDAG ──────────────────────────────
 
 @testitem "MPDAG: parents, children, neighbors work" tags = [:unit] begin
-    cg = caugi(directed(:A, :B), directed(:A, :C), undirected(:B, :C); class = MPDAG)
-    @test Set(parents(cg, :B)) == Set([:A])
-    @test Set(children(cg, :A)) == Set([:B, :C])
-    @test :C in neighbors(cg, :B)
+    mpdag = caugi(directed(:A, :B), directed(:A, :C), undirected(:B, :C); class = MPDAG)
+    @test Set(parents(mpdag, :B)) == Set([:A])
+    @test Set(children(mpdag, :A)) == Set([:B, :C])
+    @test :C in neighbors(mpdag, :B)
 end
 
 @testitem "MPDAG: skeleton works" tags = [:unit] begin
     # All-directed: trivially Meek-closed
-    cg = caugi(directed(:A, :B), directed(:B, :C); class = MPDAG)
-    sk = skeleton(cg)
+    mpdag = caugi(directed(:A, :B), directed(:B, :C); class = MPDAG)
+    sk = skeleton(mpdag)
     @test sk isa UG
     @test Set(neighbors(sk, :B)) == Set([:A, :C])
 end
 
 @testitem "MPDAG: dag_from_pdag works on MPDAG" tags = [:unit] begin
     # All-directed MPDAG is trivially extensible
-    cg = caugi(directed(:A, :B), directed(:B, :C); class = MPDAG)
-    ext = dag_from_pdag(cg)
+    mpdag = caugi(directed(:A, :B), directed(:B, :C); class = MPDAG)
+    ext = dag_from_pdag(mpdag)
     @test ext isa DAG
     @test :B in children(ext, :A)
     @test :C in children(ext, :B)

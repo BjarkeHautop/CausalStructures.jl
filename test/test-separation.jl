@@ -6,21 +6,21 @@ using CausalGraphInterface
 # ── d_separated ───────────────────────────────────────────────────────────────
 
 @testitem "d_separated: chain structure" tags = [:unit] begin
-    cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    @test !d_separated(cg, :A, :C)
-    @test d_separated(cg, :A, :C, [:B])
+    dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    @test !d_separated(dag, :A, :C)
+    @test d_separated(dag, :A, :C, [:B])
 end
 
 @testitem "d_separated: fork structure" tags = [:unit] begin
-    cg = caugi(directed(:A, :B), directed(:A, :C); class = DAG)
-    @test !d_separated(cg, :B, :C)
-    @test d_separated(cg, :B, :C, [:A])
+    dag = caugi(directed(:A, :B), directed(:A, :C); class = DAG)
+    @test !d_separated(dag, :B, :C)
+    @test d_separated(dag, :B, :C, [:A])
 end
 
 @testitem "d_separated: collider structure" tags = [:unit] begin
-    cg = caugi(directed(:A, :C), directed(:B, :C); class = DAG)
-    @test d_separated(cg, :A, :B)
-    @test !d_separated(cg, :A, :B, [:C])
+    dag = caugi(directed(:A, :C), directed(:B, :C); class = DAG)
+    @test d_separated(dag, :A, :B)
+    @test !d_separated(dag, :A, :B, [:C])
 end
 
 @testitem "d_separated: naive Bayes conditional independence pattern" tags = [:unit] begin
@@ -55,31 +55,31 @@ end
 # ── minimal_separator ────────────────────────────────────────────────────────
 
 @testitem "minimal_separator: chain structure" tags = [:unit] begin
-    cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    sep = minimal_separator(cg, :A, :C)
+    dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    sep = minimal_separator(dag, :A, :C)
     @test sep !== nothing && :B in sep
 end
 
 @testitem "minimal_separator: fork structure" tags = [:unit] begin
-    cg = caugi(directed(:A, :B), directed(:A, :C); class = DAG)
-    sep = minimal_separator(cg, :B, :C)
+    dag = caugi(directed(:A, :B), directed(:A, :C); class = DAG)
+    sep = minimal_separator(dag, :B, :C)
     @test sep !== nothing && :A in sep
 end
 
 @testitem "minimal_separator: collider returns empty separator" tags = [:unit] begin
-    cg = caugi(directed(:A, :B), directed(:C, :B); class = DAG)
-    sep = minimal_separator(cg, :A, :C)
+    dag = caugi(directed(:A, :B), directed(:C, :B); class = DAG)
+    sep = minimal_separator(dag, :A, :C)
     @test sep !== nothing && isempty(sep)
 end
 
 @testitem "minimal_separator: returns nothing when no separator exists" tags = [:unit] begin
-    cg = caugi(directed(:A, :B); class = DAG)
-    @test minimal_separator(cg, :A, :B) === nothing
+    dag = caugi(directed(:A, :B); class = DAG)
+    @test minimal_separator(dag, :A, :B) === nothing
 end
 
 @testitem "minimal_separator: default R excludes X and Y" tags = [:unit] begin
-    cg = caugi(directed(:A, :B), directed(:B, :C), directed(:C, :D); class = DAG)
-    sep = minimal_separator(cg, :A, :D)
+    dag = caugi(directed(:A, :B), directed(:B, :C), directed(:C, :D); class = DAG)
+    sep = minimal_separator(dag, :A, :D)
     @test sep !== nothing && !(:A in sep) && !(:D in sep)
 end
 
@@ -114,15 +114,15 @@ end
 end
 
 @testitem "NetworkX Case 3: no_separating_set_graph" tags = [:unit] begin
-    cg = caugi(directed(:A, :B); class = DAG)
-    @test !d_separated(cg, :A, :B)
-    @test minimal_separator(cg, :A, :B) === nothing
+    dag = caugi(directed(:A, :B); class = DAG)
+    @test !d_separated(dag, :A, :B)
+    @test minimal_separator(dag, :A, :B) === nothing
 end
 
 @testitem "NetworkX Case 4: large_no_separating_set_graph" tags = [:unit] begin
-    cg = caugi(directed(:A, :B), directed(:C, :A), directed(:C, :B); class = DAG)
-    @test !d_separated(cg, :A, :B, [:C])
-    @test minimal_separator(cg, :A, :B) === nothing
+    dag = caugi(directed(:A, :B), directed(:C, :A), directed(:C, :B); class = DAG)
+    @test !d_separated(dag, :A, :B, [:C])
+    @test minimal_separator(dag, :A, :B) === nothing
 end
 
 @testitem "paper Fig 4 G1: minimal_separator returns {V2}" tags = [:unit] begin

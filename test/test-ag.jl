@@ -133,8 +133,8 @@ end
 end
 
 @testitem "is_ag: DAG is an AG" tags = [:unit] begin
-    cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    @test is_ag(cg)
+    dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    @test is_ag(dag)
 end
 
 @testitem "is_ag: ADMG with anterior violation is not an AG" tags = [:unit] begin
@@ -161,15 +161,15 @@ end
 # ── m_separated for DAG ────────────────────────────────────────────────────────
 
 @testitem "m_separated on DAG matches d_separated: chain" tags = [:unit] begin
-    cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    @test m_separated(cg, :A, :C) == d_separated(cg, :A, :C)
-    @test m_separated(cg, :A, :C, [:B]) == d_separated(cg, :A, :C, [:B])
+    dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    @test m_separated(dag, :A, :C) == d_separated(dag, :A, :C)
+    @test m_separated(dag, :A, :C, [:B]) == d_separated(dag, :A, :C, [:B])
 end
 
 @testitem "m_separated on DAG matches d_separated: collider" tags = [:unit] begin
-    cg = caugi(directed(:A, :C), directed(:B, :C); class = DAG)
-    @test m_separated(cg, :A, :B) == d_separated(cg, :A, :B)
-    @test m_separated(cg, :A, :B, [:C]) == d_separated(cg, :A, :B, [:C])
+    dag = caugi(directed(:A, :C), directed(:B, :C); class = DAG)
+    @test m_separated(dag, :A, :B) == d_separated(dag, :A, :B)
+    @test m_separated(dag, :A, :B, [:C]) == d_separated(dag, :A, :B, [:C])
 end
 
 # ── m_separated for AG: directed edges (same as DAG / ADMG) ───────────────────
