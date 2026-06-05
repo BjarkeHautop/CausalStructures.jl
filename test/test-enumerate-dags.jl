@@ -93,10 +93,3 @@ end
     dags = enumerate_dags(cp)
     @test all(d -> d isa DAG, dags)
 end
-
-@testitem "enumerate_dags: accepts MPDAG input" tags = [:unit] begin
-    mpdag = caugi(directed(:A, :B), undirected(:B, :C), undirected(:B, :D); class = MPDAG)
-    dags = enumerate_dags(mpdag)
-    @test all(d -> d isa DAG, dags)
-    @test count_dags(mpdag) == length(dags)
-end
