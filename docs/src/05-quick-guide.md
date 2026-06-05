@@ -1,6 +1,7 @@
 # Getting Started
 
-This tutorial introduces the basic workflow using a simple directed acyclic graph (DAG).
+This tutorial introduces the basic workflow using a simple directed acyclic
+graph (DAG).
 
 ## Constructing a graph
 
@@ -20,11 +21,14 @@ using CausalGraphInterface
 dag = caugi(directed(:A, :X), directed(:A, :Y), directed(:X, :M), directed(:M, :Y); class = DAG)
 ```
 
-Graphs are validated when constructed. Invalid DAGs, such as graphs containing directed cycles, raise an error immediately.
+Graphs are validated when constructed. Invalid DAGs, such as graphs containing
+directed cycles, raise an error immediately.
 
 ## Testing conditional independence
 
-One of the central tasks in causal inference is determining whether two variables are conditionally independent. For DAGs, this is done using d-separation.
+One of the central tasks in causal inference is determining whether two
+variables are conditionally independent. For DAGs, this is done using
+d-separation.
 
 Consider the relationship between `X` and `Y`:
 
@@ -34,7 +38,8 @@ d_separated(dag, :X, :Y)
 
 This is expected because there is a directed path from `X` to `Y`.
 
-Conditioning on `A` blocks the backdoor path, but the path `X --> M --> Y` remains open:
+Conditioning on `A` blocks the backdoor path, but the path `X --> M --> Y`
+remains open:
 
 ```@example quick
 d_separated(dag, :X, :Y, [:A])
@@ -56,7 +61,8 @@ The backdoor path
 X <-- A --> Y
 ```
 
-introduces confounding and must be blocked. A valid adjustment set can be obtained automatically:
+introduces confounding and must be blocked. A valid adjustment set can be
+obtained automatically:
 
 ```@example quick
 adjustment_set(dag, :X, :Y)
@@ -68,7 +74,8 @@ Candidate adjustment sets can also be verified explicitly:
 is_valid_backdoor(dag, :X, :Y, [:A])
 ```
 
-and all minimal valid backdoor adjustment sets can be enumerated (which is only `A` in this case):
+and all minimal valid backdoor adjustment sets can be enumerated (which is only
+`A` in this case):
 
 ```@example quick
 all_backdoor_sets(dag, :X, :Y)
