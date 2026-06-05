@@ -65,5 +65,10 @@ export CausalEdge,
     all_backdoor_sets,
     adjustment_set,
     enumerate_dags,
-    count_dags
+    count_dags,
+    add_edge,
+    remove_edge,
+    add_node,
+    remove_node,
+    reclass
 end
