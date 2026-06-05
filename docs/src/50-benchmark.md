@@ -46,21 +46,27 @@ is_valid_backdoor(dag, :V50, :V70, valid_adjustment_set);
 And finally, checking d-separation:
 
 ```@repl performance
+d_separated(dag, :V50, :V70, valid_adjustment_set)
 @btime d_separated(dag, $:V50, $:V70, $valid_adjustment_set)
 ```
 
 ## Comparison with common R packages
 
 Here we compare the performance of CausalGraphInterface to various popular R
-packages (please let me know if any Julia packages should be compared to, too!).
-In particular, \][caugi](https://caugi.org/index.html),
+packages[^1].
+
+[^1]: Please let me know if any Julia packages should be compared to, too!.
+
+In particular we compare against [caugi](https://caugi.org/index.html),
 [igraph](https://r.igraph.org/), [bnlearn](https://www.bnlearn.com/),
 [dagitty](https://dagitty.net/), and
 [ggm](https://cran.r-project.org/package=ggm).
 
 Like in the Julia code above, we generate a DAG with 1000 nodes and edge
-probability 0.25. We then see how fast it is to find the parents of a random
+probability 0.25. We then see how fast each package is to find the parents of a random
 node:
+
+Benchmarks were performed on a system running Linux Mint 22.3 with an AMD Ryzen 7 8845HS processor and 14 GB RAM. Reported runtimes are median values obtained using BenchmarkTools.jl (Julia) and bench (R) after an initial warm-up run.
 
 ```@raw html
 <details><summary>Click to see R code</summary>
@@ -91,23 +97,18 @@ node_name = "V45"
 bench::mark(
   caugi = {
     caugi::parents(cg, node_name)
-    caugi::children(cg, node_name)
   },
   igraph = {
     igraph::neighbors(ig, node_name, mode = "in")
-    igraph::neighbors(ig, node_name, mode = "out")
   },
   bnlearn = {
     bnlearn::parents(bng, node_name)
-    bnlearn::children(bng, node_name)
   },
   ggm = {
     ggm::pa(node_name, ggmg)
-    ggm::ch(node_name, ggmg)
   },
   dagitty = {
     dagitty::parents(dg, node_name)
-    dagitty::children(dg, node_name)
   },
   check = FALSE # igraph returns igraph object
 )
@@ -119,16 +120,11 @@ bench::mark(
 
 Here we show speed of finding parents for the different packages:
 
-\| median \| package \|
-
-\| 183.303ns \| CausalGraphInterface \|
-
-\| 2.75µs \|caugi \|
-
-\| 127.42µs \| igraph \|
-
-\| 12.06µs \| bnlearn \|
-
-\| 5.13ms \| ggm \|
-
-\| 887.44ms \| daggity \|
+| median  | package               |
+| ------- | --------------------- |
+| 0.18 µs | CausalGraphInterface  |
+| 2.8 µs  | caugi                 |
+| 12µs    | bnlearn               |
+| 127 µs  | igraph                |
+| 5.1ms   | ggm                   |
+| 887ms   | daggity               |
