@@ -108,3 +108,13 @@ all_adjustment_sets_admg
 generate_graph
 simulate_data
 ```
+
+## Mutatation
+
+```@docs
+add_edge
+remove_edge
+add_node
+remove_node
+reclass
+```
