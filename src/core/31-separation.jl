@@ -58,19 +58,22 @@ end
 
 function _moral_adj_in_mask(B::DAGBackend, mask::BitVector)
     n = length(B.nodes)
-    adj = [Set{Int}() for _ = 1:n]
+    adj = [Int[] for _ = 1:n]
+    pa_buf = Int[]
     for ch = 1:n
         mask[ch] || continue
-        parents_in_mask = [p for p in _parents_slice(B, ch) if mask[p]]
-        for p in parents_in_mask
+        empty!(pa_buf)
+        for p in _parents_slice(B, ch)
+            mask[p] && push!(pa_buf, p)
+        end
+        for p in pa_buf
             push!(adj[p], ch)
             push!(adj[ch], p)
         end
-        for i in eachindex(parents_in_mask)
-            for j = (i+1):lastindex(parents_in_mask)
-                p1, p2 = parents_in_mask[i], parents_in_mask[j]
-                push!(adj[p1], p2)
-                push!(adj[p2], p1)
+        for i in eachindex(pa_buf)
+            for j = (i+1):lastindex(pa_buf)
+                push!(adj[pa_buf[i]], pa_buf[j])
+                push!(adj[pa_buf[j]], pa_buf[i])
             end
         end
     end

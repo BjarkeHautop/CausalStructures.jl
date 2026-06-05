@@ -353,14 +353,58 @@ function is_valid_backdoor(
     z::AbstractVector{Symbol} = Symbol[],
 )
     B = g.backend
+    n = length(B.nodes)
     x_idx = node_index(g, x)
+    y_idx = node_index(g, y)
+
+    # Reject any z member that is a descendant of x.
     de_x = _descendants_bitmask(B, [x_idx])
-    for v in z
-        de_x[node_index(g, v)] && return false
+    z_idxs = Vector{Int}(undef, length(z))
+    for (i, v) in enumerate(z)
+        vi = node_index(g, v)
+        de_x[vi] && return false
+        z_idxs[i] = vi
     end
-    obs = [z; x]
-    for p_idx in _parents_slice(B, x_idx)
-        d_separated(g, B.nodes[p_idx], y, obs) || return false
+
+    parents_x = _parents_slice(B, x_idx)
+    isempty(parents_x) && return true
+
+    # obs = z ∪ {x}.  Every parent p of x is an ancestor of x ∈ obs, so
+    # ancestors(p ∪ y ∪ obs) = ancestors(y ∪ obs) for all parents p.
+    # Precompute the ancestor mask, moral adjacency, and blocked set once.
+    obs_idxs = push!(copy(z_idxs), x_idx)
+    seeds = unique!([y_idx; obs_idxs])
+    mask = _ancestors_bitmask(B, seeds)
+    adj = _moral_adj_in_mask(B, mask)
+
+    blocked = falses(n)
+    for v in obs_idxs
+        blocked[v] = true
+    end
+
+    # Reuse BFS buffers across all parent checks.
+    visited = falses(n)
+    queue = Int[]
+    sizehint!(queue, n)
+
+    for p_idx in parents_x
+        blocked[p_idx] && continue  # p is in obs → trivially d-separated
+        fill!(visited, false)
+        empty!(queue)
+        visited[p_idx] = true
+        push!(queue, p_idx)
+        head = 1
+        while head <= length(queue)
+            u = queue[head];
+            head += 1
+            for w in adj[u]
+                visited[w] && continue
+                blocked[w] && continue
+                w == y_idx && return false
+                visited[w] = true
+                push!(queue, w)
+            end
+        end
     end
     return true
 end
