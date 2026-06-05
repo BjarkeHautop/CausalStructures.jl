@@ -419,8 +419,8 @@ function _edge_display(edge::CausalEdge)
         return "<->"
     elseif edge.src_end == Circle && edge.dst_end == Arrow
         return "o->"
-    elseif edge.src_end == Circle && edge.dst_end == Tail
-        return "o--"
+    elseif edge.src_end == Tail && edge.dst_end == Circle
+        return "--o"
     elseif edge.src_end == Circle && edge.dst_end == Circle
         return "o-o"
     end
