@@ -206,15 +206,15 @@ end
 # ── public API ────────────────────────────────────────────────────────────────
 
 """
-    is_valid_adjustment_admg(g::ADMG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    is_valid_adjustment_admg(cg::ADMG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
 
 Return `true` if `z` is a valid adjustment set for estimating the total causal
-effect of `x` on `y` in `g` using the Generalized Adjustment Criterion (GAC).
+effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
 
 A set `z` is valid if it contains no forbidden node (no node in
 `De(cn(x,y) \\ {y}) ∪ {x}`, where `cn(x,y)` are the proper causal nodes from
 `x` to `y`) and `x` and `y` are m-separated by `z` in the proper backdoor graph
-of `g`.
+of `cg`.
 
 # References
 
@@ -236,15 +236,15 @@ true
 ```
 """
 function is_valid_adjustment_admg(
-    g::ADMG,
+    cg::ADMG,
     x::Symbol,
     y::Symbol,
     z::AbstractVector{Symbol} = Symbol[],
 )
-    B = g.backend
-    xs = [node_index(g, x)]
-    ys = [node_index(g, y)]
-    z_idxs = [node_index(g, v) for v in z]
+    B = cg.backend
+    xs = [node_index(cg, x)]
+    ys = [node_index(cg, y)]
+    z_idxs = [node_index(cg, v) for v in z]
 
     forbidden = _forbidden_set(B, xs, ys)
     any(v -> forbidden[v], z_idxs) && return false
@@ -254,12 +254,12 @@ function is_valid_adjustment_admg(
 end
 
 """
-    all_adjustment_sets_admg(g::ADMG, x::Symbol, y::Symbol;
+    all_adjustment_sets_admg(cg::ADMG, x::Symbol, y::Symbol;
                              minimal::Bool = true, max_size::Int = 3)
         -> Vector{Vector{Symbol}}
 
 Return all valid adjustment sets for the total causal effect of `x` on `y` in
-`g`, up to size `max_size`.
+`cg`, up to size `max_size`.
 
 Sets are validated using the Generalized Adjustment Criterion (GAC); see
 [`is_valid_adjustment_admg`](@ref). When `minimal = true` (default), only
@@ -276,16 +276,16 @@ julia> all_adjustment_sets_admg(admg, :X, :Y)
 ```
 """
 function all_adjustment_sets_admg(
-    g::ADMG,
+    cg::ADMG,
     x::Symbol,
     y::Symbol;
     minimal::Bool = true,
     max_size::Int = 3,
 )
-    B = g.backend
+    B = cg.backend
     n = length(B.nodes)
-    xs = [node_index(g, x)]
-    ys = [node_index(g, y)]
+    xs = [node_index(cg, x)]
+    ys = [node_index(cg, y)]
 
     forbidden = _forbidden_set(B, xs, ys)
     y_mask = falses(n)
@@ -325,10 +325,10 @@ end
 # ── Backdoor criterion (DAG) ──────────────────────────────────────────────────
 
 """
-    is_valid_backdoor(g::DAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    is_valid_backdoor(cg::DAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
 
 Return `true` if `z` satisfies the backdoor criterion for the causal effect of
-`x` on `y` in `g`.
+`x` on `y` in `cg`.
 
 `z` is a valid backdoor set if (1) no node in `z` is a descendant of `x`, and
 (2) `z` blocks every backdoor path from `x` to `y`. Equivalently, every parent
@@ -337,31 +337,31 @@ of `x` is d-separated from `y` given `z ∪ {x}`.
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG);
+julia> cg = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG);
 
-julia> is_valid_backdoor(g, :X, :Y)       # empty Z leaves the backdoor path A --> Y open
+julia> is_valid_backdoor(cg, :X, :Y)       # empty Z leaves the backdoor path A --> Y open
 false
 
-julia> is_valid_backdoor(g, :X, :Y, [:A]) # conditioning on A blocks the backdoor path
+julia> is_valid_backdoor(cg, :X, :Y, [:A]) # conditioning on A blocks the backdoor path
 true
 ```
 """
 function is_valid_backdoor(
-    g::DAG,
+    cg::DAG,
     x::Symbol,
     y::Symbol,
     z::AbstractVector{Symbol} = Symbol[],
 )
-    B = g.backend
+    B = cg.backend
     n = length(B.nodes)
-    x_idx = node_index(g, x)
-    y_idx = node_index(g, y)
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
 
     # Reject any z member that is a descendant of x.
     de_x = _descendants_bitmask(B, [x_idx])
     z_idxs = Vector{Int}(undef, length(z))
     for (i, v) in enumerate(z)
-        vi = node_index(g, v)
+        vi = node_index(cg, v)
         de_x[vi] && return false
         z_idxs[i] = vi
     end
@@ -410,12 +410,12 @@ function is_valid_backdoor(
 end
 
 """
-    all_backdoor_sets(g::DAG, x::Symbol, y::Symbol;
+    all_backdoor_sets(cg::DAG, x::Symbol, y::Symbol;
                       minimal::Bool = true, max_size::Int = 3)
         -> Vector{Vector{Symbol}}
 
 Return all sets satisfying the backdoor criterion for the causal effect of `x`
-on `y` in `g`, up to size `max_size`.
+on `y` in `cg`, up to size `max_size`.
 
 Sets are validated using [`is_valid_backdoor`](@ref). When `minimal = true`
 (default), only inclusion-minimal sets are returned. Descendants of `x` and `y`
@@ -424,24 +424,24 @@ itself are never candidates.
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG);
+julia> cg = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG);
 
-julia> all_backdoor_sets(g, :X, :Y)
+julia> all_backdoor_sets(cg, :X, :Y)
 1-element Vector{Vector{Symbol}}:
  [:A]
 ```
 """
 function all_backdoor_sets(
-    g::DAG,
+    cg::DAG,
     x::Symbol,
     y::Symbol;
     minimal::Bool = true,
     max_size::Int = 3,
 )
-    B = g.backend
+    B = cg.backend
     n = length(B.nodes)
-    x_idx = node_index(g, x)
-    y_idx = node_index(g, y)
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
 
     de_x = _descendants_bitmask(B, [x_idx])
     universe = [v for v = 1:n if v != x_idx && v != y_idx && !de_x[v]]
@@ -452,7 +452,7 @@ function all_backdoor_sets(
     function enumerate!(start, k_rem)
         if k_rem == 0
             z = [B.nodes[v] for v in cur]
-            is_valid_backdoor(g, x, y, z) && push!(valid_sets, sort(z))
+            is_valid_backdoor(cg, x, y, z) && push!(valid_sets, sort(z))
             return
         end
         for i = start:length(universe)
@@ -471,9 +471,9 @@ function all_backdoor_sets(
 end
 
 """
-    adjustment_set(g::DAG, x::Symbol, y::Symbol; type::Symbol = :optimal) -> Vector{Symbol}
+    adjustment_set(cg::DAG, x::Symbol, y::Symbol; type::Symbol = :optimal) -> Vector{Symbol}
 
-Compute an adjustment set for the causal effect of `x` on `y` in `g`.
+Compute an adjustment set for the causal effect of `x` on `y` in `cg`.
 
 Three types are supported:
 
@@ -484,30 +484,30 @@ Three types are supported:
 # Examples
 
 ```jldoctest
-julia> g = caugi(
+julia> cg = caugi(
            directed(:C, :X), directed(:X, :F), directed(:X, :D),
            directed(:A, :X), directed(:A, :K), directed(:K, :Y),
            directed(:D, :Y), directed(:D, :G), directed(:Y, :H);
            class = DAG);
 
-julia> sort(adjustment_set(g, :X, :Y; type = :parents))
+julia> sort(adjustment_set(cg, :X, :Y; type = :parents))
 2-element Vector{Symbol}:
  :A
  :C
 
-julia> is_valid_backdoor(g, :X, :Y, adjustment_set(g, :X, :Y; type = :backdoor))
+julia> is_valid_backdoor(cg, :X, :Y, adjustment_set(cg, :X, :Y; type = :backdoor))
 true
 
-julia> adjustment_set(g, :X, :Y; type = :optimal)
+julia> adjustment_set(cg, :X, :Y; type = :optimal)
 1-element Vector{Symbol}:
  :K
 ```
 """
-function adjustment_set(g::DAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
-    B = g.backend
+function adjustment_set(cg::DAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
+    B = cg.backend
     n = length(B.nodes)
-    x_idx = node_index(g, x)
-    y_idx = node_index(g, y)
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
 
     if type === :parents
         keep = falses(n)

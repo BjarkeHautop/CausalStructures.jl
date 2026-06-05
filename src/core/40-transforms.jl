@@ -16,17 +16,17 @@ function _skeleton_edges(input_edges::Vector{CausalEdge})
 end
 
 """
-    skeleton(g::Union{DAG,AbstractPDAG}) -> UG
+    skeleton(cg::Union{DAG,AbstractPDAG}) -> UG
 
-Return the skeleton of `g`: the undirected graph obtained by replacing every
+Return the skeleton of `cg`: the undirected graph obtained by replacing every
 directed or partially-directed edge with an undirected edge.
 
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> sk = skeleton(g);
+julia> sk = skeleton(cg);
 
 julia> neighbors(sk, :B)
 2-element Vector{Symbol}:
@@ -34,23 +34,23 @@ julia> neighbors(sk, :B)
  :C
 ```
 """
-function skeleton(g::Union{DAG,AbstractPDAG})
-    return UG(nodes(g), _skeleton_edges(g.edges))
+function skeleton(cg::Union{DAG,AbstractPDAG})
+    return UG(nodes(cg), _skeleton_edges(cg.edges))
 end
 
 """
-    moralize(g::DAG) -> UG
+    moralize(cg::DAG) -> UG
 
-Return the moral graph of `g`: the undirected graph obtained by connecting all
+Return the moral graph of `cg`: the undirected graph obtained by connecting all
 pairs of parents that share a common child (adding a "marriage" edge), then
 replacing every directed edge with an undirected edge.
 
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :C), directed(:B, :C); class = DAG);
+julia> cg = caugi(directed(:A, :C), directed(:B, :C); class = DAG);
 
-julia> m = moralize(g);
+julia> m = moralize(cg);
 
 julia> neighbors(m, :C)   # A and B are now married
 2-element Vector{Symbol}:
@@ -58,12 +58,12 @@ julia> neighbors(m, :C)   # A and B are now married
  :B
 ```
 """
-function moralize(g::DAG)
-    B = g.backend
+function moralize(cg::DAG)
+    B = cg.backend
     edges = CausalEdge[]
     seen = Set{Tuple{Symbol,Symbol}}()
 
-    for e in g.edges
+    for e in cg.edges
         key = _ordered_pair(e.src, e.dst)
         if !(key in seen)
             push!(seen, key)
@@ -72,7 +72,7 @@ function moralize(g::DAG)
     end
 
     for node in B.nodes
-        pa = parents(g, node)
+        pa = parents(cg, node)
         if length(pa) < 2
             continue
         end
@@ -87,7 +87,7 @@ function moralize(g::DAG)
         end
     end
 
-    return UG(nodes(g), edges)
+    return UG(nodes(cg), edges)
 end
 
 function _subgraph_edges(edges::Vector{CausalEdge}, keep::Set{Symbol})
@@ -95,9 +95,9 @@ function _subgraph_edges(edges::Vector{CausalEdge}, keep::Set{Symbol})
 end
 
 """
-    subgraph(g, nodes::AbstractVector{Symbol}) -> CausalGraph
+    subgraph(cg, nodes::AbstractVector{Symbol}) -> CausalGraph
 
-Return the subgraph of `g` induced by `nodes`: the same graph class restricted
+Return the subgraph of `cg` induced by `nodes`: the same graph class restricted
 to the given node set, keeping only edges whose both endpoints are in `nodes`.
 
 Applicable to [`DAG`](@ref), [`UG`](@ref), [`PDAG`](@ref), [`CPDAG`](@ref),
@@ -106,9 +106,9 @@ and [`AG`](@ref).
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C), directed(:A, :C); class = DAG);
+julia> cg = caugi(directed(:A, :B), directed(:B, :C), directed(:A, :C); class = DAG);
 
-julia> sg = subgraph(g, [:A, :B]);
+julia> sg = subgraph(cg, [:A, :B]);
 
 julia> nodes(sg)
 2-element Vector{Symbol}:
@@ -120,10 +120,10 @@ julia> children(sg, :A)
  :B
 ```
 """
-function subgraph(g::Union{DAG,UG,AbstractPDAG,AG}, nodes::AbstractVector{Symbol})
+function subgraph(cg::Union{DAG,UG,AbstractPDAG,AG}, nodes::AbstractVector{Symbol})
     keep = Set(nodes)
-    edges = _subgraph_edges(g.edges, keep)
-    return typeof(g)(keep, edges)
+    edges = _subgraph_edges(cg.edges, keep)
+    return typeof(cg)(keep, edges)
 end
 
 function _ordered_pair(a::Symbol, b::Symbol)
@@ -170,9 +170,9 @@ is_bidirected(edge::CausalEdge) = edge_kind(edge) == (Arrow, Arrow)
 #   4. remove v
 # Returns an ADMG over the observed (non-latent) nodes.
 """
-    latent_project(g::DAG, latents::AbstractVector{Symbol}) -> ADMG
+    latent_project(cg::DAG, latents::AbstractVector{Symbol}) -> ADMG
 
-Project out latent (unobserved) variables from `g` to produce an
+Project out latent (unobserved) variables from `cg` to produce an
 [`ADMG`](@ref) over the observed variables only.
 
 Each latent node `v` is eliminated by vertex substitution: directed edges
@@ -192,15 +192,15 @@ ADMG with 2 nodes and 2 edges:
     X --> Y, X <-> Y
 ```
 """
-function latent_project(g::DAG, latents::AbstractVector{Symbol})
-    B = g.backend
+function latent_project(cg::DAG, latents::AbstractVector{Symbol})
+    B = cg.backend
     n = length(B.nodes)
 
     pa = [Set{Int}() for _ = 1:n]
     ch = [Set{Int}() for _ = 1:n]
     bi = [Set{Int}() for _ = 1:n]
 
-    for edge in g.edges
+    for edge in cg.edges
         s = B.index[edge.src]
         d = B.index[edge.dst]
         push!(ch[s], d)
@@ -210,7 +210,7 @@ function latent_project(g::DAG, latents::AbstractVector{Symbol})
     remove = falses(n)
     elim = Int[]
     for l in latents
-        idx = node_index(g, l)
+        idx = node_index(cg, l)
         remove[idx] = true
         push!(elim, idx)
     end
@@ -278,26 +278,26 @@ function latent_project(g::DAG, latents::AbstractVector{Symbol})
 end
 
 """
-    exogenize(g::DAG, nodes::AbstractVector{Symbol}) -> DAG
+    exogenize(cg::DAG, nodes::AbstractVector{Symbol}) -> DAG
 
-Return a copy of `g` with each node in `nodes` made exogenous: all incoming
+Return a copy of `cg` with each node in `nodes` made exogenous: all incoming
 edges to that node are removed, and its parents are connected directly to its
 children to preserve reachability.
 
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> g2 = exogenize(g, [:B])
+julia> g2 = exogenize(cg, [:B])
 DAG with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
     A --> C, B --> C
 ```
 """
-function exogenize(g::DAG, nodes_to_exo::AbstractVector{Symbol})
-    B = g.backend
+function exogenize(cg::DAG, nodes_to_exo::AbstractVector{Symbol})
+    B = cg.backend
     n = length(B.nodes)
 
     for v in nodes_to_exo
@@ -307,7 +307,7 @@ function exogenize(g::DAG, nodes_to_exo::AbstractVector{Symbol})
     pa = [Set{Int}() for _ = 1:n]
     ch = [Set{Int}() for _ = 1:n]
 
-    for edge in g.edges
+    for edge in cg.edges
         si = B.index[edge.src]
         di = B.index[edge.dst]
         push!(ch[si], di)
@@ -343,9 +343,9 @@ end
 # ── normalize_latent_structure ────────────────────────────────────────────────
 
 """
-    normalize_latent_structure(g::DAG, latents::AbstractVector{Symbol}) -> DAG
+    normalize_latent_structure(cg::DAG, latents::AbstractVector{Symbol}) -> DAG
 
-Normalize the latent structure of `g` while preserving the induced marginal
+Normalize the latent structure of `cg` while preserving the induced marginal
 model over the observed variables. Applies the following steps (Evans 2016,
 Lemmas 1-3):
 
@@ -373,15 +373,15 @@ DAG with 4 nodes and 4 edges:
     A --> X, A --> Y, U --> X, U --> Y
 ```
 """
-function normalize_latent_structure(g::DAG, latents::AbstractVector{Symbol})
-    B = g.backend
+function normalize_latent_structure(cg::DAG, latents::AbstractVector{Symbol})
+    B = cg.backend
     n = length(B.nodes)
 
     for l in latents
         haskey(B.index, l) || error("Unknown latent node: $(l)")
     end
 
-    isempty(latents) && return g
+    isempty(latents) && return cg
 
     latent_idxs = unique([B.index[l] for l in latents])
 
@@ -389,7 +389,7 @@ function normalize_latent_structure(g::DAG, latents::AbstractVector{Symbol})
     ch = [Set{Int}() for _ = 1:n]
     active = trues(n)
 
-    for edge in g.edges
+    for edge in cg.edges
         si = B.index[edge.src]
         di = B.index[edge.dst]
         push!(ch[si], di)
@@ -476,9 +476,9 @@ function normalize_latent_structure(g::DAG, latents::AbstractVector{Symbol})
 end
 
 """
-    dag_from_pdag(g::AbstractPDAG) -> DAG
+    dag_from_pdag(cg::AbstractPDAG) -> DAG
 
-Extend `g` to a consistent [`DAG`](@ref) by orienting all undirected
+Extend `cg` to a consistent [`DAG`](@ref) by orienting all undirected
 edges, using the Dor-Tarsi algorithm.
 
 The algorithm repeatedly finds a sink node `x` (no directed children, and whose
@@ -502,8 +502,8 @@ DAG with 3 nodes and 2 edges:
     A --> B, B --> C
 ```
 """
-function dag_from_pdag(g::AbstractPDAG)
-    B = g.backend
+function dag_from_pdag(cg::AbstractPDAG)
+    B = cg.backend
     n = length(B.nodes)
 
     pa = [Set{Int}(_parents_slice(B, i)) for i = 1:n]
@@ -570,9 +570,9 @@ function dag_from_pdag(g::AbstractPDAG)
 end
 
 """
-    meek_closure(g::AbstractPDAG) -> MPDAG
+    meek_closure(cg::AbstractPDAG) -> MPDAG
 
-Apply Meek's orientation rules (R1-R4) to `g` until no further orientations
+Apply Meek's orientation rules (R1-R4) to `cg` until no further orientations
 are implied, returning the resulting [`MPDAG`](@ref).
 
 The four rules are:
@@ -599,8 +599,8 @@ MPDAG with 3 nodes and 2 edges:
     A --> B, B --> C
 ```
 """
-function meek_closure(g::AbstractPDAG)
-    B = g.backend
+function meek_closure(cg::AbstractPDAG)
+    B = cg.backend
     n = length(B.nodes)
 
     pa = [Set{Int}(_parents_slice(B, i)) for i = 1:n]
@@ -719,10 +719,10 @@ function meek_closure(g::AbstractPDAG)
 end
 
 """
-    dag_to_cpdag(g::DAG) -> CPDAG
+    dag_to_cpdag(cg::DAG) -> CPDAG
 
 Return the [`CPDAG`](@ref) representing the Markov equivalence class (MEC) of
-`g`.
+`cg`.
 
 The algorithm detects v-structures (unshielded colliders) to determine
 compelled edge orientations, builds an initial PDAG from the skeleton, then
@@ -740,8 +740,8 @@ CPDAG with 2 nodes and 1 edge:
     A --- B
 ```
 """
-function dag_to_cpdag(g::DAG)
-    B = g.backend
+function dag_to_cpdag(cg::DAG)
+    B = cg.backend
     n = length(B.nodes)
 
     # Skeleton adjacency (symmetric, by node index)
@@ -797,7 +797,7 @@ end
 # Returns true iff a and b cannot be m-separated by any Z ⊆ other_nodes,
 # when cond_vars are always included in the conditioning set.
 function _not_m_separated_for_all_subsets(
-    g::Union{DAG,AG},
+    cg::Union{DAG,AG},
     a::Symbol,
     b::Symbol,
     other_nodes::Vector{Symbol},
@@ -809,7 +809,7 @@ function _not_m_separated_for_all_subsets(
         for k = 0:(n-1)
             (mask >> k) & 1 == 1 && push!(z, other_nodes[k+1])
         end
-        m_separated(g, a, b, z) && return false
+        m_separated(cg, a, b, z) && return false
     end
     return true
 end
@@ -854,7 +854,7 @@ end
 # Marginalize and/or condition on variables in a DAG or AG (Definition 4.2.1,
 # Richardson & Spirtes 2002). Returns an AG over the remaining nodes.
 """
-    condition_marginalize(g::Union{DAG,AG};
+    condition_marginalize(cg::Union{DAG,AG};
                           cond_vars = Symbol[], marg_vars = Symbol[]) -> AG
 
 Return the [`AG`](@ref) over the remaining nodes after conditioning on
@@ -888,11 +888,11 @@ AG with 2 nodes and 1 edge:
 ```
 """
 function condition_marginalize(
-    g::Union{DAG,AG};
+    cg::Union{DAG,AG};
     cond_vars::AbstractVector{Symbol} = Symbol[],
     marg_vars::AbstractVector{Symbol} = Symbol[],
 )
-    all_ns = Set(nodes(g))
+    all_ns = Set(nodes(cg))
 
     for v in cond_vars
         v in all_ns || error("Unknown node in cond_vars: $(v)")
@@ -909,7 +909,7 @@ function condition_marginalize(
         error("cond_vars and marg_vars must be disjoint")
 
     removed = Set([cond_vars; marg_vars])
-    remaining = [v for v in nodes(g) if !(v in removed)]
+    remaining = [v for v in nodes(cg) if !(v in removed)]
     n_rem = length(remaining)
 
     n_rem < 2 && return AG(Set(remaining), CausalEdge[])
@@ -918,7 +918,7 @@ function condition_marginalize(
     nodes_for_ant = unique([remaining; collect(cond_vars)])
     ant_dict = Dict{Symbol,Set{Symbol}}()
     for v in nodes_for_ant
-        ant_dict[v] = Set(anteriors(g, v))  # open=true: v itself excluded
+        ant_dict[v] = Set(anteriors(cg, v))  # open=true: v itself excluded
     end
 
     new_edges = CausalEdge[]
@@ -926,12 +926,12 @@ function condition_marginalize(
         for j = (i+1):n_rem
             a, b = remaining[i], remaining[j]
 
-            adj_orig = b in neighbors(g, a)
+            adj_orig = b in neighbors(cg, a)
             is_adj = if adj_orig
                 true
             else
                 other = [remaining[k] for k = 1:n_rem if k != i && k != j]
-                _not_m_separated_for_all_subsets(g, a, b, other, cond_vars)
+                _not_m_separated_for_all_subsets(cg, a, b, other, cond_vars)
             end
 
             if is_adj
@@ -980,9 +980,9 @@ multiple edges between the same pair of nodes.
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> nodes(g)
+julia> nodes(cg)
 3-element Vector{Symbol}:
  :A
  :B

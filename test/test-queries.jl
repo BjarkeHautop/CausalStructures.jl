@@ -7,13 +7,13 @@ using CausalGraphInterface
 # ── is_acyclic / is_simple ────────────────────────────────────────────────────
 
 @testitem "is_acyclic returns true for DAG/PDAG by class" tags = [:unit] begin
-    g = caugi(directed(:A, :B), directed(:B, :C), directed(:C, :D); class = DAG)
-    @test is_acyclic(g)
+    cg = caugi(directed(:A, :B), directed(:B, :C), directed(:C, :D); class = DAG)
+    @test is_acyclic(cg)
 end
 
 @testitem "is_acyclic detects cycles in UNKNOWN graphs" tags = [:unit] begin
-    g = caugi(directed(:A, :B), directed(:B, :C), directed(:C, :A); class = UNKNOWN)
-    @test !is_acyclic(g)
+    cg = caugi(directed(:A, :B), directed(:B, :C), directed(:C, :A); class = UNKNOWN)
+    @test !is_acyclic(cg)
 end
 
 @testitem "is_simple reflects declared state" tags = [:unit] begin
@@ -28,8 +28,8 @@ end
 # ── is_dag / is_pdag / is_ug / is_admg ───────────────────────────────────────
 
 @testitem "is_dag works" tags = [:unit] begin
-    g = caugi(directed(:A, :B), directed(:B, :C), directed(:C, :D); class = DAG)
-    @test is_dag(g)
+    cg = caugi(directed(:A, :B), directed(:B, :C), directed(:C, :D); class = DAG)
+    @test is_dag(cg)
 
     g2 = caugi(directed(:A, :B), directed(:B, :C), undirected(:C, :D); class = PDAG)
     @test !is_dag(g2)
@@ -43,8 +43,8 @@ end
 end
 
 @testitem "is_pdag works" tags = [:unit] begin
-    g = caugi(directed(:A, :B), directed(:B, :C), undirected(:C, :D); class = PDAG)
-    @test is_pdag(g)
+    cg = caugi(directed(:A, :B), directed(:B, :C), undirected(:C, :D); class = PDAG)
+    @test is_pdag(cg)
 
     # A DAG is also a valid PDAG
     g2 = caugi(directed(:A, :B), directed(:B, :C), directed(:C, :D); class = DAG)
@@ -61,9 +61,9 @@ end
 end
 
 @testitem "is_ug works" tags = [:unit] begin
-    g = caugi(undirected(:A, :B), undirected(:B, :C), undirected(:C, :D); class = UG)
-    @test is_ug(g)
-    @test is_ug(g)
+    cg = caugi(undirected(:A, :B), undirected(:B, :C), undirected(:C, :D); class = UG)
+    @test is_ug(cg)
+    @test is_ug(cg)
 
     g2 = caugi(directed(:A, :B), undirected(:B, :C), undirected(:C, :D); class = PDAG)
     @test !is_ug(g2)
@@ -79,8 +79,8 @@ end
 
 @testitem "is_admg works" tags = [:unit] begin
     # A pure DAG is also a valid ADMG
-    g = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    @test is_admg(g)
+    cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    @test is_admg(cg)
 
     g2 = caugi(directed(:A, :B), bidirected(:A, :C); class = ADMG)
     @test is_admg(g2)
@@ -93,53 +93,53 @@ end
 # ── parents / children / neighbors ───────────────────────────────────────────
 
 @testitem "parents returns expected nodes" tags = [:unit] begin
-    g = caugi(
+    cg = caugi(
         directed(:A, :B),
         directed(:B, :C),
         directed(:A, :D),
         directed(:D, :B);
         class = PDAG,
     )
-    @test Set(parents(g, :B)) == Set([:A, :D])
-    @test isempty(parents(g, :A))
+    @test Set(parents(cg, :B)) == Set([:A, :D])
+    @test isempty(parents(cg, :A))
 end
 
 @testitem "children returns expected nodes" tags = [:unit] begin
-    g = caugi(
+    cg = caugi(
         directed(:A, :B),
         directed(:B, :C),
         undirected(:C, :D),
         directed(:D, :E);
         class = PDAG,
     )
-    @test children(g, :A) == [:B]
-    @test children(g, :B) == [:C]
-    @test children(g, :D) == [:E]
+    @test children(cg, :A) == [:B]
+    @test children(cg, :B) == [:C]
+    @test children(cg, :D) == [:E]
 end
 
 @testitem "neighbors returns adjacency (directed + undirected)" tags = [:unit] begin
-    g = caugi(
+    cg = caugi(
         directed(:A, :B),
         directed(:B, :C),
         undirected(:B, :D),
         undirected(:C, :E);
         class = PDAG,
     )
-    @test Set(neighbors(g, :B)) == Set([:A, :C, :D])
-    @test Set(neighbors(g, :C)) == Set([:B, :E])
+    @test Set(neighbors(cg, :B)) == Set([:A, :C, :D])
+    @test Set(neighbors(cg, :C)) == Set([:B, :E])
 end
 
 @testitem "parents/children match by node name" tags = [:unit] begin
-    g = caugi(
+    cg = caugi(
         directed(:A, :B),
         directed(:B, :C),
         undirected(:B, :D),
         undirected(:C, :E);
         class = PDAG,
     )
-    @test children(g, :A) == [:B]
-    @test Set(parents(g, :B)) == Set([:A])
-    @test Set(neighbors(g, :C)) == Set([:B, :E])
+    @test children(cg, :A) == [:B]
+    @test Set(parents(cg, :B)) == Set([:A])
+    @test Set(neighbors(cg, :C)) == Set([:B, :E])
 end
 
 @testitem "parents/children are not defined for UG" tags = [:unit] begin
@@ -149,65 +149,65 @@ end
 end
 
 @testitem "neighbors for UG returns undirected adjacency" tags = [:unit] begin
-    g = caugi(undirected(:A, :B), undirected(:B, :C), undirected(:B, :D); class = UG)
-    @test neighbors(g, :A) == [:B]
-    @test Set(neighbors(g, :B)) == Set([:A, :C, :D])
-    @test neighbors(g, :C) == [:B]
-    @test neighbors(g, :D) == [:B]
+    cg = caugi(undirected(:A, :B), undirected(:B, :C), undirected(:B, :D); class = UG)
+    @test neighbors(cg, :A) == [:B]
+    @test Set(neighbors(cg, :B)) == Set([:A, :C, :D])
+    @test neighbors(cg, :C) == [:B]
+    @test neighbors(cg, :D) == [:B]
 end
 
 # ── ancestors / descendants ───────────────────────────────────────────────────
 
 @testitem "ancestors works on DAG" tags = [:unit] begin
-    g = caugi(
+    cg = caugi(
         directed(:A, :B),
         directed(:A, :C),
         directed(:B, :D),
         directed(:C, :D);
         class = DAG,
     )
-    @test Set(ancestors(g, :D)) == Set([:A, :B, :C])
-    @test Set(ancestors(g, :B)) == Set([:A])
-    @test isempty(ancestors(g, :A))
+    @test Set(ancestors(cg, :D)) == Set([:A, :B, :C])
+    @test Set(ancestors(cg, :B)) == Set([:A])
+    @test isempty(ancestors(cg, :A))
 end
 
 @testitem "descendants works on DAG" tags = [:unit] begin
-    g = caugi(
+    cg = caugi(
         directed(:A, :B),
         directed(:A, :C),
         directed(:B, :D),
         directed(:C, :D);
         class = DAG,
     )
-    @test Set(descendants(g, :A)) == Set([:B, :C, :D])
-    @test Set(descendants(g, :B)) == Set([:D])
-    @test isempty(descendants(g, :D))
+    @test Set(descendants(cg, :A)) == Set([:B, :C, :D])
+    @test Set(descendants(cg, :B)) == Set([:D])
+    @test isempty(descendants(cg, :D))
 end
 
 @testitem "ancestors/descendants open vs closed definition" tags = [:unit] begin
-    g = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
     # open = true (default): excludes the node itself
-    @test ancestors(g, :B) == [:A]
+    @test ancestors(cg, :B) == [:A]
     # open = false (closed): includes the node itself
-    @test Set(ancestors(g, :B; open = false)) == Set([:B, :A])
-    @test Set(descendants(g, :A; open = false)) == Set([:A, :B, :C])
+    @test Set(ancestors(cg, :B; open = false)) == Set([:B, :A])
+    @test Set(descendants(cg, :A; open = false)) == Set([:A, :B, :C])
 end
 
 @testitem "ancestors errors on UG" tags = [:unit] begin
-    g = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
-    @test_throws MethodError ancestors(g, :B)
+    cg = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
+    @test_throws MethodError ancestors(cg, :B)
 end
 
 @testitem "descendants errors on UG" tags = [:unit] begin
-    g = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
-    @test_throws MethodError descendants(g, :B)
+    cg = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
+    @test_throws MethodError descendants(cg, :B)
 end
 
 # NetworkX ancestors/descendants tests
 # https://github.com/networkx/networkx/blob/main/networkx/algorithms/tests/test_dag.py
 
 @testitem "ancestors NetworkX 1 test" tags = [:unit] begin
-    g = caugi(
+    cg = caugi(
         directed(:A, :B),
         directed(:A, :C),
         directed(:D, :B),
@@ -217,13 +217,13 @@ end
         directed(:E, :F);
         class = DAG,
     )
-    @test Set(ancestors(g, :F)) == Set([:A, :B, :D, :E])
-    @test Set(ancestors(g, :C)) == Set([:A, :D])
-    @test isempty(ancestors(g, :A))
+    @test Set(ancestors(cg, :F)) == Set([:A, :B, :D, :E])
+    @test Set(ancestors(cg, :C)) == Set([:A, :D])
+    @test isempty(ancestors(cg, :A))
 end
 
 @testitem "descendants NetworkX 1 test" tags = [:unit] begin
-    g = caugi(
+    cg = caugi(
         directed(:A, :B),
         directed(:A, :C),
         directed(:D, :B),
@@ -233,15 +233,15 @@ end
         directed(:E, :F);
         class = DAG,
     )
-    @test Set(descendants(g, :A)) == Set([:B, :C, :F])
-    @test Set(descendants(g, :D)) == Set([:B, :C, :E, :F])
-    @test isempty(descendants(g, :C))
+    @test Set(descendants(cg, :A)) == Set([:B, :C, :F])
+    @test Set(descendants(cg, :D)) == Set([:B, :C, :E, :F])
+    @test isempty(descendants(cg, :C))
 end
 
 # ── markov_blanket ────────────────────────────────────────────────────────────
 
 @testitem "markov_blanket works on DAGs (parents, children, spouses)" tags = [:unit] begin
-    g = caugi(
+    cg = caugi(
         directed(:A, :B),
         directed(:A, :C),
         directed(:D, :B),
@@ -249,17 +249,17 @@ end
         directed(:F, :E);
         class = DAG,
     )
-    @test Set(markov_blanket(g, :A)) == Set([:B, :C, :D])
-    @test Set(markov_blanket(g, :B)) == Set([:A, :D, :E, :F])
+    @test Set(markov_blanket(cg, :A)) == Set([:B, :C, :D])
+    @test Set(markov_blanket(cg, :B)) == Set([:A, :D, :E, :F])
 end
 
 @testitem "markov_blanket includes undirected neighbors in PDAGs" tags = [:unit] begin
-    g = caugi(directed(:A, :B), undirected(:B, :C), directed(:D, :B); class = PDAG)
-    @test Set(markov_blanket(g, :B)) == Set([:A, :C, :D])
+    cg = caugi(directed(:A, :B), undirected(:B, :C), directed(:D, :B); class = PDAG)
+    @test Set(markov_blanket(cg, :B)) == Set([:A, :C, :D])
 end
 
 @testitem "markov_blanket multi-parent fixture on DAGs" tags = [:unit] begin
-    g = caugi(
+    cg = caugi(
         directed(:W, :Y),
         directed(:X, :W),
         directed(:Z1, :X),
@@ -270,19 +270,19 @@ end
         directed(:Z3, :Y);
         class = DAG,
     )
-    @test Set(markov_blanket(g, :Z1)) == Set([:X, :Z2, :Z3])
-    @test Set(markov_blanket(g, :Y)) == Set([:W, :Z2, :Z3])
+    @test Set(markov_blanket(cg, :Z1)) == Set([:X, :Z2, :Z3])
+    @test Set(markov_blanket(cg, :Y)) == Set([:W, :Z2, :Z3])
 end
 
 @testitem "markov_blanket errors on UG" tags = [:unit] begin
-    g = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
-    @test_throws MethodError markov_blanket(g, :B)
+    cg = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
+    @test_throws MethodError markov_blanket(cg, :B)
 end
 
 # ── exogenous_nodes ───────────────────────────────────────────────────────────
 
 @testitem "exogenous_nodes works on DAG" tags = [:unit] begin
-    g = caugi(
+    cg = caugi(
         directed(:A, :B),
         directed(:A, :C),
         directed(:D, :B),
@@ -290,17 +290,17 @@ end
         directed(:F, :E);
         class = DAG,
     )
-    @test Set(exogenous_nodes(g)) == Set([:A, :D, :F])
+    @test Set(exogenous_nodes(cg)) == Set([:A, :D, :F])
 end
 
 @testitem "exogenous_nodes works on PDAG" tags = [:unit] begin
-    g = caugi(undirected(:A, :B), directed(:C, :A); class = PDAG)
-    @test Set(exogenous_nodes(g)) == Set([:B, :C])
+    cg = caugi(undirected(:A, :B), directed(:C, :A); class = PDAG)
+    @test Set(exogenous_nodes(cg)) == Set([:B, :C])
 end
 
 @testitem "exogenous_nodes works on UG" tags = [:unit] begin
-    g = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
-    @test isempty(exogenous_nodes(g))
+    cg = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
+    @test isempty(exogenous_nodes(cg))
     g_iso = caugi(undirected(:A, :B), node(:C); class = UG)
     @test exogenous_nodes(g_iso) == [:C]
 end
@@ -308,118 +308,118 @@ end
 # ── anteriors / posteriors ────────────────────────────────────────────────────
 
 @testitem "anteriors works for DAG (equals ancestors)" tags = [:unit] begin
-    g = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    @test isempty(anteriors(g, :A))
-    @test anteriors(g, :B) == [:A]
-    @test Set(anteriors(g, :C)) == Set([:A, :B])
+    cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    @test isempty(anteriors(cg, :A))
+    @test anteriors(cg, :B) == [:A]
+    @test Set(anteriors(cg, :C)) == Set([:A, :B])
 end
 
 @testitem "anteriors works for PDAG with mixed edges" tags = [:unit] begin
     # A -> B --- C, B -> D
-    g = caugi(directed(:A, :B), undirected(:B, :C), directed(:B, :D); class = PDAG)
-    @test isempty(anteriors(g, :A))
-    @test Set(anteriors(g, :B)) == Set([:A, :C])
-    @test Set(anteriors(g, :C)) == Set([:A, :B])
-    @test Set(anteriors(g, :D)) == Set([:A, :B, :C])
+    cg = caugi(directed(:A, :B), undirected(:B, :C), directed(:B, :D); class = PDAG)
+    @test isempty(anteriors(cg, :A))
+    @test Set(anteriors(cg, :B)) == Set([:A, :C])
+    @test Set(anteriors(cg, :C)) == Set([:A, :B])
+    @test Set(anteriors(cg, :D)) == Set([:A, :B, :C])
 end
 
 @testitem "anteriors works for PDAG with undirected cycle" tags = [:unit] begin
     # A --- B --- C --- A (triangle)
-    g = caugi(undirected(:A, :B), undirected(:B, :C), undirected(:C, :A); class = PDAG)
-    @test Set(anteriors(g, :A)) == Set([:B, :C])
-    @test Set(anteriors(g, :B)) == Set([:A, :C])
-    @test Set(anteriors(g, :C)) == Set([:A, :B])
+    cg = caugi(undirected(:A, :B), undirected(:B, :C), undirected(:C, :A); class = PDAG)
+    @test Set(anteriors(cg, :A)) == Set([:B, :C])
+    @test Set(anteriors(cg, :B)) == Set([:A, :C])
+    @test Set(anteriors(cg, :C)) == Set([:A, :B])
 end
 
 @testitem "anteriors errors on UG" tags = [:unit] begin
-    g = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
-    @test_throws MethodError anteriors(g, :B)
+    cg = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
+    @test_throws MethodError anteriors(cg, :B)
 end
 
 @testitem "posteriors works for DAG (equals descendants)" tags = [:unit] begin
-    g = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    @test Set(posteriors(g, :A)) == Set([:B, :C])
-    @test posteriors(g, :B) == [:C]
-    @test isempty(posteriors(g, :C))
+    cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    @test Set(posteriors(cg, :A)) == Set([:B, :C])
+    @test posteriors(cg, :B) == [:C]
+    @test isempty(posteriors(cg, :C))
 end
 
 @testitem "posteriors works for PDAG with mixed edges" tags = [:unit] begin
     # A -> B --- C, B -> D
-    g = caugi(directed(:A, :B), undirected(:B, :C), directed(:B, :D); class = PDAG)
-    @test Set(posteriors(g, :A)) == Set([:B, :C, :D])
-    @test Set(posteriors(g, :B)) == Set([:C, :D])
-    @test Set(posteriors(g, :C)) == Set([:B, :D])
-    @test isempty(posteriors(g, :D))
+    cg = caugi(directed(:A, :B), undirected(:B, :C), directed(:B, :D); class = PDAG)
+    @test Set(posteriors(cg, :A)) == Set([:B, :C, :D])
+    @test Set(posteriors(cg, :B)) == Set([:C, :D])
+    @test Set(posteriors(cg, :C)) == Set([:B, :D])
+    @test isempty(posteriors(cg, :D))
 end
 
 @testitem "posteriors works for PDAG with undirected cycle" tags = [:unit] begin
-    g = caugi(undirected(:A, :B), undirected(:B, :C), undirected(:C, :A); class = PDAG)
-    @test Set(posteriors(g, :A)) == Set([:B, :C])
-    @test Set(posteriors(g, :B)) == Set([:A, :C])
-    @test Set(posteriors(g, :C)) == Set([:A, :B])
+    cg = caugi(undirected(:A, :B), undirected(:B, :C), undirected(:C, :A); class = PDAG)
+    @test Set(posteriors(cg, :A)) == Set([:B, :C])
+    @test Set(posteriors(cg, :B)) == Set([:A, :C])
+    @test Set(posteriors(cg, :C)) == Set([:A, :B])
 end
 
 @testitem "posteriors errors on UG" tags = [:unit] begin
-    g = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
-    @test_throws MethodError posteriors(g, :B)
+    cg = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
+    @test_throws MethodError posteriors(cg, :B)
 end
 
 @testitem "posteriors excludes the node itself" tags = [:unit] begin
-    g = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    @test !(:A in posteriors(g, :A))
+    cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    @test !(:A in posteriors(cg, :A))
 end
 
 @testitem "posteriors does not return duplicates in undirected cycles" tags = [:unit] begin
-    g = caugi(undirected(:A, :B), undirected(:B, :C), undirected(:C, :A); class = PDAG)
-    res = posteriors(g, :A)
+    cg = caugi(undirected(:A, :B), undirected(:B, :C), undirected(:C, :A); class = PDAG)
+    res = posteriors(cg, :A)
     @test length(res) == length(unique(res))
 end
 
 @testitem "posteriors handles multi-step mixed reachability" tags = [:unit] begin
     # A -> B --- C --- D -> E
-    g = caugi(
+    cg = caugi(
         directed(:A, :B),
         undirected(:B, :C),
         undirected(:C, :D),
         directed(:D, :E);
         class = PDAG,
     )
-    @test Set(posteriors(g, :A)) == Set([:B, :C, :D, :E])
+    @test Set(posteriors(cg, :A)) == Set([:B, :C, :D, :E])
 end
 
 @testitem "posteriors handles disconnected components" tags = [:unit] begin
-    g = caugi(directed(:A, :B), directed(:C, :D); class = DAG)
-    @test posteriors(g, :A) == [:B]
-    @test !(:A in posteriors(g, :C))
+    cg = caugi(directed(:A, :B), directed(:C, :D); class = DAG)
+    @test posteriors(cg, :A) == [:B]
+    @test !(:A in posteriors(cg, :C))
 end
 
 @testitem "closed definition for ancestors/anteriors/descendants/posteriors" tags = [:unit] begin
-    g = caugi(directed(:A, :B), undirected(:B, :C), directed(:B, :D); class = PDAG)
+    cg = caugi(directed(:A, :B), undirected(:B, :C), directed(:B, :D); class = PDAG)
 
-    @test ancestors(g, :A; open = false) == [:A]
-    @test Set(ancestors(g, :B; open = false)) == Set([:B, :A])
+    @test ancestors(cg, :A; open = false) == [:A]
+    @test Set(ancestors(cg, :B; open = false)) == Set([:B, :A])
 
-    @test anteriors(g, :A; open = false) == [:A]
-    @test Set(anteriors(g, :C; open = false)) == Set([:C, :A, :B])
+    @test anteriors(cg, :A; open = false) == [:A]
+    @test Set(anteriors(cg, :C; open = false)) == Set([:C, :A, :B])
 
-    @test Set(descendants(g, :A; open = false)) == Set([:A, :B, :D])
-    @test Set(descendants(g, :B; open = false)) == Set([:B, :D])
+    @test Set(descendants(cg, :A; open = false)) == Set([:A, :B, :D])
+    @test Set(descendants(cg, :B; open = false)) == Set([:B, :D])
 
-    @test Set(posteriors(g, :A; open = false)) == Set([:A, :B, :C, :D])
-    @test Set(posteriors(g, :B; open = false)) == Set([:B, :C, :D])
+    @test Set(posteriors(cg, :A; open = false)) == Set([:A, :B, :C, :D])
+    @test Set(posteriors(cg, :B; open = false)) == Set([:B, :C, :D])
 end
 
 # ── subgraph ──────────────────────────────────────────────────────────────────
 
 @testitem "subgraph on DAG" tags = [:unit] begin
-    g = caugi(
+    cg = caugi(
         directed(:A, :B),
         directed(:A, :C),
         directed(:B, :D),
         directed(:C, :D);
         class = DAG,
     )
-    sg = subgraph(g, [:A, :B, :D])
+    sg = subgraph(cg, [:A, :B, :D])
     @test sg isa DAG
     @test Set(nodes(sg)) == Set([:A, :B, :D])
     @test has_edge(sg, :A, :B)
@@ -427,16 +427,16 @@ end
 end
 
 @testitem "subgraph on UG" tags = [:unit] begin
-    g = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
-    sg = subgraph(g, [:A, :B])
+    cg = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
+    sg = subgraph(cg, [:A, :B])
     @test sg isa UG
     @test Set(nodes(sg)) == Set([:A, :B])
     @test has_edge(sg, :A, :B)
 end
 
 @testitem "subgraph on PDAG" tags = [:unit] begin
-    g = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG)
-    sg = subgraph(g, [:A, :B])
+    cg = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG)
+    sg = subgraph(cg, [:A, :B])
     @test sg isa PDAG
     @test Set(nodes(sg)) == Set([:A, :B])
     @test has_edge(sg, :A, :B)
@@ -445,95 +445,95 @@ end
 # ── spouses / districts (not yet implemented) ─────────────────────────────────
 
 @testitem "spouses works for ADMG" tags = [:unit] begin
-    g = caugi(directed(:A, :B), bidirected(:B, :C); class = ADMG)
-    @test !isempty(spouses(g, :B))
+    cg = caugi(directed(:A, :B), bidirected(:B, :C); class = ADMG)
+    @test !isempty(spouses(cg, :B))
 end
 
 @testitem "districts works for ADMG" tags = [:unit] begin
-    g = caugi(bidirected(:A, :B), bidirected(:B, :C), directed(:C, :D); class = ADMG)
-    @test length(districts(g)) == 2
+    cg = caugi(bidirected(:A, :B), bidirected(:B, :C), directed(:C, :D); class = ADMG)
+    @test length(districts(cg)) == 2
 end
 
 # ── is_cpdag ──────────────────────────────────────────────────────────────────
 
 @testitem "is_cpdag: CPDAG class is always true" tags = [:unit] begin
-    g = caugi(directed(:A, :C), directed(:B, :C); class = CPDAG)
-    @test is_cpdag(g)
+    cg = caugi(directed(:A, :C), directed(:B, :C); class = CPDAG)
+    @test is_cpdag(cg)
 end
 
 @testitem "is_cpdag: PDAG v-structure is a valid CPDAG" tags = [:unit] begin
-    g = caugi(directed(:A, :C), directed(:B, :C); class = PDAG)
-    @test is_cpdag(g)
+    cg = caugi(directed(:A, :C), directed(:B, :C); class = PDAG)
+    @test is_cpdag(cg)
 end
 
 @testitem "is_cpdag: PDAG single directed edge is not a CPDAG" tags = [:unit] begin
     # A→B has no v-structure protecting it
-    g = caugi(directed(:A, :B); class = PDAG)
-    @test !is_cpdag(g)
+    cg = caugi(directed(:A, :B); class = PDAG)
+    @test !is_cpdag(cg)
 end
 
 @testitem "is_cpdag: pure directed chain is not a CPDAG" tags = [:unit] begin
-    g = caugi(directed(:A, :B), directed(:B, :C), directed(:C, :D); class = PDAG)
-    @test !is_cpdag(g)
+    cg = caugi(directed(:A, :B), directed(:B, :C), directed(:C, :D); class = PDAG)
+    @test !is_cpdag(cg)
 end
 
 @testitem "is_cpdag: undirected edge is a valid CPDAG" tags = [:unit] begin
-    g = caugi(undirected(:A, :B); class = PDAG)
-    @test is_cpdag(g)
+    cg = caugi(undirected(:A, :B); class = PDAG)
+    @test is_cpdag(cg)
 end
 
 @testitem "is_cpdag: undirected chain is a valid CPDAG" tags = [:unit] begin
-    g = caugi(undirected(:A, :B), undirected(:B, :C); class = PDAG)
-    @test is_cpdag(g)
+    cg = caugi(undirected(:A, :B), undirected(:B, :C); class = PDAG)
+    @test is_cpdag(cg)
 end
 
 @testitem "is_cpdag: undirected triangle is a valid CPDAG" tags = [:unit] begin
-    g = caugi(undirected(:A, :B), undirected(:B, :C), undirected(:A, :C); class = PDAG)
-    @test is_cpdag(g)
+    cg = caugi(undirected(:A, :B), undirected(:B, :C), undirected(:A, :C); class = PDAG)
+    @test is_cpdag(cg)
 end
 
 @testitem "is_cpdag: triangle with adjacent parents is not a CPDAG" tags = [:unit] begin
     # A→C, B→C, A—B: A and B are adjacent so no v-structure at C; arrows not protected
-    g = caugi(directed(:A, :C), directed(:B, :C), undirected(:A, :B); class = PDAG)
-    @test !is_cpdag(g)
+    cg = caugi(directed(:A, :C), directed(:B, :C), undirected(:A, :B); class = PDAG)
+    @test !is_cpdag(cg)
 end
 
 @testitem "is_cpdag: isolated nodes are a valid CPDAG" tags = [:unit] begin
-    g = caugi(node(:A), node(:B), node(:C); class = PDAG)
-    @test is_cpdag(g)
+    cg = caugi(node(:A), node(:B), node(:C); class = PDAG)
+    @test is_cpdag(cg)
 end
 
 @testitem "is_cpdag: v-structure + isolated nodes is a valid CPDAG" tags = [:unit] begin
-    g = caugi(directed(:A, :C), directed(:B, :C), node(:D), node(:E); class = PDAG)
-    @test is_cpdag(g)
+    cg = caugi(directed(:A, :C), directed(:B, :C), node(:D), node(:E); class = PDAG)
+    @test is_cpdag(cg)
 end
 
 @testitem "is_cpdag: non-chordal 4-cycle is not a CPDAG" tags = [:unit] begin
-    g = caugi(
+    cg = caugi(
         undirected(:A, :B),
         undirected(:B, :C),
         undirected(:C, :D),
         undirected(:D, :A);
         class = PDAG,
     )
-    @test !is_cpdag(g)
+    @test !is_cpdag(cg)
 end
 
 @testitem "is_cpdag: rejects Meek R1 violation" tags = [:unit] begin
     # A→B, B—C, A not adjacent to C: R1 would orient B→C
-    g = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG)
-    @test !is_cpdag(g)
+    cg = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG)
+    @test !is_cpdag(cg)
 end
 
 @testitem "is_cpdag: rejects Meek R2 violation" tags = [:unit] begin
     # A—B with A→C→B: R2 would orient A→B
-    g = caugi(undirected(:A, :B), directed(:A, :C), directed(:C, :B); class = PDAG)
-    @test !is_cpdag(g)
+    cg = caugi(undirected(:A, :B), directed(:A, :C), directed(:C, :B); class = PDAG)
+    @test !is_cpdag(cg)
 end
 
 @testitem "is_cpdag: rejects Meek R3 violation" tags = [:unit] begin
     # A—B, C→B, D→B, C not adj D, A—C, A—D: R3 would orient A→B
-    g = caugi(
+    cg = caugi(
         undirected(:A, :B),
         directed(:C, :B),
         directed(:D, :B),
@@ -541,25 +541,25 @@ end
         undirected(:A, :D);
         class = PDAG,
     )
-    @test !is_cpdag(g)
+    @test !is_cpdag(cg)
 end
 
 @testitem "is_cpdag: rejects Meek R4 violation" tags = [:unit] begin
     # A—B with directed path A→C→D→B: R4 would orient A→B
-    g = caugi(
+    cg = caugi(
         undirected(:A, :B),
         directed(:A, :C),
         directed(:C, :D),
         directed(:D, :B);
         class = PDAG,
     )
-    @test !is_cpdag(g)
+    @test !is_cpdag(cg)
 end
 
 @testitem "is_cpdag: complex valid CPDAG with v-structure + undirected components" tags =
     [:unit] begin
     # B—A, B—D, C→E←B, D→F←E
-    g = caugi(
+    cg = caugi(
         undirected(:B, :A),
         undirected(:B, :D),
         directed(:C, :E),
@@ -568,19 +568,19 @@ end
         directed(:E, :F);
         class = PDAG,
     )
-    @test is_cpdag(g)
+    @test is_cpdag(cg)
 end
 
 @testitem "is_cpdag: v-structure with R1 cascade (C→E←B, E→F) is valid" tags = [:unit] begin
     # C→E, B→E protects both; E→F is protected by SP2 (B→E→F)
-    g = caugi(directed(:A, :C), directed(:B, :C), directed(:C, :D); class = PDAG)
-    @test is_cpdag(g)
+    cg = caugi(directed(:A, :C), directed(:B, :C), directed(:C, :D); class = PDAG)
+    @test is_cpdag(cg)
 end
 
 @testitem "is_cpdag: PDAG with B→A and B→C (fork) is not a CPDAG" tags = [:unit] begin
     # B→A, B→C: neither edge is protected (no v-structure)
-    g = caugi(directed(:B, :A), directed(:B, :C); class = PDAG)
-    @test !is_cpdag(g)
+    cg = caugi(directed(:B, :A), directed(:B, :C); class = PDAG)
+    @test !is_cpdag(cg)
 end
 
 @testitem "is_cpdag: CPDAG constructor rejects invalid graph" tags = [:unit] begin
@@ -589,7 +589,7 @@ end
 
 @testitem "is_cpdag: generate_graph(CPDAG) produces valid CPDAGs" tags = [:unit] begin
     for seed = 1:10
-        g = generate_graph(6; m = 5, class = CPDAG, seed = seed)
-        @test is_cpdag(g)
+        cg = generate_graph(6; m = 5, class = CPDAG, seed = seed)
+        @test is_cpdag(cg)
     end
 end

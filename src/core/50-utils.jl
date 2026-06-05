@@ -1,24 +1,24 @@
 """
-    is_dag(g::CausalGraph)   -> Bool
+    is_dag(cg::CausalGraph)   -> Bool
 
-Check whether `g` satisfies the structural constraints of the given graph class,
+Check whether `cg` satisfies the structural constraints of the given graph class,
 independent of its declared graph class.
 
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C); class = PDAG);
+julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = PDAG);
 
-julia> is_dag(g)
+julia> is_dag(cg)
 true
 ```
 """
-is_dag(g::CausalGraph) = _class_matches_or_satisfies(g, DAGConstraints())
+is_dag(cg::CausalGraph) = _class_matches_or_satisfies(cg, DAGConstraints())
 
 """
-    is_pdag(g::CausalGraph) -> Bool
+    is_pdag(cg::CausalGraph) -> Bool
 
-Check whether `g` satisfies the structural constraints of the given graph class,
+Check whether `cg` satisfies the structural constraints of the given graph class,
 independent of its declared graph class.
 
 # Examples
@@ -30,12 +30,12 @@ julia> is_dag(pdag)
 true
 ```
 """
-is_pdag(g::CausalGraph) = _class_matches_or_satisfies(g, PDAGConstraints())
+is_pdag(cg::CausalGraph) = _class_matches_or_satisfies(cg, PDAGConstraints())
 
 """
-    is_cpdag(g::CausalGraph) -> Bool
+    is_cpdag(cg::CausalGraph) -> Bool
 
-Check whether `g` satisfies the structural constraints of the given graph class,
+Check whether `cg` satisfies the structural constraints of the given graph class,
 independent of its declared graph class.
 
 # Examples
@@ -47,12 +47,12 @@ julia> is_cpdag(dag)
 false
 ```
 """
-is_cpdag(g::CausalGraph) = _class_matches_or_satisfies(g, CPDAGConstraints())
+is_cpdag(cg::CausalGraph) = _class_matches_or_satisfies(cg, CPDAGConstraints())
 
 """
-    is_mpdag(g::CausalGraph) -> Bool
+    is_mpdag(cg::CausalGraph) -> Bool
 
-Check whether `g` satisfies the structural constraints of an MPDAG
+Check whether `cg` satisfies the structural constraints of an MPDAG
 (a PDAG closed under Meek's orientation rules R1–R4), independent of its
 declared graph class.
 
@@ -72,12 +72,12 @@ julia> is_mpdag(pdag)
 false
 ```
 """
-is_mpdag(g::CausalGraph) = _class_matches_or_satisfies(g, MPDAGConstraints())
+is_mpdag(cg::CausalGraph) = _class_matches_or_satisfies(cg, MPDAGConstraints())
 
 """
-    is_ug(g::CausalGraph) -> Bool
+    is_ug(cg::CausalGraph) -> Bool
 
-Check whether `g` satisfies the structural constraints of the given graph class,
+Check whether `cg` satisfies the structural constraints of the given graph class,
 independent of its declared graph class.
 
 # Examples
@@ -89,12 +89,12 @@ julia> is_ug(pdag)
 true
 ```
 """
-is_ug(g::CausalGraph) = _class_matches_or_satisfies(g, UGConstraints())
+is_ug(cg::CausalGraph) = _class_matches_or_satisfies(cg, UGConstraints())
 
 """
-    is_admg(g::CausalGraph) -> Bool
+    is_admg(cg::CausalGraph) -> Bool
 
-Check whether `g` satisfies the structural constraints of the given graph class,
+Check whether `cg` satisfies the structural constraints of the given graph class,
 independent of its declared graph class.
 
 # Examples
@@ -106,12 +106,12 @@ julia> is_admg(pdag)
 true
 ```
 """
-is_admg(g::CausalGraph) = _class_matches_or_satisfies(g, ADMGConstraints())
+is_admg(cg::CausalGraph) = _class_matches_or_satisfies(cg, ADMGConstraints())
 
 """
-    is_ag(g::CausalGraph) -> Bool
+    is_ag(cg::CausalGraph) -> Bool
 
-Check whether `g` satisfies the structural constraints of the given graph class,
+Check whether `cg` satisfies the structural constraints of the given graph class,
 independent of its declared graph class.
 
 # Examples
@@ -123,33 +123,33 @@ julia> is_ag(pdag)
 true
 ```
 """
-is_ag(g::CausalGraph) = _class_matches_or_satisfies(g, AGConstraints())
+is_ag(cg::CausalGraph) = _class_matches_or_satisfies(cg, AGConstraints())
 
 """
-    nodes(g::CausalGraph) -> Vector{Symbol}
+    nodes(cg::CausalGraph) -> Vector{Symbol}
 
-Return the nodes of `g` in alphabetical order.
+Return the nodes of `cg` in alphabetical order.
 
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:B, :A), directed(:A, :C); class = DAG);
+julia> cg = caugi(directed(:B, :A), directed(:A, :C); class = DAG);
 
-julia> nodes(g)
+julia> nodes(cg)
 3-element Vector{Symbol}:
  :A
  :B
  :C
 ```
 """
-function nodes(g::CausalGraph)
-    return copy(g.backend.nodes)
+function nodes(cg::CausalGraph)
+    return copy(cg.backend.nodes)
 end
 
 """
-    is_simple(g::CausalGraph) -> Bool
+    is_simple(cg::CausalGraph) -> Bool
 
-Return `true` if `g` has no self-loops and no parallel edges between the same
+Return `true` if `cg` has no self-loops and no parallel edges between the same
 pair of nodes.
 
 For all graph classes except [`UNKNOWN`](@ref), simplicity is guaranteed by
@@ -158,26 +158,26 @@ construction.
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B); class = DAG);
+julia> cg = caugi(directed(:A, :B); class = DAG);
 
-julia> is_simple(g)
+julia> is_simple(cg)
 true
 ```
 """
-function is_simple(g::CausalGraph)
-    if !(g isa UNKNOWN)
+function is_simple(cg::CausalGraph)
+    if !(cg isa UNKNOWN)
         return true
     end
 
     # self-loops
-    for e in g.edges
+    for e in cg.edges
         if e.src == e.dst
             return false
         end
     end
 
     seen = Set{Tuple{Symbol,Symbol}}()
-    for e in g.edges
+    for e in cg.edges
         key = _ordered_pair(e.src, e.dst)
         if key in seen
             return false
@@ -189,9 +189,9 @@ function is_simple(g::CausalGraph)
 end
 
 """
-    is_acyclic(g::CausalGraph) -> Bool
+    is_acyclic(cg::CausalGraph) -> Bool
 
-Return `true` if `g` contains no directed cycle.
+Return `true` if `cg` contains no directed cycle.
 
 For all graph classes except [`UNKNOWN`](@ref), acyclicity is guaranteed by
 construction.
@@ -199,9 +199,9 @@ construction.
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> is_acyclic(g)
+julia> is_acyclic(cg)
 true
 
 julia> unk = caugi(directed(:A, :B), directed(:B, :A); simple = false, class = UNKNOWN);
@@ -210,12 +210,12 @@ julia> is_acyclic(unk)
 false
 ```
 """
-function is_acyclic(g::CausalGraph)
-    if !(g isa UNKNOWN)
+function is_acyclic(cg::CausalGraph)
+    if !(cg isa UNKNOWN)
         return true
     end
 
-    return !directed_cycle_detected(g)
+    return !directed_cycle_detected(cg)
 end
 
 """
@@ -234,12 +234,12 @@ sampled DAG is converted via [`dag_to_cpdag`](@ref).
 # Examples
 
 ```jldoctest
-julia> g = generate_graph(4; m = 3, seed = 1);
+julia> cg = generate_graph(4; m = 3, seed = 1);
 
-julia> isa(g, DAG)
+julia> isa(cg, DAG)
 true
 
-julia> length(nodes(g))
+julia> length(nodes(cg))
 4
 ```
 """
@@ -310,12 +310,12 @@ function _finalize_generate_graph(::Type{CPDAG}, node_set, node_items, edges)
 end
 
 """
-    simulate_data(g::DAG; samples, seed=nothing, standardize=true,
+    simulate_data(cg::DAG; samples, seed=nothing, standardize=true,
                   coef_range=(-1.0, 1.0), error_sd=1.0, rng=GLOBAL_RNG)
         -> Dict{Symbol, Vector{Float64}}
 
 Simulate observational data from a linear Gaussian structural causal model over
-`g`. Each node is a linear function of its parents plus independent Gaussian
+`cg`. Each node is a linear function of its parents plus independent Gaussian
 noise with standard deviation `error_sd`. Edge coefficients are drawn uniformly
 from `coef_range`. If `standardize = true` (default), each variable is
 standardized to zero mean and unit variance.
@@ -325,9 +325,9 @@ Returns a `Dict` mapping each node name to a length-`samples` vector.
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> data = simulate_data(g; samples = 100, seed = 42);
+julia> data = simulate_data(cg; samples = 100, seed = 42);
 
 julia> haskey(data, :A)
 true
@@ -337,7 +337,7 @@ julia> length(data[:B])
 ```
 """
 function simulate_data(
-    g::DAG;
+    cg::DAG;
     samples::Integer,
     seed = nothing,
     standardize::Bool = true,
@@ -348,7 +348,7 @@ function simulate_data(
     if samples <= 0
         error("samples must be positive")
     end
-    B = g.backend
+    B = cg.backend
     if isempty(B.nodes)
         error("Cannot simulate data from an empty graph")
     end
@@ -362,11 +362,11 @@ function simulate_data(
         seed
     end
 
-    ordering = topological_sort(g)
+    ordering = topological_sort(cg)
 
     # random coefficients for each parent->child sampled uniformly in coef_range
     coeffs = Dict{Tuple{Symbol,Symbol},Float64}()
-    for e in g.edges
+    for e in cg.edges
         coeffs[(e.src, e.dst)] =
             rand(local_rng) * (coef_range[2] - coef_range[1]) + coef_range[1]
     end
@@ -377,7 +377,7 @@ function simulate_data(
     end
 
     for node in ordering
-        pa = parents(g, node)
+        pa = parents(cg, node)
         if isempty(pa)
             data[node] = randn(local_rng, samples) .* error_sd
         else
@@ -428,11 +428,11 @@ function _edge_display(edge::CausalEdge)
     return "$(edge.src_end) - $(edge.dst_end)"
 end
 
-function show(io::IO, g::CausalGraph)
-    B = g.backend
-    typename = typeof(g)
+function show(io::IO, cg::CausalGraph)
+    B = cg.backend
+    typename = typeof(cg)
     n_nodes = length(B.nodes)
-    n_edges = length(g.edges)
+    n_edges = length(cg.edges)
     s_n = n_nodes == 1 ? "" : "s"
     s_e = n_edges == 1 ? "" : "s"
     println(io, "$(typename) with $(n_nodes) node$(s_n) and $(n_edges) edge$(s_e):")
@@ -452,11 +452,11 @@ function show(io::IO, g::CausalGraph)
         println(
             io,
             "    ",
-            join(["$(e.src) $(_edge_display(e)) $(e.dst)" for e in g.edges], ", "),
+            join(["$(e.src) $(_edge_display(e)) $(e.dst)" for e in cg.edges], ", "),
         )
     else
         sample =
-            join(["$(e.src) $(_edge_display(e)) $(e.dst)" for e in g.edges[1:10]], ", ")
+            join(["$(e.src) $(_edge_display(e)) $(e.dst)" for e in cg.edges[1:10]], ", ")
         println(io, "    ", sample, ", … ($(n_edges - 10) more)")
     end
 end

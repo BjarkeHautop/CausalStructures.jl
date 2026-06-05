@@ -1,7 +1,7 @@
 # Ported from caugi/tests/testthat/test-simulation.R
 # API differences vs R:
 #   generate_graph(n; m=m, class=DAG)  (Julia uses type, not string/symbol)
-#   simulate_data(g; samples=n, seed=s) (Julia uses `samples` not `n`)
+#   simulate_data(cg; samples=n, seed=s) (Julia uses `samples` not `n`)
 #   simulate_data returns Dict{Symbol,Vector{Float64}}, not data.frame
 
 using Test
@@ -34,28 +34,28 @@ end
 
 @testitem "generate_graph: DAG with m=0 yields 0 edges and correct nodes" tags = [:unit] begin
     n = 5
-    g = generate_graph(n; m = 0, class = DAG)
-    @test g isa DAG
-    @test length(nodes(g)) == n
-    @test isempty(g.edges)
-    @test Set(nodes(g)) == Set([Symbol("V$i") for i = 1:n])
+    cg = generate_graph(n; m = 0, class = DAG)
+    @test cg isa DAG
+    @test length(nodes(cg)) == n
+    @test isempty(cg.edges)
+    @test Set(nodes(cg)) == Set([Symbol("V$i") for i = 1:n])
 end
 
 @testitem "generate_graph: DAG with p=0 yields 0 edges" tags = [:unit] begin
-    g = generate_graph(6; p = 0.0, class = DAG)
-    @test isempty(g.edges)
+    cg = generate_graph(6; p = 0.0, class = DAG)
+    @test isempty(cg.edges)
 end
 
 @testitem "generate_graph: m=tot yields full tournament DAG" tags = [:unit] begin
     n = 6
     tot = n * (n - 1) ÷ 2
-    g = generate_graph(n; m = tot, seed = 11, class = DAG)
-    @test length(g.edges) == tot
+    cg = generate_graph(n; m = tot, seed = 11, class = DAG)
+    @test length(cg.edges) == tot
     @test all(
         e ->
             e.src_end == CausalGraphInterface.Tail &&
             e.dst_end == CausalGraphInterface.Arrow,
-        g.edges,
+        cg.edges,
     )
 end
 
@@ -67,9 +67,9 @@ end
 end
 
 @testitem "generate_graph: CPDAG class returns CPDAG" tags = [:unit] begin
-    g = generate_graph(6; m = 5, class = CPDAG)
-    @test g isa CPDAG
-    @test length(nodes(g)) == 6
+    cg = generate_graph(6; m = 5, class = CPDAG)
+    @test cg isa CPDAG
+    @test length(nodes(cg)) == 6
 end
 
 @testitem "generate_graph: unsupported class gives TypeError" tags = [:unit] begin
@@ -92,44 +92,44 @@ end
 end
 
 @testitem "simulate_data: errors on invalid samples" tags = [:unit] begin
-    g = caugi(directed(:A, :B); class = DAG)
-    @test_throws ErrorException simulate_data(g; samples = 0)
-    @test_throws ErrorException simulate_data(g; samples = -5)
+    cg = caugi(directed(:A, :B); class = DAG)
+    @test_throws ErrorException simulate_data(cg; samples = 0)
+    @test_throws ErrorException simulate_data(cg; samples = -5)
 end
 
 @testitem "simulate_data: returns dict with correct keys" tags = [:unit] begin
-    g = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    data = simulate_data(g; samples = 100, seed = 1)
+    cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    data = simulate_data(cg; samples = 100, seed = 1)
     @test data isa Dict
     @test Set(keys(data)) == Set([:A, :B, :C])
 end
 
 @testitem "simulate_data: correct number of samples" tags = [:unit] begin
-    g = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    data = simulate_data(g; samples = 100, seed = 1)
+    cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    data = simulate_data(cg; samples = 100, seed = 1)
     @test all(v -> length(v) == 100, values(data))
 end
 
 @testitem "simulate_data: reproducible with seed" tags = [:unit] begin
-    g = caugi(directed(:A, :B), directed(:B, :C), directed(:A, :C); class = DAG)
-    data1 = simulate_data(g; samples = 100, seed = 42)
-    data2 = simulate_data(g; samples = 100, seed = 42)
+    cg = caugi(directed(:A, :B), directed(:B, :C), directed(:A, :C); class = DAG)
+    data1 = simulate_data(cg; samples = 100, seed = 42)
+    data2 = simulate_data(cg; samples = 100, seed = 42)
     @test data1[:A] == data2[:A]
     @test data1[:B] == data2[:B]
     @test data1[:C] == data2[:C]
 end
 
 @testitem "simulate_data: different seeds produce different data" tags = [:unit] begin
-    g = caugi(directed(:A, :B); class = DAG)
-    data1 = simulate_data(g; samples = 100, seed = 1)
-    data2 = simulate_data(g; samples = 100, seed = 2)
+    cg = caugi(directed(:A, :B); class = DAG)
+    data1 = simulate_data(cg; samples = 100, seed = 1)
+    data2 = simulate_data(cg; samples = 100, seed = 2)
     @test data1[:A] != data2[:A]
 end
 
 @testitem "simulate_data: standardize=true yields mean≈0 and sd≈1" tags = [:unit] begin
     using Statistics
-    g = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
-    data = simulate_data(g; samples = 1000, standardize = true, seed = 123)
+    cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    data = simulate_data(cg; samples = 1000, standardize = true, seed = 123)
     for (_, v) in data
         @test abs(mean(v)) < 1e-10
         @test abs(std(v) - 1.0) < 1e-10
@@ -138,8 +138,8 @@ end
 
 @testitem "simulate_data: standardize=false does not standardize" tags = [:unit] begin
     using Statistics
-    g = caugi(directed(:A, :B); class = DAG)
-    data = simulate_data(g; samples = 1000, standardize = false, seed = 42)
+    cg = caugi(directed(:A, :B); class = DAG)
+    data = simulate_data(cg; samples = 1000, standardize = false, seed = 42)
     means_zero = all(abs(mean(v)) < 0.01 for (_, v) in data)
     sds_one = all(abs(std(v) - 1.0) < 0.01 for (_, v) in data)
     @test !(means_zero && sds_one)
@@ -147,23 +147,23 @@ end
 
 @testitem "simulate_data: endogenous nodes correlate with parents" tags = [:unit] begin
     using Statistics
-    g = caugi(directed(:A, :B); class = DAG)
-    data = simulate_data(g; samples = 10_000, standardize = false, seed = 1)
+    cg = caugi(directed(:A, :B); class = DAG)
+    data = simulate_data(cg; samples = 10_000, standardize = false, seed = 1)
     r = cor(data[:A], data[:B])
     @test abs(r) > 0.05
 end
 
 @testitem "simulate_data: single node graph works" tags = [:unit] begin
-    g = caugi(node(:A); class = DAG)
-    data = simulate_data(g; samples = 50, seed = 1)
+    cg = caugi(node(:A); class = DAG)
+    data = simulate_data(cg; samples = 50, seed = 1)
     @test haskey(data, :A)
     @test length(data[:A]) == 50
 end
 
 @testitem "simulate_data: graph with no edges (all exogenous)" tags = [:unit] begin
     using Statistics
-    g = caugi(node(:A), node(:B), node(:C); class = DAG)
-    data = simulate_data(g; samples = 100, standardize = false, seed = 1)
+    cg = caugi(node(:A), node(:B), node(:C); class = DAG)
+    data = simulate_data(cg; samples = 100, standardize = false, seed = 1)
     @test length(keys(data)) == 3
     @test std(data[:A]) > 0
     @test std(data[:B]) > 0
@@ -171,22 +171,22 @@ end
 end
 
 @testitem "simulate_data: deep chain graph" tags = [:unit] begin
-    g = caugi(
+    cg = caugi(
         directed(:A, :B),
         directed(:B, :C),
         directed(:C, :D),
         directed(:D, :E);
         class = DAG,
     )
-    data = simulate_data(g; samples = 100, seed = 1)
+    data = simulate_data(cg; samples = 100, seed = 1)
     @test Set(keys(data)) == Set([:A, :B, :C, :D, :E])
     @test all(v -> length(v) == 100, values(data))
 end
 
 @testitem "simulate_data: collider structure A and B independent" tags = [:unit] begin
     using Statistics
-    g = caugi(directed(:A, :C), directed(:B, :C); class = DAG)
-    data = simulate_data(g; samples = 10_000, standardize = false, seed = 1)
+    cg = caugi(directed(:A, :C), directed(:B, :C); class = DAG)
+    data = simulate_data(cg; samples = 10_000, standardize = false, seed = 1)
     r_ab = cor(data[:A], data[:B])
     @test abs(r_ab) < 0.05
     @test abs(cor(data[:A], data[:C])) > 0.05

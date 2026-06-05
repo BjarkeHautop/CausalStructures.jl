@@ -81,9 +81,9 @@ function _moral_adj_in_mask(B::DAGBackend, mask::BitVector)
 end
 
 """
-    d_separated(g::DAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    d_separated(cg::DAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
 
-Return `true` if `x` and `y` are d-separated given `z` in `g`.
+Return `true` if `x` and `y` are d-separated given `z` in `cg`.
 
 Two nodes are d-separated given a conditioning set `z` if every path between
 them is blocked. A path is blocked if it contains either a non-collider node
@@ -95,12 +95,12 @@ it, then checks connectivity after removing `z`.
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> d_separated(g, :A, :C)        # chain A --> B --> C is open
+julia> d_separated(cg, :A, :C)        # chain A --> B --> C is open
 false
 
-julia> d_separated(g, :A, :C, [:B]) # conditioning on B blocks the chain
+julia> d_separated(cg, :A, :C, [:B]) # conditioning on B blocks the chain
 true
 
 julia> coll = caugi(directed(:A, :C), directed(:B, :C); class = DAG);
@@ -112,11 +112,11 @@ julia> d_separated(coll, :A, :B, [:C])  # conditioning on collider C opens the p
 false
 ```
 """
-function d_separated(g::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
-    B = g.backend
-    x_idx = node_index(g, x)
-    y_idx = node_index(g, y)
-    z_idxs = [node_index(g, v) for v in z]
+function d_separated(cg::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
+    B = cg.backend
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+    z_idxs = [node_index(cg, v) for v in z]
 
     seeds = unique([x_idx; y_idx; z_idxs])
     mask = _ancestors_bitmask(B, seeds)
@@ -147,9 +147,9 @@ function d_separated(g::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = S
 end
 
 """
-    m_separated(g, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    m_separated(cg, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
 
-Return `true` if `x` and `y` are m-separated given `z` in `g`.
+Return `true` if `x` and `y` are m-separated given `z` in `cg`.
 
 M-separation generalizes d-separation to graphs with bidirected and undirected
 edges. For a [`DAG`](@ref), m-separation is equivalent to [`d_separated`](@ref).
@@ -166,12 +166,12 @@ the anterior set of `x`, `y`, and `z`.
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> m_separated(g, :A, :C)        # equivalent to d_separated on a DAG
+julia> m_separated(cg, :A, :C)        # equivalent to d_separated on a DAG
 false
 
-julia> m_separated(g, :A, :C, [:B])
+julia> m_separated(cg, :A, :C, [:B])
 true
 
 julia> admg = caugi(directed(:A, :B), bidirected(:A, :C); class = ADMG);
@@ -183,8 +183,8 @@ julia> m_separated(admg, :B, :C, [:A]) # conditioning on A blocks the path
 true
 ```
 """
-m_separated(g::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[]) =
-    d_separated(g, x, y, z)
+m_separated(cg::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[]) =
+    d_separated(cg, x, y, z)
 
 # ── m_separated (ADMG) ────────────────────────────────────────────────────────
 
@@ -218,12 +218,12 @@ function _admg_moral_adj(B::ADMGBackend, mask::BitVector)
     return adj
 end
 
-# Returns true iff x ⊥_m y | z in ADMG g.
-function m_separated(g::ADMG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
-    B = g.backend
-    x_idx = node_index(g, x)
-    y_idx = node_index(g, y)
-    z_idxs = [node_index(g, v) for v in z]
+# Returns true iff x ⊥_m y | z in ADMG cg.
+function m_separated(cg::ADMG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
+    B = cg.backend
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+    z_idxs = [node_index(cg, v) for v in z]
 
     seeds = unique([x_idx; y_idx; z_idxs])
     mask = _ancestors_bitmask(B, seeds)
@@ -320,12 +320,12 @@ function _ag_augmented_adj(B::AGBackend, mask::BitVector)
     return adj
 end
 
-# Returns true iff x ⊥_m y | z in AG g.
-function m_separated(g::AG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
-    B = g.backend
-    x_idx = node_index(g, x)
-    y_idx = node_index(g, y)
-    z_idxs = [node_index(g, v) for v in z]
+# Returns true iff x ⊥_m y | z in AG cg.
+function m_separated(cg::AG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
+    B = cg.backend
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+    z_idxs = [node_index(cg, v) for v in z]
 
     seeds = unique([x_idx; y_idx; z_idxs])
     mask = _anterior_bitmask(B, seeds)

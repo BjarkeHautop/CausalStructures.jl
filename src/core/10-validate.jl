@@ -9,9 +9,9 @@ struct CPDAGConstraints <: GraphConstraints end
 struct MPDAGConstraints <: GraphConstraints end
 struct UNKNOWNConstraints <: GraphConstraints end
 
-function directed_cycle_detected(g::CausalGraph)
-    nodes = g.backend.nodes
-    edges = g.edges
+function directed_cycle_detected(cg::CausalGraph)
+    nodes = cg.backend.nodes
+    edges = cg.edges
 
     children_map = Dict(node => Set{Symbol}() for node in nodes)
     indegree = Dict(node => 0 for node in nodes)
@@ -42,102 +42,105 @@ function directed_cycle_detected(g::CausalGraph)
     return visited != length(nodes)
 end
 
-function validation_errors(::DAGConstraints, g::CausalGraph)
+function validation_errors(::DAGConstraints, cg::CausalGraph)
     errors = String[]
 
-    all(is_directed, g.edges) || push!(errors, "invalid edge type for graph class DAG")
+    all(is_directed, cg.edges) || push!(errors, "invalid edge type for graph class DAG")
 
-    all(e -> e.src != e.dst, g.edges) || push!(errors, "self-loops are not allowed in DAG")
+    all(e -> e.src != e.dst, cg.edges) || push!(errors, "self-loops are not allowed in DAG")
 
-    directed_cycle_detected(g) && push!(errors, "directed cycles are not allowed in DAG")
+    directed_cycle_detected(cg) && push!(errors, "directed cycles are not allowed in DAG")
 
     return errors
 end
 
-function validation_errors(::PDAGConstraints, g::CausalGraph)
+function validation_errors(::PDAGConstraints, cg::CausalGraph)
     errors = String[]
 
-    all(e -> is_directed(e) || is_undirected(e), g.edges) ||
+    all(e -> is_directed(e) || is_undirected(e), cg.edges) ||
         push!(errors, "invalid edge type for graph class PDAG")
 
-    all(e -> e.src != e.dst, g.edges) || push!(errors, "self-loops are not allowed in PDAG")
+    all(e -> e.src != e.dst, cg.edges) ||
+        push!(errors, "self-loops are not allowed in PDAG")
 
-    directed_cycle_detected(g) && push!(errors, "directed cycles are not allowed in PDAG")
-
-    return errors
-end
-
-function validation_errors(::UGConstraints, g::CausalGraph)
-    errors = String[]
-
-    all(is_undirected, g.edges) || push!(errors, "invalid edge type for graph class UG")
-
-    all(e -> e.src != e.dst, g.edges) || push!(errors, "self-loops are not allowed in UG")
+    directed_cycle_detected(cg) && push!(errors, "directed cycles are not allowed in PDAG")
 
     return errors
 end
 
-function validation_errors(::ADMGConstraints, g::CausalGraph)
+function validation_errors(::UGConstraints, cg::CausalGraph)
     errors = String[]
 
-    all(e -> is_directed(e) || is_bidirected(e), g.edges) ||
+    all(is_undirected, cg.edges) || push!(errors, "invalid edge type for graph class UG")
+
+    all(e -> e.src != e.dst, cg.edges) || push!(errors, "self-loops are not allowed in UG")
+
+    return errors
+end
+
+function validation_errors(::ADMGConstraints, cg::CausalGraph)
+    errors = String[]
+
+    all(e -> is_directed(e) || is_bidirected(e), cg.edges) ||
         push!(errors, "invalid edge type for graph class ADMG")
 
-    all(e -> e.src != e.dst, g.edges) || push!(errors, "self-loops are not allowed in ADMG")
+    all(e -> e.src != e.dst, cg.edges) ||
+        push!(errors, "self-loops are not allowed in ADMG")
 
-    directed_cycle_detected(g) && push!(errors, "directed cycles are not allowed in ADMG")
+    directed_cycle_detected(cg) && push!(errors, "directed cycles are not allowed in ADMG")
 
     return errors
 end
 
-function validation_errors(::UNKNOWNConstraints, g::UNKNOWN)
+function validation_errors(::UNKNOWNConstraints, cg::UNKNOWN)
     errors = String[]
 
-    if g.simple && !is_simple(g)
+    if cg.simple && !is_simple(cg)
         push!(errors, "graph marked simple=true but contains self-loops or parallel edges")
     end
 
     return errors
 end
 
-_satisfies_constraints(c::GraphConstraints, g::CausalGraph) =
-    isempty(validation_errors(c, g))
+_satisfies_constraints(c::GraphConstraints, cg::CausalGraph) =
+    isempty(validation_errors(c, cg))
 
-function _satisfies_constraints(::UNKNOWNConstraints, g::UNKNOWN)
-    if g.simple
-        return is_simple(g)
+function _satisfies_constraints(::UNKNOWNConstraints, cg::UNKNOWN)
+    if cg.simple
+        return is_simple(cg)
     end
 
     return true
 end
 
-_fast_skip(g::CausalGraph, ::DAGConstraints) = g isa DAG
-_fast_skip(g::CausalGraph, ::PDAGConstraints) = g isa AbstractPDAG || g isa DAG || g isa UG
-_fast_skip(g::CausalGraph, ::CPDAGConstraints) = g isa CPDAG
-_fast_skip(g::CausalGraph, ::MPDAGConstraints) = g isa MPDAG || g isa CPDAG
-_fast_skip(g::CausalGraph, ::UGConstraints) = g isa UG
-_fast_skip(g::CausalGraph, ::ADMGConstraints) = g isa ADMG || g isa DAG
-_fast_skip(g::CausalGraph, ::AGConstraints) = g isa AG || g isa DAG
+_fast_skip(cg::CausalGraph, ::DAGConstraints) = cg isa DAG
+_fast_skip(cg::CausalGraph, ::PDAGConstraints) =
+    cg isa AbstractPDAG || cg isa DAG || cg isa UG
+_fast_skip(cg::CausalGraph, ::CPDAGConstraints) = cg isa CPDAG
+_fast_skip(cg::CausalGraph, ::MPDAGConstraints) = cg isa MPDAG || cg isa CPDAG
+_fast_skip(cg::CausalGraph, ::UGConstraints) = cg isa UG
+_fast_skip(cg::CausalGraph, ::ADMGConstraints) = cg isa ADMG || cg isa DAG
+_fast_skip(cg::CausalGraph, ::AGConstraints) = cg isa AG || cg isa DAG
 
-function _class_matches_or_satisfies(g::CausalGraph, constraints::GraphConstraints)
-    _fast_skip(g, constraints) && return true
-    return _satisfies_constraints(constraints, g)
+function _class_matches_or_satisfies(cg::CausalGraph, constraints::GraphConstraints)
+    _fast_skip(cg, constraints) && return true
+    return _satisfies_constraints(constraints, cg)
 end
 
-function validation_errors(::AGConstraints, g::CausalGraph)
+function validation_errors(::AGConstraints, cg::CausalGraph)
     errors = String[]
 
-    all(e -> is_directed(e) || is_undirected(e) || is_bidirected(e), g.edges) ||
+    all(e -> is_directed(e) || is_undirected(e) || is_bidirected(e), cg.edges) ||
         push!(errors, "invalid edge type for graph class AG")
 
-    all(e -> e.src != e.dst, g.edges) || push!(errors, "self-loops are not allowed in AG")
+    all(e -> e.src != e.dst, cg.edges) || push!(errors, "self-loops are not allowed in AG")
 
-    directed_cycle_detected(g) && push!(errors, "directed cycles are not allowed in AG")
+    directed_cycle_detected(cg) && push!(errors, "directed cycles are not allowed in AG")
 
     isempty(errors) || return errors
 
     # Need AGBackend for structural constraint checks
-    B = g.backend isa AGBackend ? g.backend : build_backend(AG, nodes(g), g.edges)
+    B = cg.backend isa AGBackend ? cg.backend : build_backend(AG, nodes(cg), cg.edges)
     n = length(B.nodes)
 
     # Undirected constraint: if a node has an undirected edge it must have no arrowheads
@@ -465,11 +468,11 @@ function _cpdag_arrows_protected(B::PDAGBackend, n::Int)
     return true
 end
 
-function validation_errors(::MPDAGConstraints, g::CausalGraph)
-    errors = validation_errors(PDAGConstraints(), g)
+function validation_errors(::MPDAGConstraints, cg::CausalGraph)
+    errors = validation_errors(PDAGConstraints(), cg)
     isempty(errors) || return errors
 
-    B = g.backend isa PDAGBackend ? g.backend : build_backend(PDAG, nodes(g), g.edges)
+    B = cg.backend isa PDAGBackend ? cg.backend : build_backend(PDAG, nodes(cg), cg.edges)
     n = length(B.nodes)
     n <= 1 && return errors
 
@@ -478,11 +481,11 @@ function validation_errors(::MPDAGConstraints, g::CausalGraph)
     return errors
 end
 
-function validation_errors(::CPDAGConstraints, g::CausalGraph)
-    errors = validation_errors(PDAGConstraints(), g)
+function validation_errors(::CPDAGConstraints, cg::CausalGraph)
+    errors = validation_errors(PDAGConstraints(), cg)
     isempty(errors) || return errors
 
-    B = g.backend isa PDAGBackend ? g.backend : build_backend(PDAG, nodes(g), g.edges)
+    B = cg.backend isa PDAGBackend ? cg.backend : build_backend(PDAG, nodes(cg), cg.edges)
     n = length(B.nodes)
     n <= 1 && return errors
 
@@ -510,27 +513,27 @@ graph_class_name(::ADMGConstraints) = "ADMG"
 graph_class_name(::AGConstraints) = "AG"
 graph_class_name(::UNKNOWNConstraints) = "UNKNOWN"
 
-function validate(g::CausalGraph, c::GraphConstraints)
-    errors = validation_errors(c, g)
+function validate(cg::CausalGraph, c::GraphConstraints)
+    errors = validation_errors(c, cg)
 
     isempty(errors) ||
         error("Invalid $(graph_class_name(c)):\n  - " * join(errors, "\n  - "))
 
-    return g
+    return cg
 end
 
-validate(g::CausalGraph, ::Type{DAG}) = validate(g, DAGConstraints())
+validate(cg::CausalGraph, ::Type{DAG}) = validate(cg, DAGConstraints())
 
-validate(g::CausalGraph, ::Type{PDAG}) = validate(g, PDAGConstraints())
+validate(cg::CausalGraph, ::Type{PDAG}) = validate(cg, PDAGConstraints())
 
-validate(g::CausalGraph, ::Type{CPDAG}) = validate(g, CPDAGConstraints())
+validate(cg::CausalGraph, ::Type{CPDAG}) = validate(cg, CPDAGConstraints())
 
-validate(g::CausalGraph, ::Type{MPDAG}) = validate(g, MPDAGConstraints())
+validate(cg::CausalGraph, ::Type{MPDAG}) = validate(cg, MPDAGConstraints())
 
-validate(g::CausalGraph, ::Type{UG}) = validate(g, UGConstraints())
+validate(cg::CausalGraph, ::Type{UG}) = validate(cg, UGConstraints())
 
-validate(g::CausalGraph, ::Type{ADMG}) = validate(g, ADMGConstraints())
+validate(cg::CausalGraph, ::Type{ADMG}) = validate(cg, ADMGConstraints())
 
-validate(g::CausalGraph, ::Type{AG}) = validate(g, AGConstraints())
+validate(cg::CausalGraph, ::Type{AG}) = validate(cg, AGConstraints())
 
-validate(g::CausalGraph, ::Type{UNKNOWN}) = validate(g, UNKNOWNConstraints())
+validate(cg::CausalGraph, ::Type{UNKNOWN}) = validate(cg, UNKNOWNConstraints())

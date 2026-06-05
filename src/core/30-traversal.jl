@@ -3,27 +3,27 @@
 # exogenous_nodes, markov_blanket, spouses, districts
 
 """
-    topological_sort(g::DAG) -> Vector{Symbol}
+    topological_sort(cg::DAG) -> Vector{Symbol}
 
-Return the nodes of `g` in topological order.
+Return the nodes of `cg` in topological order.
 
-For every directed edge `u --> v` in `g`, `u` appears before `v` in the
+For every directed edge `u --> v` in `cg`, `u` appears before `v` in the
 returned vector.
 
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> topological_sort(g)
+julia> topological_sort(cg)
 3-element Vector{Symbol}:
  :A
  :B
  :C
 ```
 """
-function topological_sort(g::DAG)
-    B = g.backend
+function topological_sort(cg::DAG)
+    B = cg.backend
     n = length(B.nodes)
 
     indegree = zeros(Int, n)
@@ -55,9 +55,9 @@ function topological_sort(g::DAG)
 end
 
 """
-    ancestors(g, node::Symbol; open::Bool = true) -> Vector{Symbol}
+    ancestors(cg, node::Symbol; open::Bool = true) -> Vector{Symbol}
 
-Return the ancestors of `node` in `g`: all nodes from which `node` is
+Return the ancestors of `node` in `cg`: all nodes from which `node` is
 reachable by following directed edges forward.
 
 When `open = true` (open definition, default), `node` itself is excluded from
@@ -71,28 +71,28 @@ Applicable to [`DAG`](@ref), [`PDAG`](@ref), [`CPDAG`](@ref),
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> ancestors(g, :A)
+julia> ancestors(cg, :A)
 Symbol[]
 
-julia> ancestors(g, :A, open = false)
+julia> ancestors(cg, :A, open = false)
 1-element Vector{Symbol}:
  :A
 
-julia> ancestors(g, :C)
+julia> ancestors(cg, :C)
 2-element Vector{Symbol}:
  :A
  :B
 ```
 """
 function ancestors(
-    g::Union{DAG,AbstractPDAG,ADMG,AG},
+    cg::Union{DAG,AbstractPDAG,ADMG,AG},
     node::Symbol;
     open::Bool = _OPEN_DEFAULT,
 )
-    B = g.backend
-    node_idx = node_index(g, node)
+    B = cg.backend
+    node_idx = node_index(cg, node)
     seen = falses(length(B.nodes))
     stack = collect(_parents_slice(B, node_idx))
 
@@ -109,9 +109,9 @@ function ancestors(
 end
 
 """
-    descendants(g, node::Symbol; open::Bool = true) -> Vector{Symbol}
+    descendants(cg, node::Symbol; open::Bool = true) -> Vector{Symbol}
 
-Return the descendants of `node` in `g`: all nodes reachable from `node` by
+Return the descendants of `node` in `cg`: all nodes reachable from `node` by
 following directed edges forward.
 
 When `open = true` (open definition, default), `node` itself is excluded from
@@ -125,17 +125,17 @@ Applicable to [`DAG`](@ref), [`PDAG`](@ref), [`CPDAG`](@ref),
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> descendants(g, :A)
+julia> descendants(cg, :A)
 2-element Vector{Symbol}:
  :B
  :C
 
-julia> descendants(g, :C)
+julia> descendants(cg, :C)
 Symbol[]
 
-julia> descendants(g, :A, open = false)
+julia> descendants(cg, :A, open = false)
 3-element Vector{Symbol}:
  :A
  :B
@@ -143,12 +143,12 @@ julia> descendants(g, :A, open = false)
 ```
 """
 function descendants(
-    g::Union{DAG,AbstractPDAG,ADMG,AG},
+    cg::Union{DAG,AbstractPDAG,ADMG,AG},
     node::Symbol;
     open::Bool = _OPEN_DEFAULT,
 )
-    B = g.backend
-    node_idx = node_index(g, node)
+    B = cg.backend
+    node_idx = node_index(cg, node)
     seen = falses(length(B.nodes))
     stack = collect(_children_slice(B, node_idx))
 
@@ -164,11 +164,11 @@ function descendants(
 end
 
 """
-    exogenous_nodes(g::Union{DAG,ADMG,AG}) -> Vector{Symbol}
-    exogenous_nodes(g::AbstractPDAG; undirected_as_parents = false) -> Vector{Symbol}
-    exogenous_nodes(g::UG) -> Vector{Symbol}
+    exogenous_nodes(cg::Union{DAG,ADMG,AG}) -> Vector{Symbol}
+    exogenous_nodes(cg::AbstractPDAG; undirected_as_parents = false) -> Vector{Symbol}
+    exogenous_nodes(cg::UG) -> Vector{Symbol}
 
-Return all exogenous nodes in `g`: nodes with no incoming directed edges.
+Return all exogenous nodes in `cg`: nodes with no incoming directed edges.
 
 For [`UG`](@ref), where no directed edges exist, a node is considered exogenous
 if and only if it is isolated (no neighbors at all).
@@ -180,9 +180,9 @@ undirected edge is not considered exogenous.
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> exogenous_nodes(g)
+julia> exogenous_nodes(cg)
 1-element Vector{Symbol}:
  :A
 
@@ -204,18 +204,18 @@ julia> exogenous_nodes(pdag, undirected_as_parents = true)
  :A
 ```
 """
-function exogenous_nodes(g::Union{DAG,ADMG,AG})
-    B = g.backend
+function exogenous_nodes(cg::Union{DAG,ADMG,AG})
+    B = cg.backend
     return [B.nodes[i] for i in eachindex(B.nodes) if isempty(_parents_slice(B, i))]
 end
 
-function exogenous_nodes(g::UG)
-    B = g.backend
+function exogenous_nodes(cg::UG)
+    B = cg.backend
     return [B.nodes[i] for i in eachindex(B.nodes) if isempty(_undirected_slice(B, i))]
 end
 
-function exogenous_nodes(g::AbstractPDAG; undirected_as_parents::Bool = false)
-    B = g.backend
+function exogenous_nodes(cg::AbstractPDAG; undirected_as_parents::Bool = false)
+    B = cg.backend
     exogenous = Symbol[]
     for i in eachindex(B.nodes)
         isempty(_parents_slice(B, i)) || continue
@@ -226,9 +226,9 @@ function exogenous_nodes(g::AbstractPDAG; undirected_as_parents::Bool = false)
 end
 
 """
-    anteriors(g::Union{DAG,AbstractPDAG,AG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
+    anteriors(cg::Union{DAG,AbstractPDAG,AG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
 
-Return the anteriors of `node` in `g`: all nodes from which `node` is reachable
+Return the anteriors of `node` in `cg`: all nodes from which `node` is reachable
 by following directed edges backward or traversing undirected edges.
 
 Applicable to [`DAG`](@ref), [`PDAG`](@ref), [`CPDAG`](@ref), and [`AG`](@ref).
@@ -244,9 +244,9 @@ default can be changed project-wide via Preferences.jl:
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> anteriors(g, :C)  # same as ancestors for a DAG
+julia> anteriors(cg, :C)  # same as ancestors for a DAG
 2-element Vector{Symbol}:
  :A
  :B
@@ -262,11 +262,11 @@ julia> anteriors(pdag, :C)  # C reaches B via undirected edge, then A via direct
  :B
 ```
 """
-anteriors(g::DAG, node::Symbol; open::Bool = _OPEN_DEFAULT) = ancestors(g, node; open)
+anteriors(cg::DAG, node::Symbol; open::Bool = _OPEN_DEFAULT) = ancestors(cg, node; open)
 
-function anteriors(g::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
-    B = g.backend
-    node_idx = node_index(g, node)
+function anteriors(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
+    B = cg.backend
+    node_idx = node_index(cg, node)
     seen = falses(length(B.nodes))
     stack = collect(_parents_slice(B, node_idx))
     append!(stack, _undirected_slice(B, node_idx))
@@ -284,9 +284,9 @@ function anteriors(g::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     return open ? result : [node; result]
 end
 
-function anteriors(g::AG, node::Symbol; open::Bool = _OPEN_DEFAULT)
-    B = g.backend
-    node_idx = node_index(g, node)
+function anteriors(cg::AG, node::Symbol; open::Bool = _OPEN_DEFAULT)
+    B = cg.backend
+    node_idx = node_index(cg, node)
     seen = falses(length(B.nodes))
     stack = collect(_parents_slice(B, node_idx))
     append!(stack, _undirected_slice(B, node_idx))
@@ -305,9 +305,9 @@ function anteriors(g::AG, node::Symbol; open::Bool = _OPEN_DEFAULT)
 end
 
 """
-    posteriors(g::Union{DAG,AbstractPDAG,AG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
+    posteriors(cg::Union{DAG,AbstractPDAG,AG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
 
-Return the posteriors of `node` in `g`: all nodes reachable from `node` by
+Return the posteriors of `node` in `cg`: all nodes reachable from `node` by
 following directed edges forward or traversing undirected edges.
 
 Applicable to [`DAG`](@ref), [`PDAG`](@ref), [`CPDAG`](@ref), and [`AG`](@ref).
@@ -323,9 +323,9 @@ default can be changed project-wide via Preferences.jl:
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> posteriors(g, :A)  # same as descendants for a DAG
+julia> posteriors(cg, :A)  # same as descendants for a DAG
 2-element Vector{Symbol}:
  :B
  :C
@@ -342,11 +342,11 @@ julia> posteriors(pdag, :C)  # C reaches B via undirected edge only
  :B
 ```
 """
-posteriors(g::DAG, node::Symbol; open::Bool = _OPEN_DEFAULT) = descendants(g, node; open)
+posteriors(cg::DAG, node::Symbol; open::Bool = _OPEN_DEFAULT) = descendants(cg, node; open)
 
-function posteriors(g::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
-    B = g.backend
-    node_idx = node_index(g, node)
+function posteriors(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
+    B = cg.backend
+    node_idx = node_index(cg, node)
     seen = falses(length(B.nodes))
     stack = collect(_children_slice(B, node_idx))
     append!(stack, _undirected_slice(B, node_idx))
@@ -364,9 +364,9 @@ function posteriors(g::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     return open ? result : [node; result]
 end
 
-function posteriors(g::AG, node::Symbol; open::Bool = _OPEN_DEFAULT)
-    B = g.backend
-    node_idx = node_index(g, node)
+function posteriors(cg::AG, node::Symbol; open::Bool = _OPEN_DEFAULT)
+    B = cg.backend
+    node_idx = node_index(cg, node)
     seen = falses(length(B.nodes))
     stack = collect(_children_slice(B, node_idx))
     append!(stack, _undirected_slice(B, node_idx))
@@ -385,9 +385,9 @@ function posteriors(g::AG, node::Symbol; open::Bool = _OPEN_DEFAULT)
 end
 
 """
-    markov_blanket(g, node::Symbol) -> Vector{Symbol}
+    markov_blanket(cg, node::Symbol) -> Vector{Symbol}
 
-Return the Markov blanket of `node` in `g`.
+Return the Markov blanket of `node` in `cg`.
 
 For a [`DAG`](@ref), the Markov blanket is the set of parents, children, and
 co-parents (other parents of `node`'s children). For a [`PDAG`](@ref) or
@@ -399,23 +399,23 @@ co-parents, spouses, and undirected neighbors.
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C), directed(:D, :C); class = DAG);
+julia> cg = caugi(directed(:A, :B), directed(:B, :C), directed(:D, :C); class = DAG);
 
-julia> markov_blanket(g, :B)
+julia> markov_blanket(cg, :B)
 3-element Vector{Symbol}:
  :A
  :C
  :D
 
-julia> markov_blanket(g, :C)
+julia> markov_blanket(cg, :C)
 2-element Vector{Symbol}:
  :B
  :D
 ```
 """
-function markov_blanket(g::DAG, node::Symbol)
-    B = g.backend
-    node_idx = node_index(g, node)
+function markov_blanket(cg::DAG, node::Symbol)
+    B = cg.backend
+    node_idx = node_index(cg, node)
     seen = falses(length(B.nodes))
 
     for parent_idx in _parents_slice(B, node_idx)
@@ -432,9 +432,9 @@ function markov_blanket(g::DAG, node::Symbol)
     return [B.nodes[i] for i in eachindex(seen) if seen[i]]
 end
 
-function markov_blanket(g::AbstractPDAG, node::Symbol)
-    B = g.backend
-    node_idx = node_index(g, node)
+function markov_blanket(cg::AbstractPDAG, node::Symbol)
+    B = cg.backend
+    node_idx = node_index(cg, node)
     seen = falses(length(B.nodes))
 
     for parent_idx in _parents_slice(B, node_idx)
@@ -454,9 +454,9 @@ function markov_blanket(g::AbstractPDAG, node::Symbol)
     return [B.nodes[i] for i in eachindex(seen) if seen[i]]
 end
 
-function markov_blanket(g::ADMG, node::Symbol)
-    B = g.backend
-    node_idx = node_index(g, node)
+function markov_blanket(cg::ADMG, node::Symbol)
+    B = cg.backend
+    node_idx = node_index(cg, node)
     seen = falses(length(B.nodes))
     for d_idx in _district_of_idx(B, node_idx)
         d_idx != node_idx && (seen[d_idx] = true)
@@ -468,9 +468,9 @@ function markov_blanket(g::ADMG, node::Symbol)
     return [B.nodes[i] for i in eachindex(seen) if seen[i]]
 end
 
-function markov_blanket(g::AG, node::Symbol)
-    B = g.backend
-    node_idx = node_index(g, node)
+function markov_blanket(cg::AG, node::Symbol)
+    B = cg.backend
+    node_idx = node_index(cg, node)
     seen = falses(length(B.nodes))
 
     for parent_idx in _parents_slice(B, node_idx)
@@ -494,9 +494,9 @@ function markov_blanket(g::AG, node::Symbol)
 end
 
 """
-    spouses(g::Union{ADMG,AG}, node::Symbol) -> Vector{Symbol}
+    spouses(cg::Union{ADMG,AG}, node::Symbol) -> Vector{Symbol}
 
-Return the spouses of `node` in `g`: nodes connected to `node` via a
+Return the spouses of `node` in `cg`: nodes connected to `node` via a
 bidirected edge (`node <-> spouse`).
 
 Applicable to [`ADMG`](@ref) and [`AG`](@ref).
@@ -514,9 +514,9 @@ julia> spouses(admg, :B)
 Symbol[]
 ```
 """
-function spouses(g::Union{ADMG,AG}, node::Symbol)
-    B = g.backend
-    idx = node_index(g, node)
+function spouses(cg::Union{ADMG,AG}, node::Symbol)
+    B = cg.backend
+    idx = node_index(cg, node)
     return B.nodes[_spouses_slice(B, idx)]
 end
 
@@ -537,9 +537,9 @@ function _district_of_idx(B::ADMGBackend, node_idx::Int)
 end
 
 """
-    districts(g::ADMG) -> Vector{Vector{Symbol}}
+    districts(cg::ADMG) -> Vector{Vector{Symbol}}
 
-Return all districts (c-components) of `g`.
+Return all districts (c-components) of `cg`.
 
 A district is a maximal set of nodes connected via bidirected edges. Singleton
 nodes with no bidirected edges each form their own district.
@@ -556,8 +556,8 @@ julia> districts(admg)
  [:D, :E]
 ```
 """
-function districts(g::ADMG)
-    B = g.backend
+function districts(cg::ADMG)
+    B = cg.backend
     n = length(B.nodes)
     comp = zeros(Int, n)
     cid = 0

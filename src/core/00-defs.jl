@@ -214,9 +214,9 @@ function _build_graph(
     backend_kwargs...,
 ) where {T<:CausalGraph}
     backend = build_backend(T, nodes, edges)
-    g = T(edges, backend, backend_kwargs...)
-    validate(g, T)
-    return g
+    cg = T(edges, backend, backend_kwargs...)
+    validate(cg, T)
+    return cg
 end
 
 function DAG(nodes, edges::Vector{CausalEdge})

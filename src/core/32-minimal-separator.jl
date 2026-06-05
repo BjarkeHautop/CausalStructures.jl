@@ -93,7 +93,7 @@ function _d_connected_restricted_idxs(
 end
 
 """
-    minimal_separator(g::Union{DAG,ADMG,AG}, x, y; include=Symbol[], restrict=nothing)
+    minimal_separator(cg::Union{DAG,ADMG,AG}, x, y; include=Symbol[], restrict=nothing)
 
 Find a minimal d-separator (DAG) or m-separator (ADMG, AG) between nodes `x` and `y`.
 
@@ -106,7 +106,7 @@ exists within the allowed candidate set.
 
 # Arguments
 
-- `g`: A [`DAG`](@ref), [`ADMG`](@ref), or [`AG`](@ref).
+- `cg`: A [`DAG`](@ref), [`ADMG`](@ref), or [`AG`](@ref).
 - `x`, `y`: The two nodes to separate.
 - `include`: Nodes forced into the separator. Must be a subset of `restrict` (or
   the default candidate set).
@@ -135,9 +135,9 @@ Intelligence (UAI 2020)*, PMLR 115:637-647.
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> minimal_separator(g, :A, :C)  # chain A --> B --> C: separator is {B}
+julia> minimal_separator(cg, :A, :C)  # chain A --> B --> C: separator is {B}
 1-element Vector{Symbol}:
  :B
 
@@ -174,21 +174,21 @@ julia> minimal_separator(admg, :A, :C)  # ADMG: returns a minimal m-separator
 ```
 """
 function minimal_separator(
-    g::DAG,
+    cg::DAG,
     x::Symbol,
     y::Symbol;
     include::AbstractVector{Symbol} = Symbol[],
     restrict::Union{Nothing,AbstractVector{Symbol}} = nothing,
 )
-    B = g.backend
+    B = cg.backend
     n = length(B.nodes)
-    x_idx = node_index(g, x)
-    y_idx = node_index(g, y)
-    inc_idxs = [node_index(g, v) for v in include]
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+    inc_idxs = [node_index(cg, v) for v in include]
     res_idxs = if restrict === nothing
         [i for i = 1:n if i != x_idx && i != y_idx]
     else
-        [node_index(g, v) for v in restrict]
+        [node_index(cg, v) for v in restrict]
     end
 
     res_set = Set(res_idxs)
@@ -317,42 +317,42 @@ function _findminsep(B, x_idx, y_idx, inc_idxs, res_idxs)
 end
 
 function minimal_separator(
-    g::ADMG,
+    cg::ADMG,
     x::Symbol,
     y::Symbol;
     include::AbstractVector{Symbol} = Symbol[],
     restrict::Union{Nothing,AbstractVector{Symbol}} = nothing,
 )
-    B = g.backend
+    B = cg.backend
     n = length(B.nodes)
-    x_idx = node_index(g, x)
-    y_idx = node_index(g, y)
-    inc_idxs = [node_index(g, v) for v in include]
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+    inc_idxs = [node_index(cg, v) for v in include]
     res_idxs = if restrict === nothing
         [i for i = 1:n if i != x_idx && i != y_idx]
     else
-        [node_index(g, v) for v in restrict]
+        [node_index(cg, v) for v in restrict]
     end
     result = _findminsep(B, x_idx, y_idx, inc_idxs, res_idxs)
     return result === nothing ? nothing : B.nodes[result]
 end
 
 function minimal_separator(
-    g::AG,
+    cg::AG,
     x::Symbol,
     y::Symbol;
     include::AbstractVector{Symbol} = Symbol[],
     restrict::Union{Nothing,AbstractVector{Symbol}} = nothing,
 )
-    B = g.backend
+    B = cg.backend
     n = length(B.nodes)
-    x_idx = node_index(g, x)
-    y_idx = node_index(g, y)
-    inc_idxs = [node_index(g, v) for v in include]
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+    inc_idxs = [node_index(cg, v) for v in include]
     res_idxs = if restrict === nothing
         [i for i = 1:n if i != x_idx && i != y_idx]
     else
-        [node_index(g, v) for v in restrict]
+        [node_index(cg, v) for v in restrict]
     end
     result = _findminsep(B, x_idx, y_idx, inc_idxs, res_idxs)
     return result === nothing ? nothing : B.nodes[result]
