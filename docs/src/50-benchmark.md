@@ -2,24 +2,31 @@ Here we will show the performance of various queries in CausalGraphInterface.
 
 ## Design choices
 
-The core data structure in CausalGraphInterface is a compressed sparse row (CSR) representation of the graph. CSR representations store for each vertex a contiguous slice of neighbor IDs with a pointer (offset) array that marks the start/end of each slice. This format is memory efficient for sparse graphs.
+The core data structure in CausalGraphInterface is a compressed sparse row (CSR)
+representation of the graph. This is memory efficient, but does mean that any
+rebuilding of the graph would be expensive.
 
-The graph object also stores important query information in the object, leading to parent, child, and neighbor queries being done in O(1). This yields a larger memory footprint, but the trade-off is that queries are extremely fast.
+The graph object also stores important query information in the object, leading
+to parent, child, and neighbor queries being done in $O(1)$. This yields a
+larger memory footprint, but the trade-off is that queries are extremely fast.
 
 ## Performance
 
-First, let's generate a random DAG with 1000 nodes and an edge probability of 0.25.
+First, let's generate a random DAG with 1000 nodes and an edge probability of
+0.25.
 
 ```@example performance
 using CausalGraphInterface
 dag = generate_graph(1000; p = 0.25, seed = 1405)
 ```
 
-Let's see how fast common queries such as finding parents, children, ancestors, and descendants are:
+Let's see how fast common queries such as finding parents, children, ancestors,
+and descendants are:
 
 ```@repl performance
 using BenchmarkTools
 node_name = :V45
+parents(dag, node_name); children(dag, node_name); ancestors(dag, node_name); descendants(dag, node_name);
 
 @btime parents(dag, $node_name);
 @btime children(dag, $node_name);
@@ -27,10 +34,12 @@ node_name = :V45
 @btime descendants(dag, $node_name);
 ```
 
-Let's try a more complex query: finding a valid adjustment set using Pearl's backdoor criterion, and verifying it:
+Let's try a more complex query: finding a valid adjustment set using Pearl's
+backdoor criterion, and verifying it:
 
 ```@repl performance
 valid_adjustment_set = adjustment_set(dag, :V50, :V70, type = :backdoor)
+is_valid_backdoor(dag, :V50, :V70, valid_adjustment_set);
 @btime is_valid_backdoor(dag, $:V50, $:V70, $valid_adjustment_set)
 ```
 
@@ -42,6 +51,84 @@ And finally, checking d-separation:
 
 ## Comparison with common R packages
 
-Link to code for R benchmark:
+Here we compare the performance of CausalGraphInterface to various popular R
+packages (please let me know if any Julia packages should be compared to, too!).
+In particular, \][caugi](https://caugi.org/index.html),
+[igraph](https://r.igraph.org/), [bnlearn](https://www.bnlearn.com/),
+[dagitty](https://dagitty.net/), and
+[ggm](https://cran.r-project.org/package=ggm).
 
-Table of results...
+Like in the Julia code above, we generate a DAG with 1000 nodes and edge
+probability 0.25. We then see how fast it is to find the parents of a random
+node:
+
+```@raw html
+<details><summary>Click to see R code</summary>
+```
+
+```r
+generate_graphs <- function(n, p) {
+  cg <- caugi::generate_graph(n = n, p = p, class = "DAG")
+  ig <- caugi::as_igraph(cg)
+  ggmg <- caugi::as_adjacency(cg)
+  bng <- caugi::as_bnlearn(cg)
+  dg <- caugi::as_dagitty(cg)
+  list(cg = cg, ig = ig, ggmg = ggmg, bng = bng, dg = dg)
+}
+
+graphs <- generate_graphs(1000, p = 0.25)
+cg <- graphs$cg
+ig <- graphs$ig
+ggmg <- graphs$ggmg
+bng <- graphs$bng
+dg <- graphs$dg
+
+# build the caugi to reflect correct runtime
+cg <- caugi::build(cg)
+
+node_name = "V45"
+
+bench::mark(
+  caugi = {
+    caugi::parents(cg, node_name)
+    caugi::children(cg, node_name)
+  },
+  igraph = {
+    igraph::neighbors(ig, node_name, mode = "in")
+    igraph::neighbors(ig, node_name, mode = "out")
+  },
+  bnlearn = {
+    bnlearn::parents(bng, node_name)
+    bnlearn::children(bng, node_name)
+  },
+  ggm = {
+    ggm::pa(node_name, ggmg)
+    ggm::ch(node_name, ggmg)
+  },
+  dagitty = {
+    dagitty::parents(dg, node_name)
+    dagitty::children(dg, node_name)
+  },
+  check = FALSE # igraph returns igraph object
+)
+```
+
+```@raw html
+</details>
+```
+
+Here we show speed of finding parents for the different packages:
+
+\| median \| package \|
+
+\| 183.303ns \| CausalGraphInterface \|
+
+\| 2.75µs \|caugi \|
+
+\| 127.42µs \| igraph \|
+
+\| 12.06µs \| bnlearn \|
+
+\| 5.13ms \| ggm \|
+
+\| 887.44ms \| daggity \|
