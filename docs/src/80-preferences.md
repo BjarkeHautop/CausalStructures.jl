@@ -23,7 +23,7 @@ delete_preferences!(CausalGraphInterface, "key")
 
 ## Traversal
 
-### `"open"` — open vs closed neighbourhood definition
+### `"open"`: open vs closed neighbourhood definition
 
 | Default | Type   | Affects |
 |---------|--------|---------|
@@ -43,20 +43,20 @@ set_preferences!(CausalGraphInterface, "open" => false)
 All plot preferences affect `Makie.plot(cg; ...)` when the corresponding
 keyword argument is not passed explicitly. They require loading a Makie backend.
 
-### `"plot_layout"` — default layout algorithm
+### `"plot_layout"`: default layout algorithm
 
 | Default    | Type     | Valid values |
 |------------|----------|--------------|
 | `:circle"` | `String` | `:circle`, `:spring`, `:stress`, `:sfdp"`, `:spectral"`, `:shell`, `:squaregrid` |
 
 Note, that all algorithms except `:circle` require
-NetworkLayout, see [Plotting guide](@ref plotting-guide) for more details.
+NetworkLayout, see the [Layouts](@ref plot-layouts) section for more details.
 
 ```julia
 set_preferences!(CausalGraphInterface, "plot_layout" => "spring")
 ```
 
-### `"plot_node_color"` — default node fill colour
+### `"plot_node_color"`: default node fill colour
 
 | Default   | Type     |
 |-----------|----------|
@@ -68,7 +68,7 @@ Any [Makie-compatible colour name or hex string](https://docs.makie.org/stable/e
 set_preferences!(CausalGraphInterface, "plot_node_color" => "lightblue")
 ```
 
-### `"plot_node_strokecolor"` — default node border colour
+### `"plot_node_strokecolor"`: default node border colour
 
 | Default   | Type     |
 |-----------|----------|
@@ -78,7 +78,7 @@ set_preferences!(CausalGraphInterface, "plot_node_color" => "lightblue")
 set_preferences!(CausalGraphInterface, "plot_node_strokecolor" => "gray30")
 ```
 
-### `"plot_node_strokewidth"` — default node border width
+### `"plot_node_strokewidth"`: default node border width
 
 | Default | Type     |
 |---------|----------|
@@ -88,7 +88,7 @@ set_preferences!(CausalGraphInterface, "plot_node_strokecolor" => "gray30")
 set_preferences!(CausalGraphInterface, "plot_node_strokewidth" => 1.5)
 ```
 
-### `"plot_edge_color"` — default edge colour
+### `"plot_edge_color"`: default edge colour
 
 | Default   | Type     |
 |-----------|----------|
@@ -98,7 +98,7 @@ set_preferences!(CausalGraphInterface, "plot_node_strokewidth" => 1.5)
 set_preferences!(CausalGraphInterface, "plot_edge_color" => "steelblue")
 ```
 
-### `"plot_linewidth"` — default edge line width
+### `"plot_linewidth"`: default edge line width
 
 | Default | Type     |
 |---------|----------|

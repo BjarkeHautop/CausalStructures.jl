@@ -48,7 +48,7 @@ cg = caugi(
 Makie.plot(cg)
 ```
 
-## Layouts
+## [Layouts](@id plot-layouts)
 
 The `layout` keyword controls node placement. The `:circle` layout is always
 available. All others require NetworkLayout.
