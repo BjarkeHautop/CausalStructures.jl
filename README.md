@@ -18,9 +18,7 @@ validating, and manipulating causal graphs. Rather than treating every graph as
 an arbitrary collection of nodes and edges, graph classes explicitly encode
 their structural assumptions and invariants.
 
-The package is inspired by the R package [caugi](https://caugi.org/) and aims to
-provide a similarly expressive and extensible foundation for causal graphs in
-Julia.
+The package is inspired by the design principles of the R package [caugi](https://caugi.org/) and aims to provide a similarly expressive and extensible foundation for causal graphs in Julia.
 
 ## Design Philosophy
 
