@@ -1,5 +1,4 @@
 # Ported from caugi/tests/testthat/test-queries.R and test-caugi_graph.R
-# Verb-based tests (add_edges, set_edges, etc.) are skipped.
 
 using Test
 using CausalGraphInterface
