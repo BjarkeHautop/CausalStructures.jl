@@ -83,7 +83,7 @@ end
 
 Abstract supertype for all causal graph classes. Concrete subtypes: [`DAG`](@ref),
 [`UG`](@ref), [`PDAG`](@ref), [`CPDAG`](@ref), [`ADMG`](@ref), [`AG`](@ref),
-and [`UNKNOWN`](@ref).
+[`MAG`](@ref), and [`UNKNOWN`](@ref).
 """
 abstract type CausalGraph end
 
@@ -94,6 +94,13 @@ Abstract supertype for partially directed acyclic graphs. Concrete subtypes:
 [`PDAG`](@ref), [`CPDAG`](@ref), and [`MPDAG`](@ref).
 """
 abstract type AbstractPDAG <: CausalGraph end
+
+"""
+    AbstractAG <: CausalGraph
+
+Abstract supertype for ancestral graphs. Concrete subtypes: [`AG`](@ref) and [`MAG`](@ref).
+"""
+abstract type AbstractAG <: CausalGraph end
 
 """
     DAG
@@ -186,7 +193,21 @@ arrowheads pointing at them on any adjacent edge (i.e., no parents or spouses).
 
 See [`caugi`](@ref) for construction of graphs.
 """
-struct AG <: CausalGraph
+struct AG <: AbstractAG
+    edges::Vector{CausalEdge}
+    backend::AGBackend
+end
+
+"""
+    MAG
+
+A Maximal Ancestral Graph. An [`AG`](@ref) in which every pair of non-adjacent nodes
+is m-separated by some subset of the remaining nodes. MAGs are the canonical
+representatives of equivalence classes of DAGs with hidden variables.
+
+See [`caugi`](@ref) for construction of graphs.
+"""
+struct MAG <: AbstractAG
     edges::Vector{CausalEdge}
     backend::AGBackend
 end
@@ -245,6 +266,10 @@ end
 
 function AG(nodes, edges::Vector{CausalEdge})
     return _build_graph(AG, nodes, edges)
+end
+
+function MAG(nodes, edges::Vector{CausalEdge})
+    return _build_graph(MAG, nodes, edges)
 end
 
 function UNKNOWN(nodes, edges::Vector{CausalEdge}; simple::Bool = true)

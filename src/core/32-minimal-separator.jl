@@ -93,9 +93,9 @@ function _d_connected_restricted_idxs(
 end
 
 """
-    minimal_separator(cg::Union{DAG,ADMG,AG}, x, y; include=Symbol[], restrict=nothing)
+    minimal_separator(cg::Union{DAG,ADMG,AbstractAG}, x, y; include=Symbol[], restrict=nothing)
 
-Find a minimal d-separator (DAG) or m-separator (ADMG, AG) between nodes `x` and `y`.
+Find a minimal d-separator (DAG) or m-separator (ADMG, AG, MAG) between nodes `x` and `y`.
 
 A set ``Z`` separates ``x`` from ``y`` if conditioning on ``Z`` renders them
 d/m-independent. The returned set is *minimal*: no proper subset (excluding forced
@@ -338,7 +338,7 @@ function minimal_separator(
 end
 
 function minimal_separator(
-    cg::AG,
+    cg::AbstractAG,
     x::Symbol,
     y::Symbol;
     include::AbstractVector{Symbol} = Symbol[],

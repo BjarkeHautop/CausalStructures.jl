@@ -126,6 +126,30 @@ true
 is_ag(cg::CausalGraph) = _class_matches_or_satisfies(cg, AGConstraints())
 
 """
+    is_mag(cg::CausalGraph) -> Bool
+
+Check whether `cg` satisfies the structural constraints of a MAG (a maximal ancestral
+graph): an [`AG`](@ref) in which every pair of non-adjacent nodes is m-separated by
+some subset of the remaining nodes.
+
+# Examples
+
+```jldoctest
+julia> mag = caugi(directed(:A, :B), directed(:B, :C); class = MAG);
+
+julia> is_mag(mag)
+true
+
+julia> ag = caugi(bidirected(:Z, :X), bidirected(:Z, :W), bidirected(:X, :Y),
+                  directed(:X, :W), directed(:Z, :Y); class = AG);
+
+julia> is_mag(ag)
+false
+```
+"""
+is_mag(cg::CausalGraph) = _class_matches_or_satisfies(cg, MAGConstraints())
+
+"""
     nodes(cg::CausalGraph) -> Vector{Symbol}
 
 Return the nodes of `cg` in alphabetical order.

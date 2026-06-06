@@ -102,6 +102,9 @@ build_backend(::Type{CPDAG}, nodes, edges::Vector{CausalEdge}) =
 build_backend(::Type{MPDAG}, nodes, edges::Vector{CausalEdge}) =
     build_backend(PDAG, nodes, edges)
 
+build_backend(::Type{MAG}, nodes, edges::Vector{CausalEdge}) =
+    build_backend(AG, nodes, edges)
+
 function build_backend(::Type{PDAG}, nodes, edges::Vector{CausalEdge})
     ordered_nodes = sort!(unique(collect(nodes)))
     index = Dict(n => i for (i, n) in enumerate(ordered_nodes))
@@ -354,7 +357,7 @@ julia> parents(cg, :A)
 Symbol[]
 ```
 """
-parents(cg::Union{DAG,AbstractPDAG,ADMG,AG,UNKNOWN}, node::Symbol) =
+parents(cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG,UNKNOWN}, node::Symbol) =
     neighbors(cg, node; mode = :in)
 
 """
@@ -379,7 +382,7 @@ julia> children(cg, :B)
 Symbol[]
 ```
 """
-children(cg::Union{DAG,AbstractPDAG,ADMG,AG,UNKNOWN}, node::Symbol) =
+children(cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG,UNKNOWN}, node::Symbol) =
     neighbors(cg, node; mode = :out)
 
 """

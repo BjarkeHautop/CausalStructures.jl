@@ -321,7 +321,12 @@ function _ag_augmented_adj(B::AGBackend, mask::BitVector)
 end
 
 # Returns true iff x ⊥_m y | z in AG cg.
-function m_separated(cg::AG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
+function m_separated(
+    cg::AbstractAG,
+    x::Symbol,
+    y::Symbol,
+    z::AbstractVector{Symbol} = Symbol[],
+)
     B = cg.backend
     x_idx = node_index(cg, x)
     y_idx = node_index(cg, y)

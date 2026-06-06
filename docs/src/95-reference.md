@@ -25,6 +25,7 @@ Pages = ["95-reference.md"]
 ```@docs
 CausalGraph
 AbstractPDAG
+AbstractAG
 DAG
 UG
 PDAG
@@ -32,6 +33,7 @@ CPDAG
 MPDAG
 ADMG
 AG
+MAG
 UNKNOWN
 CausalEdge
 caugi
@@ -68,6 +70,7 @@ is_mpdag
 is_ug
 is_admg
 is_ag
+is_mag
 is_simple
 is_acyclic
 ```

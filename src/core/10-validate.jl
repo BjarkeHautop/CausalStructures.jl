@@ -5,6 +5,7 @@ struct PDAGConstraints <: GraphConstraints end
 struct UGConstraints <: GraphConstraints end
 struct ADMGConstraints <: GraphConstraints end
 struct AGConstraints <: GraphConstraints end
+struct MAGConstraints <: GraphConstraints end
 struct CPDAGConstraints <: GraphConstraints end
 struct MPDAGConstraints <: GraphConstraints end
 struct UNKNOWNConstraints <: GraphConstraints end
@@ -120,11 +121,19 @@ _fast_skip(cg::CausalGraph, ::CPDAGConstraints) = cg isa CPDAG
 _fast_skip(cg::CausalGraph, ::MPDAGConstraints) = cg isa MPDAG || cg isa CPDAG
 _fast_skip(cg::CausalGraph, ::UGConstraints) = cg isa UG
 _fast_skip(cg::CausalGraph, ::ADMGConstraints) = cg isa ADMG || cg isa DAG
-_fast_skip(cg::CausalGraph, ::AGConstraints) = cg isa AG || cg isa DAG
+_fast_skip(cg::CausalGraph, ::AGConstraints) = cg isa AbstractAG || cg isa DAG
+_fast_skip(cg::CausalGraph, ::MAGConstraints) = cg isa MAG || cg isa DAG
 
 function _class_matches_or_satisfies(cg::CausalGraph, constraints::GraphConstraints)
     _fast_skip(cg, constraints) && return true
     return _satisfies_constraints(constraints, cg)
+end
+
+# Return an AbstractAG view of cg, reusing its backend if already AGBackend.
+_as_ag(cg::AbstractAG) = cg
+function _as_ag(cg::CausalGraph)
+    B = cg.backend isa AGBackend ? cg.backend : build_backend(AG, nodes(cg), cg.edges)
+    return AG(cg.edges, B)
 end
 
 function validation_errors(::AGConstraints, cg::CausalGraph)
@@ -139,8 +148,7 @@ function validation_errors(::AGConstraints, cg::CausalGraph)
 
     isempty(errors) || return errors
 
-    # Need AGBackend for structural constraint checks
-    B = cg.backend isa AGBackend ? cg.backend : build_backend(AG, nodes(cg), cg.edges)
+    B = _as_ag(cg).backend
     n = length(B.nodes)
 
     # Undirected constraint: if a node has an undirected edge it must have no arrowheads
@@ -186,6 +194,50 @@ function validation_errors(::AGConstraints, cg::CausalGraph)
                     )
                 end
             end
+        end
+    end
+
+    return errors
+end
+
+# Recursive subset search: tries all subsets of candidates[from:end] appended to z.
+function _mag_search_sep(
+    cg::AbstractAG,
+    u::Symbol,
+    v::Symbol,
+    candidates::Vector{Symbol},
+    z::Vector{Symbol},
+    from::Int,
+)
+    m_separated(cg, u, v, z) && return true
+    for i = from:length(candidates)
+        push!(z, candidates[i])
+        _mag_search_sep(cg, u, v, candidates, z, i + 1) && (pop!(z); return true)
+        pop!(z)
+    end
+    return false
+end
+
+function validation_errors(::MAGConstraints, cg::CausalGraph)
+    errors = validation_errors(AGConstraints(), cg)
+    isempty(errors) || return errors
+
+    # Need AGBackend for structural constraint checks
+    ag = _as_ag(cg)
+    B = ag.backend
+    n = length(B.nodes)
+    n <= 2 && return errors
+
+    for u = 1:n, v = (u+1):n
+        # skip adjacent pairs
+        v ∈ _all_nbrs_slice(B, u) && continue
+        candidates = [B.nodes[w] for w = 1:n if w != u && w != v]
+        if !_mag_search_sep(ag, B.nodes[u], B.nodes[v], candidates, Symbol[], 1)
+            push!(
+                errors,
+                "MAG maximality violated: no m-separating set exists for " *
+                "$(B.nodes[u]) and $(B.nodes[v])",
+            )
         end
     end
 
@@ -511,6 +563,7 @@ graph_class_name(::MPDAGConstraints) = "MPDAG"
 graph_class_name(::UGConstraints) = "UG"
 graph_class_name(::ADMGConstraints) = "ADMG"
 graph_class_name(::AGConstraints) = "AG"
+graph_class_name(::MAGConstraints) = "MAG"
 graph_class_name(::UNKNOWNConstraints) = "UNKNOWN"
 
 function validate(cg::CausalGraph, c::GraphConstraints)
@@ -535,5 +588,7 @@ validate(cg::CausalGraph, ::Type{UG}) = validate(cg, UGConstraints())
 validate(cg::CausalGraph, ::Type{ADMG}) = validate(cg, ADMGConstraints())
 
 validate(cg::CausalGraph, ::Type{AG}) = validate(cg, AGConstraints())
+
+validate(cg::CausalGraph, ::Type{MAG}) = validate(cg, MAGConstraints())
 
 validate(cg::CausalGraph, ::Type{UNKNOWN}) = validate(cg, UNKNOWNConstraints())

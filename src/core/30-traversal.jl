@@ -87,7 +87,7 @@ julia> ancestors(cg, :C)
 ```
 """
 function ancestors(
-    cg::Union{DAG,AbstractPDAG,ADMG,AG},
+    cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG},
     node::Symbol;
     open::Bool = _OPEN_DEFAULT,
 )
@@ -143,7 +143,7 @@ julia> descendants(cg, :A, open = false)
 ```
 """
 function descendants(
-    cg::Union{DAG,AbstractPDAG,ADMG,AG},
+    cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG},
     node::Symbol;
     open::Bool = _OPEN_DEFAULT,
 )
@@ -204,7 +204,7 @@ julia> exogenous_nodes(pdag, undirected_as_parents = true)
  :A
 ```
 """
-function exogenous_nodes(cg::Union{DAG,ADMG,AG})
+function exogenous_nodes(cg::Union{DAG,ADMG,AbstractAG})
     B = cg.backend
     return [B.nodes[i] for i in eachindex(B.nodes) if isempty(_parents_slice(B, i))]
 end
@@ -284,7 +284,7 @@ function anteriors(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     return open ? result : [node; result]
 end
 
-function anteriors(cg::AG, node::Symbol; open::Bool = _OPEN_DEFAULT)
+function anteriors(cg::AbstractAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend
     node_idx = node_index(cg, node)
     seen = falses(length(B.nodes))
@@ -364,7 +364,7 @@ function posteriors(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     return open ? result : [node; result]
 end
 
-function posteriors(cg::AG, node::Symbol; open::Bool = _OPEN_DEFAULT)
+function posteriors(cg::AbstractAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend
     node_idx = node_index(cg, node)
     seen = falses(length(B.nodes))
@@ -468,7 +468,7 @@ function markov_blanket(cg::ADMG, node::Symbol)
     return [B.nodes[i] for i in eachindex(seen) if seen[i]]
 end
 
-function markov_blanket(cg::AG, node::Symbol)
+function markov_blanket(cg::AbstractAG, node::Symbol)
     B = cg.backend
     node_idx = node_index(cg, node)
     seen = falses(length(B.nodes))
@@ -514,7 +514,7 @@ julia> spouses(admg, :B)
 Symbol[]
 ```
 """
-function spouses(cg::Union{ADMG,AG}, node::Symbol)
+function spouses(cg::Union{ADMG,AbstractAG}, node::Symbol)
     B = cg.backend
     idx = node_index(cg, node)
     return B.nodes[_spouses_slice(B, idx)]
