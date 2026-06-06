@@ -10,6 +10,11 @@ Return the nodes of `cg` in topological order.
 For every directed edge `u --> v` in `cg`, `u` appears before `v` in the
 returned vector.
 
+# References
+
+Kahn, A. B. (1962). Topological sorting of large networks. *Communications of
+the ACM*, 5(11):558-562.
+
 # Examples
 
 ```jldoctest
