@@ -11,6 +11,7 @@ DocMeta.setdocmeta!(
 # Add titles of sections and overrides page titles
 const titles = Dict(
     "05-quick-guide.md" => "Getting Started",
+    "10-plotting.md" => "Plotting",
     "50-benchmark.md" => "Performance",
     "91-developer.md" => "Developer docs",
 )
