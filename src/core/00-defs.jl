@@ -147,7 +147,6 @@ invariant within the MEC.
 
 Chickering, D. M. (2002). Learning equivalence classes of Bayesian-network
 structures. *Journal of Machine Learning Research*, 2:445-498.
-[https://www.jmlr.org/papers/v2/chickering02a.html](https://www.jmlr.org/papers/v2/chickering02a.html)
 """
 struct CPDAG <: AbstractPDAG
     edges::Vector{CausalEdge}
@@ -164,7 +163,7 @@ when background knowledge (forced edge orientations) is present.
 # References
 
 Meek, C. (1995). Causal inference and causal explanation with background knowledge.
-*Proceedings of UAI-95*, pp. 403-411.
+*Proceedings of UAI-95*, pp. 403-410.
 """
 struct MPDAG <: AbstractPDAG
     edges::Vector{CausalEdge}

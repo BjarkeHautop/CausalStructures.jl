@@ -321,7 +321,7 @@ Lemmas 1-3):
 
 # References
 
-Evans, R. J. (2016). Graphs for margins of Bayesian networks. *Scandinavian
+Evans, R. J. (2016). Graphs for Margins of Bayesian Networks. *Scandinavian
 Journal of Statistics*, 43(3):625-648.
 
 # Examples
@@ -451,7 +451,7 @@ and removes it. Raises an error if no valid DAG extension exists.
 # References
 
 Dor, D. & Tarsi, M. (1992). A simple algorithm to construct a consistent
-extension of a partially oriented acyclic graph.
+extension of a partially oriented graph.
 
 # Examples
 
@@ -547,8 +547,8 @@ The four rules are:
 
 # References
 
-Meek, C. (1995). Causal inference and causal explanation with background
-knowledge. *Proceedings of UAI-95*, pp. 403-411.
+Meek, C. (1995). Causal inference and causal explanation with background knowledge.
+*Proceedings of UAI-95*, pp. 403-410.
 
 # Examples
 

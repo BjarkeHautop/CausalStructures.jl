@@ -127,10 +127,10 @@ restricted to the first result, and the outputs are intersected.
 
 # References
 
-van der Zander, B. & Liśkiewicz, M. (2020). Finding minimal d-separators in linear
-time and applications. *Proceedings of the 35th Conference on Uncertainty in Artificial
+van der Zander, B. & Liśkiewicz, M. (2020). Finding Minimal d-separators in
+Linear Time and Applications.
+*Proceedings of the 35th Conference on Uncertainty in Artificial
 Intelligence (UAI 2020)*, PMLR 115:637-647.
-[https://proceedings.mlr.press/v115/van-der-zander20a.html](https://proceedings.mlr.press/v115/van-der-zander20a.html)
 
 # Examples
 

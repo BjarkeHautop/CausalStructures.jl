@@ -218,10 +218,9 @@ of `cg`.
 
 # References
 
-Perković, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete
-graphical characterization and construction of adjustment sets in Markov
-equivalence classes of ancestral graphs. *Journal of Machine Learning Research*,
-19(84):1-62.
+Perković, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete Graphical
+Characterization and Construction of Adjustment Sets in Markov Equivalence Classes
+of Ancestral Graphs *Journal of Machine Learning Research*, 18:1-62.
 
 # Examples
 
@@ -489,9 +488,9 @@ Three types are supported:
 
 # References
 
-Henckel, Y., Perković, E., & Maathuis, M. H. (2019). Graphical criteria for
-efficient total effect estimation via adjustment in causal linear models.
-*Journal of the Royal Statistical Society: Series B*, 81(3):579-607.
+Henckel, Y., Perković, E., & Maathuis, M. H. (2022). Graphical Criteria for Efficient Total
+Effect Estimation Via Adjustment in Causal Linear Models.
+*Journal of the Royal Statistical Society: Series B*, 84:579-599.
 (`:optimal`)
 
 Pearl, J. (2009). *Causality: Models, Reasoning and Inference* (2nd ed.).
