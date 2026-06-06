@@ -1,4 +1,4 @@
-# Ported from caugi/tests/testthat/test-operations.R
+# Tests adapted in part from caugi/tests/testthat/test-operations.R
 
 using Test
 using CausalGraphInterface
@@ -199,7 +199,7 @@ end
     @test :D in children(g2, :A)  # A-->D added via chain
 end
 
-# ── dag_from_pdag (not yet implemented) ───────────────────────────────────────
+# ── dag_from_pdag ───────────────────────────────────────
 
 @testitem "dag_from_pdag converts a valid PDAG to a DAG" tags = [:unit] begin
     pdag = caugi(undirected(:A, :B), undirected(:B, :C); class = PDAG)

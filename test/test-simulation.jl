@@ -1,8 +1,4 @@
-# Ported from caugi/tests/testthat/test-simulation.R
-# API differences vs R:
-#   generate_graph(n; m=m, class=DAG)  (Julia uses type, not string/symbol)
-#   simulate_data(cg; samples=n, seed=s) (Julia uses `samples` not `n`)
-#   simulate_data returns Dict{Symbol,Vector{Float64}}, not data.frame
+# Tests adapted in part from caugi/tests/testthat/test-simulation.R
 
 using Test
 using CausalGraphInterface

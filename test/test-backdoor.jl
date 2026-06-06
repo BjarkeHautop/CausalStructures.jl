@@ -1,4 +1,4 @@
-# Ported from caugi/tests/testthat/test-adjustment.R (backdoor section)
+# Tests adapted in part from caugi/tests/testthat/test-adjustment.R
 
 using Test
 using CausalGraphInterface

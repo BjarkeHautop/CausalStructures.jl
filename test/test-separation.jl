@@ -1,5 +1,4 @@
-# Ported from caugi/tests/testthat/test-separation.R
-# m_separated and minimal_separator are not yet implemented.
+# Tests adapted in part from caugi/tests/testthat/test-separation.R
 
 using Test
 using CausalGraphInterface
@@ -138,7 +137,7 @@ end
     @test sep !== nothing && Set(sep) == Set([:V2])
 end
 
-# ── m_separated for ADMG (not yet implemented) ────────────────────────────────
+# ── m_separated for ADMG ────────────────────────────────
 
 @testitem "m_separated: chain in ADMG" tags = [:unit] begin
     admg = caugi(directed(:A, :B), directed(:B, :C); class = ADMG)

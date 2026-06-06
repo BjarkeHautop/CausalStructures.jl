@@ -1,5 +1,5 @@
 # Tests for MPDAG graph class
-# Reference: caugi/tests/testthat/test-operations.R (meek_closure and MPDAG section)
+# Tests adapted in part from caugi/tests/testthat/test-operations.R
 
 using Test
 using CausalGraphInterface

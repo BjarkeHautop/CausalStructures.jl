@@ -1,4 +1,4 @@
-# Ported from caugi/tests/testthat/test-topological-sort.R
+# Tests adapted in part from caugi/tests/testthat/test-topological-sort.R
 
 using Test
 using CausalGraphInterface

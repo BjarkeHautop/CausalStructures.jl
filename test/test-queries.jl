@@ -1,4 +1,4 @@
-# Ported from caugi/tests/testthat/test-queries.R and test-caugi_graph.R
+# Tests adapted in part from caugi/tests/testthat/test-queries.R
 
 using Test
 using CausalGraphInterface
@@ -523,7 +523,7 @@ end
     @test has_edge(sg, :A, :B)
 end
 
-# ── spouses / districts (not yet implemented) ─────────────────────────────────
+# ── spouses / districts ─────────────────────────────────
 
 @testitem "spouses works for ADMG" tags = [:unit] begin
     admg = caugi(directed(:A, :B), bidirected(:B, :C); class = ADMG)

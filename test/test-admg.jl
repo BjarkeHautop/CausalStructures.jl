@@ -1,4 +1,4 @@
-# Ported from caugi/tests/testthat/test-admg.R
+# Tests adapted in part from caugi/tests/testthat/test-admg.R
 
 using Test
 using CausalGraphInterface
@@ -44,7 +44,7 @@ end
     @test Set(neighbors(admg, :B)) == Set([:A, :C])
 end
 
-# ── ancestors / descendants for ADMG (not yet implemented for ADMG type) ──────
+# ── ancestors / descendants for ADMG ──────
 
 @testitem "ancestors follows directed edges only in ADMG" tags = [:unit] begin
     admg = caugi(directed(:A, :B), directed(:B, :C), bidirected(:A, :D); class = ADMG)
@@ -62,7 +62,7 @@ end
     @test isempty(ancestors(admg, :D))
 end
 
-# ── spouses (not yet implemented) ─────────────────────────────────────────────
+# ── spouses ─────────────────────────────────────────────
 
 @testitem "spouses returns bidirected neighbors" tags = [:unit] begin
     admg = caugi(directed(:A, :B), bidirected(:A, :C), bidirected(:B, :C); class = ADMG)
@@ -76,7 +76,7 @@ end
     @test isempty(spouses(admg, :B))
 end
 
-# ── districts (not yet implemented) ───────────────────────────────────────────
+# ── districts ───────────────────────────────────────────
 
 @testitem "districts returns c-components" tags = [:unit] begin
     admg = caugi(directed(:A, :B), bidirected(:A, :C), bidirected(:D, :E); class = ADMG)
@@ -109,7 +109,7 @@ end
     @test m_separated(admg, :X, :Y, [:L])
 end
 
-# ── markov_blanket for ADMG (not yet implemented) ─────────────────────────────
+# ── markov_blanket for ADMG ─────────────────────────────
 
 @testitem "markov_blanket district-based for ADMG" tags = [:unit] begin
     admg = caugi(directed(:L, :X), directed(:X, :Y), bidirected(:X, :Z); class = ADMG)
@@ -127,7 +127,7 @@ end
     @test :Y in mb
 end
 
-# ── exogenous_nodes for ADMG (not yet implemented) ────────────────────────────
+# ── exogenous_nodes for ADMG ────────────────────────────
 
 @testitem "exogenous_nodes works for ADMG" tags = [:unit] begin
     admg = caugi(directed(:A, :B), bidirected(:C, :D); class = ADMG)

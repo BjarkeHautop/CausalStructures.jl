@@ -1,5 +1,5 @@
 # Tests for enumerate_dags and count_dags
-# Reference: caugi/src/rust/src/graph/pdag/enumerate.rs
+# Tests adapted in part from caugi/src/rust/src/graph/pdag/enumerate.rs
 
 using Test
 using CausalGraphInterface
