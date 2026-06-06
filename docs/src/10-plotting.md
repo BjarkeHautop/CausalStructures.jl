@@ -3,7 +3,7 @@
 Plotting is provided by the `MakieExt` extension and requires loading a Makie
 backend before use. Below we use CairoMakie:
 
-```julia
+```@example plot
 using CausalGraphInterface
 using CairoMakie
 ```
@@ -12,9 +12,9 @@ using CairoMakie
 
 Pass any `CausalGraph` to `Makie.plot`:
 
-```julia
+```@example plot
 dag = caugi(directed(:A, :X), directed(:A, :Y), directed(:X, :Y); class = DAG)
-fig = Makie.plot(dag)
+Makie.plot(dag)
 ```
 
 ## Edge types
@@ -30,6 +30,18 @@ All six edge types are rendered with their conventional endpoint marks:
 | `partially_undirected(:A, :B)` | `A --o B`   | tail – circle          |
 | `partial(:A, :B)`              | `A o-o B`   | circle – circle        |
 
+A graph combining several edge types:
+
+```@example plot
+cg = caugi(
+    partial(:X, :Y),
+    partially_directed(:X, :Z),
+    partially_undirected(:Z, :W);
+    class = UNKNOWN,
+)
+Makie.plot(cg)
+```
+
 ## Sizing
 
 Three keyword arguments control the geometry. All must be positive `Real`
@@ -41,8 +53,8 @@ values; the defaults scale with the number of nodes.
 | `arrow_size`   | length of arrowhead triangles   | `0.4 × node_radius`         |
 | `circle_size`  | radius of open-circle endpoints | `0.28 × node_radius`        |
 
-```julia
-fig = Makie.plot(dag; node_radius = 0.15, arrow_size = 0.06, circle_size = 0.04)
+```@example plot
+Makie.plot(dag; node_radius = 0.18, arrow_size = 0.07, circle_size = 0.05)
 ```
 
 ## Node styling
@@ -51,22 +63,22 @@ Each node style argument accepts either a **scalar** (applied to all nodes) or a
 **`Dict{Symbol, <value>}`** keyed by node name. Use `:default` inside the dict
 as a fallback for nodes not listed explicitly.
 
-| Keyword            | Default  | Controls               |
-|--------------------|----------|------------------------|
-| `node_color`       | `:white` | fill color             |
-| `node_strokecolor` | `:black` | border color           |
-| `node_strokewidth` | `2.0`    | border line width      |
+| Keyword            | Default  | Controls                      |
+|--------------------|----------|-------------------------------|
+| `node_color`       | `:white` | fill color                    |
+| `node_strokecolor` | `:black` | border color                  |
+| `node_strokewidth` | `2.0`    | border line width (positive)  |
 
 Global styling:
 
-```julia
-fig = Makie.plot(dag; node_color = :lightblue, node_strokecolor = :navy)
+```@example plot
+Makie.plot(dag; node_color = :lightblue, node_strokecolor = :navy)
 ```
 
 Highlight individual nodes:
 
-```julia
-fig = Makie.plot(dag;
+```@example plot
+Makie.plot(dag;
     node_color = Dict(:A => :salmon, :default => :white),
     node_strokecolor = Dict(:A => :crimson, :default => :black),
 )
@@ -89,31 +101,31 @@ may be keyed by:
 3. `:default` inside the dict
 4. Hard-coded fallback
 
-| Keyword      | Default  | Controls          |
-|--------------|----------|-------------------|
-| `edge_color` | `:black` | line / marker color |
-| `linewidth`  | `1.5`    | line width        |
+| Keyword      | Default  | Controls                      |
+|--------------|----------|-------------------------------|
+| `edge_color` | `:black` | line / marker color           |
+| `linewidth`  | `1.5`    | line width (positive)         |
 
 Global edge color:
 
-```julia
-fig = Makie.plot(dag; edge_color = :steelblue)
+```@example plot
+Makie.plot(dag; edge_color = :steelblue)
 ```
 
 Color edges by type:
 
-```julia
+```@example plot
 admg = caugi(directed(:X, :Y), bidirected(:X, :Z), directed(:Z, :Y); class = ADMG)
 
-fig = Makie.plot(admg;
+Makie.plot(admg;
     edge_color = Dict(:directed => :steelblue, :bidirected => :crimson),
 )
 ```
 
 Vary line width by type:
 
-```julia
-fig = Makie.plot(admg;
+```@example plot
+Makie.plot(admg;
     edge_color = Dict(:directed => :steelblue, :bidirected => :crimson),
     linewidth  = Dict(:bidirected => 2.5, :default => 1.5),
 )
@@ -121,28 +133,28 @@ fig = Makie.plot(admg;
 
 Highlight a specific edge:
 
-```julia
-fig = Makie.plot(dag;
+```@example plot
+Makie.plot(dag;
     edge_color = Dict((:A, :X) => :red, :default => :black),
 )
 ```
 
 Combine type defaults with a specific edge override:
 
-```julia
-fig = Makie.plot(admg;
+```@example plot
+Makie.plot(admg;
     edge_color = Dict(
         :directed   => :steelblue,
         :bidirected => :crimson,
-        (:X, :Y)    => :orange,   # overrides :directed for this edge
+        (:X, :Y)    => :orange,
     ),
 )
 ```
 
 ## Combining options
 
-```julia
-admg = caugi(
+```@example plot
+admg2 = caugi(
     directed(:U, :X),
     directed(:U, :Y),
     directed(:X, :Y),
@@ -150,8 +162,8 @@ admg = caugi(
     class = ADMG,
 )
 
-fig = Makie.plot(
-    admg;
+Makie.plot(
+    admg2;
     node_color       = Dict(:U => :lightyellow, :default => :white),
     node_strokecolor = :gray30,
     edge_color       = Dict(:directed => :gray20, :bidirected => :crimson),

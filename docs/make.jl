@@ -1,4 +1,5 @@
 using CausalGraphInterface
+using CairoMakie
 using Documenter
 
 DocMeta.setdocmeta!(
