@@ -159,22 +159,23 @@ Visualize a [`CausalGraph`](@ref) using Makie. Requires loading a Makie backend
 ## Style keyword arguments
 
 Each style argument accepts either a **scalar** (applied to all elements) or a
-**`Dict`** for fine-grained control.
+**`Dict`** for fine-grained control. Defaults marked † are configurable via
+`Preferences.jl`; see the [Preferences](@ref) page.
 
 ### Node styles
 
-| Keyword             | Default  | Dict key type |
-|---------------------|----------|---------------|
-| `node_color`        | `:white` | `Symbol` (node name) |
-| `node_strokecolor`  | `:black` | `Symbol` (node name) |
-| `node_strokewidth`  | `2.0`    | `Symbol` (node name) |
+| Keyword             | Default †  | Dict key type |
+|---------------------|------------|---------------|
+| `node_color`        | `"white"`  | `Symbol` (node name) |
+| `node_strokecolor`  | `"black"`  | `Symbol` (node name) |
+| `node_strokewidth`  | `2.0`      | `Symbol` (node name) |
 
 ### Edge styles
 
-| Keyword       | Default   | Dict key type                                  |
-|---------------|-----------|------------------------------------------------|
-| `edge_color`  | `:black`  | `Symbol` (edge type) or `(Symbol, Symbol)` (src, dst) |
-| `linewidth`   | `1.5`     | `Symbol` (edge type) or `(Symbol, Symbol)` (src, dst) |
+| Keyword       | Default †  | Dict key type                                  |
+|---------------|------------|------------------------------------------------|
+| `edge_color`  | `"black"`  | `Symbol` (edge type) or `(Symbol, Symbol)` (src, dst) |
+| `linewidth`   | `1.5`      | `Symbol` (edge type) or `(Symbol, Symbol)` (src, dst) |
 
 **Edge-type symbols:** `:directed`, `:undirected`, `:bidirected`,
 `:partially_directed`, `:partially_undirected`, `:partial`.
@@ -187,8 +188,8 @@ Each style argument accepts either a **scalar** (applied to all elements) or a
 
 ## Layout
 
-The `layout` keyword controls node placement. `:circle` (default) is always
-available. The remaining methods require `using NetworkLayout`:
+The `layout` keyword controls node placement (default † `:circle`). `:circle`
+is always available; the remaining methods require `using NetworkLayout`:
 
 | `layout`      | Algorithm                           |
 |---------------|-------------------------------------|
@@ -239,15 +240,15 @@ Makie.plot(dag; layout = positions)
 """
 function Makie.plot(
     cg::CausalGraph;
-    layout::Union{Symbol,AbstractVector} = :circle,
+    layout::Union{Symbol,AbstractVector} = CausalGraphInterface._PLOT_LAYOUT_DEFAULT,
     node_radius::Union{Real,Nothing} = nothing,
     arrow_size::Union{Real,Nothing} = nothing,
     circle_size::Union{Real,Nothing} = nothing,
-    node_color = :white,
-    node_strokecolor = :black,
-    node_strokewidth = 2.0f0,
-    edge_color = :black,
-    linewidth = 1.5f0,
+    node_color = CausalGraphInterface._PLOT_NODE_COLOR_DEFAULT,
+    node_strokecolor = CausalGraphInterface._PLOT_NODE_STROKECOLOR_DEFAULT,
+    node_strokewidth = CausalGraphInterface._PLOT_NODE_STROKEWIDTH_DEFAULT,
+    edge_color = CausalGraphInterface._PLOT_EDGE_COLOR_DEFAULT,
+    linewidth = CausalGraphInterface._PLOT_LINEWIDTH_DEFAULT,
     layout_kwargs...,
 )
     n = length(cg.backend.nodes)

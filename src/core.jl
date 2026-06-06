@@ -2,11 +2,15 @@ using Preferences
 using Random
 using Statistics
 
-# When true, traversal functions use the open definition: the queried
-# node itself is not included in the result. Set to false via
-#   set_preferences!(CausalGraphInterface, "open" => false)
-# then restart Julia to use the closed definition by default.
+
 const _OPEN_DEFAULT::Bool = @load_preference("open", true)
+
+const _PLOT_LAYOUT_DEFAULT::Symbol = Symbol(@load_preference("plot_layout", "circle"))
+const _PLOT_NODE_COLOR_DEFAULT = @load_preference("plot_node_color", "white")
+const _PLOT_NODE_STROKECOLOR_DEFAULT = @load_preference("plot_node_strokecolor", "black")
+const _PLOT_NODE_STROKEWIDTH_DEFAULT = @load_preference("plot_node_strokewidth", 2.0)
+const _PLOT_EDGE_COLOR_DEFAULT = @load_preference("plot_edge_color", "black")
+const _PLOT_LINEWIDTH_DEFAULT = @load_preference("plot_linewidth", 1.5)
 
 include("core/00-defs.jl")
 include("core/05-edges.jl")
