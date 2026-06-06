@@ -484,7 +484,18 @@ Three types are supported:
 
 - `:parents`: ``\\bigcup \\mathrm{Pa}(x) \\setminus \\{x, y\\}``.
 - `:backdoor`: Pearl backdoor formula.
-- `:optimal`: O-set.
+- `:optimal`: O-set ``\\mathrm{Pa}(\\mathrm{cn}(x,y)) \\setminus (\\{x\\} \\cup \\mathrm{cn}(x,y))``,
+  where ``\\mathrm{cn}(x,y) = \\mathrm{De}(x) \\cap \\mathrm{An}(y)``.
+
+# References
+
+Henckel, Y., Perković, E., & Maathuis, M. H. (2019). Graphical criteria for
+efficient total effect estimation via adjustment in causal linear models.
+*Journal of the Royal Statistical Society: Series B*, 81(3):579-607.
+(`:optimal`)
+
+Pearl, J. (2009). *Causality: Models, Reasoning and Inference* (2nd ed.).
+Cambridge University Press. (`:parents` and `:backdoor`)
 
 # Examples
 
