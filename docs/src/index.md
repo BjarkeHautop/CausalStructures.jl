@@ -30,13 +30,13 @@ Currently implemented:
 - Maximally Partially Directed Acyclic Graphs (`MPDAG`)
 - Acyclic Directed Mixed Graphs (`ADMG`)
 - Ancestral Graphs (`AG`)
+- Maximal Ancestral Graphs (`MAG`)
 - Arbitrary graphs (`UNKNOWN`)
 
 `UNKNOWN` can be used for currently unsupported graph classes.
 
 Planned future additions include
 
-- Maximal Ancestral Graphs (`MAG`)
 - Partial Ancestral Graphs (`PAG`)
 
 The following edge types exists:

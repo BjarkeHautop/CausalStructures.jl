@@ -41,13 +41,13 @@ Currently implemented:
 - Maximally Oriented Partially Directed Acyclic Graphs (`MPDAG`)
 - Acyclic Directed Mixed Graphs (`ADMG`)
 - Ancestral Graphs (`AG`)
+- Maximal Ancestral Graphs (`MAG`)
 - Arbitrary graphs (`UNKNOWN`)
 
 `UNKNOWN` can be used for currently unsupported graph classes.
 
 Planned future additions include
 
-- Maximal Ancestral Graphs (`MAG`)
 - Partial Ancestral Graphs (`PAG`)
 
 The following edge types exists:
@@ -87,10 +87,7 @@ admg = latent_project(dag, [:U])
 Figure out a better syntax than using `directed(), undirected()`, etc. Ideally,
 we would support edge operators similar to the syntax used in R.
 
-Maybe use `Edge(..., directed)` instead of `directed(...)`, and similar for the
-rest?
+Maybe use `Edge(..., directed)` instead of `directed(...)`, and similar for the rest?
 
 Allow one of the arguments to be a vector (but not both at the same time)? I.e.
 `directed([:U, :Y], :X)` to mean `directed(:U, :X)` and `directed(:Y, :X)`?
-
-Figure out plotting of causal graphs.
