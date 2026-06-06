@@ -70,6 +70,5 @@ export CausalEdge,
     remove_edge,
     add_node,
     remove_node,
-    reclass,
-    caugi_plot
+    reclass
 end

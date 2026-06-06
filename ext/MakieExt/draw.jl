@@ -3,13 +3,13 @@
 # Endpoint semantics per CausalEdge:
 #   src_end / dst_end : Tail | Arrow | Circle
 #
-# Edge type → endpoint marks:
-#   -->   Tail  → Arrow   : line + arrowhead at dst
-#   ---   Tail  → Tail    : plain line
-#   <->   Arrow → Arrow   : line + arrowheads at both ends
-#   o->   Circle→ Arrow   : open circle at src + arrowhead at dst
-#   --o   Tail  → Circle  : line + open circle at dst
-#   o-o   Circle→ Circle  : open circles at both ends
+# Edge type - endpoint marks:
+#   -->   Tail  - Arrow   : line + arrowhead at dst
+#   ---   Tail  - Tail    : plain line
+#   <->   Arrow - Arrow   : line + arrowheads at both ends
+#   o->   Circle- Arrow   : open circle at src + arrowhead at dst
+#   --o   Tail  - Circle  : line + open circle at dst
+#   o-o   Circle- Circle  : open circles at both ends
 
 const _Tail = CausalGraphInterface.Tail
 const _Arrow = CausalGraphInterface.Arrow
@@ -100,8 +100,8 @@ function _draw_edge!(
     end
 end
 
-function CausalGraphInterface.caugi_plot(
-    g::CausalGraph;
+function Makie.plot(
+    cg::CausalGraph;
     node_radius::Union{Real,Nothing} = nothing,
     arrow_size::Union{Real,Nothing} = nothing,
     circle_size::Union{Real,Nothing} = nothing,
@@ -109,7 +109,7 @@ function CausalGraphInterface.caugi_plot(
     node_strokecolor = :black,
     edge_color = :black,
 )
-    n = length(g.backend.nodes)
+    n = length(cg.backend.nodes)
     n == 0 && error("Cannot plot an empty graph (0 nodes).")
 
     positions = _circle_layout(n)
@@ -119,7 +119,7 @@ function CausalGraphInterface.caugi_plot(
     r_circle = Float32(something(circle_size, r_node * 0.28f0))
 
     node_pos = Dict{Symbol,Point2f}(
-        g.backend.nodes[i] => positions[i] for i in eachindex(g.backend.nodes)
+        cg.backend.nodes[i] => positions[i] for i in eachindex(cg.backend.nodes)
     )
 
     fig = Makie.Figure()
@@ -128,7 +128,7 @@ function CausalGraphInterface.caugi_plot(
     Makie.hidespines!(ax)
 
     # Edges drawn first so nodes appear on top.
-    for e in g.edges
+    for e in cg.edges
         _draw_edge!(
             ax,
             e,
@@ -142,7 +142,7 @@ function CausalGraphInterface.caugi_plot(
     end
 
     # Node circles and labels.
-    for i in eachindex(g.backend.nodes)
+    for i in eachindex(cg.backend.nodes)
         _draw_filled_circle!(
             ax,
             positions[i],
@@ -155,7 +155,7 @@ function CausalGraphInterface.caugi_plot(
             ax,
             positions[i][1],
             positions[i][2];
-            text = string(g.backend.nodes[i]),
+            text = string(cg.backend.nodes[i]),
             align = (:center, :center),
             fontsize = 14,
         )
