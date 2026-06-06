@@ -285,7 +285,7 @@ end
 @testitem "meek_closure R1 collider guard: do not create new unshielded collider" tags =
     [:unit] begin
     # A --> B, D --> C, B --- C: R1 would fire (A not adj C), but orienting B --> C
-    # would create unshielded collider D --> C ← B (D not adj B) — guard blocks it.
+    # would create unshielded collider D --> C <-- B (D not adj B) - guard blocks it.
     pdag = caugi(directed(:A, :B), directed(:D, :C), undirected(:B, :C); class = PDAG)
     closed = meek_closure(pdag)
     @test closed isa MPDAG

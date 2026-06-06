@@ -179,7 +179,7 @@ end
 
 @testitem "all_adjustment_sets_admg: no valid set when all paths blocked by collider" tags =
     [:unit] begin
-    # Instrumental variable + bidirected: Z-->X-->Y, X<->Y — cannot block all paths
+    # Instrumental variable + bidirected: Z-->X-->Y, X<->Y - cannot block all paths
     admg = caugi(directed(:Z, :X), directed(:X, :Y), bidirected(:X, :Y); class = ADMG)
     sets = all_adjustment_sets_admg(admg, :X, :Y; minimal = true, max_size = 3)
     @test isempty(sets)
