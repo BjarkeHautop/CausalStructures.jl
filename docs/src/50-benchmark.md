@@ -6,9 +6,7 @@ The core data structure in CausalGraphInterface is a compressed sparse row (CSR)
 representation of the graph. This is memory efficient, but does mean that any
 rebuilding of the graph would be expensive.
 
-The graph object also stores important query information in the object, leading
-to parent, child, and neighbor queries being done in $O(1)$. This yields a
-larger memory footprint, but the trade-off is that queries are extremely fast.
+The graph object also stores important query information in the object, leading to parent, child, and neighbor queries being done in $O(1)$. While this increases the memory footprint, many causal graph algorithms are built from repeated applications of these basic queries, making the additional storage worthwhile.
 
 ## Performance
 
@@ -55,7 +53,7 @@ d_separated(dag, :V50, :V70, valid_adjustment_set)
 Here we compare the performance of CausalGraphInterface to various popular R
 packages[^1].
 
-[^1]: Please let me know if any Julia packages should be compared to, too!.
+[^1]: Please let me know if there are any Julia packages I should compare against as well.
 
 In particular we compare against [caugi](https://caugi.org/index.html),
 [igraph](https://r.igraph.org/), [bnlearn](https://www.bnlearn.com/),
