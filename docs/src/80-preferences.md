@@ -27,7 +27,7 @@ delete_preferences!(CausalGraphInterface, "key")
 
 | Default | Type   | Affects |
 |---------|--------|---------|
-| `true`  | `Bool` | `ancestors`, `descendants`, `anteriors`, `posteriors` |
+| `true`  | `Bool` | `ancestors`, `descendants`, `possible_ancestors`, `possible_descendants`, `anteriors`, `posteriors` |
 
 When `true` (open definition), the queried node itself is excluded from the
 result. Set to `false` to use the closed definition (node included).

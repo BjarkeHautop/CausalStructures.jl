@@ -304,6 +304,88 @@ end
     @test exogenous_nodes(g_iso) == [:C]
 end
 
+# ── possible_ancestors / possible_descendants ─────────────────────────────────
+
+@testitem "possible_ancestors on CPDAG: undirected chain" tags = [:unit] begin
+    # A --- B --- C: all edges reversible
+    cpdag = caugi(undirected(:A, :B), undirected(:B, :C); class = CPDAG)
+    @test isempty(ancestors(cpdag, :C))
+    @test Set(possible_ancestors(cpdag, :C)) == Set([:A, :B])
+    @test isempty(ancestors(cpdag, :A))
+    @test Set(possible_ancestors(cpdag, :A)) == Set([:B, :C])
+end
+
+@testitem "possible_ancestors on CPDAG: compelled v-structure" tags = [:unit] begin
+    # A --> C <-- B: both edges compelled; possible ancestors == definite ancestors
+    cpdag = caugi(directed(:A, :C), directed(:B, :C); class = CPDAG)
+    @test Set(possible_ancestors(cpdag, :C)) == Set([:A, :B])
+    @test Set(ancestors(cpdag, :C)) == Set([:A, :B])
+    @test isempty(possible_ancestors(cpdag, :A))
+end
+
+@testitem "possible_ancestors on CPDAG: mixed directed and undirected" tags = [:unit] begin
+    # Valid CPDAG: B---A, B---D, C-->E<--B, D-->F<--E
+    cpdag = caugi(
+        undirected(:B, :A),
+        undirected(:B, :D),
+        directed(:C, :E),
+        directed(:B, :E),
+        directed(:D, :F),
+        directed(:E, :F);
+        class = CPDAG,
+    )
+    # Definite ancestors of F: D, E, B, C (all via compelled directed paths)
+    @test Set(ancestors(cpdag, :F)) == Set([:D, :E, :B, :C])
+    # Possible ancestors of F: additionally A (reachable via B---A, and B is a definite ancestor)
+    @test Set(possible_ancestors(cpdag, :F)) == Set([:A, :B, :C, :D, :E])
+end
+
+@testitem "possible_ancestors open/closed definition" tags = [:unit] begin
+    cpdag = caugi(undirected(:A, :B), undirected(:B, :C); class = CPDAG)
+    @test Set(possible_ancestors(cpdag, :C; open = false)) == Set([:A, :B, :C])
+    @test :C ∉ possible_ancestors(cpdag, :C)
+end
+
+@testitem "possible_descendants on CPDAG: undirected chain" tags = [:unit] begin
+    cpdag = caugi(undirected(:A, :B), undirected(:B, :C); class = CPDAG)
+    @test isempty(descendants(cpdag, :A))
+    @test Set(possible_descendants(cpdag, :A)) == Set([:B, :C])
+    @test isempty(descendants(cpdag, :C))
+    @test Set(possible_descendants(cpdag, :C)) == Set([:A, :B])
+end
+
+@testitem "possible_descendants on CPDAG: compelled v-structure" tags = [:unit] begin
+    cpdag = caugi(directed(:A, :C), directed(:B, :C); class = CPDAG)
+    @test isempty(possible_descendants(cpdag, :C))
+    @test Set(possible_descendants(cpdag, :A)) == Set([:C])
+end
+
+@testitem "possible_descendants open/closed definition" tags = [:unit] begin
+    cpdag = caugi(undirected(:A, :B), undirected(:B, :C); class = CPDAG)
+    @test Set(possible_descendants(cpdag, :A; open = false)) == Set([:A, :B, :C])
+    @test :A ∉ possible_descendants(cpdag, :A)
+end
+
+@testitem "possible_ancestors/descendants are supersets of ancestors/descendants" tags =
+    [:unit] begin
+    cpdag = caugi(
+        undirected(:B, :A),
+        undirected(:B, :D),
+        directed(:C, :E),
+        directed(:B, :E),
+        directed(:D, :F),
+        directed(:E, :F);
+        class = CPDAG,
+    )
+    for node in [:A, :B, :C, :D, :E, :F]
+        @test issubset(Set(ancestors(cpdag, node)), Set(possible_ancestors(cpdag, node)))
+        @test issubset(
+            Set(descendants(cpdag, node)),
+            Set(possible_descendants(cpdag, node)),
+        )
+    end
+end
+
 # ── anteriors / posteriors ────────────────────────────────────────────────────
 
 @testitem "anteriors works for DAG (equals ancestors)" tags = [:unit] begin

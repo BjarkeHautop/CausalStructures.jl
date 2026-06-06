@@ -231,6 +231,124 @@ function exogenous_nodes(cg::AbstractPDAG; undirected_as_parents::Bool = false)
 end
 
 """
+    possible_ancestors(cg::AbstractPDAG, node::Symbol; open::Bool = true) -> Vector{Symbol}
+
+Return the possible ancestors of `node` in `cg`: all nodes `V` for which there
+exists at least one DAG in the equivalence class represented by `cg` in which
+`V` is an ancestor of `node`.
+
+`V` is a possible ancestor of `node` if there is a **possibly directed path**
+from `V` to `node`: a path on which no edge is compelled in the direction away
+from `node`. Each step traverses either an undirected edge or a directed edge
+pointing toward `node`.
+
+Applicable to [`PDAG`](@ref), [`CPDAG`](@ref), and [`MPDAG`](@ref).
+
+When `open = true` (default), `node` itself is excluded. When `open = false`
+(closed definition), `node` is included. The default can be changed via
+Preferences.jl: `set_preferences!(CausalGraphInterface, "open" => false)`.
+
+# References
+
+Perkovic, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete
+Graphical Characterization and Construction of Adjustment Sets in
+Markov Equivalence Classes of Ancestral Graphs.
+*Journal of Machine Learning Research 18*, 1-62.
+
+# Examples
+
+```jldoctest
+julia> cpdag = caugi(undirected(:A, :B), undirected(:B, :C); class = CPDAG);
+
+julia> ancestors(cpdag, :C)
+Symbol[]
+
+julia> possible_ancestors(cpdag, :C)
+2-element Vector{Symbol}:
+ :A
+ :B
+```
+"""
+function possible_ancestors(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
+    B = cg.backend
+    node_idx = node_index(cg, node)
+    seen = falses(length(B.nodes))
+    stack = collect(_parents_slice(B, node_idx))
+    append!(stack, _undirected_slice(B, node_idx))
+
+    while !isempty(stack)
+        idx = pop!(stack)
+        idx == node_idx && continue
+        seen[idx] && continue
+        seen[idx] = true
+        append!(stack, _parents_slice(B, idx))
+        append!(stack, _undirected_slice(B, idx))
+    end
+
+    result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
+    return open ? result : [node; result]
+end
+
+"""
+    possible_descendants(cg::AbstractPDAG, node::Symbol; open::Bool = true) -> Vector{Symbol}
+
+Return the possible descendants of `node` in `cg`: all nodes `V` for which
+there exists at least one DAG in the equivalence class represented by `cg` in
+which `V` is a descendant of `node`.
+
+`V` is a possible descendant of `node` if there is a **possibly directed path**
+from `node` to `V`: a path on which no edge is compelled in the direction away
+from `node`. Each step traverses either an undirected edge or a directed edge
+pointing away from `node`.
+
+Applicable to [`PDAG`](@ref), [`CPDAG`](@ref), and [`MPDAG`](@ref).
+
+When `open = true` (default), `node` itself is excluded. When `open = false`
+(closed definition), `node` is included. The default can be changed via
+Preferences.jl: `set_preferences!(CausalGraphInterface, "open" => false)`.
+
+# References
+
+Perkovic, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete
+Graphical Characterization and Construction of Adjustment Sets in
+Markov Equivalence Classes of Ancestral Graphs.
+*Journal of Machine Learning Research 18*, 1-62.
+
+# Examples
+
+```jldoctest
+julia> cpdag = caugi(undirected(:A, :B), undirected(:B, :C); class = CPDAG);
+
+julia> descendants(cpdag, :A)
+Symbol[]
+
+julia> possible_descendants(cpdag, :A)
+2-element Vector{Symbol}:
+ :B
+ :C
+```
+"""
+function possible_descendants(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
+    B = cg.backend
+    node_idx = node_index(cg, node)
+    seen = falses(length(B.nodes))
+    stack = collect(_children_slice(B, node_idx))
+    append!(stack, _undirected_slice(B, node_idx))
+
+    while !isempty(stack)
+        idx = pop!(stack)
+        idx == node_idx && continue
+        seen[idx] && continue
+        seen[idx] = true
+        append!(stack, _children_slice(B, idx))
+        append!(stack, _undirected_slice(B, idx))
+    end
+
+    result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
+    return open ? result : [node; result]
+end
+
+"""
     anteriors(cg::Union{DAG,AbstractPDAG,AG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
 
 Return the anteriors of `node` in `cg`: all nodes from which `node` is reachable

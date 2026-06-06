@@ -53,6 +53,8 @@ nodes
 topological_sort
 ancestors
 descendants
+possible_ancestors
+possible_descendants
 anteriors
 posteriors
 exogenous_nodes
