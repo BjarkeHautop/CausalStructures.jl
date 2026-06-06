@@ -73,7 +73,8 @@ makedocs(;
     sitename = "CausalGraphInterface.jl",
     format = Documenter.HTML(;
         canonical = "https://BjarkeHautop.github.io/CausalGraphInterface.jl",
-        size_threshold_warn = 150 * 1024,
+        example_size_threshold = nothing,
+        size_threshold_ignore = ["10-plotting.md", "95-reference.md"],
     ),
     pages = list_pages(),
 )

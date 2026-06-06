@@ -118,3 +118,11 @@ add_node
 remove_node
 reclass
 ```
+
+## Plotting
+
+See the [Plotting guide](@ref plotting-guide) for full examples.
+
+```@docs
+layout
+```

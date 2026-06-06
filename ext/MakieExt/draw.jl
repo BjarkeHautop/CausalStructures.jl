@@ -179,11 +179,29 @@ Each style argument accepts either a **scalar** (applied to all elements) or a
 **Edge-type symbols:** `:directed`, `:undirected`, `:bidirected`,
 `:partially_directed`, `:partially_undirected`, `:partial`.
 
-**Dict lookup precedence (highest → lowest):**
+**Dict lookup precedence (highest --> lowest):**
 1. Specific edge `(src, dst)` pair
 2. Edge-type symbol
 3. `:default` key inside the Dict
 4. Hard-coded fallback
+
+## Layout
+
+The `layout` keyword controls node placement. `:circle` (default) is always
+available. The remaining methods require `using NetworkLayout`:
+
+| `layout`      | Algorithm                           |
+|---------------|-------------------------------------|
+| `:circle`     | Evenly spaced on a circle (default) |
+| `:spring`     | Fruchterman-Reingold force-directed |
+| `:stress`     | Stress majorization                 |
+| `:sfdp`       | Scalable Force-Directed Placement   |
+| `:spectral`   | Spectral layout                     |
+| `:shell`      | Concentric shells                   |
+| `:squaregrid` | Square grid                         |
+
+Extra keyword arguments are forwarded to the NetworkLayout algorithm
+(e.g. `seed`, `iterations`).
 
 ## Examples
 
@@ -204,10 +222,16 @@ Makie.plot(admg; edge_color = Dict(:directed => :steelblue, :bidirected => :crim
 
 # Highlight a specific edge
 Makie.plot(dag; edge_color = Dict((:A, :X) => :red, :default => :black))
+
+# Force-directed layout (requires NetworkLayout)
+using NetworkLayout
+Makie.plot(dag; layout = :spring)
+Makie.plot(dag; layout = :spring, seed = 42, iterations = 200)
 ```
 """
 function Makie.plot(
     cg::CausalGraph;
+    layout::Symbol = :circle,
     node_radius::Union{Real,Nothing} = nothing,
     arrow_size::Union{Real,Nothing} = nothing,
     circle_size::Union{Real,Nothing} = nothing,
@@ -216,11 +240,12 @@ function Makie.plot(
     node_strokewidth = 2.0f0,
     edge_color = :black,
     linewidth = 1.5f0,
+    layout_kwargs...,
 )
     n = length(cg.backend.nodes)
     n == 0 && error("Cannot plot an empty graph (0 nodes).")
 
-    positions = _circle_layout(n)
+    positions = _positions(cg, layout, layout_kwargs)
 
     r_node = Float32(something(node_radius, max(0.12, 0.4 * sin(π / max(n, 2)))))
     r_arrow = Float32(something(arrow_size, r_node * 0.4f0))

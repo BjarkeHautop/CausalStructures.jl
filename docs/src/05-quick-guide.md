@@ -80,7 +80,3 @@ and all minimal valid backdoor adjustment sets can be enumerated (which is only
 ```@example quick
 all_backdoor_sets(dag, :X, :Y)
 ```
-
-## Next Steps
-
-See the API for all the other functionality not covered here.

@@ -1,11 +1,17 @@
-# Plotting
+# [Plotting](@id plotting-guide)
 
-Plotting is provided by the `MakieExt` extension and requires loading a Makie
-backend before use. Below we use CairoMakie:
+Plotting is provided by the `MakieExt` extension and requires loading a [Makie](https://docs.makie.org/stable/) backend before use. Below we use CairoMakie:
 
 ```@example plot
 using CausalGraphInterface
 using CairoMakie
+```
+
+Layout algorithms beyond the default circle require
+[NetworkLayout.jl](https://github.com/JuliaGraphs/NetworkLayout.jl):
+
+```julia
+using NetworkLayout  # unlocks :spring, :stress, :sfdp, :spectral, :shell, :squaregrid
 ```
 
 ## Basic usage
@@ -40,6 +46,37 @@ cg = caugi(
     class = UNKNOWN,
 )
 Makie.plot(cg)
+```
+
+## Layouts
+
+The `layout` keyword controls node placement. The `:circle` layout is always
+available. All others require NetworkLayout.
+
+| `layout`      | Algorithm                           |
+|---------------|-------------------------------------|
+| `:circle`     | Evenly spaced on a circle (default) |
+| `:spring`     | Fruchterman-Reingold force-directed |
+| `:stress`     | Stress majorization                 |
+| `:sfdp`       | Scalable Force-Directed Placement   |
+| `:spectral`   | Spectral layout                     |
+| `:shell`      | Concentric shells                   |
+| `:squaregrid` | Square grid                         |
+
+Extra keyword arguments are forwarded to the NetworkLayout algorithm:
+
+```@example plot
+using NetworkLayout
+
+Makie.plot(dag; layout = :spring)
+Makie.plot(dag; layout = :spring, seed = 42, iterations = 500)
+```
+
+`layout` can also be called independently to obtain coordinates for use
+outside of Makie:
+
+```@example plot
+positions = layout(dag, :spring; seed = 42)
 ```
 
 ## Sizing

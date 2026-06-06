@@ -4,6 +4,7 @@ CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 CausalGraphInterface = "b41ab49a-79bc-5eac-acbb-517b17bd5c16"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 LiveServer = "16fef848-5104-11e9-1b77-fb7a48bbb589"
+NetworkLayout = "46757867-2c16-5918-afeb-47bfcb05e46a"
 Preferences = "21216c6a-2e73-6563-6e65-726566657250"
 
 [sources]
