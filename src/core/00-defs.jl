@@ -106,8 +106,6 @@ abstract type AbstractAG <: CausalGraph end
     DAG
 
 A Directed Acyclic Graph. Directed edges only, and no directed cycles allowed.
-
-See [`caugi`](@ref) for construction of graphs.
 """
 struct DAG <: CausalGraph
     edges::Vector{CausalEdge}
@@ -118,8 +116,6 @@ end
     UG
 
 An Undirected Graph. Undirected edges only.
-
-See [`caugi`](@ref) for construction of graphs.
 """
 struct UG <: CausalGraph
     edges::Vector{CausalEdge}
@@ -131,8 +127,6 @@ end
 
 A Partially Directed Acyclic Graph.
 Directed and undirected edges only, and no directed cycles allowed.
-
-See [`caugi`](@ref) for construction of graphs.
 """
 struct PDAG <: AbstractPDAG
     edges::Vector{CausalEdge}
@@ -149,7 +143,11 @@ differs across DAGs in the class.
 Consequently, every edge is directed exactly when its orientation is
 invariant within the MEC.
 
-See [`caugi`](@ref) for construction of graphs.
+# References
+
+Chickering, D. M. (2002). Learning equivalence classes of Bayesian-network
+structures. *Journal of Machine Learning Research*, 2:445-498.
+[https://www.jmlr.org/papers/v2/chickering02a.html](https://www.jmlr.org/papers/v2/chickering02a.html)
 """
 struct CPDAG <: AbstractPDAG
     edges::Vector{CausalEdge}
@@ -163,7 +161,10 @@ A Maximally Partially Directed Acyclic Graph. A PDAG that is closed under Meek's
 orientation rules R1-R4: no further edge orientation can be implied. MPDAGs arise
 when background knowledge (forced edge orientations) is present.
 
-See [`caugi`](@ref) for construction of graphs.
+# References
+
+Meek, C. (1995). Causal inference and causal explanation with background knowledge.
+*Proceedings of UAI-95*, pp. 403-411.
 """
 struct MPDAG <: AbstractPDAG
     edges::Vector{CausalEdge}
@@ -176,7 +177,10 @@ end
 An Acyclic Directed Mixed Graph. Directed and bidirected edges only,
 and no directed cycles allowed.
 
-See [`caugi`](@ref) for construction of graphs.
+# References
+
+Richardson, T. S. (2003). Markov properties for acyclic directed mixed graphs.
+*Scandinavian Journal of Statistics*, 30(1):145-157.
 """
 struct ADMG <: CausalGraph
     edges::Vector{CausalEdge}
@@ -191,7 +195,10 @@ It contains no directed cycles, and if `X <-> Y` then neither `X` is an ancestor
 `Y` nor `Y` of `X`. Additionally, vertices incident to an undirected edge have no
 arrowheads pointing at them on any adjacent edge (i.e., no parents or spouses).
 
-See [`caugi`](@ref) for construction of graphs.
+# References
+
+Richardson, T. & Spirtes, P. (2002). Ancestral graph Markov models.
+*Annals of Statistics*, 30(4):962-1030.
 """
 struct AG <: AbstractAG
     edges::Vector{CausalEdge}
@@ -205,7 +212,10 @@ A Maximal Ancestral Graph. An [`AG`](@ref) in which every pair of non-adjacent n
 is m-separated by some subset of the remaining nodes. MAGs are the canonical
 representatives of equivalence classes of DAGs with hidden variables.
 
-See [`caugi`](@ref) for construction of graphs.
+# References
+
+Richardson, T. & Spirtes, P. (2002). Ancestral graph Markov models.
+*Annals of Statistics*, 30(4):962-1030.
 """
 struct MAG <: AbstractAG
     edges::Vector{CausalEdge}
@@ -219,8 +229,6 @@ A graph with no structural constraints enforced. Accepts all edge types. Intende
 fallback for graph classes not yet natively supported.
 
 Set `simple = false` to allow multiple edges between the same pair of nodes.
-
-See [`caugi`](@ref) for construction of graphs.
 """
 struct UNKNOWN <: CausalGraph
     edges::Vector{CausalEdge}
