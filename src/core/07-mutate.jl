@@ -1,16 +1,13 @@
-_simple_flag(g::UNKNOWN) = g.simple
-_simple_flag(::CausalGraph) = true
-
-function _mutate_rebuild(::Type{T}, nodes, edges, _simple) where {T<:CausalGraph}
-    return build_graph(T, nodes, edges)
+function _mutate_rebuild(cg::CausalGraph, nodes, edges)
+    return build_graph(typeof(cg), nodes, edges)
 end
 
-function _mutate_rebuild(::Type{UNKNOWN}, nodes, edges, simple)
-    return build_graph(UNKNOWN, nodes, edges; simple = simple)
+function _mutate_rebuild(cg::UNKNOWN, nodes, edges)
+    return build_graph(UNKNOWN, nodes, edges; simple = cg.simple)
 end
 
 """
-    add_edge(g::CausalGraph, e::CausalEdge) -> CausalGraph
+    add_edge(cg::CausalGraph, e::CausalEdge) -> CausalGraph
 
 Return a new graph of the same class with edge `e` added. Nodes referenced by `e`
 are added automatically if not already present.
@@ -18,29 +15,28 @@ are added automatically if not already present.
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B); class = DAG);
+julia> dag = caugi(directed(:A, :B); class = DAG);
 
-julia> g2 = add_edge(g, directed(:B, :C));
+julia> dag2 = add_edge(dag, directed(:B, :C));
 
-julia> nodes(g2)
+julia> nodes(dag2)
 3-element Vector{Symbol}:
  :A
  :B
  :C
 
-julia> length(g2.edges)
+julia> length(dag2.edges)
 2
 ```
 """
-function add_edge(g::T, e::CausalEdge) where {T<:CausalGraph}
-    new_nodes = Set(g.backend.nodes)
+function add_edge(cg::CausalGraph, e::CausalEdge)
+    new_nodes = Set(cg.backend.nodes)
     push!(new_nodes, e.src, e.dst)
-    new_edges = push!(copy(g.edges), e)
-    return _mutate_rebuild(T, new_nodes, new_edges, _simple_flag(g))
+    return _mutate_rebuild(cg, new_nodes, push!(copy(cg.edges), e))
 end
 
 """
-    remove_edge(g::CausalGraph, e::CausalEdge) -> CausalGraph
+    remove_edge(cg::CausalGraph, e::CausalEdge) -> CausalGraph
 
 Return a new graph of the same class with edge `e` removed. Nodes that become
 isolated are retained. Throws `ArgumentError` if `e` is not present.
@@ -48,34 +44,33 @@ isolated are retained. Throws `ArgumentError` if `e` is not present.
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> g2 = remove_edge(g, directed(:A, :B));
+julia> dag2 = remove_edge(dag, directed(:A, :B));
 
-julia> length(g2.edges)
+julia> length(dag2.edges)
 1
 
-julia> nodes(g2)
+julia> nodes(dag2)
 3-element Vector{Symbol}:
  :A
  :B
  :C
 ```
 """
-function remove_edge(g::T, e::CausalEdge) where {T<:CausalGraph}
-    idx = findfirst(==(e), g.edges)
+function remove_edge(cg::CausalGraph, e::CausalEdge)
+    idx = findfirst(==(e), cg.edges)
     if idx === nothing
         throw(ArgumentError("edge not found in graph: $(e.src) -- $(e.dst)"))
     end
-    new_edges = deleteat!(copy(g.edges), idx)
-    return _mutate_rebuild(T, Set(g.backend.nodes), new_edges, _simple_flag(g))
+    return _mutate_rebuild(cg, Set(cg.backend.nodes), deleteat!(copy(cg.edges), idx))
 end
 
 """
-    add_node(g::CausalGraph, n::Symbol) -> CausalGraph
+    add_node(cg::CausalGraph, n::Symbol) -> CausalGraph
 
 Return a new graph of the same class with isolated node `n` added.
-If `n` is already present, returns `g` unchanged.
+If `n` is already present, returns `cg` unchanged.
 
 # Examples
 
@@ -91,14 +86,13 @@ julia> nodes(g2)
  :C
 ```
 """
-function add_node(g::T, n::Symbol) where {T<:CausalGraph}
-    n in g.backend.nodes && return g
-    new_nodes = push!(Set(g.backend.nodes), n)
-    return _mutate_rebuild(T, new_nodes, copy(g.edges), _simple_flag(g))
+function add_node(cg::CausalGraph, n::Symbol)
+    n in cg.backend.nodes && return cg
+    return _mutate_rebuild(cg, push!(Set(cg.backend.nodes), n), copy(cg.edges))
 end
 
 """
-    remove_node(g::CausalGraph, n::Symbol) -> CausalGraph
+    remove_node(cg::CausalGraph, n::Symbol) -> CausalGraph
 
 Return a new graph of the same class with node `n` and all its incident edges removed.
 Throws `ArgumentError` if `n` is not present.
@@ -119,34 +113,38 @@ julia> length(g2.edges)
 0
 ```
 """
-function remove_node(g::T, n::Symbol) where {T<:CausalGraph}
-    n in g.backend.nodes || throw(ArgumentError("node not found in graph: $n"))
-    new_nodes = setdiff(Set(g.backend.nodes), (n,))
-    new_edges = filter(e -> e.src != n && e.dst != n, g.edges)
-    return _mutate_rebuild(T, new_nodes, new_edges, _simple_flag(g))
+function remove_node(cg::CausalGraph, n::Symbol)
+    n in cg.backend.nodes || throw(ArgumentError("node not found in graph: $n"))
+    new_nodes = setdiff(Set(cg.backend.nodes), (n,))
+    new_edges = filter(e -> e.src != n && e.dst != n, cg.edges)
+    return _mutate_rebuild(cg, new_nodes, new_edges)
 end
 
 """
-    reclass(g::CausalGraph, T::Type{<:CausalGraph}; simple=true) -> T
+    reclass(cg::CausalGraph, T::Type{<:CausalGraph}; simple=true) -> T
 
-Return a new graph of class `T` with the same nodes and edges as `g`.
+Return a new graph of class `T` with the same nodes and edges as `cg`.
 Throws if the edges violate the structural constraints of `T`.
 `simple` only applies when `T` is [`UNKNOWN`](@ref).
 
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> p = reclass(g, PDAG);
+julia> pdag = reclass(dag, PDAG);
 
-julia> p isa PDAG
+julia> pdag isa PDAG
 true
 
-julia> nodes(p) == nodes(g)
+julia> nodes(pdag) == nodes(dag)
 true
 ```
 """
-function reclass(g::CausalGraph, ::Type{T}; simple::Bool = true) where {T<:CausalGraph}
-    return _mutate_rebuild(T, Set(g.backend.nodes), copy(g.edges), simple)
+function reclass(cg::CausalGraph, ::Type{T}) where {T<:CausalGraph}
+    return build_graph(T, Set(cg.backend.nodes), copy(cg.edges))
+end
+
+function reclass(cg::CausalGraph, ::Type{UNKNOWN}; simple::Bool = true)
+    return build_graph(UNKNOWN, Set(cg.backend.nodes), copy(cg.edges); simple = simple)
 end
