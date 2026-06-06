@@ -72,11 +72,13 @@ Makie.plot(dag; layout = :spring)
 Makie.plot(dag; layout = :spring, seed = 42, iterations = 500)
 ```
 
-`layout` can also be called independently to obtain coordinates for use
-outside of Makie:
+Node placement can also be specified using specific positions. Below we first call `layout` then fine-tune
+one of the node positions before plotting:
 
 ```@example plot
 positions = layout(dag, :spring; seed = 42)
+positions[2] = (0.0, 0.0)  # move node 2 to the origin
+Makie.plot(dag; layout = positions)
 ```
 
 ## Sizing

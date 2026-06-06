@@ -200,6 +200,9 @@ available. The remaining methods require `using NetworkLayout`:
 | `:shell`      | Concentric shells                   |
 | `:squaregrid` | Square grid                         |
 
+Alternatively, `layout` may be set to a custom `AbstractVector` of 2D coordinates
+in the same order as `nodes(cg)`.
+
 Extra keyword arguments are forwarded to the NetworkLayout algorithm
 (e.g. `seed`, `iterations`).
 
@@ -227,11 +230,16 @@ Makie.plot(dag; edge_color = Dict((:A, :X) => :red, :default => :black))
 using NetworkLayout
 Makie.plot(dag; layout = :spring)
 Makie.plot(dag; layout = :spring, seed = 42, iterations = 200)
+
+# Custom layout (e.g. after manual tweaks)
+positions = layout(dag, :spring)
+positions[1] += (0.1, -0.05)
+Makie.plot(dag; layout = positions)
 ```
 """
 function Makie.plot(
     cg::CausalGraph;
-    layout::Symbol = :circle,
+    layout::Union{Symbol,AbstractVector} = :circle,
     node_radius::Union{Real,Nothing} = nothing,
     arrow_size::Union{Real,Nothing} = nothing,
     circle_size::Union{Real,Nothing} = nothing,
