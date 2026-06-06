@@ -334,6 +334,11 @@ Return `true` if `z` satisfies the backdoor criterion for the causal effect of
 (2) `z` blocks every backdoor path from `x` to `y`. Equivalently, every parent
 of `x` is d-separated from `y` given `z ∪ {x}`.
 
+# References
+
+Pearl, J. (2009). *Causality: Models, Reasoning and Inference* (2nd ed.).
+Cambridge University Press.
+
 # Examples
 
 ```jldoctest
