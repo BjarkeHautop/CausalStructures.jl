@@ -32,8 +32,8 @@ All six edge types are rendered with their conventional endpoint marks:
 
 ## Sizing
 
-Three keyword arguments control the geometry. All accept any `Real` value; the
-defaults scale with the number of nodes.
+Three keyword arguments control the geometry. All must be positive `Real`
+values; the defaults scale with the number of nodes.
 
 | Keyword        | Controls                        | Default                     |
 |----------------|---------------------------------|-----------------------------|
