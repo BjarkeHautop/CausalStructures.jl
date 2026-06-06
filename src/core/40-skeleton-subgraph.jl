@@ -1,4 +1,8 @@
 # Graph transforms: skeleton, moralize, subgraph
+#
+# Adapted from caugi:
+#   caugi/src/rust/src/graph/dag/transforms.rs  (skeleton, moralize)
+#   caugi/src/rust/src/graph/alg/moral.rs
 
 function _skeleton_edges(input_edges::Vector{CausalEdge})
     skeleton_edges = CausalEdge[]

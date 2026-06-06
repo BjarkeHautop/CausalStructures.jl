@@ -1,4 +1,9 @@
 # PDAG/CPDAG algorithms: dag_from_pdag, meek_closure, dag_to_cpdag
+#
+# Adapted from caugi:
+#   caugi/src/rust/src/graph/pdag/transforms.rs  (dag_from_pdag)
+#   caugi/src/rust/src/graph/alg/meek.rs         (meek_closure)
+#   caugi/src/rust/src/graph/dag/transforms.rs   (dag_to_cpdag)
 
 """
     dag_from_pdag(cg::AbstractPDAG) -> DAG

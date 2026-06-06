@@ -1,3 +1,6 @@
+# Most algorithms are adapted from the caugi R/Rust package (caugi/).
+# Functions not present in caugi are implemented directly from the cited papers.
+
 using Preferences
 using Random
 using Statistics
@@ -22,6 +25,10 @@ include("core/30-traversal.jl")
 include("core/31-separation.jl")
 include("core/32-minimal-separator.jl")
 include("core/33-adjustment.jl")
-include("core/40-transforms.jl")
+include("core/40-skeleton-subgraph.jl")
+include("core/41-latent.jl")
+include("core/42-pdag.jl")
+include("core/43-condition-marginalize.jl")
+include("core/44-enumerate-dags.jl")
 include("core/50-utils.jl")
 include("core/60-layout.jl")

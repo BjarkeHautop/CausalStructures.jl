@@ -1,5 +1,9 @@
 # ADMG Generalized Adjustment Criterion (GAC)
 # Perković, Textor, Kalisch, Maathuis (2018)
+#
+# Adapted from caugi:
+#   caugi/src/rust/src/graph/dag/adjustment.rs
+#   caugi/src/rust/src/graph/admg/adjustment.rs
 
 # ── descendants bitmask ───────────────────────────────────────────────────────
 

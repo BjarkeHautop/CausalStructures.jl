@@ -1,4 +1,6 @@
 # Latent variable transforms: latent_project, exogenize, normalize_latent_structure
+#
+# Adapted from caugi: caugi/src/rust/src/graph/dag/transforms.rs
 
 # Vertex-elimination latent projection: for each latent node v (in index order),
 #   1. add p-->c for all p ∈ Pa(v), c ∈ Ch(v)

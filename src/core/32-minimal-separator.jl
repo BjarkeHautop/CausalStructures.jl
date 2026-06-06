@@ -1,5 +1,7 @@
 # Minimal separator algorithms for DAG, ADMG, and AG.
 #
+# Adapted from caugi: caugi/src/rust/src/graph/alg/min_msep.rs
+#
 # All three follow van der Zander & Liśkiewicz (UAI 2020) FINDMINSEP:
 # run FINDNEARESTSEP twice (once from x, once from y restricted to the first
 # result) and intersect. The difference per class is in how "ancestors" are

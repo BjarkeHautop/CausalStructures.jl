@@ -1,3 +1,10 @@
+# Graph class validation (is_pdag, is_cpdag, is_dag, is_admg, is_ag, ...)
+#
+# Adapted from caugi:
+#   caugi/src/rust/src/graph/pdag/cpdag.rs  (CPDAG / MPDAG validation)
+#   caugi/src/rust/src/graph/alg/acyclic.rs (acyclicity check)
+#   caugi/src/rust/src/graph/alg/moral.rs   (chordality check)
+
 abstract type GraphConstraints end
 
 struct DAGConstraints <: GraphConstraints end
@@ -438,7 +445,7 @@ end
 # True if no Meek orientation rule (R1–R4) would fire.
 # Mirrors the safeguards in meek_closure so this is consistent with it.
 function _cpdag_meek_closed(B::PDAGBackend, n::Int)
-    # R1: u-->v, v—w, u ⊄ w  ⇒  v-->w  (unless cycle or new collider)
+    # R1: u-->v, v---w, u ⊄ w  ⇒  v-->w  (unless cycle or new collider)
     for v = 1:n
         pa = _parents_slice(B, v)
         isempty(pa) && continue
@@ -454,7 +461,7 @@ function _cpdag_meek_closed(B::PDAGBackend, n::Int)
         end
     end
 
-    # R2: u—v, ∃ w: u-->w-->v  ⇒  u-->v
+    # R2: u---v, ∃ w: u-->w-->v  ⇒  u-->v
     for v = 1:n
         pa_v = _parents_slice(B, v)
         for u in _undirected_slice(B, v)
@@ -462,7 +469,7 @@ function _cpdag_meek_closed(B::PDAGBackend, n::Int)
         end
     end
 
-    # R3: u—v, ∃ w,x: w-->v, x-->v, w ⊄ x, u—w, u—x  ⇒  u-->v
+    # R3: u---v, ∃ w,x: w-->v, x-->v, w ⊄ x, u---w, u---x  ⇒  u-->v
     for v = 1:n
         pv = _parents_slice(B, v)
         length(pv) < 2 && continue
@@ -479,7 +486,7 @@ function _cpdag_meek_closed(B::PDAGBackend, n::Int)
         end
     end
 
-    # R4: u—v and directed path u⇒v or v⇒u
+    # R4: u---v and directed path u⇒v or v⇒u
     for v = 1:n
         for u in _undirected_slice(B, v)
             (_cpdag_has_dir_path(B, u, v, n) || _cpdag_has_dir_path(B, v, u, n)) &&
@@ -501,7 +508,7 @@ function _cpdag_arrows_protected(B::PDAGBackend, n::Int)
             any(c -> !_cpdag_adjacent(B, c, b), _parents_slice(B, a)) && continue
             # SP2: ∃ c: a-->c, c-->b
             _cpdag_intersects(_children_slice(B, a), pa_b) && continue
-            # SP3: ∃ c,d-->b, c ⊄ d, a—c, a—d
+            # SP3: ∃ c,d-->b, c ⊄ d, a---c, a---d
             und_a = _undirected_slice(B, a)
             sp3 = false
             for i in eachindex(pa_b), j = (i+1):lastindex(pa_b)

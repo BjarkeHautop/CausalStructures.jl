@@ -1,4 +1,9 @@
 # Separation algorithms: d_separated and m_separated.
+#
+# Adapted from caugi:
+#   caugi/src/rust/src/graph/dag/separation.rs  (d_separated)
+#   caugi/src/rust/src/graph/admg/msep.rs       (m_separated for ADMG)
+#   caugi/src/rust/src/graph/ag/msep.rs         (m_separated for AG)
 
 # ── Shared ancestor / anterior masks ──────────────────────────────────────────
 

@@ -1,6 +1,8 @@
-# Graph traversal algorithms:
-# topological_sort, ancestors, descendants, anteriors, posteriors,
-# exogenous_nodes, markov_blanket, spouses, districts
+# Graph traversal algorithms
+#
+# Most algorithms are ported from
+# caugi: caugi/src/rust/src/graph/alg/traversal.rs
+# But some are original implementations.
 
 """
     topological_sort(cg::DAG) -> Vector{Symbol}

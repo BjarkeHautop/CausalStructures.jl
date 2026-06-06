@@ -1,4 +1,6 @@
 # condition_marginalize: condition and/or marginalize variables in a DAG or AG
+#
+# DAG version was adapted from caugi: caugi/R/operations.R
 
 # Returns true iff a and b cannot be m-separated by any Z ⊆ other_nodes,
 # when cond_vars are always included in the conditioning set.

@@ -1,4 +1,6 @@
 # enumerate_dags / count_dags: Chickering (2002) recursive MEC listing on raw Set-of-Int state
+#
+# Adapted from caugi: caugi/src/rust/src/graph/pdag/enumerate.rs
 
 function _adj_sets(a::Int, b::Int, pa, ch, und)
     return b in pa[a] || b in ch[a] || b in und[a]

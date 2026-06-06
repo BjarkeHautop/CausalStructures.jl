@@ -1,3 +1,5 @@
+# Inspired by caugi
+
 """
     is_dag(cg::CausalGraph)   -> Bool
 
