@@ -432,3 +432,68 @@ end
     @test frontdoor_set(cg, :X, :Y; required = [:D], candidates = [:A, :B, :C, :D]) ===
           nothing
 end
+
+# ── ListFDSets ────────────────────────────────────────────────────────────────
+
+@testitem "ListFDSets: classic single mediator" tags = [:unit] begin
+    cg = caugi(
+        directed(:U, :X),
+        directed(:U, :Y),
+        directed(:X, :Z),
+        directed(:Z, :Y);
+        class = DAG,
+    )
+    @test all_frontdoor_sets(cg, :X, :Y; candidates = [:Z]) == [[:Z]]
+end
+
+@testitem "ListFDSets: Jeong (2022) Fig. 1b - all 4 valid sets" tags = [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig1b()
+    zs = all_frontdoor_sets(cg, :X, :Y; candidates = [:A, :B, :C, :D])
+    @test Set(zs) == Set([[:A], [:A, :B], [:A, :C], [:A, :B, :C]])
+end
+
+@testitem "ListFDSets: Jeong (2022) Fig. 1b - required C restricts listing" tags = [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig1b()
+    zs = all_frontdoor_sets(cg, :X, :Y; required = [:C], candidates = [:A, :B, :C, :D])
+    @test Set(zs) == Set([[:A, :C], [:A, :B, :C]])
+end
+
+@testitem "ListFDSets: Jeong (2022) Fig. 1b - required D returns empty" tags = [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig1b()
+    @test isempty(
+        all_frontdoor_sets(cg, :X, :Y; required = [:D], candidates = [:A, :B, :C, :D]),
+    )
+end
+
+# ── Fig. 6 graphs ─────────────────────────────────────────────────────────────
+# Each parallel path X --> Ai --> Bi --> Y can be intercepted by {Ai}, {Bi}, or
+# {Ai,Bi}, giving 3^n valid FD sets for n parallel paths (Example 9 in the paper).
+
+@testitem "ListFDSets: Jeong (2022) Fig. 6a - 9 valid sets (3^2)" tags = [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig6a()
+    zs = all_frontdoor_sets(cg, :X, :Y; candidates = [:A1, :B1, :A2, :B2])
+    @test length(zs) == 9
+    # Alphabetical node order: A1 < A2 < B1 < B2
+    @test Set(zs) == Set([
+        [:A1, :A2],
+        [:A1, :B2],
+        [:A1, :A2, :B2],
+        [:A2, :B1],
+        [:B1, :B2],
+        [:A2, :B1, :B2],
+        [:A1, :A2, :B1],
+        [:A1, :B1, :B2],
+        [:A1, :A2, :B1, :B2],
+    ])
+end
+
+@testitem "ListFDSets: Jeong (2022) Fig. 6b - 27 valid sets (3^3)" tags = [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig6b()
+    zs = all_frontdoor_sets(cg, :X, :Y; candidates = [:A1, :B1, :A2, :B2, :A3, :B3])
+    @test length(zs) == 27
+end

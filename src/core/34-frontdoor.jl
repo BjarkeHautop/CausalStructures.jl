@@ -548,3 +548,142 @@ function frontdoor_set(
 
     return [B.nodes[v] for v = 1:n if r_dbl_prime[v]]
 end
+
+# LISTFDSETS inner recursion (Algorithm 2, Jeong et al. 2022).
+# Mutates i_mask and r_mask in place, restoring them before returning.
+function _listfdsets!(
+    results::Vector{Vector{Symbol}},
+    B::DAGBackend,
+    x_set::BitVector,
+    y_mask::BitVector,
+    x_idx::Int,
+    y_idx::Int,
+    i_mask::BitVector,
+    r_mask::BitVector,
+    cpg_children::Vector{Vector{Int}},
+)
+    n = length(B.nodes)
+
+    # Step 1: condition 2 — drop candidates with a BD path from X
+    r_prime = _getcand2ndfdc(B, [x_idx], x_set, i_mask, r_mask)
+    r_prime === nothing && return
+
+    # Step 2: condition 3 feasibility
+    r_dbl_prime = _getcand3rdfdc(B, x_set, y_mask, i_mask, r_prime)
+    r_dbl_prime === nothing && return
+
+    # Step 3: condition 1 — R'' must block all directed X --> Y paths in CPG
+    visited = falses(n)
+    visited[x_idx] = true
+    queue = Int[x_idx]
+    head = 1
+    while head <= length(queue)
+        u = queue[head];
+        head += 1
+        for c in cpg_children[u]
+            r_dbl_prime[c] && continue
+            c == y_idx && return   # infeasible: Y reachable
+            visited[c] && continue
+            visited[c] = true
+            push!(queue, c)
+        end
+    end
+
+    # Find first v in R \ I to branch on
+    v = 0
+    for j = 1:n
+        if r_mask[j] && !i_mask[j]
+            v = j;
+            break
+        end
+    end
+
+    if v == 0  # I == R: this set is valid, output it
+        push!(results, [B.nodes[j] for j = 1:n if i_mask[j]])
+        return
+    end
+
+    # Branch 1: include v (I ∪ {v}, R)
+    i_mask[v] = true
+    _listfdsets!(results, B, x_set, y_mask, x_idx, y_idx, i_mask, r_mask, cpg_children)
+    i_mask[v] = false
+
+    # Branch 2: exclude v (I, R \ {v})
+    r_mask[v] = false
+    _listfdsets!(results, B, x_set, y_mask, x_idx, y_idx, i_mask, r_mask, cpg_children)
+    r_mask[v] = true
+end
+
+"""
+    all_frontdoor_sets(cg::DAG, x, y; required=[], candidates) -> Vector{Vector{Symbol}}
+
+Return all front-door adjustment sets Z with `required ⊆ Z ⊆ candidates` relative
+to (`x`, `y`) in `cg`.
+
+Implements Algorithm 2 (LISTFDSETS) of Jeong, Tian & Bareinboim (2022). The
+algorithm has polynomial-delay guarantees: it outputs the first result in
+polynomial time and takes polynomial time between consecutive results.
+
+# Examples
+
+```jldoctest
+julia> cg = caugi(directed(:U, :X), directed(:U, :Y), directed(:X, :Z), directed(:Z, :Y); class = DAG);
+
+julia> all_frontdoor_sets(cg, :X, :Y; candidates = [:Z])
+1-element Vector{Vector{Symbol}}:
+ [:Z]
+```
+
+```jldoctest
+julia> cg = caugi(
+           directed(:U1, :X), directed(:U1, :Y), directed(:U2, :X), directed(:U2, :D),
+           directed(:X, :A), directed(:A, :B), directed(:A, :C), directed(:A, :D),
+           directed(:B, :Y), directed(:C, :Y), directed(:D, :Y);
+           class = DAG);
+
+julia> sort(all_frontdoor_sets(cg, :X, :Y; candidates = [:A, :B, :C, :D]))
+4-element Vector{Vector{Symbol}}:
+ [:A]
+ [:A, :B]
+ [:A, :B, :C]
+ [:A, :C]
+```
+
+# References
+
+Jeong, S., Tian, J., & Bareinboim, E. (2022). Finding and Listing Front-Door
+Adjustment Sets. *Advances in Neural Information Processing Systems*, 35.
+"""
+function all_frontdoor_sets(
+    cg::DAG,
+    x::Symbol,
+    y::Symbol;
+    required::AbstractVector{Symbol} = Symbol[],
+    candidates::AbstractVector{Symbol},
+)
+    B = cg.backend
+    n = length(B.nodes)
+
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+
+    x_set = falses(n)
+    x_set[x_idx] = true
+    y_mask = falses(n)
+    y_mask[y_idx] = true
+
+    i_mask = falses(n)
+    for s in required
+        i_mask[node_index(cg, s)] = true
+    end
+    r_mask = falses(n)
+    for s in candidates
+        r_mask[node_index(cg, s)] = true
+    end
+
+    _, cpg_children = _get_causal_path_graph(B, x_set, y_mask)
+
+    results = Vector{Vector{Symbol}}()
+    _listfdsets!(results, B, x_set, y_mask, x_idx, y_idx, i_mask, r_mask, cpg_children)
+    return results
+end
