@@ -440,11 +440,15 @@ function _getcand2ndfdc(
 end
 
 """
-    frontdoor_set(cg::DAG, x, y; required=[], candidates) -> Vector{Symbol} or nothing
+    frontdoor_set(cg::DAG, x, y; include=[], restrict=nothing) -> Vector{Symbol} or nothing
 
-Return a front-door adjustment set Z with `required ⊆ Z ⊆ candidates` satisfying
+Return a front-door adjustment set Z with `include ⊆ Z ⊆ restrict` satisfying
 all three front-door conditions relative to (`x`, `y`) in `cg`, or `nothing` if
 no such set exists.
+
+- `include`: nodes forced into the set.
+- `restrict`: candidate pool from which the set is drawn. Defaults to all nodes
+  in `cg` except `x` and `y`.
 
 Implements Algorithm 1 of Jeong, Tian & Bareinboim (2022):
 - Step 1 (GETCAND2NDFDC): drop candidates that have a backdoor path from X.
@@ -458,7 +462,7 @@ The returned set is the full R'' from Steps 1-2 (not necessarily minimal).
 ```jldoctest
 julia> cg = caugi(directed(:U, :X), directed(:U, :Y), directed(:X, :Z), directed(:Z, :Y); class = DAG);
 
-julia> frontdoor_set(cg, :X, :Y; candidates = [:Z])
+julia> frontdoor_set(cg, :X, :Y; restrict = [:Z])
 1-element Vector{Symbol}:
  :Z
 ```
@@ -471,18 +475,18 @@ julia> # Jeong (2022) Fig. 1b
            directed(:B, :Y), directed(:C, :Y), directed(:D, :Y);
            class = DAG);
 
-julia> frontdoor_set(cg, :X, :Y; candidates = [:A, :B, :C, :D])
+julia> frontdoor_set(cg, :X, :Y; restrict = [:A, :B, :C, :D])
 3-element Vector{Symbol}:
  :A
  :B
  :C
 
-julia> frontdoor_set(cg, :X, :Y; required = [:C], candidates = [:A, :C])
+julia> frontdoor_set(cg, :X, :Y; include = [:C], restrict = [:A, :C])
 2-element Vector{Symbol}:
  :A
  :C
 
-julia> frontdoor_set(cg, :X, :Y; required = [:D], candidates = [:A, :B, :C, :D]) === nothing
+julia> frontdoor_set(cg, :X, :Y; include = [:D], restrict = [:A, :B, :C, :D]) === nothing
 true
 ```
 
@@ -495,8 +499,8 @@ function frontdoor_set(
     cg::DAG,
     x::Symbol,
     y::Symbol;
-    required::AbstractVector{Symbol} = Symbol[],
-    candidates::AbstractVector{Symbol},
+    include::AbstractVector{Symbol} = Symbol[],
+    restrict::Union{Nothing,AbstractVector{Symbol}} = nothing,
 )
     B = cg.backend
     n = length(B.nodes)
@@ -510,11 +514,12 @@ function frontdoor_set(
     y_mask[y_idx] = true
 
     i_mask = falses(n)
-    for s in required
+    for s in include
         i_mask[node_index(cg, s)] = true
     end
     r_mask = falses(n)
-    for s in candidates
+    _restrict = restrict === nothing ? filter(v -> v != x && v != y, nodes(cg)) : restrict
+    for s in _restrict
         r_mask[node_index(cg, s)] = true
     end
 
@@ -615,10 +620,14 @@ function _listfdsets!(
 end
 
 """
-    all_frontdoor_sets(cg::DAG, x, y; required=[], candidates) -> Vector{Vector{Symbol}}
+    all_frontdoor_sets(cg::DAG, x, y; include=[], restrict=nothing) -> Vector{Vector{Symbol}}
 
-Return all front-door adjustment sets Z with `required ⊆ Z ⊆ candidates` relative
+Return all front-door adjustment sets Z with `include ⊆ Z ⊆ restrict` relative
 to (`x`, `y`) in `cg`.
+
+- `include`: nodes forced into every returned set.
+- `restrict`: candidate pool from which sets are drawn. Defaults to all nodes
+  in `cg` except `x` and `y`.
 
 Implements Algorithm 2 (LISTFDSETS) of Jeong, Tian & Bareinboim (2022). The
 algorithm has polynomial-delay guarantees: it outputs the first result in
@@ -629,7 +638,7 @@ polynomial time and takes polynomial time between consecutive results.
 ```jldoctest
 julia> cg = caugi(directed(:U, :X), directed(:U, :Y), directed(:X, :Z), directed(:Z, :Y); class = DAG);
 
-julia> all_frontdoor_sets(cg, :X, :Y; candidates = [:Z])
+julia> all_frontdoor_sets(cg, :X, :Y; restrict = [:Z])
 1-element Vector{Vector{Symbol}}:
  [:Z]
 ```
@@ -641,7 +650,7 @@ julia> cg = caugi(
            directed(:B, :Y), directed(:C, :Y), directed(:D, :Y);
            class = DAG);
 
-julia> sort(all_frontdoor_sets(cg, :X, :Y; candidates = [:A, :B, :C, :D]))
+julia> sort(all_frontdoor_sets(cg, :X, :Y; restrict = [:A, :B, :C, :D]))
 4-element Vector{Vector{Symbol}}:
  [:A]
  [:A, :B]
@@ -658,8 +667,8 @@ function all_frontdoor_sets(
     cg::DAG,
     x::Symbol,
     y::Symbol;
-    required::AbstractVector{Symbol} = Symbol[],
-    candidates::AbstractVector{Symbol},
+    include::AbstractVector{Symbol} = Symbol[],
+    restrict::Union{Nothing,AbstractVector{Symbol}} = nothing,
 )
     B = cg.backend
     n = length(B.nodes)
@@ -673,11 +682,12 @@ function all_frontdoor_sets(
     y_mask[y_idx] = true
 
     i_mask = falses(n)
-    for s in required
+    for s in include
         i_mask[node_index(cg, s)] = true
     end
     r_mask = falses(n)
-    for s in candidates
+    _restrict = restrict === nothing ? filter(v -> v != x && v != y, nodes(cg)) : restrict
+    for s in _restrict
         r_mask[node_index(cg, s)] = true
     end
 

@@ -96,6 +96,8 @@ count_dags
 
 ## Separation & Adjustment
 
+See the [Causal Identification guide](@ref causal-identification-guide) for worked examples.
+
 ```@docs
 d_separated
 m_separated
