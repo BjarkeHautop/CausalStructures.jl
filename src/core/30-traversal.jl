@@ -99,16 +99,26 @@ function ancestors(
     open::Bool = _OPEN_DEFAULT,
 )
     B = cg.backend
+    n = length(B.nodes)
     node_idx = node_index(cg, node)
-    seen = falses(length(B.nodes))
-    stack = collect(_parents_slice(B, node_idx))
+    seen = falses(n)
+    stack = Int[]
+    sizehint!(stack, n)
+    for p in _parents_slice(B, node_idx)
+        if !seen[p]
+            seen[p] = true
+            push!(stack, p)
+        end
+    end
 
     while !isempty(stack)
         idx = pop!(stack)
-        idx == node_idx && continue
-        seen[idx] && continue
-        seen[idx] = true
-        append!(stack, _parents_slice(B, idx))
+        for p in _parents_slice(B, idx)
+            if !seen[p]
+                seen[p] = true
+                push!(stack, p)
+            end
+        end
     end
 
     result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
@@ -155,15 +165,26 @@ function descendants(
     open::Bool = _OPEN_DEFAULT,
 )
     B = cg.backend
+    n = length(B.nodes)
     node_idx = node_index(cg, node)
-    seen = falses(length(B.nodes))
-    stack = collect(_children_slice(B, node_idx))
+    seen = falses(n)
+    stack = Int[]
+    sizehint!(stack, n)
+    for c in _children_slice(B, node_idx)
+        if !seen[c]
+            seen[c] = true
+            push!(stack, c)
+        end
+    end
 
     while !isempty(stack)
         idx = pop!(stack)
-        seen[idx] && continue
-        seen[idx] = true
-        append!(stack, _children_slice(B, idx))
+        for c in _children_slice(B, idx)
+            if !seen[c]
+                seen[c] = true
+                push!(stack, c)
+            end
+        end
     end
 
     result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
@@ -273,20 +294,42 @@ Markov Equivalence Classes of Ancestral Graphs.
 """
 function possible_ancestors(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend
+    n = length(B.nodes)
     node_idx = node_index(cg, node)
-    seen = falses(length(B.nodes))
-    stack = collect(_parents_slice(B, node_idx))
-    append!(stack, _undirected_slice(B, node_idx))
+    seen = falses(n)
+    seen[node_idx] = true  # sentinel: prevents re-enqueuing via undirected edges
+    stack = Int[]
+    sizehint!(stack, n)
+    for p in _parents_slice(B, node_idx)
+        if !seen[p]
+            seen[p] = true
+            push!(stack, p)
+        end
+    end
+    for u in _undirected_slice(B, node_idx)
+        if !seen[u]
+            seen[u] = true
+            push!(stack, u)
+        end
+    end
 
     while !isempty(stack)
         idx = pop!(stack)
-        idx == node_idx && continue
-        seen[idx] && continue
-        seen[idx] = true
-        append!(stack, _parents_slice(B, idx))
-        append!(stack, _undirected_slice(B, idx))
+        for p in _parents_slice(B, idx)
+            if !seen[p]
+                seen[p] = true
+                push!(stack, p)
+            end
+        end
+        for u in _undirected_slice(B, idx)
+            if !seen[u]
+                seen[u] = true
+                push!(stack, u)
+            end
+        end
     end
 
+    seen[node_idx] = false  # clear sentinel so node doesn't appear in result
     result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
     return open ? result : [node; result]
 end
@@ -332,20 +375,42 @@ Markov Equivalence Classes of Ancestral Graphs.
 """
 function possible_descendants(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend
+    n = length(B.nodes)
     node_idx = node_index(cg, node)
-    seen = falses(length(B.nodes))
-    stack = collect(_children_slice(B, node_idx))
-    append!(stack, _undirected_slice(B, node_idx))
+    seen = falses(n)
+    seen[node_idx] = true  # sentinel: prevents re-enqueuing via undirected edges
+    stack = Int[]
+    sizehint!(stack, n)
+    for c in _children_slice(B, node_idx)
+        if !seen[c]
+            seen[c] = true
+            push!(stack, c)
+        end
+    end
+    for u in _undirected_slice(B, node_idx)
+        if !seen[u]
+            seen[u] = true
+            push!(stack, u)
+        end
+    end
 
     while !isempty(stack)
         idx = pop!(stack)
-        idx == node_idx && continue
-        seen[idx] && continue
-        seen[idx] = true
-        append!(stack, _children_slice(B, idx))
-        append!(stack, _undirected_slice(B, idx))
+        for c in _children_slice(B, idx)
+            if !seen[c]
+                seen[c] = true
+                push!(stack, c)
+            end
+        end
+        for u in _undirected_slice(B, idx)
+            if !seen[u]
+                seen[u] = true
+                push!(stack, u)
+            end
+        end
     end
 
+    seen[node_idx] = false  # clear sentinel so node doesn't appear in result
     result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
     return open ? result : [node; result]
 end
@@ -391,40 +456,84 @@ anteriors(cg::DAG, node::Symbol; open::Bool = _OPEN_DEFAULT) = ancestors(cg, nod
 
 function anteriors(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend
+    n = length(B.nodes)
     node_idx = node_index(cg, node)
-    seen = falses(length(B.nodes))
-    stack = collect(_parents_slice(B, node_idx))
-    append!(stack, _undirected_slice(B, node_idx))
+    seen = falses(n)
+    seen[node_idx] = true  # sentinel: prevents re-enqueuing via undirected edges
+    stack = Int[]
+    sizehint!(stack, n)
+    for p in _parents_slice(B, node_idx)
+        if !seen[p]
+            seen[p] = true
+            push!(stack, p)
+        end
+    end
+    for u in _undirected_slice(B, node_idx)
+        if !seen[u]
+            seen[u] = true
+            push!(stack, u)
+        end
+    end
 
     while !isempty(stack)
         idx = pop!(stack)
-        idx == node_idx && continue
-        seen[idx] && continue
-        seen[idx] = true
-        append!(stack, _parents_slice(B, idx))
-        append!(stack, _undirected_slice(B, idx))
+        for p in _parents_slice(B, idx)
+            if !seen[p]
+                seen[p] = true
+                push!(stack, p)
+            end
+        end
+        for u in _undirected_slice(B, idx)
+            if !seen[u]
+                seen[u] = true
+                push!(stack, u)
+            end
+        end
     end
 
+    seen[node_idx] = false  # clear sentinel so node doesn't appear in result
     result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
     return open ? result : [node; result]
 end
 
 function anteriors(cg::AbstractAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend
+    n = length(B.nodes)
     node_idx = node_index(cg, node)
-    seen = falses(length(B.nodes))
-    stack = collect(_parents_slice(B, node_idx))
-    append!(stack, _undirected_slice(B, node_idx))
+    seen = falses(n)
+    seen[node_idx] = true  # sentinel: prevents re-enqueuing via undirected edges
+    stack = Int[]
+    sizehint!(stack, n)
+    for p in _parents_slice(B, node_idx)
+        if !seen[p]
+            seen[p] = true
+            push!(stack, p)
+        end
+    end
+    for u in _undirected_slice(B, node_idx)
+        if !seen[u]
+            seen[u] = true
+            push!(stack, u)
+        end
+    end
 
     while !isempty(stack)
         idx = pop!(stack)
-        idx == node_idx && continue
-        seen[idx] && continue
-        seen[idx] = true
-        append!(stack, _parents_slice(B, idx))
-        append!(stack, _undirected_slice(B, idx))
+        for p in _parents_slice(B, idx)
+            if !seen[p]
+                seen[p] = true
+                push!(stack, p)
+            end
+        end
+        for u in _undirected_slice(B, idx)
+            if !seen[u]
+                seen[u] = true
+                push!(stack, u)
+            end
+        end
     end
 
+    seen[node_idx] = false  # clear sentinel so node doesn't appear in result
     result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
     return open ? result : [node; result]
 end
@@ -471,40 +580,84 @@ posteriors(cg::DAG, node::Symbol; open::Bool = _OPEN_DEFAULT) = descendants(cg, 
 
 function posteriors(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend
+    n = length(B.nodes)
     node_idx = node_index(cg, node)
-    seen = falses(length(B.nodes))
-    stack = collect(_children_slice(B, node_idx))
-    append!(stack, _undirected_slice(B, node_idx))
+    seen = falses(n)
+    seen[node_idx] = true  # sentinel: prevents re-enqueuing via undirected edges
+    stack = Int[]
+    sizehint!(stack, n)
+    for c in _children_slice(B, node_idx)
+        if !seen[c]
+            seen[c] = true
+            push!(stack, c)
+        end
+    end
+    for u in _undirected_slice(B, node_idx)
+        if !seen[u]
+            seen[u] = true
+            push!(stack, u)
+        end
+    end
 
     while !isempty(stack)
         idx = pop!(stack)
-        idx == node_idx && continue
-        seen[idx] && continue
-        seen[idx] = true
-        append!(stack, _children_slice(B, idx))
-        append!(stack, _undirected_slice(B, idx))
+        for c in _children_slice(B, idx)
+            if !seen[c]
+                seen[c] = true
+                push!(stack, c)
+            end
+        end
+        for u in _undirected_slice(B, idx)
+            if !seen[u]
+                seen[u] = true
+                push!(stack, u)
+            end
+        end
     end
 
+    seen[node_idx] = false  # clear sentinel so node doesn't appear in result
     result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
     return open ? result : [node; result]
 end
 
 function posteriors(cg::AbstractAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend
+    n = length(B.nodes)
     node_idx = node_index(cg, node)
-    seen = falses(length(B.nodes))
-    stack = collect(_children_slice(B, node_idx))
-    append!(stack, _undirected_slice(B, node_idx))
+    seen = falses(n)
+    seen[node_idx] = true  # sentinel: prevents re-enqueuing via undirected edges
+    stack = Int[]
+    sizehint!(stack, n)
+    for c in _children_slice(B, node_idx)
+        if !seen[c]
+            seen[c] = true
+            push!(stack, c)
+        end
+    end
+    for u in _undirected_slice(B, node_idx)
+        if !seen[u]
+            seen[u] = true
+            push!(stack, u)
+        end
+    end
 
     while !isempty(stack)
         idx = pop!(stack)
-        idx == node_idx && continue
-        seen[idx] && continue
-        seen[idx] = true
-        append!(stack, _children_slice(B, idx))
-        append!(stack, _undirected_slice(B, idx))
+        for c in _children_slice(B, idx)
+            if !seen[c]
+                seen[c] = true
+                push!(stack, c)
+            end
+        end
+        for u in _undirected_slice(B, idx)
+            if !seen[u]
+                seen[u] = true
+                push!(stack, u)
+            end
+        end
     end
 
+    seen[node_idx] = false  # clear sentinel so node doesn't appear in result
     result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
     return open ? result : [node; result]
 end
