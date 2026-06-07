@@ -12,11 +12,6 @@ Return the nodes of `cg` in topological order.
 For every directed edge `u --> v` in `cg`, `u` appears before `v` in the
 returned vector.
 
-# References
-
-Kahn, A. B. (1962). Topological sorting of large networks. *Communications of
-the ACM*, 5(11):558-562.
-
 # Examples
 
 ```jldoctest
@@ -28,6 +23,11 @@ julia> topological_sort(cg)
  :B
  :C
 ```
+
+# References
+
+Kahn, A. B. (1962). Topological sorting of large networks. *Communications of
+the ACM*, 5(11):558-562.
 """
 function topological_sort(cg::DAG)
     B = cg.backend
@@ -250,13 +250,6 @@ When `open = true` (default), `node` itself is excluded. When `open = false`
 (closed definition), `node` is included. The default can be changed via
 Preferences.jl: `set_preferences!(CausalGraphInterface, "open" => false)`.
 
-# References
-
-Perkovic, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete
-Graphical Characterization and Construction of Adjustment Sets in
-Markov Equivalence Classes of Ancestral Graphs.
-*Journal of Machine Learning Research 18*, 1-62.
-
 # Examples
 
 ```jldoctest
@@ -270,6 +263,13 @@ julia> possible_ancestors(cpdag, :C)
  :A
  :B
 ```
+
+# References
+
+Perkovic, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete
+Graphical Characterization and Construction of Adjustment Sets in
+Markov Equivalence Classes of Ancestral Graphs.
+*Journal of Machine Learning Research 18*, 1-62.
 """
 function possible_ancestors(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend
@@ -309,13 +309,6 @@ When `open = true` (default), `node` itself is excluded. When `open = false`
 (closed definition), `node` is included. The default can be changed via
 Preferences.jl: `set_preferences!(CausalGraphInterface, "open" => false)`.
 
-# References
-
-Perkovic, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete
-Graphical Characterization and Construction of Adjustment Sets in
-Markov Equivalence Classes of Ancestral Graphs.
-*Journal of Machine Learning Research 18*, 1-62.
-
 # Examples
 
 ```jldoctest
@@ -329,6 +322,13 @@ julia> possible_descendants(cpdag, :A)
  :B
  :C
 ```
+
+# References
+
+Perkovic, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete
+Graphical Characterization and Construction of Adjustment Sets in
+Markov Equivalence Classes of Ancestral Graphs.
+*Journal of Machine Learning Research 18*, 1-62.
 """
 function possible_descendants(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend

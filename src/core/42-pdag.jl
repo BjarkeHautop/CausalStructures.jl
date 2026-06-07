@@ -15,11 +15,6 @@ The algorithm repeatedly finds a sink node `x` (no directed children, and whose
 undirected neighbors form a clique), orients all undirected edges toward `x`,
 and removes it. Raises an error if no valid DAG extension exists.
 
-# References
-
-Dor, D. & Tarsi, M. (1992). A simple algorithm to construct a consistent
-extension of a partially oriented graph.
-
 # Examples
 
 ```jldoctest
@@ -31,6 +26,11 @@ DAG with 3 nodes and 2 edges:
   edges:
     A --> B, B --> C
 ```
+
+# References
+
+Dor, D. & Tarsi, M. (1992). A simple algorithm to construct a consistent
+extension of a partially oriented graph.
 """
 function dag_from_pdag(cg::AbstractPDAG)
     B = cg.backend
@@ -112,11 +112,6 @@ The four rules are:
   and `a --- c`, `a --- d` --> orient `a --> b`
 - **R4**: `a --- b`, directed path `a -->+ b` exists --> orient `a --> b`
 
-# References
-
-Meek, C. (1995). Causal inference and causal explanation with background knowledge.
-*Proceedings of UAI-95*, pp. 403-410.
-
 # Examples
 
 ```jldoctest
@@ -128,6 +123,11 @@ MPDAG with 3 nodes and 2 edges:
   edges:
     A --> B, B --> C
 ```
+
+# References
+
+Meek, C. (1995). Causal inference and causal explanation with background knowledge.
+*Proceedings of UAI-95*, pp. 403-410.
 """
 function meek_closure(cg::AbstractPDAG)
     B = cg.backend

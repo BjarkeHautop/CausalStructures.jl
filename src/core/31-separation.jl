@@ -97,11 +97,6 @@ in `z`, or a collider node (and all its descendants) not in `z`.
 The algorithm restricts to the ancestor graph of `x`, `y`, and `z`, moralizes
 it, then checks connectivity after removing `z`.
 
-# References
-
-Lauritzen, S. L., Dawid, A. P., Larsen, B. N., & Leimer, H.-G. (1990).
-Independence properties of directed Markov fields. *Networks*, 20(5):491-505.
-
 # Examples
 
 ```jldoctest
@@ -121,6 +116,11 @@ true
 julia> d_separated(coll, :A, :B, [:C])  # conditioning on collider C opens the path
 false
 ```
+
+# References
+
+Lauritzen, S. L., Dawid, A. P., Larsen, B. N., & Leimer, H.-G. (1990).
+Independence properties of directed Markov fields. *Networks*, 20(5):491-505.
 """
 function d_separated(cg::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
     B = cg.backend
@@ -173,11 +173,6 @@ form a clique), and checks connectivity after removing `z`.
 **AG**: uses the augmented graph of Richardson & Spirtes (2002) restricted to
 the anterior set of `x`, `y`, and `z`.
 
-# References
-
-Richardson, T. & Spirtes, P. (2002). Ancestral graph Markov models.
-*Annals of Statistics*, 30(4):962-1030.
-
 # Examples
 
 ```jldoctest
@@ -197,6 +192,11 @@ false
 julia> m_separated(admg, :B, :C, [:A]) # conditioning on A blocks the path
 true
 ```
+
+# References
+
+Richardson, T. & Spirtes, P. (2002). Ancestral graph Markov models.
+*Annals of Statistics*, 30(4):962-1030.
 """
 m_separated(cg::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[]) =
     d_separated(cg, x, y, z)

@@ -195,11 +195,6 @@ Lemmas 1-3):
 3. Remove latent nodes whose child set is a strict subset of another latent
    node's child set.
 
-# References
-
-Evans, R. J. (2016). Graphs for margins of Bayesian networks. *Scandinavian
-Journal of Statistics*, 43(3):625-648.
-
 # Examples
 
 ```jldoctest
@@ -211,6 +206,11 @@ DAG with 4 nodes and 4 edges:
   edges:
     A --> X, A --> Y, U --> X, U --> Y
 ```
+
+# References
+
+Evans, R. J. (2016). Graphs for margins of Bayesian networks. *Scandinavian
+Journal of Statistics*, 43(3):625-648.
 """
 function normalize_latent_structure(cg::DAG, latents::AbstractVector{Symbol})
     B = cg.backend

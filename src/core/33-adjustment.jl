@@ -220,12 +220,6 @@ A set `z` is valid if it contains no forbidden node (no node in
 `x` to `y`) and `x` and `y` are m-separated by `z` in the proper backdoor graph
 of `cg`.
 
-# References
-
-Perković, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete Graphical
-Characterization and Construction of Adjustment Sets in Markov Equivalence Classes
-of Ancestral Graphs *Journal of Machine Learning Research*, 18:1-62.
-
 # Examples
 
 ```jldoctest
@@ -237,6 +231,12 @@ false
 julia> is_valid_adjustment_admg(admg, :X, :Y, [:L]) # conditioning on L blocks the backdoor path
 true
 ```
+
+# References
+
+Perković, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete Graphical
+Characterization and Construction of Adjustment Sets in Markov Equivalence Classes
+of Ancestral Graphs *Journal of Machine Learning Research*, 18:1-62.
 """
 function is_valid_adjustment_admg(
     cg::ADMG,
@@ -337,11 +337,6 @@ Return `true` if `z` satisfies the backdoor criterion for the causal effect of
 (2) `z` blocks every backdoor path from `x` to `y`. Equivalently, every parent
 of `x` is d-separated from `y` given `z ∪ {x}`.
 
-# References
-
-Pearl, J. (2009). *Causality: Models, Reasoning and Inference* (2nd ed.).
-Cambridge University Press.
-
 # Examples
 
 ```jldoctest
@@ -353,6 +348,11 @@ false
 julia> is_valid_backdoor(cg, :X, :Y, [:A]) # conditioning on A blocks the backdoor path
 true
 ```
+
+# References
+
+Pearl, J. (2009). *Causality: Models, Reasoning and Inference* (2nd ed.).
+Cambridge University Press.
 """
 function is_valid_backdoor(
     cg::DAG,
@@ -490,16 +490,6 @@ Three types are supported:
 - `:optimal`: O-set ``\\mathrm{Pa}(\\mathrm{cn}(x,y)) \\setminus (\\{x\\} \\cup \\mathrm{cn}(x,y))``,
   where ``\\mathrm{cn}(x,y) = \\mathrm{De}(x) \\cap \\mathrm{An}(y)``.
 
-# References
-
-Henckel, Y., Perković, E., & Maathuis, M. H. (2022). Graphical Criteria for Efficient Total
-Effect Estimation Via Adjustment in Causal Linear Models.
-*Journal of the Royal Statistical Society: Series B*, 84:579-599.
-(`:optimal`)
-
-Pearl, J. (2009). *Causality: Models, Reasoning and Inference* (2nd ed.).
-Cambridge University Press. (`:parents` and `:backdoor`)
-
 # Examples
 
 ```jldoctest
@@ -521,6 +511,16 @@ julia> adjustment_set(cg, :X, :Y; type = :optimal)
 1-element Vector{Symbol}:
  :K
 ```
+
+# References
+
+Henckel, Y., Perković, E., & Maathuis, M. H. (2022). Graphical Criteria for Efficient Total
+Effect Estimation Via Adjustment in Causal Linear Models.
+*Journal of the Royal Statistical Society: Series B*, 84:579-599.
+(`:optimal`)
+
+Pearl, J. (2009). *Causality: Models, Reasoning and Inference* (2nd ed.).
+Cambridge University Press. (`:parents` and `:backdoor`)
 """
 function adjustment_set(cg::DAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
     B = cg.backend

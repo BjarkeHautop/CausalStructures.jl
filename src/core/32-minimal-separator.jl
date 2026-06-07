@@ -127,13 +127,6 @@ restricted to the first result, and the outputs are intersected.
 - **AG**: same as ADMG but uses anteriors (ancestors reachable via directed
   or undirected edges) and handles undirected edge marks.
 
-# References
-
-van der Zander, B. & Liśkiewicz, M. (2020). Finding Minimal d-separators in
-Linear Time and Applications.
-*Proceedings of the 35th Conference on Uncertainty in Artificial
-Intelligence (UAI 2020)*, PMLR 115:637-647.
-
 # Examples
 
 ```jldoctest
@@ -174,6 +167,13 @@ julia> minimal_separator(admg, :A, :C)
 1-element Vector{Symbol}:
  :B
 ```
+
+# References
+
+van der Zander, B. & Liśkiewicz, M. (2020). Finding Minimal d-separators in
+Linear Time and Applications.
+*Proceedings of the 35th Conference on Uncertainty in Artificial
+Intelligence (UAI 2020)*, PMLR 115:637-647.
 """
 function minimal_separator(
     cg::DAG,

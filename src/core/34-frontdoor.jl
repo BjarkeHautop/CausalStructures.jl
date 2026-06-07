@@ -15,14 +15,6 @@ Return `true` if `z` satisfies the front-door criterion for the causal effect of
 When these conditions hold, the causal effect is identified by the front-door
 formula, even in the presence of unmeasured confounders between `x` and `y`.
 
-# References
-
-Pearl, J. (2009). *Causality: Models, Reasoning and Inference* (2nd ed.).
-Cambridge University Press.
-
-Jeong, S., Tian, J., & Bareinboim, E. (2022). Finding and Listing Front-Door
-Adjustment Sets. *Advances in Neural Information Processing Systems*, 35.
-
 # Examples
 
 ```jldoctest
@@ -37,6 +29,14 @@ false
 julia> is_valid_frontdoor(cg, :X, :Y, [:U])   # U does not intercept X -> M -> Y
 false
 ```
+
+# References
+
+Pearl, J. (2009). *Causality: Models, Reasoning and Inference* (2nd ed.).
+Cambridge University Press.
+
+Jeong, S., Tian, J., & Bareinboim, E. (2022). Finding and Listing Front-Door
+Adjustment Sets. *Advances in Neural Information Processing Systems*, 35.
 """
 function is_valid_frontdoor(
     cg::DAG,

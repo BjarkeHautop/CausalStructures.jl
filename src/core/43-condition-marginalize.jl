@@ -78,11 +78,6 @@ if each is anterior to the other.
 At least one of `cond_vars` or `marg_vars` must be non-empty, and they must
 be disjoint.
 
-# References
-
-Richardson, T. & Spirtes, P. (2002). Ancestral graph Markov models.
-*Annals of Statistics*, 30(4):962-1030.
-
 # Examples
 
 ```jldoctest
@@ -94,6 +89,11 @@ AG with 2 nodes and 1 edge:
   edges:
     X <-> Y
 ```
+
+# References
+
+Richardson, T. & Spirtes, P. (2002). Ancestral graph Markov models.
+*Annals of Statistics*, 30(4):962-1030.
 """
 function condition_marginalize(
     cg::Union{DAG,AG};

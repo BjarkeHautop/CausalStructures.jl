@@ -222,11 +222,6 @@ Can call [`count_dags`](@ref) for sizing the problem before
 calling this function, as the number of DAGs in a MEC
 can be very large.
 
-# References
-
-Chickering, D. M. (2002). Learning equivalence classes of Bayesian-network
-structures. *Journal of Machine Learning Research*, 2:445-498.
-
 # Examples
 
 ```jldoctest
@@ -237,6 +232,11 @@ julia> dags = enumerate_dags(pdag);
 julia> length(dags)
 3
 ```
+
+# References
+
+Chickering, D. M. (2002). Learning equivalence classes of Bayesian-network
+structures. *Journal of Machine Learning Research*, 2:445-498.
 """
 function enumerate_dags(cg::AbstractPDAG)
     closed = meek_closure(cg)
