@@ -114,7 +114,7 @@ end
 # Resolve a per-edge style attribute.
 #
 # `val` may be:
-#   - a scalar  → applied to all edges
+#   - a scalar  --> applied to all edges
 #   - a Dict keyed by any mix of:
 #       (Symbol, Symbol)  specific edge, e.g. (:X, :Y) => :red
 #       Symbol            edge type,     e.g. :directed => :blue
