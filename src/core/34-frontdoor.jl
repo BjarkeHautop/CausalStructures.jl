@@ -303,6 +303,36 @@ function _get_dep(
     return z_prime
 end
 
+# GETCAND3RDFDC from Jeong, Tian & Bareinboim (2022), Step 2 of FindFDSet.
+#
+# Returns R'' ⊆ R': all v ∈ R' for which GETDEP(G, X, Y, {v}, R') != nothing,
+# meaning there exists Z' ⊆ R' \ {v} such that {v} ∪ Z' satisfies the third
+# FD condition. If GETDEP returns nothing for some v ∈ I, returns nothing
+# (infeasible: I must be included but cannot satisfy condition 3).
+function _getcand3rdfdc(
+    B::DAGBackend,
+    x_set::BitVector,
+    y_mask::BitVector,
+    i_mask::BitVector,
+    r_prime_mask::BitVector,
+)
+    n = length(B.nodes)
+    r_dbl_prime = copy(r_prime_mask)
+    t_mask = falses(n)
+    for v = 1:n
+        r_prime_mask[v] || continue
+        t_mask .= false
+        t_mask[v] = true
+        if _get_dep(B, x_set, y_mask, t_mask, r_prime_mask) === nothing
+            if i_mask[v]
+                return nothing  # v in I must be included but fails condition 3
+            end
+            r_dbl_prime[v] = false
+        end
+    end
+    return r_dbl_prime
+end
+
 # GETCAND2NDFDC from Jeong, Tian & Bareinboim (2022), Step 1 of FindFDSet.
 #
 # Returns R' ⊆ R: all v ∈ R for which TESTSEP(G_X, X, v, ∅) = true (no unblocked

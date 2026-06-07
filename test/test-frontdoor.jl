@@ -176,6 +176,64 @@ end
     @test CausalGraphInterface._getcand2ndfdc(B, [x_idx], x_set, i_mask, r_mask) === nothing
 end
 
+# ── Example 3: GETCAND3RDFDC ─────────────────────────────────────────────────
+#
+# Given I = {} and R' = {A, B, C}, GETCAND3RDFDC outputs R'' = {A, B, C}
+# because GETDEP succeeds for every v in R'.
+
+@testitem "GETCAND3RDFDC: Jeong (2022) Example 3 - all of R' retained" tags = [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig1b()
+    B = cg.backend
+    n = length(B.nodes)
+
+    x_idx = CausalGraphInterface.node_index(cg, :X)
+    x_set = falses(n)
+    x_set[x_idx] = true
+
+    y_mask = falses(n)
+    y_mask[CausalGraphInterface.node_index(cg, :Y)] = true
+
+    i_mask = falses(n)
+    r_prime_mask = falses(n)
+    for s in [:A, :B, :C]
+        r_prime_mask[CausalGraphInterface.node_index(cg, s)] = true
+    end
+
+    r_dbl_prime =
+        CausalGraphInterface._getcand3rdfdc(B, x_set, y_mask, i_mask, r_prime_mask)
+
+    @test r_dbl_prime !== nothing
+    @test Set(B.nodes[v] for v = 1:n if r_dbl_prime[v]) == Set([:A, :B, :C])
+end
+
+@testitem "GETCAND3RDFDC: Jeong (2022) Example 3 - infeasible when v in I fails GETDEP" tags =
+    [:unit] begin
+    include("helper-frontdoor.jl")
+    # R' = {B, C}: GETDEP returns nothing for v=B (Example 5), so if B is required
+    # via I, GETCAND3RDFDC must return nothing.
+    cg = _jeong2022_fig1b()
+    B = cg.backend
+    n = length(B.nodes)
+
+    x_idx = CausalGraphInterface.node_index(cg, :X)
+    x_set = falses(n)
+    x_set[x_idx] = true
+
+    y_mask = falses(n)
+    y_mask[CausalGraphInterface.node_index(cg, :Y)] = true
+
+    i_mask = falses(n)
+    i_mask[CausalGraphInterface.node_index(cg, :B)] = true  # B required, but GETDEP fails
+    r_prime_mask = falses(n)
+    for s in [:B, :C]
+        r_prime_mask[CausalGraphInterface.node_index(cg, s)] = true
+    end
+
+    @test CausalGraphInterface._getcand3rdfdc(B, x_set, y_mask, i_mask, r_prime_mask) ===
+          nothing
+end
+
 # ── Example 4: GETDEP ────────────────────────────────────────────────────────
 #
 # G' from Fig. 1b, I = {}, R' = {A, B, C} (output of GETCAND2NDFDC).
