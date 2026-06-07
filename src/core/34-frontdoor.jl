@@ -1,3 +1,43 @@
+"""
+    is_valid_frontdoor(cg::DAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+
+Return `true` if `z` satisfies the front-door criterion for the causal effect of
+`x` on `y` in `cg`.
+
+`z` is a valid front-door set if:
+1. `z` intercepts all directed paths from `x` to `y`.
+2. There are no unblocked backdoor paths from `x` to any node in `z` (given the
+   empty set).
+3. For every node `zi` in `z`, all backdoor paths from `zi` to `y` are blocked
+   by `x` together with the remaining nodes in `z` (i.e., conditioned on
+   `{x} ∪ (z \\ {zi})`).
+
+When these conditions hold, the causal effect is identified by the front-door
+formula, even in the presence of unmeasured confounders between `x` and `y`.
+
+# References
+
+Pearl, J. (2009). *Causality: Models, Reasoning and Inference* (2nd ed.).
+Cambridge University Press.
+
+Jeong, S., Tian, J., & Bareinboim, E. (2022). Finding and Listing Front-Door
+Adjustment Sets. *Advances in Neural Information Processing Systems*, 35.
+
+# Examples
+
+```jldoctest
+julia> cg = caugi(directed(:U, :X), directed(:X, :M), directed(:M, :Y), directed(:U, :Y); class = DAG);
+
+julia> is_valid_frontdoor(cg, :X, :Y, [:M])  # M mediates X -> Y and satisfies all conditions
+true
+
+julia> is_valid_frontdoor(cg, :X, :Y)         # empty Z leaves directed path X -> M -> Y open
+false
+
+julia> is_valid_frontdoor(cg, :X, :Y, [:U])   # U does not intercept X -> M -> Y
+false
+```
+"""
 function is_valid_frontdoor(
     cg::DAG,
     x::Symbol,
@@ -45,9 +85,15 @@ function is_valid_frontdoor(
         _d_separated_gx(B, [x_idx], [zi], Int[], x_set) || return false
     end
 
-    # Condition (iii): X blocks all backdoor paths from any Zi ∈ Z to Y.
-    for zi in z_idxs
-        is_valid_backdoor(cg, B.nodes[zi], y, [x]) || return false
+    # Condition (iii): All backdoor paths from each Zi ∈ Z to Y are blocked by
+    # X ∪ (Z \ {Zi}). Other members of Z can act as blockers alongside X.
+    # Checked via d-separation in G_{Zi} (Zi's outgoing edges removed).
+    zi_set = falses(n)
+    for (k, zi) in enumerate(z_idxs)
+        zi_set .= false
+        zi_set[zi] = true
+        cond_idxs = [x_idx; [z_idxs[j] for j in eachindex(z_idxs) if j != k]]
+        _d_separated_gx(B, [zi], [y_idx], cond_idxs, zi_set) || return false
     end
 
     return true
@@ -65,7 +111,7 @@ end
 # Reference: Jeong, Tian & Bareinboim (2022). Finding and Listing Front-Door
 #   Adjustment Sets. NeurIPS 2022.
 
-# Ancestors in G_X: follow edges backward, but skip edge p → u whenever p ∈ x_set,
+# Ancestors in G_X: follow edges backward, but skip edge p --> u whenever p ∈ x_set,
 # because those outgoing edges no longer exist in G_X.
 function _ancestors_bitmask_gx(B::DAGBackend, seeds::Vector{Int}, x_set::BitVector)
     n = length(B.nodes)
@@ -80,7 +126,7 @@ function _ancestors_bitmask_gx(B::DAGBackend, seeds::Vector{Int}, x_set::BitVect
     while !isempty(stack)
         u = pop!(stack)
         for p in _parents_slice(B, u)
-            x_set[p] && continue  # edge p → u is removed in G_X
+            x_set[p] && continue  # edge p --> u is removed in G_X
             if !mask[p]
                 mask[p] = true
                 push!(stack, p)
@@ -163,11 +209,12 @@ function _d_separated_gx(
     return true
 end
 
-# GETCAND2NDFDC from Jeong, Tian & Bareinboim (2022), Algorithm 2 / Subroutine 1 of FINDFDSET.
+# GETCAND2NDFDC from Jeong, Tian & Bareinboim (2022), Step 1 of FINDFDSET.
 #
-# Filters R down to variables with no unblocked backdoor path from X (2nd FDC
-# condition). Returns R' ⊆ R, or nothing if any variable in I (must-include)
-# has a backdoor path (making the constraint I ⊆ Z ⊆ R infeasible).
+# Returns R' ⊆ R: all v ∈ R for which TESTSEP(G_X, X, v, ∅) = true (no unblocked
+# backdoor path from X to v). Since a BD path from X to Z exists iff it exists to
+# some v ∈ Z, every Z with I ⊆ Z ⊆ R' is guaranteed to satisfy the 2nd front-door
+# condition. Returns nothing if any v ∈ I has a BD path from X (I ⊆ Z ⊆ R infeasible).
 function _getcand2ndfdc(
     B::DAGBackend,
     x_idxs::Vector{Int},

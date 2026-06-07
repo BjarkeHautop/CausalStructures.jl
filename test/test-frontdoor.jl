@@ -1,7 +1,7 @@
 using Test
 using CausalGraphInterface
 
-# Classic front-door graph: U -> X -> M -> Y, U -> Y
+# Classic front-door graph: U --> X --> M --> Y, U --> Y
 # M mediates the entire causal effect of X on Y; U is an unmeasured confounder.
 # Z = {M} is the canonical front-door set.
 
@@ -27,7 +27,7 @@ end
     @test !is_valid_frontdoor(cg, :X, :Y)
 end
 
-@testitem "is_valid_frontdoor: U fails condition (i) — does not intercept X -> M -> Y" tags =
+@testitem "is_valid_frontdoor: U fails condition (i) - does not intercept X -> M -> Y" tags =
     [:unit] begin
     cg = caugi(
         directed(:U, :X),
@@ -55,8 +55,8 @@ end
 
 @testitem "is_valid_frontdoor: condition (iii) fails when X does not block backdoor from Z to Y" tags =
     [:unit] begin
-    # X -> M, M -> Y, B -> M, B -> Y
-    # Backdoor path from M to Y: M <- B -> Y is not blocked by X.
+    # X --> M, M --> Y, B --> M, B --> Y
+    # Backdoor path from M to Y: M <-- B --> Y is not blocked by X.
     cg = caugi(
         directed(:X, :M),
         directed(:M, :Y),
@@ -67,8 +67,8 @@ end
     @test !is_valid_frontdoor(cg, :X, :Y, [:M])
 end
 
-@testitem "is_valid_frontdoor: X -> Y direct edge violates condition (i)" tags = [:unit] begin
-    # If there is a direct edge X -> Y alongside X -> M -> Y, then M alone does
+@testitem "is_valid_frontdoor: X --> Y direct edge violates condition (i)" tags = [:unit] begin
+    # If there is a direct edge X --> Y alongside X --> M --> Y, then M alone does
     # not intercept the direct path.
     cg = caugi(
         directed(:U, :X),
@@ -79,12 +79,12 @@ end
         class = DAG,
     )
     @test !is_valid_frontdoor(cg, :X, :Y, [:M])
-    # Both M and the direct path must be intercepted — no single node suffices.
+    # Both M and the direct path must be intercepted - no single node suffices.
     @test !is_valid_frontdoor(cg, :X, :Y, [:U])
 end
 
-@testitem "is_valid_frontdoor: chain mediators — each singleton is valid" tags = [:unit] begin
-    # U -> X -> M1 -> M2 -> Y, U -> Y
+@testitem "is_valid_frontdoor: chain mediators - each singleton is valid" tags = [:unit] begin
+    # U --> X --> M1 --> M2 --> Y, U --> Y
     # Both {M1} and {M2} individually intercept all directed paths.
     cg = caugi(
         directed(:U, :X),
@@ -99,9 +99,95 @@ end
     @test is_valid_frontdoor(cg, :X, :Y, [:M1, :M2])
 end
 
-@testitem "is_valid_frontdoor: no causal path — empty Z valid" tags = [:unit] begin
-    # X -> A, B -> Y: no directed path from X to Y at all.
+@testitem "is_valid_frontdoor: no causal path - empty Z valid" tags = [:unit] begin
+    # X --> A, B --> Y: no directed path from X to Y at all.
     # Empty Z vacuously intercepts all (zero) directed paths.
     cg = caugi(directed(:X, :A), directed(:B, :Y); class = DAG)
     @test is_valid_frontdoor(cg, :X, :Y)
+end
+
+# ── is_valid_frontdoor on G' (Fig. 1b) ───────────────────────────────────────
+
+@testitem "is_valid_frontdoor: Jeong Fig 1b - four valid sets" tags = [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig1b()
+    @test is_valid_frontdoor(cg, :X, :Y, [:A])
+    @test is_valid_frontdoor(cg, :X, :Y, [:A, :B])
+    @test is_valid_frontdoor(cg, :X, :Y, [:A, :C])
+    @test is_valid_frontdoor(cg, :X, :Y, [:A, :B, :C])
+end
+
+@testitem "is_valid_frontdoor: Jeong Fig 1b - invalid sets" tags = [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig1b()
+    @test !is_valid_frontdoor(cg, :X, :Y, [:B])       # condition (i): A -> C -> Y bypasses B
+    @test !is_valid_frontdoor(cg, :X, :Y, [:C])       # condition (i): A -> B -> Y bypasses C
+    @test !is_valid_frontdoor(cg, :X, :Y, [:D])       # condition (ii): BD path X <- U2 -> D
+    @test !is_valid_frontdoor(cg, :X, :Y, [:A, :D])   # condition (ii): D has BD path from X
+end
+
+# ── Example 2: GETCAND2NDFDC ─────────────────────────────────────────────────
+#
+# With I = ∅ and R = {A, B, C, D}, GETCAND2NDFDC outputs {A, B, C}.
+# D is excluded because TESTSEP(G_X, X, D, ∅) = false: the BD path X <- U2 -> D is open.
+
+@testitem "GETCAND2NDFDC: Jeong (2022) Example 2 - D excluded, A B C retained" tags =
+    [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig1b()
+    B = cg.backend
+    n = length(B.nodes)
+
+    x_idx = CausalGraphInterface.node_index(cg, :X)
+    x_set = falses(n)
+    x_set[x_idx] = true
+
+    # I = ∅, R = {A, B, C, D}
+    i_mask = falses(n)
+    r_mask = falses(n)
+    for s in [:A, :B, :C, :D]
+        r_mask[CausalGraphInterface.node_index(cg, s)] = true
+    end
+
+    r_prime = CausalGraphInterface._getcand2ndfdc(B, [x_idx], x_set, i_mask, r_mask)
+
+    @test r_prime !== nothing
+    @test Set(B.nodes[v] for v = 1:n if r_prime[v]) == Set([:A, :B, :C])
+end
+
+@testitem "GETCAND2NDFDC: Jeong (2022) Example 2 - infeasible when D ∈ I" tags = [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig1b()
+    B = cg.backend
+    n = length(B.nodes)
+
+    x_idx = CausalGraphInterface.node_index(cg, :X)
+    x_set = falses(n)
+    x_set[x_idx] = true
+
+    # I = {D}: D must be included but has a BD path from X --> infeasible
+    i_mask = falses(n)
+    i_mask[CausalGraphInterface.node_index(cg, :D)] = true
+    r_mask = falses(n)
+    for s in [:A, :B, :C, :D]
+        r_mask[CausalGraphInterface.node_index(cg, s)] = true
+    end
+
+    @test CausalGraphInterface._getcand2ndfdc(B, [x_idx], x_set, i_mask, r_mask) === nothing
+end
+
+# ── Example 1: FINDFDSET (broken until implemented) ──────────────────────────
+
+@testitem "FINDFDSET: Jeong (2022) Example 1 - broken until findfdset implemented" tags =
+    [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig1b()
+    # Graph G' from Fig. 1b.
+    # Expected outputs for findfdset(cg, :X, :Y; required, candidates):
+    #   required = {},    candidates = {A,B,C,D}  ->  {A,B,C}
+    #   required = {C},   candidates = {A,C}      ->  {A,C}
+    #   required = {D},   candidates = {A,B,C,D}  ->  nothing (infeasible)
+    @test_broken false
+    @test_broken false
+    @test_broken false
 end
