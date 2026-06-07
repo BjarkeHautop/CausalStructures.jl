@@ -21,7 +21,7 @@ dag = generate_graph(1000; p = 0.25, seed = 1405)
 Let's see how fast common queries such as finding parents, children, ancestors,
 and descendants are:
 
-```@repl performance
+```@example performance
 using BenchmarkTools
 node_name = :V45
 parents(dag, node_name); children(dag, node_name); ancestors(dag, node_name); descendants(dag, node_name);
@@ -35,7 +35,7 @@ parents(dag, node_name); children(dag, node_name); ancestors(dag, node_name); de
 Let's try a more complex query: finding a valid adjustment set using Pearl's
 backdoor criterion, and verifying it:
 
-```@repl performance
+```@example performance
 valid_adjustment_set = adjustment_set(dag, :V50, :V70, type = :backdoor)
 is_valid_backdoor(dag, :V50, :V70, valid_adjustment_set);
 @btime is_valid_backdoor(dag, $:V50, $:V70, $valid_adjustment_set)
@@ -43,7 +43,7 @@ is_valid_backdoor(dag, :V50, :V70, valid_adjustment_set);
 
 And finally, checking d-separation:
 
-```@repl performance
+```@example performance
 d_separated(dag, :V50, :V70, valid_adjustment_set)
 @btime d_separated(dag, $:V50, $:V70, $valid_adjustment_set)
 ```
@@ -116,13 +116,15 @@ bench::mark(
 </details>
 ```
 
-Here we show speed of finding parents for the different packages:
+Here we compare the speed of retrieving parent nodes across different packages:
 
-| median  | package               |
-| ------- | --------------------- |
-| 0.18 µs | CausalGraphInterface  |
-| 2.8 µs  | caugi                 |
-| 12µs    | bnlearn               |
-| 127 µs  | igraph                |
-| 5.1ms   | ggm                   |
-| 887ms   | daggity               |
+| **Median** | **Package**           |
+| ---------- | --------------------- |
+| 0.17 µs    | CausalGraphInterface  |
+| 2.8 µs     | caugi                 |
+| 12µs       | bnlearn               |
+| 127 µs     | igraph                |
+| 5.1ms      | ggm                   |
+| 887ms      | daggity               |
+
+As shown above, CausalGraphInterface is substantially faster than the competing R packages for a simple query such as retrieving parent nodes. The same pattern holds across all other benchmarked operations.
