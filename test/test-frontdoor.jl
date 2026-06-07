@@ -408,18 +408,27 @@ end
     @test children(:Y) == Set{Symbol}()   # outgoing from Y removed
 end
 
-# ── Example 1: FindFDSet (broken until implemented) ──────────────────────────
+# ── Example 1: FindFDSet ──────────────────────────────────────────────────────
 
-@testitem "FindFDSet: Jeong (2022) Example 1 - broken until FindFDSet implemented" tags =
-    [:unit] begin
+@testitem "FindFDSet: Jeong (2022) Example 1 - I={}, R={A,B,C,D}" tags = [:unit] begin
     include("helper-frontdoor.jl")
     cg = _jeong2022_fig1b()
-    # Graph G' from Fig. 1b.
-    # Expected outputs for FindFDSet(cg, :X, :Y; required, candidates):
-    #   required = {},    candidates = {A,B,C,D}  ->  {A,B,C}
-    #   required = {C},   candidates = {A,C}      ->  {A,C}
-    #   required = {D},   candidates = {A,B,C,D}  ->  nothing (infeasible)
-    @test_broken false
-    @test_broken false
-    @test_broken false
+    z = frontdoor_set(cg, :X, :Y; candidates = [:A, :B, :C, :D])
+    @test z !== nothing
+    @test Set(z) == Set([:A, :B, :C])
+end
+
+@testitem "FindFDSet: Jeong (2022) Example 1 - I={C}, R={A,C}" tags = [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig1b()
+    z = frontdoor_set(cg, :X, :Y; required = [:C], candidates = [:A, :C])
+    @test z !== nothing
+    @test Set(z) == Set([:A, :C])
+end
+
+@testitem "FindFDSet: Jeong (2022) Example 1 - I={D}, R={A,B,C,D} infeasible" tags = [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig1b()
+    @test frontdoor_set(cg, :X, :Y; required = [:D], candidates = [:A, :B, :C, :D]) ===
+          nothing
 end

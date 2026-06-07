@@ -101,6 +101,7 @@ d_separated
 m_separated
 minimal_separator
 adjustment_set
+frontdoor_set
 is_valid_backdoor
 all_backdoor_sets
 is_valid_frontdoor

@@ -438,3 +438,113 @@ function _getcand2ndfdc(
     end
     return r_prime
 end
+
+"""
+    frontdoor_set(cg::DAG, x, y; required=[], candidates) -> Vector{Symbol} or nothing
+
+Return a front-door adjustment set Z with `required ⊆ Z ⊆ candidates` satisfying
+all three front-door conditions relative to (`x`, `y`) in `cg`, or `nothing` if
+no such set exists.
+
+Implements Algorithm 1 of Jeong, Tian & Bareinboim (2022):
+- Step 1 (GETCAND2NDFDC): drop candidates that have a backdoor path from X.
+- Step 2 (GETCAND3RDFDC): drop candidates for which condition 3 cannot be met.
+- Step 3: check that the remaining set blocks all directed paths X --> Y.
+
+The returned set is the full R'' from Steps 1-2 (not necessarily minimal).
+
+# Examples
+
+```jldoctest
+julia> cg = caugi(directed(:U, :X), directed(:U, :Y), directed(:X, :Z), directed(:Z, :Y); class = DAG);
+
+julia> frontdoor_set(cg, :X, :Y; candidates = [:Z])
+1-element Vector{Symbol}:
+ :Z
+```
+
+```jldoctest
+julia> # Jeong (2022) Fig. 1b
+       cg = caugi(
+           directed(:U1, :X), directed(:U1, :Y), directed(:U2, :X), directed(:U2, :D),
+           directed(:X, :A), directed(:A, :B), directed(:A, :C), directed(:A, :D),
+           directed(:B, :Y), directed(:C, :Y), directed(:D, :Y);
+           class = DAG);
+
+julia> frontdoor_set(cg, :X, :Y; candidates = [:A, :B, :C, :D])
+3-element Vector{Symbol}:
+ :A
+ :B
+ :C
+
+julia> frontdoor_set(cg, :X, :Y; required = [:C], candidates = [:A, :C])
+2-element Vector{Symbol}:
+ :A
+ :C
+
+julia> frontdoor_set(cg, :X, :Y; required = [:D], candidates = [:A, :B, :C, :D]) === nothing
+true
+```
+
+# References
+
+Jeong, S., Tian, J., & Bareinboim, E. (2022). Finding and Listing Front-Door
+Adjustment Sets. *Advances in Neural Information Processing Systems*, 35.
+"""
+function frontdoor_set(
+    cg::DAG,
+    x::Symbol,
+    y::Symbol;
+    required::AbstractVector{Symbol} = Symbol[],
+    candidates::AbstractVector{Symbol},
+)
+    B = cg.backend
+    n = length(B.nodes)
+
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+
+    x_set = falses(n)
+    x_set[x_idx] = true
+    y_mask = falses(n)
+    y_mask[y_idx] = true
+
+    i_mask = falses(n)
+    for s in required
+        i_mask[node_index(cg, s)] = true
+    end
+    r_mask = falses(n)
+    for s in candidates
+        r_mask[node_index(cg, s)] = true
+    end
+
+    # Step 1: filter out candidates with a backdoor path from X (condition 2)
+    r_prime = _getcand2ndfdc(B, [x_idx], x_set, i_mask, r_mask)
+    r_prime === nothing && return nothing
+
+    # Step 2: filter out candidates for which condition 3 cannot be satisfied
+    r_dbl_prime = _getcand3rdfdc(B, x_set, y_mask, i_mask, r_prime)
+    r_dbl_prime === nothing && return nothing
+
+    # Step 3: check condition 1 via forward reachability in the causal path graph.
+    # R'' blocks all directed X --> Y paths iff Y is not reachable from X in CPG
+    # after treating R'' nodes as walls.
+    _, cpg_children = _get_causal_path_graph(B, x_set, y_mask)
+    visited = falses(n)
+    visited[x_idx] = true
+    queue = Int[x_idx]
+    head = 1
+    while head <= length(queue)
+        u = queue[head];
+        head += 1
+        for c in cpg_children[u]
+            r_dbl_prime[c] && continue   # wall: R'' intercepts here
+            c == y_idx && return nothing  # Y reachable => condition 1 fails
+            visited[c] && continue
+            visited[c] = true
+            push!(queue, c)
+        end
+    end
+
+    return [B.nodes[v] for v = 1:n if r_dbl_prime[v]]
+end
