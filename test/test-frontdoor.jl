@@ -176,14 +176,142 @@ end
     @test CausalGraphInterface._getcand2ndfdc(B, [x_idx], x_set, i_mask, r_mask) === nothing
 end
 
-# ── Example 1: FINDFDSET (broken until implemented) ──────────────────────────
+# ── Example 4: GETDEP ────────────────────────────────────────────────────────
+#
+# G' from Fig. 1b, I = {}, R' = {A, B, C} (output of GETCAND2NDFDC).
+#   v = A => T = {A}, GETDEP returns Z' = {}
+#   v = B => T = {B}, GETDEP returns Z' = {A}   (Example 4 in the paper)
+#   v = C => T = {C}, GETDEP returns Z' = {A}
 
-@testitem "FINDFDSET: Jeong (2022) Example 1 - broken until findfdset implemented" tags =
+@testitem "GETDEP: Jeong (2022) Example 4 - T={A}" tags = [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig1b()
+    B = cg.backend
+    n = length(B.nodes)
+
+    x_idx = CausalGraphInterface.node_index(cg, :X)
+    x_set = falses(n)
+    x_set[x_idx] = true
+
+    y_mask = falses(n)
+    y_mask[CausalGraphInterface.node_index(cg, :Y)] = true
+
+    r_prime_mask = falses(n)
+    for s in [:A, :B, :C]
+        r_prime_mask[CausalGraphInterface.node_index(cg, s)] = true
+    end
+
+    t_mask = falses(n)
+    t_mask[CausalGraphInterface.node_index(cg, :A)] = true
+
+    z_prime = CausalGraphInterface._get_dep(B, x_set, y_mask, t_mask, r_prime_mask)
+
+    @test z_prime !== nothing
+    @test Set(B.nodes[v] for v = 1:n if z_prime[v]) == Set{Symbol}()
+end
+
+@testitem "GETDEP: Jeong (2022) Example 4 - T={B}" tags = [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig1b()
+    B = cg.backend
+    n = length(B.nodes)
+
+    x_idx = CausalGraphInterface.node_index(cg, :X)
+    x_set = falses(n)
+    x_set[x_idx] = true
+
+    y_mask = falses(n)
+    y_mask[CausalGraphInterface.node_index(cg, :Y)] = true
+
+    r_prime_mask = falses(n)
+    for s in [:A, :B, :C]
+        r_prime_mask[CausalGraphInterface.node_index(cg, s)] = true
+    end
+
+    t_mask = falses(n)
+    t_mask[CausalGraphInterface.node_index(cg, :B)] = true
+
+    z_prime = CausalGraphInterface._get_dep(B, x_set, y_mask, t_mask, r_prime_mask)
+
+    @test z_prime !== nothing
+    @test Set(B.nodes[v] for v = 1:n if z_prime[v]) == Set([:A])
+end
+
+@testitem "GETDEP: Jeong (2022) Example 4 - T={C}" tags = [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig1b()
+    B = cg.backend
+    n = length(B.nodes)
+
+    x_idx = CausalGraphInterface.node_index(cg, :X)
+    x_set = falses(n)
+    x_set[x_idx] = true
+
+    y_mask = falses(n)
+    y_mask[CausalGraphInterface.node_index(cg, :Y)] = true
+
+    r_prime_mask = falses(n)
+    for s in [:A, :B, :C]
+        r_prime_mask[CausalGraphInterface.node_index(cg, s)] = true
+    end
+
+    t_mask = falses(n)
+    t_mask[CausalGraphInterface.node_index(cg, :C)] = true
+
+    z_prime = CausalGraphInterface._get_dep(B, x_set, y_mask, t_mask, r_prime_mask)
+
+    @test z_prime !== nothing
+    @test Set(B.nodes[v] for v = 1:n if z_prime[v]) == Set([:A])
+end
+
+# ── Example 5: GETDEP with smaller R' => returns nothing ─────────────────────
+#
+# With R' = {B, C} and T = {B}, GETDEP cannot disconnect all BD paths from T to
+# Y while staying within R' \ T = {C}.  The BFS reaches Y (through D --> Y in M)
+# before exhausting the queue, so GETDEP returns nothing.
+#
+# BFS trace (explicit latent-node DAG):
+#   u=B  => NR={} (A not in R'), N'={A}              => Q=[A]
+#   u=A  => NR={C}, update M to G'_{B,C},
+#           N'={C,D,U2}, NR'={C}                     => Q=[C,D,U2]
+#   u=C  => NR={}, N'={}
+#   u=D  => NR={} (Y,U1 not in R'), N'={Y,U1}        => Q grows
+#   u=U2 => all neighbors visited
+#   u=Y  => u in Y => return nothing
+
+@testitem "GETDEP: Jeong (2022) Example 5 - R'={B,C}, T={B} returns nothing" tags = [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig1b()
+    B = cg.backend
+    n = length(B.nodes)
+
+    x_idx = CausalGraphInterface.node_index(cg, :X)
+    x_set = falses(n)
+    x_set[x_idx] = true
+
+    y_mask = falses(n)
+    y_mask[CausalGraphInterface.node_index(cg, :Y)] = true
+
+    # R' = {B, C} — smaller candidate pool than Example 4
+    r_prime_mask = falses(n)
+    for s in [:B, :C]
+        r_prime_mask[CausalGraphInterface.node_index(cg, s)] = true
+    end
+
+    t_mask = falses(n)
+    t_mask[CausalGraphInterface.node_index(cg, :B)] = true
+
+    @test CausalGraphInterface._get_dep(B, x_set, y_mask, t_mask, r_prime_mask) === nothing
+end
+
+# ── Example 1: FindFDSet (broken until implemented) ──────────────────────────
+
+@testitem "FindFDSet: Jeong (2022) Example 1 - broken until FindFDSet implemented" tags =
     [:unit] begin
     include("helper-frontdoor.jl")
     cg = _jeong2022_fig1b()
     # Graph G' from Fig. 1b.
-    # Expected outputs for findfdset(cg, :X, :Y; required, candidates):
+    # Expected outputs for FindFDSet(cg, :X, :Y; required, candidates):
     #   required = {},    candidates = {A,B,C,D}  ->  {A,B,C}
     #   required = {C},   candidates = {A,C}      ->  {A,C}
     #   required = {D},   candidates = {A,B,C,D}  ->  nothing (infeasible)

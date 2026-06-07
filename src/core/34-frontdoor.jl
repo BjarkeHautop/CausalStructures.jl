@@ -209,7 +209,101 @@ function _d_separated_gx(
     return true
 end
 
-# GETCAND2NDFDC from Jeong, Tian & Bareinboim (2022), Step 1 of FINDFDSET.
+# GETDEP from Jeong, Tian & Bareinboim (2022), helper for Step 2 of FindFDSet.
+#
+# Given T (a candidate set), R' (the filtered candidate pool from Step 1), X, and Y,
+# finds a set Z' ⊆ R' \ T such that T ∪ Z' satisfies the third FD condition relative
+# to (X, Y), or returns nothing (⊥) if no such Z' exists.
+#
+# The BFS traverses the moralized graph of G'_T (ancestors of T∪X∪Y, with T's
+# outgoing edges removed), with X removed as a node (blocked in BFS).  Latent
+# nodes are traversed because BD paths can route through them; only nodes in R'
+# are candidates for Z'.
+#
+# Reference: Jeong, Tian & Bareinboim (2022). Finding and Listing Front-Door
+#   Adjustment Sets. NeurIPS 2022. Algorithm 4.
+function _get_dep(
+    B::DAGBackend,
+    x_set::BitVector,
+    y_mask::BitVector,
+    t_mask::BitVector,
+    r_prime_mask::BitVector,
+)
+    n = length(B.nodes)
+
+    # G' = G restricted to An(T ∪ X ∪ Y) in G (full graph, no edges removed for ancestors)
+    seeds = Int[]
+    for v = 1:n
+        (t_mask[v] || x_set[v] || y_mask[v]) && push!(seeds, v)
+    end
+    an_mask = _ancestors_bitmask_gx(B, seeds, falses(n))
+
+    # G'' = G'_T initially; removed_mask grows with Z' as the BFS adds nodes
+    removed_mask = copy(t_mask)
+    adj = _moral_adj_gx(B, an_mask, removed_mask)
+
+    # BFS: visited includes X (removed from M) and all T nodes (starting queue)
+    z_prime = falses(n)
+    visited = falses(n)
+    queue = Int[]
+    for v = 1:n
+        x_set[v] && (visited[v] = true)
+    end
+    for v = 1:n
+        if t_mask[v] && !visited[v]
+            visited[v] = true
+            push!(queue, v)
+        end
+    end
+
+    head = 1
+    while head <= length(queue)
+        u = queue[head]
+        head += 1
+
+        y_mask[u] && return nothing  # Y reachable => no valid Z' exists
+
+        # NR = unvisited neighbors of u in current M that are in R'
+        nr_mask = falses(n)
+        for w in adj[u]
+            (r_prime_mask[w] && !visited[w]) && (nr_mask[w] = true)
+        end
+
+        # Update G'' (add NR to removed_mask) and recompute M
+        updated = false
+        for v = 1:n
+            if nr_mask[v]
+                removed_mask[v] = true
+                z_prime[v] = true
+                updated = true
+            end
+        end
+        updated && (adj = _moral_adj_gx(B, an_mask, removed_mask))
+
+        # N' = unvisited neighbors of u in new M (includes latent nodes)
+        n_set = falses(n)
+        for w in adj[u]
+            !visited[w] && (n_set[w] = true)
+        end
+
+        # NR' = {w ∈ NR | w has an incoming arrow in G}; must also be BFS-ed
+        for v = 1:n
+            (nr_mask[v] && !isempty(_parents_slice(B, v))) && (n_set[v] = true)
+        end
+
+        # Insert N = N' ∪ NR' into queue
+        for v = 1:n
+            if n_set[v] && !visited[v]
+                visited[v] = true
+                push!(queue, v)
+            end
+        end
+    end
+
+    return z_prime
+end
+
+# GETCAND2NDFDC from Jeong, Tian & Bareinboim (2022), Step 1 of FindFDSet.
 #
 # Returns R' ⊆ R: all v ∈ R for which TESTSEP(G_X, X, v, ∅) = true (no unblocked
 # backdoor path from X to v). Since a BD path from X to Z exists iff it exists to
