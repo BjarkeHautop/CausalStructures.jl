@@ -137,10 +137,7 @@ end
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
-
-    x_idx = CausalGraphInterface.node_index(cg, :X)
-    x_set = falses(n)
-    x_set[x_idx] = true
+    gx = CausalGraphInterface._build_gx(cg, :X)
 
     # I = ∅, R = {A, B, C, D}
     i_mask = falses(n)
@@ -149,7 +146,7 @@ end
         r_mask[CausalGraphInterface.node_index(cg, s)] = true
     end
 
-    r_prime = CausalGraphInterface._getcand2ndfdc(B, [x_idx], x_set, i_mask, r_mask)
+    r_prime = CausalGraphInterface._getcand2ndfdc(gx, :X, B.nodes, i_mask, r_mask)
 
     @test r_prime !== nothing
     @test Set(B.nodes[v] for v = 1:n if r_prime[v]) == Set([:A, :B, :C])
@@ -160,10 +157,7 @@ end
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
-
-    x_idx = CausalGraphInterface.node_index(cg, :X)
-    x_set = falses(n)
-    x_set[x_idx] = true
+    gx = CausalGraphInterface._build_gx(cg, :X)
 
     # I = {D}: D must be included but has a BD path from X --> infeasible
     i_mask = falses(n)
@@ -173,7 +167,7 @@ end
         r_mask[CausalGraphInterface.node_index(cg, s)] = true
     end
 
-    @test CausalGraphInterface._getcand2ndfdc(B, [x_idx], x_set, i_mask, r_mask) === nothing
+    @test CausalGraphInterface._getcand2ndfdc(gx, :X, B.nodes, i_mask, r_mask) === nothing
 end
 
 # ── Example 3: GETCAND3RDFDC ─────────────────────────────────────────────────
