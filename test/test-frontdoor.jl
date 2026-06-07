@@ -362,6 +362,52 @@ end
     @test CausalGraphInterface._get_dep(B, x_set, y_mask, t_mask, r_prime_mask) === nothing
 end
 
+# ── Example 7: GETCAUSALPATHGRAPH ────────────────────────────────────────────
+#
+# G' from Fig. 1b, X = {X}, Y = {Y}.
+# PCP = (De(X) \ X) ∩ An(Y, G_{overline{X}}) = {A, B, C, D} (and Y itself).
+# CPG nodes = {X, A, B, C, D, Y}  (latent U1, U2 excluded).
+# CPG edges: X --> A --> {B, C, D} --> Y (incoming to X and outgoing from Y removed).
+
+@testitem "GETCAUSALPATHGRAPH: Jeong (2022) Example 7 - node set" tags = [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig1b()
+    B = cg.backend
+    n = length(B.nodes)
+
+    x_set = falses(n)
+    x_set[CausalGraphInterface.node_index(cg, :X)] = true
+    y_mask = falses(n)
+    y_mask[CausalGraphInterface.node_index(cg, :Y)] = true
+
+    cpg_mask, _ = CausalGraphInterface._get_causal_path_graph(B, x_set, y_mask)
+
+    @test Set(B.nodes[v] for v = 1:n if cpg_mask[v]) == Set([:X, :A, :B, :C, :D, :Y])
+end
+
+@testitem "GETCAUSALPATHGRAPH: Jeong (2022) Example 7 - edges" tags = [:unit] begin
+    include("helper-frontdoor.jl")
+    cg = _jeong2022_fig1b()
+    B = cg.backend
+    n = length(B.nodes)
+
+    x_set = falses(n)
+    x_set[CausalGraphInterface.node_index(cg, :X)] = true
+    y_mask = falses(n)
+    y_mask[CausalGraphInterface.node_index(cg, :Y)] = true
+
+    _, cpg_children = CausalGraphInterface._get_causal_path_graph(B, x_set, y_mask)
+
+    children(s) =
+        Set(B.nodes[c] for c in cpg_children[CausalGraphInterface.node_index(cg, s)])
+    @test children(:X) == Set([:A])
+    @test children(:A) == Set([:B, :C, :D])
+    @test children(:B) == Set([:Y])
+    @test children(:C) == Set([:Y])
+    @test children(:D) == Set([:Y])
+    @test children(:Y) == Set{Symbol}()   # outgoing from Y removed
+end
+
 # ── Example 1: FindFDSet (broken until implemented) ──────────────────────────
 
 @testitem "FindFDSet: Jeong (2022) Example 1 - broken until FindFDSet implemented" tags =

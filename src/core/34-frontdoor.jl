@@ -303,6 +303,85 @@ function _get_dep(
     return z_prime
 end
 
+# GETCAUSALPATHGRAPH from Jeong, Tian & Bareinboim (2022), helper for Step 3 of FindFDSet.
+#
+# Constructs the causal path graph G' relative to (G, X, Y):
+#   PCP(X,Y) = (De(X) \ X) ∩ An(Y)_{G_{overline{X}}}
+#   G'' = G restricted to X ∪ Y ∪ PCP(X,Y)
+#   G' = G''_{overline{X} underline{Y}}:
+# (bidirected edges removed, which is a no-op for an explicit-latent DAG)
+# overline{X} = delete incoming edges to X (do(X)),
+# underline{Y} = delete outgoing edges from Y (condition on Y)
+#
+# Returns (cpg_mask, cpg_children) where cpg_mask marks the CPG node set and
+# cpg_children[v] lists the directed children of v in G'.
+function _get_causal_path_graph(B::DAGBackend, x_set::BitVector, y_mask::BitVector)
+    n = length(B.nodes)
+
+    # De(X) in G: BFS forward along directed edges from X
+    de_x = falses(n)
+    queue = Int[]
+    for v = 1:n
+        if x_set[v]
+            de_x[v] = true
+            push!(queue, v)
+        end
+    end
+    head = 1
+    while head <= length(queue)
+        u = queue[head];
+        head += 1
+        for c in _children_slice(B, u)
+            de_x[c] && continue
+            de_x[c] = true
+            push!(queue, c)
+        end
+    end
+
+    # An(Y) in G_{overline{X}}: BFS backward from Y; skip parents of X nodes
+    # (G_{overline{X}} has all incoming edges to X removed)
+    an_y = falses(n)
+    queue2 = Int[]
+    for v = 1:n
+        if y_mask[v]
+            an_y[v] = true
+            push!(queue2, v)
+        end
+    end
+    head = 1
+    while head <= length(queue2)
+        u = queue2[head];
+        head += 1
+        x_set[u] && continue  # incoming to X removed: don't traverse X's parents
+        for p in _parents_slice(B, u)
+            an_y[p] && continue
+            an_y[p] = true
+            push!(queue2, p)
+        end
+    end
+
+    # PCP(X,Y) = (De(X) \ X) ∩ An(Y, G_{overline{X}})
+    # CPG nodes = X ∪ Y ∪ PCP
+    cpg_mask = falses(n)
+    for v = 1:n
+        cpg_mask[v] = x_set[v] || y_mask[v] || (de_x[v] && !x_set[v] && an_y[v])
+    end
+
+    # CPG edges: directed edges among CPG nodes, excluding incoming to X and outgoing from Y
+    cpg_children = [Int[] for _ = 1:n]
+    for u = 1:n
+        cpg_mask[u] || continue
+        y_mask[u] && continue  # outgoing from Y removed
+        for c in _children_slice(B, u)
+            cpg_mask[c] || continue
+            x_set[c] && continue  # incoming to X removed
+            push!(cpg_children[u], c)
+        end
+    end
+
+    return cpg_mask, cpg_children
+end
+
 # GETCAND3RDFDC from Jeong, Tian & Bareinboim (2022), Step 2 of FindFDSet.
 #
 # Returns R'' ⊆ R': all v ∈ R' for which GETDEP(G, X, Y, {v}, R') != nothing,
