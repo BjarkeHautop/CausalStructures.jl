@@ -92,6 +92,7 @@ normalize_latent_structure
 condition_marginalize
 enumerate_dags
 count_dags
+ag_to_mag
 ```
 
 ## Separation & Adjustment

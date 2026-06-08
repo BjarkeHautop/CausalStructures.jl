@@ -321,3 +321,70 @@ function dag_to_cpdag(cg::DAG)
     result = meek_closure(pdag)
     return CPDAG(Set(result.backend.nodes), result.edges)
 end
+
+"""
+    ag_to_mag(cg::AG) -> MAG
+
+Convert an [`AG`](@ref) to a Markov equivalent [`MAG`](@ref) by adding edges
+between every pair of non-adjacent vertices that cannot be m-separated by any
+subset of the remaining nodes.
+
+For each non-separable pair (u, v), the edge type is determined by the
+ancestor relationship in the current graph:
+- u ancestor of v --> add u --> v
+- v ancestor of u --> add v --> u
+- Neither --> add u <-> v (bidirected)
+
+Edges are added one at a time and the graph is re-evaluated after each addition,
+since each new edge can change m-separation and ancestor relationships.
+If `cg` is already maximal (is a MAG), it is returned unchanged.
+
+# Examples
+
+```jldoctest
+julia> ag = caugi(directed(:A, :B), directed(:B, :C); class = AG);
+
+julia> ag_to_mag(ag)
+MAG with 3 nodes and 2 edges:
+  nodes: A, B, C
+  edges:
+    A --> B, B --> C
+```
+
+# References
+
+Richardson, T. & Spirtes, P. (2002). Ancestral graph Markov models.
+*Annals of Statistics*, 30(4):962-1030.
+"""
+function ag_to_mag(cg::AG)
+    all_nodes = Set(nodes(cg))
+    all_edges = copy(cg.edges)
+
+    while true
+        current = AG(all_nodes, all_edges)
+        B = current.backend
+        n = length(B.nodes)
+
+        found = false
+        for u = 1:n, v = (u+1):n
+            v ∈ _all_nbrs_slice(B, u) && continue
+            candidates = [B.nodes[w] for w = 1:n if w != u && w != v]
+            _mag_search_sep(current, B.nodes[u], B.nodes[v], candidates, Symbol[], 1) &&
+                continue
+            u_sym, v_sym = B.nodes[u], B.nodes[v]
+            if u_sym ∈ ancestors(current, v_sym)
+                push!(all_edges, directed(u_sym, v_sym))
+            elseif v_sym ∈ ancestors(current, u_sym)
+                push!(all_edges, directed(v_sym, u_sym))
+            else
+                push!(all_edges, bidirected(u_sym, v_sym))
+            end
+            found = true
+            break
+        end
+
+        !found && break
+    end
+
+    return MAG(all_nodes, all_edges)
+end

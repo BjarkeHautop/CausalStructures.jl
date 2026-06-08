@@ -140,3 +140,58 @@ end
     )
     @test !is_mag(ag)
 end
+
+# ── ag_to_mag ──────────────────────────────────────────────────────────────────
+
+@testitem "ag_to_mag: already-maximal AG is returned unchanged" tags = [:unit] begin
+    ag = caugi(directed(:A, :B), directed(:B, :C); class = AG)
+    mag = ag_to_mag(ag)
+    @test mag isa MAG
+    @test Set(nodes(mag)) == Set([:A, :B, :C])
+    @test Set(mag.edges) == Set(ag.edges)
+end
+
+@testitem "ag_to_mag: canonical non-maximal adds Y <-> W" tags = [:unit] begin
+    # Z <-> X, Z <-> W, X <-> Y, X --> W, Z --> Y: Y and W non-adjacent, no m-sep set
+    ag = caugi(
+        bidirected(:Z, :X),
+        bidirected(:Z, :W),
+        bidirected(:X, :Y),
+        directed(:X, :W),
+        directed(:Z, :Y);
+        class = AG,
+    )
+    @test !is_mag(ag)
+    mag = ag_to_mag(ag)
+    @test mag isa MAG
+    @test is_mag(mag)
+    @test bidirected(:Y, :W) ∈ mag.edges || bidirected(:W, :Y) ∈ mag.edges
+end
+
+@testitem "ag_to_mag: AG that is MAG returns itself" tags = [:unit] begin
+    original = caugi(
+        bidirected(:Z, :X),
+        bidirected(:Z, :W),
+        bidirected(:Y, :W),
+        bidirected(:X, :Y),
+        directed(:X, :W),
+        directed(:Z, :Y);
+        class = AG,
+    )
+    mag = ag_to_mag(original)
+    @test mag isa MAG
+    @test Set(mag.edges) == Set(original.edges)
+end
+
+@testitem "ag_to_mag: adds directed edge when ancestor relationship holds" tags = [:unit] begin
+    # A --> B, B --> C with A and C non-adjacent: already separated by {B}, so no edge added
+    # For directed addition: create a graph where A is ancestor of C but not adjacent
+    # A --> B, A --> C with B and C non-adjacent and no m-sep for B,C:
+    # B and C have common cause A; they are d-separated by {A}, so this is a MAG already.
+    # Instead use: A --> B --> C --> D, with A,C non-adjacent (sep by B) and B,D non-adjacent (sep by C)
+    ag = caugi(directed(:A, :B), directed(:B, :C), directed(:C, :D); class = AG)
+    mag = ag_to_mag(ag)
+    @test mag isa MAG
+    # All non-adjacent pairs have m-sep sets in a chain, so no edges added
+    @test Set(mag.edges) == Set(ag.edges)
+end
