@@ -3,8 +3,8 @@
 """
     is_dag(cg::CausalGraph)   -> Bool
 
-Check whether `cg` satisfies the structural constraints of the given graph class,
-independent of its declared graph class.
+Check whether `cg` satisfies the structural constraints of a [`DAG`](@ref)
+(directed acyclic graph), independent of its declared graph class.
 
 # Examples
 
@@ -20,15 +20,15 @@ is_dag(cg::CausalGraph) = _class_matches_or_satisfies(cg, DAGConstraints())
 """
     is_pdag(cg::CausalGraph) -> Bool
 
-Check whether `cg` satisfies the structural constraints of the given graph class,
-independent of its declared graph class.
+Check whether `cg` satisfies the structural constraints of a [`PDAG`](@ref)
+(partially directed acyclic graph), independent of its declared graph class.
 
 # Examples
 
 ```jldoctest
-julia> pdag = caugi(directed(:A, :B), directed(:B, :C); class = PDAG);
+julia> cg = caugi(directed(:A, :B), undirected(:B, :C); class = UNKNOWN);
 
-julia> is_dag(pdag)
+julia> is_pdag(cg)
 true
 ```
 """
@@ -37,8 +37,8 @@ is_pdag(cg::CausalGraph) = _class_matches_or_satisfies(cg, PDAGConstraints())
 """
     is_cpdag(cg::CausalGraph) -> Bool
 
-Check whether `cg` satisfies the structural constraints of the given graph class,
-independent of its declared graph class.
+Check whether `cg` satisfies the structural constraints of a [`CPDAG`](@ref)
+(completed partially directed acyclic graphs ), independent of its declared graph class.
 
 # Examples
 
@@ -54,18 +54,16 @@ is_cpdag(cg::CausalGraph) = _class_matches_or_satisfies(cg, CPDAGConstraints())
 """
     is_mpdag(cg::CausalGraph) -> Bool
 
-Check whether `cg` satisfies the structural constraints of an MPDAG
-(a PDAG closed under Meek's orientation rules R1–R4), independent of its
+Check whether `cg` satisfies the structural constraints of a [`MPDAG`](@ref)
+(maximally oriented partially directed acyclic graph), independent of its
 declared graph class.
-
-Every [`CPDAG`](@ref) is also an MPDAG; the converse does not hold in general.
 
 # Examples
 
 ```jldoctest
-julia> mpdag = caugi(directed(:A, :B), directed(:B, :C); class = MPDAG);
+julia> dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> is_mpdag(mpdag)
+julia> is_mpdag(dag)
 true
 
 julia> pdag = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG);
@@ -79,8 +77,8 @@ is_mpdag(cg::CausalGraph) = _class_matches_or_satisfies(cg, MPDAGConstraints())
 """
     is_ug(cg::CausalGraph) -> Bool
 
-Check whether `cg` satisfies the structural constraints of the given graph class,
-independent of its declared graph class.
+Check whether `cg` satisfies the structural constraints of a [`UG`](@ref)
+(undirected graph), independent of its declared graph class.
 
 # Examples
 
@@ -96,8 +94,8 @@ is_ug(cg::CausalGraph) = _class_matches_or_satisfies(cg, UGConstraints())
 """
     is_admg(cg::CausalGraph) -> Bool
 
-Check whether `cg` satisfies the structural constraints of the given graph class,
-independent of its declared graph class.
+Check whether `cg` satisfies the structural constraints of a [`ADMG`](@ref)
+(acyclic directed mixed graph), independent of its declared graph class.
 
 # Examples
 
@@ -130,16 +128,15 @@ is_ag(cg::CausalGraph) = _class_matches_or_satisfies(cg, AGConstraints())
 """
     is_mag(cg::CausalGraph) -> Bool
 
-Check whether `cg` satisfies the structural constraints of a MAG (a maximal ancestral
-graph): an [`AG`](@ref) in which every pair of non-adjacent nodes is m-separated by
-some subset of the remaining nodes.
+Check whether `cg` satisfies the structural constraints of a [`MAG`](@ref)
+(maximal ancestral graph), independent of its declared graph class.
 
 # Examples
 
 ```jldoctest
-julia> mag = caugi(directed(:A, :B), directed(:B, :C); class = MAG);
+julia> ag = caugi(directed(:A, :B), directed(:B, :C); class = AG);
 
-julia> is_mag(mag)
+julia> is_mag(ag)
 true
 
 julia> ag = caugi(bidirected(:Z, :X), bidirected(:Z, :W), bidirected(:X, :Y),
@@ -188,6 +185,11 @@ julia> cg = caugi(directed(:A, :B); class = DAG);
 
 julia> is_simple(cg)
 true
+
+julia> unk = caugi(directed(:A, :B), directed(:A, :B); simple = false, class = UNKNOWN);
+
+julia> is_simple(unk)
+false
 ```
 """
 function is_simple(cg::CausalGraph)
