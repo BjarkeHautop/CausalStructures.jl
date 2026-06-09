@@ -75,6 +75,7 @@ is_ag
 is_mag
 is_simple
 is_acyclic
+markov_equivalent
 ```
 
 ## Operations

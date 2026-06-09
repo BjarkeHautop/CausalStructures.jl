@@ -511,3 +511,96 @@ end
     @test mg isa AG
     @test :U ∉ nodes(mg)
 end
+
+# ── markov_equivalent ─────────────────────────────────────────────────────
+
+@testitem "markov_equivalent: identical DAGs are equivalent" tags = [:unit] begin
+    g1 = caugi(directed(:A, :B), directed(:C, :B); class = DAG)
+    g2 = caugi(directed(:A, :B), directed(:C, :B); class = DAG)
+    @test markov_equivalent(g1, g2)
+end
+
+@testitem "markov_equivalent: reversed chain is equivalent" tags = [:unit] begin
+    # A --> B --> C and C --> B --> A have the same skeleton and no v-structures
+    g1 = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    g2 = caugi(directed(:C, :B), directed(:B, :A); class = DAG)
+    @test markov_equivalent(g1, g2)
+end
+
+@testitem "markov_equivalent: fork equivalent to chain" tags = [:unit] begin
+    # B --> A, B --> C (fork) vs A --> B --> C (chain) -- same skeleton, no v-structures
+    fork = caugi(directed(:B, :A), directed(:B, :C); class = DAG)
+    chain = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    @test markov_equivalent(fork, chain)
+end
+
+@testitem "markov_equivalent: v-structure vs chain is not equivalent" tags = [:unit] begin
+    # A --> B <-- C (v-structure, A-C not adjacent)
+    # vs A --> B --> C (chain, no v-structure)
+    vstr = caugi(directed(:A, :B), directed(:C, :B); class = DAG)
+    chain = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    @test !markov_equivalent(vstr, chain)
+end
+
+@testitem "markov_equivalent: different skeletons are not equivalent" tags = [:unit] begin
+    g1 = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    g2 = caugi(directed(:A, :B), directed(:A, :C); class = DAG)
+    @test !markov_equivalent(g1, g2)
+end
+
+@testitem "markov_equivalent: different node sets are not equivalent" tags = [:unit] begin
+    g1 = caugi(directed(:A, :B); class = DAG)
+    g2 = caugi(directed(:A, :C); class = DAG)
+    @test !markov_equivalent(g1, g2)
+end
+
+@testitem "markov_equivalent: single-node DAGs are equivalent" tags = [:unit] begin
+    g1 = caugi(node(:A); class = DAG)
+    g2 = caugi(node(:A); class = DAG)
+    @test markov_equivalent(g1, g2)
+end
+
+@testitem "markov_equivalent: shielded collider does not count as v-structure" tags =
+    [:unit] begin
+    # A --> B <-- C with A-C adjacent is shielded -- all orientations of this
+    # triangle are equivalent (no v-structure distinguishes them).
+    triangle_v = caugi(directed(:A, :B), directed(:C, :B), directed(:A, :C); class = DAG)
+    triangle_c = caugi(directed(:A, :B), directed(:C, :B), directed(:C, :A); class = DAG)
+    @test markov_equivalent(triangle_v, triangle_c)
+end
+
+@testitem "markov_equivalent: consistent with dag_to_cpdag" tags = [:unit] begin
+    # Enumerate all DAGs on 3 nodes and verify: g1,g2 Markov equivalent
+    # iff dag_to_cpdag gives the same edge set.
+    function cpdag_edges(g)
+        cp = dag_to_cpdag(g)
+        Set(Set([e.src, e.dst]) => (e.src_end, e.dst_end) for e in cp.edges)
+    end
+    same_cpdag(g1, g2) = begin
+        cp1 = dag_to_cpdag(g1)
+        cp2 = dag_to_cpdag(g2)
+        Set(cp1.edges) == Set(cp2.edges)
+    end
+    nodes3 = [:X, :Y, :Z]
+    all_edges = [
+        directed(:X, :Y),
+        directed(:Y, :X),
+        directed(:X, :Z),
+        directed(:Z, :X),
+        directed(:Y, :Z),
+        directed(:Z, :Y),
+    ]
+    # Build all acyclic subsets
+    dags = DAG[]
+    for mask = 0:(2^6-1)
+        selected = [all_edges[i] for i = 1:6 if (mask >> (i-1)) & 1 == 1]
+        try
+            g = caugi(selected..., node(:X), node(:Y), node(:Z); class = DAG)
+            push!(dags, g)
+        catch
+        end
+    end
+    for i in eachindex(dags), j in eachindex(dags)
+        @test markov_equivalent(dags[i], dags[j]) == same_cpdag(dags[i], dags[j])
+    end
+end

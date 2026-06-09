@@ -1,5 +1,3 @@
-# PDAG/CPDAG algorithms: dag_from_pdag, meek_closure, dag_to_cpdag
-#
 # Adapted from caugi:
 #   caugi/src/rust/src/graph/pdag/transforms.rs  (dag_from_pdag)
 #   caugi/src/rust/src/graph/alg/meek.rs         (meek_closure)
@@ -320,6 +318,88 @@ function dag_to_cpdag(cg::DAG)
     pdag = PDAG(Set(B.nodes), edges)
     result = meek_closure(pdag)
     return CPDAG(Set(result.backend.nodes), result.edges)
+end
+
+"""
+    markov_equivalent(g1::DAG, g2::DAG) -> Bool
+
+Return `true` if `g1` and `g2` belong to the same Markov equivalence class
+(MEC), i.e. they encode exactly the same conditional independences.
+
+Two DAGs are Markov equivalent if and only if they share the same skeleton
+(undirected adjacency structure) and the same set of v-structures (unshielded
+colliders a --> b <-- c with a,c non-adjacent). This is the Verma-Pearl
+characterization (Verma & Pearl, 1990).
+
+# Examples
+
+```jldoctest
+julia> g1 = caugi(directed(:A, :B), directed(:C, :B); class = DAG);
+
+julia> g2 = caugi(directed(:A, :B), directed(:C, :B); class = DAG);
+
+julia> markov_equivalent(g1, g2)
+true
+
+julia> g3 = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+
+julia> markov_equivalent(g1, g3)
+false
+```
+
+# References
+
+- Verma, T. & Pearl, J. (1990). Equivalence and synthesis of causal models.
+  *Proceedings of UAI 1990*.
+"""
+function markov_equivalent(g1::DAG, g2::DAG)
+    B1, B2 = g1.backend, g2.backend
+    n = length(B1.nodes)
+    length(B2.nodes) != n && return false
+    Set(B1.nodes) != Set(B2.nodes) && return false
+
+    # Build skeleton adjacency sets (by Symbol) for both graphs.
+    adj1 = Dict{Symbol,Set{Symbol}}(v => Set{Symbol}() for v in B1.nodes)
+    for i = 1:n
+        vi = B1.nodes[i]
+        for p in _parents_slice(B1, i)
+            push!(adj1[vi], B1.nodes[p])
+            push!(adj1[B1.nodes[p]], vi)
+        end
+    end
+
+    adj2 = Dict{Symbol,Set{Symbol}}(v => Set{Symbol}() for v in B2.nodes)
+    for i = 1:n
+        vi = B2.nodes[i]
+        for p in _parents_slice(B2, i)
+            push!(adj2[vi], B2.nodes[p])
+            push!(adj2[B2.nodes[p]], vi)
+        end
+    end
+
+    adj1 != adj2 && return false
+
+    # Collect v-structures as canonical triples (a, b, c) with a < c (by string
+    # order) for each graph, then compare.
+    _vstructs(B, adj) = begin
+        vs = Set{Tuple{Symbol,Symbol,Symbol}}()
+        m = length(B.nodes)
+        for bi = 1:m
+            b = B.nodes[bi]
+            pa = [B.nodes[p] for p in _parents_slice(B, bi)]
+            for i in eachindex(pa)
+                for j = (i+1):length(pa)
+                    a, c = pa[i], pa[j]
+                    c in adj[a] && continue  # shielded -- not a v-structure
+                    key = a < c ? (a, b, c) : (c, b, a)
+                    push!(vs, key)
+                end
+            end
+        end
+        vs
+    end
+
+    return _vstructs(B1, adj1) == _vstructs(B2, adj2)
 end
 
 """
