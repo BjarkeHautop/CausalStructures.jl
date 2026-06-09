@@ -72,8 +72,8 @@ the result. When `open = false` (closed definition), `node` is included. The
 default can be changed project-wide via Preferences.jl:
 `set_preferences!(CausalGraphInterface, "open" => false)` (restart Julia after).
 
-Applicable to [`DAG`](@ref), [`PDAG`](@ref), [`CPDAG`](@ref),
-[`ADMG`](@ref), and [`AG`](@ref).
+Applicable to [`DAG`](@ref), [`AbstractPDAG`](@ref),
+[`ADMG`](@ref), and [`AbstractAG`](@ref).
 
 # Examples
 
@@ -136,8 +136,8 @@ the result. When `open = false` (closed definition), `node` is included. The
 default can be changed project-wide via Preferences.jl:
 `set_preferences!(CausalGraphInterface, "open" => false)` (restart Julia after).
 
-Applicable to [`DAG`](@ref), [`PDAG`](@ref), [`CPDAG`](@ref),
-[`ADMG`](@ref), and [`AG`](@ref).
+Applicable to [`DAG`](@ref), [`AbstractPDAG`](@ref),
+[`ADMG`](@ref), and [`AbstractAG`](@ref).
 
 # Examples
 
@@ -201,7 +201,7 @@ Return all exogenous nodes in `cg`: nodes with no incoming directed edges.
 For [`UG`](@ref), where no directed edges exist, a node is considered exogenous
 if and only if it is isolated (no neighbors at all).
 
-For [`PDAG`](@ref) and [`CPDAG`](@ref), the `undirected_as_parents` keyword
+For [`AbstractPDAG`](@ref), the `undirected_as_parents` keyword
 controls how undirected edges are treated. When `true`, a node incident to any
 undirected edge is not considered exogenous.
 
@@ -264,8 +264,6 @@ exists at least one DAG in the equivalence class represented by `cg` in which
 from `V` to `node`: a path on which no edge is compelled in the direction away
 from `node`. Each step traverses either an undirected edge or a directed edge
 pointing toward `node`.
-
-Applicable to [`PDAG`](@ref), [`CPDAG`](@ref), and [`MPDAG`](@ref).
 
 When `open = true` (default), `node` itself is excluded. When `open = false`
 (closed definition), `node` is included. The default can be changed via
@@ -346,7 +344,7 @@ from `node` to `V`: a path on which no edge is compelled in the direction away
 from `node`. Each step traverses either an undirected edge or a directed edge
 pointing away from `node`.
 
-Applicable to [`PDAG`](@ref), [`CPDAG`](@ref), and [`MPDAG`](@ref).
+Applicable to [`AbstractPDAG`](@ref).
 
 When `open = true` (default), `node` itself is excluded. When `open = false`
 (closed definition), `node` is included. The default can be changed via
@@ -416,14 +414,14 @@ function possible_descendants(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN
 end
 
 """
-    anteriors(cg::Union{DAG,AbstractPDAG,AG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
+    anteriors(cg::Union{DAG,AbstractPDAG,AbstractAG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
 
 Return the anteriors of `node` in `cg`: all nodes from which `node` is reachable
 by following directed edges backward or traversing undirected edges.
 
-Applicable to [`DAG`](@ref), [`PDAG`](@ref), [`CPDAG`](@ref), and [`AG`](@ref).
+Applicable to [`DAG`](@ref), [`AbstractPDAG`](@ref), and [`AbstractAG`](@ref).
 For a [`DAG`](@ref), anteriors are equivalent to [`ancestors`](@ref) (no
-undirected edges exist). For [`PDAG`](@ref), [`CPDAG`](@ref), and [`AG`](@ref),
+undirected edges exist). For [`AbstractPDAG`](@ref) and [`AbstractAG`](@ref),
 undirected edges extend the reachable set beyond strict ancestors.
 
 When `open = true` (open definition, default), `node` itself is excluded from
@@ -539,14 +537,14 @@ function anteriors(cg::AbstractAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
 end
 
 """
-    posteriors(cg::Union{DAG,AbstractPDAG,AG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
+    posteriors(cg::Union{DAG,AbstractPDAG,AbstractAG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
 
 Return the posteriors of `node` in `cg`: all nodes reachable from `node` by
 following directed edges forward or traversing undirected edges.
 
-Applicable to [`DAG`](@ref), [`PDAG`](@ref), [`CPDAG`](@ref), and [`AG`](@ref).
+Applicable to [`DAG`](@ref), [`AbstractPDAG`](@ref), and [`AbstractAG`](@ref).
 For a [`DAG`](@ref), posteriors are equivalent to [`descendants`](@ref) (no
-undirected edges exist). For [`PDAG`](@ref), [`CPDAG`](@ref), and [`AG`](@ref),
+undirected edges exist). For [`AbstractPDAG`](@ref) and [`AbstractAG`](@ref),
 undirected edges extend the reachable set beyond strict descendants.
 
 When `open = true` (open definition, default), `node` itself is excluded from

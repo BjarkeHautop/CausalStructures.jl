@@ -97,7 +97,8 @@ end
 """
     minimal_separator(cg::Union{DAG,ADMG,AbstractAG}, x, y; include=Symbol[], restrict=nothing)
 
-Find a minimal d-separator (DAG) or m-separator (ADMG, AG, MAG) between nodes `x` and `y`.
+Find a minimal d-separator ([`DAG`](@ref)) or m-separator
+([`ADMG`](@ref), [`AbstractAG`](@ref)) between nodes `x` and `y`.
 
 A set ``Z`` separates ``x`` from ``y`` if conditioning on ``Z`` renders them
 d/m-independent. The returned set is *minimal*: no proper subset (excluding forced
@@ -108,7 +109,7 @@ exists within the allowed candidate set.
 
 # Arguments
 
-- `cg`: A [`DAG`](@ref), [`ADMG`](@ref), or [`AG`](@ref).
+- `cg`: A [`DAG`](@ref), [`ADMG`](@ref), or [`AbstractAG`](@ref).
 - `x`, `y`: The two nodes to separate.
 - `include`: Nodes forced into the separator. Must be a subset of `restrict` (or
   the default candidate set).
@@ -124,7 +125,7 @@ restricted to the first result, and the outputs are intersected.
 - **DAG**: directional Bayes-ball restricted to ancestors of `{x, y} ∪ include`.
 - **ADMG**: mark-based Bayes-ball over directed and bidirected edges,
   restricted to ancestors.
-- **AG**: same as ADMG but uses anteriors (ancestors reachable via directed
+- **AbstractAG**: same as ADMG but uses anteriors (ancestors reachable via directed
   or undirected edges) and handles undirected edge marks.
 
 # Examples

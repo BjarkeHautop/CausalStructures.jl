@@ -96,16 +96,7 @@ function build_backend(::Type{UG}, nodes, edges::Vector{CausalEdge})
     return UGBackend(ordered_nodes, index, colptr, rowval)
 end
 
-build_backend(::Type{CPDAG}, nodes, edges::Vector{CausalEdge}) =
-    build_backend(PDAG, nodes, edges)
-
-build_backend(::Type{MPDAG}, nodes, edges::Vector{CausalEdge}) =
-    build_backend(PDAG, nodes, edges)
-
-build_backend(::Type{MAG}, nodes, edges::Vector{CausalEdge}) =
-    build_backend(AG, nodes, edges)
-
-function build_backend(::Type{PDAG}, nodes, edges::Vector{CausalEdge})
+function build_backend(::Type{<:AbstractPDAG}, nodes, edges::Vector{CausalEdge})
     ordered_nodes = sort!(unique(collect(nodes)))
     index = Dict(n => i for (i, n) in enumerate(ordered_nodes))
     n = length(ordered_nodes)
@@ -157,7 +148,7 @@ function build_backend(::Type{ADMG}, nodes, edges::Vector{CausalEdge})
     return ADMGBackend(ordered_nodes, index, colptr, deg, rowval)
 end
 
-function build_backend(::Type{AG}, nodes, edges::Vector{CausalEdge})
+function build_backend(::Type{<:AbstractAG}, nodes, edges::Vector{CausalEdge})
     ordered_nodes = sort!(unique(collect(nodes)))
     index = Dict(n => i for (i, n) in enumerate(ordered_nodes))
     n = length(ordered_nodes)
@@ -341,7 +332,7 @@ end
 Return the parents of `node` in `cg`: nodes `p` such that `p --> node` is an edge in `cg`.
 
 Equivalent to `neighbors(cg, node; mode = :in)`. Applicable to [`DAG`](@ref),
-[`PDAG`](@ref), [`CPDAG`](@ref), [`ADMG`](@ref), [`AG`](@ref), and [`UNKNOWN`](@ref).
+[`AbstractPDAG`](@ref), [`ADMG`](@ref), [`AbstractAG`](@ref), and [`UNKNOWN`](@ref).
 
 # Examples
 
@@ -366,7 +357,7 @@ parents(cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG,UNKNOWN}, node::Symbol) =
 Return the children of `node` in `cg`: nodes `c` such that `node --> c` is an edge in `cg`.
 
 Equivalent to `neighbors(cg, node; mode = :out)`. Applicable to [`DAG`](@ref),
-[`PDAG`](@ref), [`CPDAG`](@ref), [`ADMG`](@ref), [`AG`](@ref), and [`UNKNOWN`](@ref).
+[`AbstractPDAG`](@ref), [`ADMG`](@ref), [`AbstractAG`](@ref), and [`UNKNOWN`](@ref).
 
 # Examples
 

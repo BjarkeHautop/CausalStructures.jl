@@ -82,8 +82,8 @@ end
     CausalGraph
 
 Abstract supertype for all causal graph classes. Concrete subtypes: [`DAG`](@ref),
-[`UG`](@ref), [`PDAG`](@ref), [`CPDAG`](@ref), [`ADMG`](@ref), [`AG`](@ref),
-[`MAG`](@ref), and [`UNKNOWN`](@ref).
+[`UG`](@ref), [`AbstractPDAG`](@ref), [`ADMG`](@ref), [`AbstractAG`](@ref), and
+[`UNKNOWN`](@ref).
 """
 abstract type CausalGraph end
 
