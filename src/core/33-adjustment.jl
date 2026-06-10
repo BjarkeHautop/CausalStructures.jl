@@ -490,24 +490,24 @@ function _m_separated_pbg_ag(
 end
 
 """
-    is_valid_adjustment(cg::MAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    is_valid_adjustment(cg::AbstractAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
 
 Return `true` if `z` is a valid adjustment set for estimating the total causal
 effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
 
 Uses the same criterion as [`is_valid_adjustment`](@ref ADMG): `z` must contain
 no forbidden node and must m-separate `x` from `y` in the proper backdoor graph
-of `cg`.
+of `cg`. Applicable to [`AG`](@ref) and [`MAG`](@ref).
 
 # Examples
 
 ```jldoctest
-julia> mag = caugi(directed(:A, :X), directed(:X, :Y), bidirected(:A, :Y); class = MAG);
+julia> mag = caugi(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG);
 
-julia> is_valid_adjustment(mag, :X, :Y)        # path X <-- A <-> Y is open
+julia> is_valid_adjustment(mag, :X, :Y)
 false
 
-julia> is_valid_adjustment(mag, :X, :Y, [:A])  # A blocks the open path
+julia> is_valid_adjustment(mag, :X, :Y, [:A])
 true
 ```
 
@@ -518,7 +518,7 @@ Characterization and Construction of Adjustment Sets in Markov Equivalence Class
 of Ancestral Graphs. *Journal of Machine Learning Research*, 18:1-62.
 """
 function is_valid_adjustment(
-    cg::MAG,
+    cg::AbstractAG,
     x::Symbol,
     y::Symbol,
     z::AbstractVector{Symbol} = Symbol[],
@@ -536,12 +536,12 @@ function is_valid_adjustment(
 end
 
 """
-    all_adjustment_sets(cg::MAG, x::Symbol, y::Symbol;
+    all_adjustment_sets(cg::AbstractAG, x::Symbol, y::Symbol;
                         minimal::Bool = true, max_size::Int = 3)
         -> Vector{Vector{Symbol}}
 
 Return all valid adjustment sets for the total causal effect of `x` on `y` in
-`cg`, up to size `max_size`.
+`cg`, up to size `max_size`. Applicable to [`AG`](@ref) and [`MAG`](@ref).
 
 Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 (default), only inclusion-minimal sets are returned.
@@ -549,7 +549,7 @@ Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 # Examples
 
 ```jldoctest
-julia> mag = caugi(directed(:A, :X), directed(:X, :Y), bidirected(:A, :Y); class = MAG);
+julia> mag = caugi(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG);
 
 julia> all_adjustment_sets(mag, :X, :Y)
 1-element Vector{Vector{Symbol}}:
@@ -563,7 +563,7 @@ Characterization and Construction of Adjustment Sets in Markov Equivalence Class
 of Ancestral Graphs. *Journal of Machine Learning Research*, 18:1-62.
 """
 function all_adjustment_sets(
-    cg::MAG,
+    cg::AbstractAG,
     x::Symbol,
     y::Symbol;
     minimal::Bool = true,
@@ -770,12 +770,12 @@ proper backdoor graph.
 # Examples
 
 ```jldoctest
-julia> cpdag = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = CPDAG);
+julia> pdag = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = PDAG);
 
-julia> is_valid_adjustment(cpdag, :X, :Y)       # empty Z leaves A --> Y open
+julia> is_valid_adjustment(pdag, :X, :Y)
 false
 
-julia> is_valid_adjustment(cpdag, :X, :Y, [:A]) # A blocks the backdoor path
+julia> is_valid_adjustment(pdag, :X, :Y, [:A])
 true
 ```
 
@@ -817,11 +817,23 @@ Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 # Examples
 
 ```jldoctest
-julia> cpdag = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = CPDAG);
+julia> mpdag = caugi(
+           directed(:A, :X), directed(:B, :X),
+           directed(:X, :Y), directed(:A, :Y),
+           undirected(:B, :K), directed(:K, :Y);
+           class = MPDAG,
+       );
 
-julia> all_adjustment_sets(cpdag, :X, :Y)
-1-element Vector{Vector{Symbol}}:
- [:A]
+julia> all_adjustment_sets(mpdag, :X, :Y)
+2-element Vector{Vector{Symbol}}:
+ [:A, :B]
+ [:A, :K]
+
+julia> all_adjustment_sets(mpdag, :X, :Y, minimal = false)
+3-element Vector{Vector{Symbol}}:
+ [:A, :B]
+ [:A, :K]
+ [:A, :B, :K]
 ```
 
 # References
@@ -1148,13 +1160,13 @@ exists. Returns an empty vector if `x` has no causal path to `y`.
 # Examples
 
 ```jldoctest
-julia> cpdag = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = CPDAG);
+julia> pdag = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = PDAG);
 
-julia> adjustment_set(cpdag, :X, :Y)
+julia> adjustment_set(pdag, :X, :Y)
 1-element Vector{Symbol}:
  :A
 
-julia> is_valid_adjustment(cpdag, :X, :Y, adjustment_set(cpdag, :X, :Y))
+julia> is_valid_adjustment(pdag, :X, :Y, [:A])
 true
 ```
 

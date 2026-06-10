@@ -126,12 +126,12 @@ true
 julia> d_separated(coll, :A, :B, [:C])  # conditioning on collider C opens the path
 false
 
-julia> cpdag = caugi(undirected(:A, :B), directed(:B, :C); class = CPDAG);
+julia> mpdag = caugi(undirected(:A, :B), directed(:B, :C); class = MPDAG);
 
-julia> d_separated(cpdag, :A, :C, [:B]) # B blocks whether A --> B or A <-- B
+julia> d_separated(mpdag, :A, :C, [:B]) # B blocks whether A --> B or A <-- B
 true
 
-julia> d_separated(cpdag, :A, :C)       # B is possibly a non-collider: open path exists
+julia> d_separated(mpdag, :A, :C)       # B is possibly a non-collider: open path exists
 false
 ```
 
