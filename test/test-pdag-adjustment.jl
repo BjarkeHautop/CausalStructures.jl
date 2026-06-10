@@ -180,3 +180,27 @@ end
     z = adjustment_set(cpdag, :X, :Y)
     @test is_valid_adjustment(cpdag, :X, :Y, z)
 end
+
+# ── minimal_separator ─────────────────────────────────────────────────────────
+
+@testitem "minimal_separator AbstractPDAG: directed chain returns middle node" tags =
+    [:unit] begin
+    pdag = caugi(directed(:A, :B), directed(:B, :C); class = PDAG)
+    @test minimal_separator(pdag, :A, :C) == [:B]
+end
+
+@testitem "minimal_separator AbstractPDAG: undirected chain returns middle node" tags =
+    [:unit] begin
+    cpdag = caugi(undirected(:A, :B), undirected(:B, :C); class = CPDAG)
+    @test minimal_separator(cpdag, :A, :C) == [:B]
+end
+
+@testitem "minimal_separator AbstractPDAG: v-structure already d-separated" tags = [:unit] begin
+    cpdag = caugi(directed(:A, :B), directed(:C, :B); class = CPDAG)
+    @test minimal_separator(cpdag, :A, :C) == Symbol[]
+end
+
+@testitem "minimal_separator AbstractPDAG: direct edge returns nothing" tags = [:unit] begin
+    pdag = caugi(directed(:A, :B); class = PDAG)
+    @test minimal_separator(pdag, :A, :B) === nothing
+end

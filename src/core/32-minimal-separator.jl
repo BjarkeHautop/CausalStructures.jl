@@ -1,8 +1,8 @@
-# Minimal separator algorithms for DAG, ADMG, and AG.
+# Minimal separator algorithms for DAG, ADMG, AG, and AbstractPDAG.
 #
 # Adapted from caugi: caugi/src/rust/src/graph/alg/min_msep.rs
 #
-# All three follow van der Zander & Liśkiewicz (UAI 2020) FINDMINSEP:
+# All four follow van der Zander & Liśkiewicz (UAI 2020) FINDMINSEP:
 # run FINDNEARESTSEP twice (once from x, once from y restricted to the first
 # result) and intersect. The difference per class is in how "ancestors" are
 # computed (directed-only vs anteriors) and which REACHABLE function is used.
@@ -95,9 +95,9 @@ function _d_connected_restricted_idxs(
 end
 
 """
-    minimal_separator(cg::Union{DAG,ADMG,AbstractAG}, x, y; include=Symbol[], restrict=nothing)
+    minimal_separator(cg::Union{DAG,ADMG,AbstractAG,AbstractPDAG}, x, y; include=Symbol[], restrict=nothing)
 
-Find a minimal d-separator ([`DAG`](@ref)) or m-separator
+Find a minimal d-separator ([`DAG`](@ref), [`AbstractPDAG`](@ref)) or m-separator
 ([`ADMG`](@ref), [`AbstractAG`](@ref)) between nodes `x` and `y`.
 
 A set ``Z`` separates ``x`` from ``y`` if conditioning on ``Z`` renders them
@@ -109,7 +109,7 @@ exists within the allowed candidate set.
 
 # Arguments
 
-- `cg`: A [`DAG`](@ref), [`ADMG`](@ref), or [`AbstractAG`](@ref).
+- `cg`: A [`DAG`](@ref), [`ADMG`](@ref), [`AbstractAG`](@ref), or [`AbstractPDAG`](@ref).
 - `x`, `y`: The two nodes to separate.
 - `include`: Nodes forced into the separator. Must be a subset of `restrict` (or
   the default candidate set).
@@ -127,6 +127,8 @@ restricted to the first result, and the outputs are intersected.
   restricted to ancestors.
 - **AbstractAG**: same as ADMG but uses anteriors (ancestors reachable via directed
   or undirected edges) and handles undirected edge marks.
+- **AbstractPDAG**: mark-based Bayes-ball over directed and undirected edges,
+  restricted to anteriors.
 
 # Examples
 
@@ -342,6 +344,111 @@ end
 
 function minimal_separator(
     cg::AbstractAG,
+    x::Symbol,
+    y::Symbol;
+    include::AbstractVector{Symbol} = Symbol[],
+    restrict::Union{Nothing,AbstractVector{Symbol}} = nothing,
+)
+    B = cg.backend
+    n = length(B.nodes)
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+    inc_idxs = [node_index(cg, v) for v in include]
+    res_idxs = if restrict === nothing
+        [i for i = 1:n if i != x_idx && i != y_idx]
+    else
+        [node_index(cg, v) for v in restrict]
+    end
+    result = _findminsep(B, x_idx, y_idx, inc_idxs, res_idxs)
+    return result === nothing ? nothing : B.nodes[result]
+end
+
+# ── AbstractPDAG ──────────────────────────────────────────────────────────────
+
+# REACHABLE for PDAG (3 marks: Tail, Head, Undir); no spouse edges.
+function _reachable_pdag(
+    B::PDAGBackend,
+    xs::Vector{Int},
+    a_mask::BitVector,
+    z_mask::BitVector,
+)
+    n = length(B.nodes)
+    visited = falses(n, 3)
+    q = Tuple{Int,Int}[]
+
+    for x in xs
+        a_mask[x] || continue
+        for m = 1:3
+            if !visited[x, m]
+                visited[x, m] = true
+                push!(q, (x, m))
+            end
+        end
+    end
+
+    head = 1
+    while head <= length(q)
+        v, in_m = q[head]
+        head += 1
+        v_in_z = z_mask[v]
+        for p in _parents_slice(B, v)       # p-->v: out=Head(2), nbr_in=Tail(1)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, p, 1)
+        end
+        for c in _children_slice(B, v)      # v-->c: out=Tail(1), nbr_in=Head(2)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 1, c, 2)
+        end
+        for w in _undirected_slice(B, v)    # v---w: out=Undir(3), nbr_in=Undir(3)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 3, w, 3)
+        end
+    end
+
+    reached = falses(n)
+    for v = 1:n
+        reached[v] = visited[v, 1] || visited[v, 2] || visited[v, 3]
+    end
+    return reached
+end
+
+function _find_nearest_sep(
+    B::PDAGBackend,
+    xs::Vector{Int},
+    ys::Vector{Int},
+    inc_idxs::Vector{Int},
+    res_idxs::Vector{Int},
+)
+    n = length(B.nodes)
+    res_set = Set(res_idxs)
+    for i in inc_idxs
+        i ∈ res_set || return nothing
+    end
+
+    seeds = unique([xs; ys; inc_idxs])
+    a_mask = _anterior_bitmask(B, seeds)
+
+    z0_mask = falses(n)
+    xs_set = Set(xs)
+    ys_set = Set(ys)
+    for r in res_idxs
+        if a_mask[r] && r ∉ xs_set && r ∉ ys_set
+            z0_mask[r] = true
+        end
+    end
+
+    x_star = _reachable_pdag(B, xs, a_mask, z0_mask)
+    any(y -> x_star[y], ys) && return nothing
+
+    z_mask = falses(n)
+    for v = 1:n
+        z0_mask[v] && x_star[v] && (z_mask[v] = true)
+    end
+    for i in inc_idxs
+        z_mask[i] = true
+    end
+    return [v for v = 1:n if z_mask[v]]
+end
+
+function minimal_separator(
+    cg::AbstractPDAG,
     x::Symbol,
     y::Symbol;
     include::AbstractVector{Symbol} = Symbol[],

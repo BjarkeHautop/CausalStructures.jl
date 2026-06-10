@@ -43,11 +43,14 @@ function skeleton(cg::Union{DAG,AbstractPDAG})
 end
 
 """
-    moralize(cg::DAG) -> UG
+    moralize(cg::Union{DAG,AbstractPDAG}) -> UG
 
 Return the moral graph of `cg`: the undirected graph obtained by connecting all
-pairs of parents that share a common child (adding a "marriage" edge), then
-replacing every directed edge with an undirected edge.
+pairs of directed parents that share a common child (adding a "marriage" edge),
+then replacing every edge with an undirected edge.
+
+For [`AbstractPDAG`](@ref), only directed parents participate in marriage edges;
+undirected neighbors are included in the skeleton but do not form a clique.
 
 # Examples
 
@@ -60,9 +63,18 @@ julia> neighbors(m, :C)   # A and B are now married
 2-element Vector{Symbol}:
  :A
  :B
+
+julia> pdag = caugi(directed(:A, :C), directed(:B, :C), undirected(:D, :C); class = PDAG);
+
+julia> mp = moralize(pdag);
+
+julia> sort(neighbors(mp, :A))   # A married to B (co-directed-parents of C); D not married
+2-element Vector{Symbol}:
+ :B
+ :C
 ```
 """
-function moralize(cg::DAG)
+function moralize(cg::Union{DAG,AbstractPDAG})
     B = cg.backend
     edges = CausalEdge[]
     seen = Set{Tuple{Symbol,Symbol}}()
