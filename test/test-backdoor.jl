@@ -3,36 +3,9 @@
 using Test
 using CausalGraphInterface
 
-# Figure 6.5 from Elements of Causal Inference (p. 115)
-# C-->X, X-->F, X-->D, A-->X, A-->K, K-->Y, D-->Y, D-->G, Y-->H
-function _eci_graph()
-    caugi(
-        directed(:C, :X),
-        directed(:X, :F),
-        directed(:X, :D),
-        directed(:A, :X),
-        directed(:A, :K),
-        directed(:K, :Y),
-        directed(:D, :Y),
-        directed(:D, :G),
-        directed(:Y, :H);
-        class = DAG,
-    )
-end
-
 @testitem "is_valid_backdoor: canonical choices on ECI graph" tags = [:unit] begin
-    cg = caugi(
-        directed(:C, :X),
-        directed(:X, :F),
-        directed(:X, :D),
-        directed(:A, :X),
-        directed(:A, :K),
-        directed(:K, :Y),
-        directed(:D, :Y),
-        directed(:D, :G),
-        directed(:Y, :H);
-        class = DAG,
-    )
+    include("helper-backdoor.jl")
+    cg = _eci_graph()
     @test is_valid_backdoor(cg, :X, :Y, [:A])
     @test is_valid_backdoor(cg, :X, :Y, [:K])
     @test !is_valid_backdoor(cg, :X, :Y, [:D])       # D is a descendant of X
@@ -41,18 +14,8 @@ end
 end
 
 @testitem "all_backdoor_sets: minimal sets on ECI graph" tags = [:unit] begin
-    cg = caugi(
-        directed(:C, :X),
-        directed(:X, :F),
-        directed(:X, :D),
-        directed(:A, :X),
-        directed(:A, :K),
-        directed(:K, :Y),
-        directed(:D, :Y),
-        directed(:D, :G),
-        directed(:Y, :H);
-        class = DAG,
-    )
+    include("helper-backdoor.jl")
+    cg = _eci_graph()
     sets = all_backdoor_sets(cg, :X, :Y; minimal = true)
     @test length(sets) == 2
     @test any(s -> s == [:A], sets)
@@ -60,18 +23,8 @@ end
 end
 
 @testitem "all_backdoor_sets: non-minimal with max_size=2" tags = [:unit] begin
-    cg = caugi(
-        directed(:C, :X),
-        directed(:X, :F),
-        directed(:X, :D),
-        directed(:A, :X),
-        directed(:A, :K),
-        directed(:K, :Y),
-        directed(:D, :Y),
-        directed(:D, :G),
-        directed(:Y, :H);
-        class = DAG,
-    )
+    include("helper-backdoor.jl")
+    cg = _eci_graph()
     sets = all_backdoor_sets(cg, :X, :Y; minimal = false, max_size = 2)
     @test length(sets) == 5
     set_strings = Set(join(sort(s), ",") for s in sets)
@@ -157,35 +110,15 @@ end
 # ── adjustment_set ─────────────────────────────────────────────────────────────
 
 @testitem "adjustment_set: parents type returns Pa(X) \\ {X,Y}" tags = [:unit] begin
-    cg = caugi(
-        directed(:C, :X),
-        directed(:X, :F),
-        directed(:X, :D),
-        directed(:A, :X),
-        directed(:A, :K),
-        directed(:K, :Y),
-        directed(:D, :Y),
-        directed(:D, :G),
-        directed(:Y, :H);
-        class = DAG,
-    )
+    include("helper-backdoor.jl")
+    cg = _eci_graph()
     z = adjustment_set(cg, :X, :Y; type = :parents)
     @test Set(z) == Set([:A, :C])
 end
 
 @testitem "adjustment_set: backdoor type returns a valid backdoor set" tags = [:unit] begin
-    cg = caugi(
-        directed(:C, :X),
-        directed(:X, :F),
-        directed(:X, :D),
-        directed(:A, :X),
-        directed(:A, :K),
-        directed(:K, :Y),
-        directed(:D, :Y),
-        directed(:D, :G),
-        directed(:Y, :H);
-        class = DAG,
-    )
+    include("helper-backdoor.jl")
+    cg = _eci_graph()
     z = adjustment_set(cg, :X, :Y; type = :backdoor)
     @test is_valid_backdoor(cg, :X, :Y, z)
     @test :D ∉ z  # descendant of X must not appear
@@ -204,18 +137,8 @@ end
 end
 
 @testitem "adjustment_set: optimal type returns K on ECI graph" tags = [:unit] begin
-    cg = caugi(
-        directed(:C, :X),
-        directed(:X, :F),
-        directed(:X, :D),
-        directed(:A, :X),
-        directed(:A, :K),
-        directed(:K, :Y),
-        directed(:D, :Y),
-        directed(:D, :G),
-        directed(:Y, :H);
-        class = DAG,
-    )
+    include("helper-backdoor.jl")
+    cg = _eci_graph()
     z = adjustment_set(cg, :X, :Y; type = :optimal)
     @test is_valid_backdoor(cg, :X, :Y, z)
     @test z == [:K]
