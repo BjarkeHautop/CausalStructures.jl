@@ -50,12 +50,12 @@ Planned future additions include
 
 The following edge types exists:
 
-- `directed()`
-- `undirected()`
-- `bidirected()`
-- `partially_directed()`
-- `partially_undirected()`
-- `partial()`
+- `directed(:A, :B)` for A --> B
+- `undirected(:A, :B)` for A --- B
+- `bidirected(:A, :B)` for A <-> B
+- `partially_directed(:A, :B)` for A o-> B
+- `partially_undirected(:A, :B)` for A --o B
+- `partial(:A, :B)` for A o-o B
 
 ## Quick Start
 
