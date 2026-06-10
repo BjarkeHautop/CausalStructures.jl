@@ -1,6 +1,6 @@
 module CausalGraphInterface
 
-include("core.jl")
+include("load.jl")
 
 export CausalEdge,
     CausalGraph,
