@@ -8,7 +8,10 @@
 # ── Shared ancestor / anterior masks ──────────────────────────────────────────
 
 # Ancestor bitmask: nodes reachable from seeds via directed parents only.
-function _ancestors_bitmask(B::Union{DAGBackend,ADMGBackend,AGBackend}, seeds::Vector{Int})
+function _ancestors_bitmask(
+    B::Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend},
+    seeds::Vector{Int},
+)
     n = length(B.nodes)
     mask = falses(n)
     stack = Int[]
@@ -31,7 +34,7 @@ function _ancestors_bitmask(B::Union{DAGBackend,ADMGBackend,AGBackend}, seeds::V
 end
 
 # Anterior bitmask (AG): nodes reachable from seeds via directed parents OR undirected edges.
-function _anterior_bitmask(B::AGBackend, seeds::Vector{Int})
+function _anterior_bitmask(B::Union{AGBackend,PDAGBackend}, seeds::Vector{Int})
     n = length(B.nodes)
     mask = falses(n)
     stack = Int[]
@@ -86,16 +89,23 @@ function _moral_adj_in_mask(B::DAGBackend, mask::BitVector)
 end
 
 """
-    d_separated(cg::DAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    d_separated(cg, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
 
 Return `true` if `x` and `y` are d-separated given `z` in `cg`.
+
+Applicable to [`DAG`](@ref) and [`AbstractPDAG`](@ref) (PDAG, CPDAG, MPDAG).
 
 Two nodes are d-separated given a conditioning set `z` if every path between
 them is blocked. A path is blocked if it contains either a non-collider node
 in `z`, or a collider node (and all its descendants) not in `z`.
 
-The algorithm restricts to the ancestor graph of `x`, `y`, and `z`, moralizes
-it, then checks connectivity after removing `z`.
+For [`DAG`](@ref): restricts to the ancestor graph of `x`, `y`, and `z`,
+moralizes it, then checks connectivity after removing `z`.
+
+For [`AbstractPDAG`](@ref): restricts to the anterior set (nodes reachable via
+directed parents or undirected edges), moralizes with undirected neighbors
+joining the parent clique at each node, then checks connectivity after
+removing `z`.
 
 # Examples
 
@@ -115,12 +125,24 @@ true
 
 julia> d_separated(coll, :A, :B, [:C])  # conditioning on collider C opens the path
 false
+
+julia> cpdag = caugi(undirected(:A, :B), directed(:B, :C); class = CPDAG);
+
+julia> d_separated(cpdag, :A, :C, [:B]) # B blocks whether A --> B or A <-- B
+true
+
+julia> d_separated(cpdag, :A, :C)       # B is possibly a non-collider: open path exists
+false
 ```
 
 # References
 
 Lauritzen, S. L., Dawid, A. P., Larsen, B. N., & Leimer, H.-G. (1990).
 Independence properties of directed Markov fields. *Networks*, 20(5):491-505.
+
+Hauser, A. & Bühlmann, P. (2012). Characterization and greedy learning of interventional
+Markov equivalence classes of directed acyclic graphs.
+*Journal of Machine Learning Research*, 13:2409-2464.
 """
 function d_separated(cg::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
     B = cg.backend
@@ -131,6 +153,73 @@ function d_separated(cg::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = 
     seeds = unique([x_idx; y_idx; z_idxs])
     mask = _ancestors_bitmask(B, seeds)
     adj = _moral_adj_in_mask(B, mask)
+
+    blocked = falses(length(B.nodes))
+    for v in z_idxs
+        blocked[v] = true
+    end
+    blocked[x_idx] && return true
+
+    visited = falses(length(B.nodes))
+    visited[x_idx] = true
+    queue = [x_idx]
+    head = 1
+    while head <= length(queue)
+        u = queue[head]
+        head += 1
+        for w in adj[u]
+            if !visited[w] && !blocked[w]
+                w == y_idx && return false
+                visited[w] = true
+                push!(queue, w)
+            end
+        end
+    end
+    return true
+end
+
+# ── d_separated (AbstractPDAG) ────────────────────────────────────────────────
+
+# Moral adjacency for PDAG: for each v, clique Pa(v); undirected Ne(v) add direct edges only.
+function _pdag_moral_adj(B::PDAGBackend, mask::BitVector)
+    n = length(B.nodes)
+    adj = [Int[] for _ = 1:n]
+    for v = 1:n
+        mask[v] || continue
+        pa = [p for p in _parents_slice(B, v) if mask[p]]
+        ne = [w for w in _undirected_slice(B, v) if mask[w]]
+        for p in pa
+            push!(adj[v], p)
+            push!(adj[p], v)
+        end
+        for w in ne
+            push!(adj[v], w)  # reverse added when w is processed
+        end
+        for i in eachindex(pa), j = (i+1):lastindex(pa)
+            push!(adj[pa[i]], pa[j])
+            push!(adj[pa[j]], pa[i])
+        end
+    end
+    for v = 1:n
+        sort!(unique!(adj[v]))
+    end
+    return adj
+end
+
+function d_separated(
+    cg::AbstractPDAG,
+    x::Symbol,
+    y::Symbol,
+    z::AbstractVector{Symbol} = Symbol[],
+)
+    B = cg.backend
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+    z_idxs = [node_index(cg, v) for v in z]
+
+    seeds = unique([x_idx; y_idx; z_idxs])
+    mask = _anterior_bitmask(B, seeds)
+    adj = _pdag_moral_adj(B, mask)
 
     blocked = falses(length(B.nodes))
     for v in z_idxs

@@ -112,8 +112,8 @@ frontdoor_set(dag4, :X, :Y; include = [:C], restrict = [:A, :B, :C, :D])
 ## ADMG Adjustment
 
 In an ADMG, bidirected edges represent hidden common causes directly, keeping
-only the observed nodes in the graph. [`is_valid_adjustment_admg`](@ref) and
-[`all_adjustment_sets_admg`](@ref) implement the Generalized Adjustment
+only the observed nodes in the graph. [`is_valid_adjustment`](@ref) and
+[`all_adjustment_sets`](@ref) implement the Generalized Adjustment
 Criterion for such graphs.
 
 The bidirected edge `X <-> Z` represents a hidden common cause of `X` and `Z`.
@@ -132,13 +132,13 @@ admg = caugi(
 Without conditioning, this path remains open:
 
 ```@example id
-is_valid_adjustment_admg(admg, :X, :Y)
+is_valid_adjustment(admg, :X, :Y)
 ```
 
 All valid adjustment sets, here only `{Z}`, which blocks the confounding path:
 
 ```@example id
-all_adjustment_sets_admg(admg, :X, :Y)
+all_adjustment_sets(admg, :X, :Y)
 ```
 
 ADMGs also support [`m_separated`](@ref), which generalises d-separation to

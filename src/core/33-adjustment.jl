@@ -1,4 +1,4 @@
-# ADMG Generalized Adjustment Criterion (GAC)
+# ADMG/MAG Generalized Adjustment Criterion (GAC)
 # Perković, Textor, Kalisch, Maathuis (2018)
 #
 # Adapted from caugi:
@@ -7,7 +7,10 @@
 
 # ── descendants bitmask ───────────────────────────────────────────────────────
 
-function _descendants_bitmask(B::Union{DAGBackend,ADMGBackend}, seeds::Vector{Int})
+function _descendants_bitmask(
+    B::Union{DAGBackend,ADMGBackend,AGBackend},
+    seeds::Vector{Int},
+)
     n = length(B.nodes)
     mask = falses(n)
     stack = Int[]
@@ -30,7 +33,7 @@ end
 # ── forbidden set ─────────────────────────────────────────────────────────────
 
 # forb(X,Y) = De(cn(X,Y) \ Y) ∪ X,  where cn(X,Y) = De(X) ∩ An(Y)
-function _forbidden_set(B::ADMGBackend, xs::Vector{Int}, ys::Vector{Int})
+function _forbidden_set(B::Union{ADMGBackend,AGBackend}, xs::Vector{Int}, ys::Vector{Int})
     n = length(B.nodes)
     de_x = _descendants_bitmask(B, xs)
     an_y = _ancestors_bitmask(B, ys)
@@ -111,7 +114,7 @@ function _admg_moral_adj_filtered(
 end
 
 # Compute PBG removed edges: x --> v with x ∈ X, v ∉ X, v ∈ An(Y).
-function _pbg_removed(B::ADMGBackend, xs::Vector{Int}, ys::Vector{Int})
+function _pbg_removed(B::Union{ADMGBackend,AGBackend}, xs::Vector{Int}, ys::Vector{Int})
     n = length(B.nodes)
     an_y = _ancestors_bitmask(B, ys)
     x_mask = falses(n)
@@ -210,7 +213,7 @@ end
 # ── public API ────────────────────────────────────────────────────────────────
 
 """
-    is_valid_adjustment_admg(cg::ADMG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    is_valid_adjustment(cg::ADMG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
 
 Return `true` if `z` is a valid adjustment set for estimating the total causal
 effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
@@ -225,10 +228,10 @@ of `cg`.
 ```jldoctest
 julia> admg = caugi(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG);
 
-julia> is_valid_adjustment_admg(admg, :X, :Y)       # empty Z does not block L --> Y
+julia> is_valid_adjustment(admg, :X, :Y)       # empty Z does not block L --> Y
 false
 
-julia> is_valid_adjustment_admg(admg, :X, :Y, [:L]) # conditioning on L blocks the backdoor path
+julia> is_valid_adjustment(admg, :X, :Y, [:L]) # conditioning on L blocks the backdoor path
 true
 ```
 
@@ -238,7 +241,7 @@ Perković, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete Graph
 Characterization and Construction of Adjustment Sets in Markov Equivalence Classes
 of Ancestral Graphs *Journal of Machine Learning Research*, 18:1-62.
 """
-function is_valid_adjustment_admg(
+function is_valid_adjustment(
     cg::ADMG,
     x::Symbol,
     y::Symbol,
@@ -257,15 +260,15 @@ function is_valid_adjustment_admg(
 end
 
 """
-    all_adjustment_sets_admg(cg::ADMG, x::Symbol, y::Symbol;
-                             minimal::Bool = true, max_size::Int = 3)
+    all_adjustment_sets(cg::ADMG, x::Symbol, y::Symbol;
+                        minimal::Bool = true, max_size::Int = 3)
         -> Vector{Vector{Symbol}}
 
 Return all valid adjustment sets for the total causal effect of `x` on `y` in
 `cg`, up to size `max_size`.
 
 Sets are validated using the Generalized Adjustment Criterion (GAC); see
-[`is_valid_adjustment_admg`](@ref). When `minimal = true` (default), only
+[`is_valid_adjustment`](@ref). When `minimal = true` (default), only
 inclusion-minimal sets are returned.
 
 # Examples
@@ -273,12 +276,12 @@ inclusion-minimal sets are returned.
 ```jldoctest
 julia> admg = caugi(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG);
 
-julia> all_adjustment_sets_admg(admg, :X, :Y)
+julia> all_adjustment_sets(admg, :X, :Y)
 1-element Vector{Vector{Symbol}}:
  [:L]
 ```
 """
-function all_adjustment_sets_admg(
+function all_adjustment_sets(
     cg::ADMG,
     x::Symbol,
     y::Symbol;
@@ -325,7 +328,553 @@ function all_adjustment_sets_admg(
     return valid_sets
 end
 
-# ── Backdoor criterion (DAG) ──────────────────────────────────────────────────
+# ── MAG proper-backdoor graph helpers ────────────────────────────────────────
+
+# Anterior bitmask in the PBG: reachable via directed parents (excluding removed)
+# or undirected edges.
+function _anterior_bitmask_filtered(
+    B::Union{AGBackend,PDAGBackend},
+    seeds::Vector{Int},
+    removed::Set{Tuple{Int,Int}},
+)
+    n = length(B.nodes)
+    mask = falses(n)
+    stack = Int[]
+    for s in seeds
+        mask[s] && continue
+        mask[s] = true
+        push!(stack, s)
+    end
+    while !isempty(stack)
+        u = pop!(stack)
+        for p in _parents_slice(B, u)
+            (p, u) in removed && continue
+            mask[p] && continue
+            mask[p] = true
+            push!(stack, p)
+        end
+        for w in _undirected_slice(B, u)
+            mask[w] && continue
+            mask[w] = true
+            push!(stack, w)
+        end
+    end
+    return mask
+end
+
+# True if 'from' has an arrowhead pointing into 'at' in the PBG.
+# Directed edges in removed are treated as absent.
+function _arrowhead_at_filtered(
+    B::AGBackend,
+    at::Int,
+    from::Int,
+    removed::Set{Tuple{Int,Int}},
+)
+    if from in _parents_slice(B, at)
+        return !((from, at) in removed)
+    end
+    return from in _spouses_slice(B, at)
+end
+
+# Augmented adjacency (Richardson & Spirtes 2002) for the MAG PBG.
+# Identical structure to _ag_augmented_adj but skips edges in `removed`.
+# removed only contains directed edges x --> v, so each node-pair has at most
+# one edge type in a valid MAG, making the check unambiguous.
+function _ag_augmented_adj_filtered(
+    B::AGBackend,
+    mask::BitVector,
+    removed::Set{Tuple{Int,Int}},
+)
+    n = length(B.nodes)
+    adj = [Int[] for _ = 1:n]
+    visited = zeros(Int, n * n)
+    stamp = 0
+
+    for s = 1:n
+        mask[s] || continue
+        stamp += 1
+        if stamp == typemax(Int)
+            fill!(visited, 0)
+            stamp = 1
+        end
+
+        q = Tuple{Int,Int}[]
+
+        for v in _all_nbrs_slice(B, s)
+            mask[v] || continue
+            ((s, v) in removed || (v, s) in removed) && continue
+            push!(adj[s], v)
+            push!(adj[v], s)
+            key = (s - 1) * n + v
+            if visited[key] != stamp
+                visited[key] = stamp
+                push!(q, (s, v))
+            end
+        end
+
+        head = 1
+        while head <= length(q)
+            prev, curr = q[head]
+            head += 1
+            for nxt in _all_nbrs_slice(B, curr)
+                nxt == prev && continue
+                mask[nxt] || continue
+                _arrowhead_at_filtered(B, curr, prev, removed) || continue
+                _arrowhead_at_filtered(B, curr, nxt, removed) || continue
+
+                key = (curr - 1) * n + nxt
+                visited[key] == stamp && continue
+                visited[key] = stamp
+                push!(q, (curr, nxt))
+
+                if nxt != s
+                    push!(adj[s], nxt)
+                    push!(adj[nxt], s)
+                end
+            end
+        end
+    end
+
+    for v = 1:n
+        sort!(unique!(adj[v]))
+    end
+    return adj
+end
+
+# BFS m-sep check in the MAG PBG.
+function _m_separated_pbg_ag(
+    B::AGBackend,
+    xs::Vector{Int},
+    ys::Vector{Int},
+    z::Vector{Int},
+    removed::Set{Tuple{Int,Int}},
+)
+    (isempty(xs) || isempty(ys)) && return true
+    n = length(B.nodes)
+
+    seeds = unique([xs; ys; z])
+    mask = _anterior_bitmask_filtered(B, seeds, removed)
+    adj = _ag_augmented_adj_filtered(B, mask, removed)
+
+    y_mask = falses(n)
+    for y in ys
+        ;
+        y_mask[y] = true;
+    end
+    blocked = falses(n)
+    for v in z
+        ;
+        blocked[v] = true;
+    end
+
+    visited = falses(n)
+    queue = Int[]
+    for x in xs
+        (mask[x] && !blocked[x] && !visited[x]) || continue
+        visited[x] = true
+        push!(queue, x)
+    end
+
+    head = 1
+    while head <= length(queue)
+        u = queue[head];
+        head += 1
+        for w in adj[u]
+            (visited[w] || blocked[w]) && continue
+            y_mask[w] && return false
+            visited[w] = true
+            push!(queue, w)
+        end
+    end
+    return true
+end
+
+"""
+    is_valid_adjustment(cg::MAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+
+Return `true` if `z` is a valid adjustment set for estimating the total causal
+effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
+
+Uses the same criterion as [`is_valid_adjustment`](@ref ADMG): `z` must contain
+no forbidden node and must m-separate `x` from `y` in the proper backdoor graph
+of `cg`.
+
+# Examples
+
+```jldoctest
+julia> mag = caugi(directed(:A, :X), directed(:X, :Y), bidirected(:A, :Y); class = MAG);
+
+julia> is_valid_adjustment(mag, :X, :Y)        # path X <-- A <-> Y is open
+false
+
+julia> is_valid_adjustment(mag, :X, :Y, [:A])  # A blocks the open path
+true
+```
+
+# References
+
+Perković, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete Graphical
+Characterization and Construction of Adjustment Sets in Markov Equivalence Classes
+of Ancestral Graphs. *Journal of Machine Learning Research*, 18:1-62.
+"""
+function is_valid_adjustment(
+    cg::MAG,
+    x::Symbol,
+    y::Symbol,
+    z::AbstractVector{Symbol} = Symbol[],
+)
+    B = cg.backend
+    xs = [node_index(cg, x)]
+    ys = [node_index(cg, y)]
+    z_idxs = [node_index(cg, v) for v in z]
+
+    forbidden = _forbidden_set(B, xs, ys)
+    any(v -> forbidden[v], z_idxs) && return false
+
+    removed = _pbg_removed(B, xs, ys)
+    return _m_separated_pbg_ag(B, xs, ys, z_idxs, removed)
+end
+
+"""
+    all_adjustment_sets(cg::MAG, x::Symbol, y::Symbol;
+                        minimal::Bool = true, max_size::Int = 3)
+        -> Vector{Vector{Symbol}}
+
+Return all valid adjustment sets for the total causal effect of `x` on `y` in
+`cg`, up to size `max_size`.
+
+Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
+(default), only inclusion-minimal sets are returned.
+
+# Examples
+
+```jldoctest
+julia> mag = caugi(directed(:A, :X), directed(:X, :Y), bidirected(:A, :Y); class = MAG);
+
+julia> all_adjustment_sets(mag, :X, :Y)
+1-element Vector{Vector{Symbol}}:
+ [:A]
+```
+
+# References
+
+Perković, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete Graphical
+Characterization and Construction of Adjustment Sets in Markov Equivalence Classes
+of Ancestral Graphs. *Journal of Machine Learning Research*, 18:1-62.
+"""
+function all_adjustment_sets(
+    cg::MAG,
+    x::Symbol,
+    y::Symbol;
+    minimal::Bool = true,
+    max_size::Int = 3,
+)
+    B = cg.backend
+    n = length(B.nodes)
+    xs = [node_index(cg, x)]
+    ys = [node_index(cg, y)]
+
+    forbidden = _forbidden_set(B, xs, ys)
+    y_mask = falses(n)
+    for yi in ys
+        ;
+        y_mask[yi] = true;
+    end
+
+    universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
+    removed = _pbg_removed(B, xs, ys)
+
+    valid_sets = Vector{Vector{Symbol}}()
+    cur = Int[]
+
+    function enumerate!(start, k_rem)
+        if k_rem == 0
+            if _m_separated_pbg_ag(B, xs, ys, cur, removed)
+                push!(valid_sets, sort([B.nodes[v] for v in cur]))
+            end
+            return
+        end
+        for i = start:length(universe)
+            push!(cur, universe[i])
+            enumerate!(i + 1, k_rem - 1)
+            pop!(cur)
+        end
+    end
+
+    for k = 0:min(max_size, length(universe))
+        enumerate!(1, k)
+    end
+
+    minimal && _prune_minimal!(valid_sets)
+    return valid_sets
+end
+
+# ── PDAG/CPDAG/MPDAG proper-backdoor graph helpers ───────────────────────────
+#
+# Reference: Perković, Textor, Kalisch, Maathuis (2018), same paper as above.
+#
+# Key differences from ADMG/MAG:
+#   - forbidden set uses PossibleDe (children + undirected) rather than De
+#   - PBG removes X --> V where V ∈ PossibleAn(Y) (anteriors), not just An(Y)
+#   - moralization joins Pa(v) ∪ Ne(v) into a clique (undirected neighbors
+#     play the role spouses play for ADMG)
+
+# PossibleDe bitmask: reachable from seeds via directed children OR undirected.
+function _possible_descendants_bitmask(B::PDAGBackend, seeds::Vector{Int})
+    n = length(B.nodes)
+    mask = falses(n)
+    stack = Int[]
+    for s in seeds
+        mask[s] && continue
+        mask[s] = true
+        push!(stack, s)
+    end
+    while !isempty(stack)
+        u = pop!(stack)
+        for c in _children_slice(B, u)
+            mask[c] && continue
+            mask[c] = true
+            push!(stack, c)
+        end
+        for w in _undirected_slice(B, u)
+            mask[w] && continue
+            mask[w] = true
+            push!(stack, w)
+        end
+    end
+    return mask
+end
+
+# forb(X,Y) for PDAG: PossibleDe(Cn(X,Y) \ Y) ∪ X,
+# where Cn(X,Y) = PossibleDe(X) ∩ PossibleAn(Y) (nodes on possibly directed paths X --> Y).
+function _forbidden_set_pdag(B::PDAGBackend, xs::Vector{Int}, ys::Vector{Int})
+    n = length(B.nodes)
+    poss_de_x = _possible_descendants_bitmask(B, xs)
+    ant_y = _anterior_bitmask(B, ys)
+    y_mask = falses(n)
+    for y in ys
+        y_mask[y] = true
+    end
+    causal_minus_y = [v for v = 1:n if poss_de_x[v] && ant_y[v] && !y_mask[v]]
+    forbidden = _possible_descendants_bitmask(B, causal_minus_y)
+    for x in xs
+        forbidden[x] = true
+    end
+    return forbidden
+end
+
+# PBG removed edges for PDAG: X --> V where V ∉ X and V ∈ PossibleAn(Y).
+function _pbg_removed_pdag(B::PDAGBackend, xs::Vector{Int}, ys::Vector{Int})
+    n = length(B.nodes)
+    ant_y = _anterior_bitmask(B, ys)
+    x_mask = falses(n)
+    for x in xs
+        x_mask[x] = true
+    end
+    removed = Set{Tuple{Int,Int}}()
+    for x in xs
+        for c in _children_slice(B, x)
+            (!x_mask[c] && ant_y[c]) && push!(removed, (x, c))
+        end
+    end
+    return removed
+end
+
+# Moralized adjacency for PDAG PBG: clique Pa(v); undirected Ne(v) add direct edges only.
+function _pdag_moral_adj_filtered(
+    B::PDAGBackend,
+    mask::BitVector,
+    removed::Set{Tuple{Int,Int}},
+)
+    n = length(B.nodes)
+    adj = [Int[] for _ = 1:n]
+    for v = 1:n
+        mask[v] || continue
+        pa = [p for p in _parents_slice(B, v) if mask[p] && !((p, v) in removed)]
+        ne = [w for w in _undirected_slice(B, v) if mask[w]]
+        for p in pa
+            push!(adj[v], p)
+            push!(adj[p], v)
+        end
+        for w in ne
+            push!(adj[v], w)  # reverse added when w is processed
+        end
+        for i in eachindex(pa), j = (i+1):lastindex(pa)
+            push!(adj[pa[i]], pa[j])
+            push!(adj[pa[j]], pa[i])
+        end
+    end
+    for v = 1:n
+        sort!(unique!(adj[v]))
+    end
+    return adj
+end
+
+# BFS d-sep check in PDAG PBG (moralization-based).
+function _d_separated_pbg_pdag(
+    B::PDAGBackend,
+    xs::Vector{Int},
+    ys::Vector{Int},
+    z::Vector{Int},
+    removed::Set{Tuple{Int,Int}},
+)
+    (isempty(xs) || isempty(ys)) && return true
+    n = length(B.nodes)
+
+    seeds = unique([xs; ys; z])
+    mask = _anterior_bitmask_filtered(B, seeds, removed)
+    adj = _pdag_moral_adj_filtered(B, mask, removed)
+
+    y_mask = falses(n)
+    for y in ys
+        y_mask[y] = true
+    end
+    blocked = falses(n)
+    for v in z
+        blocked[v] = true
+    end
+
+    visited = falses(n)
+    queue = Int[]
+    for x in xs
+        (mask[x] && !blocked[x] && !visited[x]) || continue
+        visited[x] = true
+        push!(queue, x)
+    end
+
+    head = 1
+    while head <= length(queue)
+        u = queue[head]
+        head += 1
+        for w in adj[u]
+            (visited[w] || blocked[w]) && continue
+            y_mask[w] && return false
+            visited[w] = true
+            push!(queue, w)
+        end
+    end
+    return true
+end
+
+"""
+    is_valid_adjustment(cg::AbstractPDAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+
+Return `true` if `z` is a valid adjustment set for estimating the total causal
+effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
+
+Applicable to [`PDAG`](@ref), [`CPDAG`](@ref), and [`MPDAG`](@ref). The
+forbidden set is computed using possible descendants (nodes reachable via
+directed or undirected edges) and the separation check uses the moralized
+proper backdoor graph.
+
+# Examples
+
+```jldoctest
+julia> cpdag = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = CPDAG);
+
+julia> is_valid_adjustment(cpdag, :X, :Y)       # empty Z leaves A --> Y open
+false
+
+julia> is_valid_adjustment(cpdag, :X, :Y, [:A]) # A blocks the backdoor path
+true
+```
+
+# References
+
+Perković, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete Graphical
+Characterization and Construction of Adjustment Sets in Markov Equivalence Classes
+of Ancestral Graphs. *Journal of Machine Learning Research*, 18:1-62.
+"""
+function is_valid_adjustment(
+    cg::AbstractPDAG,
+    x::Symbol,
+    y::Symbol,
+    z::AbstractVector{Symbol} = Symbol[],
+)
+    B = cg.backend
+    xs = [node_index(cg, x)]
+    ys = [node_index(cg, y)]
+    z_idxs = [node_index(cg, v) for v in z]
+
+    forbidden = _forbidden_set_pdag(B, xs, ys)
+    any(v -> forbidden[v], z_idxs) && return false
+
+    removed = _pbg_removed_pdag(B, xs, ys)
+    return _d_separated_pbg_pdag(B, xs, ys, z_idxs, removed)
+end
+
+"""
+    all_adjustment_sets(cg::AbstractPDAG, x::Symbol, y::Symbol;
+                        minimal::Bool = true, max_size::Int = 3)
+        -> Vector{Vector{Symbol}}
+
+Return all valid adjustment sets for the total causal effect of `x` on `y` in
+`cg`, up to size `max_size`.
+
+Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
+(default), only inclusion-minimal sets are returned.
+
+# Examples
+
+```jldoctest
+julia> cpdag = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = CPDAG);
+
+julia> all_adjustment_sets(cpdag, :X, :Y)
+1-element Vector{Vector{Symbol}}:
+ [:A]
+```
+
+# References
+
+Perković, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete Graphical
+Characterization and Construction of Adjustment Sets in Markov Equivalence Classes
+of Ancestral Graphs. *Journal of Machine Learning Research*, 18:1-62.
+"""
+function all_adjustment_sets(
+    cg::AbstractPDAG,
+    x::Symbol,
+    y::Symbol;
+    minimal::Bool = true,
+    max_size::Int = 3,
+)
+    B = cg.backend
+    n = length(B.nodes)
+    xs = [node_index(cg, x)]
+    ys = [node_index(cg, y)]
+
+    forbidden = _forbidden_set_pdag(B, xs, ys)
+    y_mask = falses(n)
+    for yi in ys
+        y_mask[yi] = true
+    end
+
+    universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
+    removed = _pbg_removed_pdag(B, xs, ys)
+
+    valid_sets = Vector{Vector{Symbol}}()
+    cur = Int[]
+
+    function enumerate!(start, k_rem)
+        if k_rem == 0
+            if _d_separated_pbg_pdag(B, xs, ys, cur, removed)
+                push!(valid_sets, sort([B.nodes[v] for v in cur]))
+            end
+            return
+        end
+        for i = start:length(universe)
+            push!(cur, universe[i])
+            enumerate!(i + 1, k_rem - 1)
+            pop!(cur)
+        end
+    end
+
+    for k = 0:min(max_size, length(universe))
+        enumerate!(1, k)
+    end
+
+    minimal && _prune_minimal!(valid_sets)
+    return valid_sets
+end
 
 """
     is_valid_backdoor(cg::DAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
@@ -577,5 +1126,85 @@ function adjustment_set(cg::DAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
                 "Unknown adjustment_set type $type. Use :parents, :backdoor, or :optimal.",
             ),
         )
+    end
+end
+
+"""
+    adjustment_set(cg::AbstractPDAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
+        -> Vector{Symbol}
+
+Compute an adjustment set for the causal effect of `x` on `y` in `cg`.
+
+Two types are supported:
+
+- `:parents`: directed parents of `x`.
+- `:optimal`: O-set ``\\mathrm{Pa}(\\mathrm{Cn}(x,y)) \\setminus (\\{x\\} \\cup \\mathrm{Cn}(x,y))``,
+  where ``\\mathrm{Cn}(x,y) = \\mathrm{PossibleDe}(x) \\cap \\mathrm{PossibleAn}(y)`` (nodes
+  on possibly directed paths from `x` to `y`).
+
+The returned set is guaranteed to satisfy [`is_valid_adjustment`](@ref) when one
+exists. Returns an empty vector if `x` has no causal path to `y`.
+
+# Examples
+
+```jldoctest
+julia> cpdag = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = CPDAG);
+
+julia> adjustment_set(cpdag, :X, :Y)
+1-element Vector{Symbol}:
+ :A
+
+julia> is_valid_adjustment(cpdag, :X, :Y, adjustment_set(cpdag, :X, :Y))
+true
+```
+
+# References
+
+Henckel, Y., Perković, E., & Maathuis, M. H. (2022). Graphical Criteria for Efficient Total
+Effect Estimation Via Adjustment in Causal Linear Models.
+*Journal of the Royal Statistical Society: Series B*, 84:579-599.
+"""
+function adjustment_set(cg::AbstractPDAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
+    B = cg.backend
+    n = length(B.nodes)
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+
+    if type === :parents
+        keep = falses(n)
+        for p in _parents_slice(B, x_idx)
+            keep[p] = true
+        end
+        keep[x_idx] = false
+        keep[y_idx] = false
+        return [B.nodes[v] for v = 1:n if keep[v]]
+
+    elseif type === :optimal
+        poss_de_x = _possible_descendants_bitmask(B, [x_idx])
+        poss_de_x[x_idx] = false
+
+        ant_y = _anterior_bitmask(B, [y_idx])
+
+        cn_mask = falses(n)
+        for v = 1:n
+            poss_de_x[v] && ant_y[v] && (cn_mask[v] = true)
+        end
+        poss_de_x[y_idx] && (cn_mask[y_idx] = true)
+
+        pacn_mask = falses(n)
+        for v = 1:n
+            cn_mask[v] || continue
+            for p in _parents_slice(B, v)
+                pacn_mask[p] = true
+            end
+        end
+        pacn_mask[x_idx] = false
+        for v = 1:n
+            cn_mask[v] && (pacn_mask[v] = false)
+        end
+        return [B.nodes[v] for v = 1:n if pacn_mask[v]]
+
+    else
+        throw(ArgumentError("Unknown adjustment_set type $type. Use :parents or :optimal."))
     end
 end

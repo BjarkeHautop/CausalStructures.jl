@@ -137,14 +137,14 @@ end
 
 # ── adjustment ────────────────────────────────────────────────────────────────
 
-@testitem "is_valid_adjustment_admg: classic confounding L-->X-->Y, L-->Y" tags = [:unit] begin
+@testitem "is_valid_adjustment: classic confounding L-->X-->Y, L-->Y" tags = [:unit] begin
     admg = caugi(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG)
-    @test !is_valid_adjustment_admg(admg, :X, :Y)
-    @test !is_valid_adjustment_admg(admg, :X, :Y, Symbol[])
-    @test is_valid_adjustment_admg(admg, :X, :Y, [:L])
+    @test !is_valid_adjustment(admg, :X, :Y)
+    @test !is_valid_adjustment(admg, :X, :Y, Symbol[])
+    @test is_valid_adjustment(admg, :X, :Y, [:L])
 end
 
-@testitem "is_valid_adjustment_admg: rejects forbidden descendants" tags = [:unit] begin
+@testitem "is_valid_adjustment: rejects forbidden descendants" tags = [:unit] begin
     admg = caugi(
         directed(:X, :M),
         directed(:M, :Y),
@@ -152,17 +152,17 @@ end
         directed(:L, :Y);
         class = ADMG,
     )
-    @test !is_valid_adjustment_admg(admg, :X, :Y, [:M])  # M is on causal path
-    @test is_valid_adjustment_admg(admg, :X, :Y, [:L])
+    @test !is_valid_adjustment(admg, :X, :Y, [:M])  # M is on causal path
+    @test is_valid_adjustment(admg, :X, :Y, [:L])
 end
 
-@testitem "all_adjustment_sets_admg: finds minimal set" tags = [:unit] begin
+@testitem "all_adjustment_sets: finds minimal set" tags = [:unit] begin
     admg = caugi(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG)
-    sets = all_adjustment_sets_admg(admg, :X, :Y; minimal = true)
+    sets = all_adjustment_sets(admg, :X, :Y; minimal = true)
     @test any(s -> Set(s) == Set([:L]), sets)
 end
 
-@testitem "all_adjustment_sets_admg: with extra non-confounding node" tags = [:unit] begin
+@testitem "all_adjustment_sets: with extra non-confounding node" tags = [:unit] begin
     admg = caugi(
         directed(:L, :X),
         directed(:X, :Y),
@@ -170,17 +170,17 @@ end
         directed(:M, :Y);
         class = ADMG,
     )
-    sets = all_adjustment_sets_admg(admg, :X, :Y; minimal = true)
+    sets = all_adjustment_sets(admg, :X, :Y; minimal = true)
     @test any(s -> Set(s) == Set([:L]), sets)
-    sets_all = all_adjustment_sets_admg(admg, :X, :Y; minimal = false, max_size = 3)
+    sets_all = all_adjustment_sets(admg, :X, :Y; minimal = false, max_size = 3)
     @test any(s -> Set(s) == Set([:L]), sets_all)
     @test any(s -> Set(s) == Set([:L, :M]), sets_all)
 end
 
-@testitem "all_adjustment_sets_admg: no valid set when all paths blocked by collider" tags =
+@testitem "all_adjustment_sets: no valid set when all paths blocked by collider" tags =
     [:unit] begin
     # Instrumental variable + bidirected: Z-->X-->Y, X<->Y - cannot block all paths
     admg = caugi(directed(:Z, :X), directed(:X, :Y), bidirected(:X, :Y); class = ADMG)
-    sets = all_adjustment_sets_admg(admg, :X, :Y; minimal = true, max_size = 3)
+    sets = all_adjustment_sets(admg, :X, :Y; minimal = true, max_size = 3)
     @test isempty(sets)
 end

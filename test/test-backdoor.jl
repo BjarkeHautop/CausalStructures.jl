@@ -241,3 +241,100 @@ end
     cg = caugi(directed(:X, :Y); class = DAG)
     @test_throws ArgumentError adjustment_set(cg, :X, :Y; type = :unknown)
 end
+
+# ── MAG adjustment (is_valid_adjustment / all_adjustment_sets) ────────
+
+@testitem "is_valid_adjustment: simple confounder (DAG-as-MAG)" tags = [:unit] begin
+    # A --> X --> Y, A --> Y: A is a common cause (pure directed MAG = DAG)
+    mag = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = MAG)
+    @test is_valid_adjustment(mag, :X, :Y, [:A])
+    @test !is_valid_adjustment(mag, :X, :Y)       # open path X <-- A --> Y
+end
+
+@testitem "is_valid_adjustment: bidirected confounder" tags = [:unit] begin
+    # A <-> X, A --> Y, X --> Y: hidden common cause of A and X; A also causes Y.
+    # A is not ancestor of X (no directed path A --> X), so A <-> X is a valid MAG edge.
+    # The open non-causal path X <-- (A <-> X) --> Y is blocked by conditioning on A.
+    mag = caugi(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG)
+    @test is_valid_adjustment(mag, :X, :Y, [:A])
+    @test !is_valid_adjustment(mag, :X, :Y)
+end
+
+@testitem "is_valid_adjustment: collider structure blocks without conditioning" tags =
+    [:unit] begin
+    # A <-> X, A <-> Y, X --> Y: A is an unobserved collider between the two hidden
+    # common-cause paths. The empty set is valid because A naturally blocks the
+    # non-causal path. Conditioning on A would OPEN the collider path.
+    mag = caugi(bidirected(:A, :X), bidirected(:A, :Y), directed(:X, :Y); class = MAG)
+    @test is_valid_adjustment(mag, :X, :Y)         # empty set valid
+    @test !is_valid_adjustment(mag, :X, :Y, [:A])  # conditioning on A opens path
+end
+
+@testitem "is_valid_adjustment: descendant of X is forbidden" tags = [:unit] begin
+    # A --> X --> M --> Y: M is a descendant of X, invalid adjustment
+    mag = caugi(
+        directed(:A, :X),
+        directed(:X, :M),
+        directed(:M, :Y),
+        directed(:A, :Y);
+        class = MAG,
+    )
+    @test !is_valid_adjustment(mag, :X, :Y, [:M])  # M is forbidden (descendant of X)
+    @test is_valid_adjustment(mag, :X, :Y, [:A])
+end
+
+@testitem "is_valid_adjustment: chain has valid empty set" tags = [:unit] begin
+    mag = caugi(directed(:X, :Y); class = MAG)
+    @test is_valid_adjustment(mag, :X, :Y)
+end
+
+@testitem "all_adjustment_sets: bidirected confounder returns {A}" tags = [:unit] begin
+    mag = caugi(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG)
+    sets = all_adjustment_sets(mag, :X, :Y)
+    @test length(sets) == 1
+    @test sets[1] == [:A]
+end
+
+@testitem "all_adjustment_sets: collider structure returns only empty set" tags = [:unit] begin
+    # Collider A blocks non-causal paths; only the empty adjustment set is valid.
+    mag = caugi(bidirected(:A, :X), bidirected(:A, :Y), directed(:X, :Y); class = MAG)
+    sets = all_adjustment_sets(mag, :X, :Y)
+    @test length(sets) == 1
+    @test sets[1] == Symbol[]
+end
+
+@testitem "all_adjustment_sets: chain returns empty set" tags = [:unit] begin
+    mag = caugi(directed(:X, :Y); class = MAG)
+    sets = all_adjustment_sets(mag, :X, :Y)
+    @test length(sets) == 1
+    @test sets[1] == Symbol[]
+end
+
+@testitem "all_adjustment_sets: consistent with is_valid_adjustment" tags = [:unit] begin
+    # Verify that every set returned is valid and all valid sets (up to size) are found.
+    # A --> X, B --> X, X --> Y, A --> Y: pure directed MAG (= DAG); A and B confound X.
+    mag = caugi(
+        directed(:A, :X),
+        directed(:B, :X),
+        directed(:X, :Y),
+        directed(:A, :Y);
+        class = MAG,
+    )
+    sets = all_adjustment_sets(mag, :X, :Y; minimal = false, max_size = 2)
+    for z in sets
+        @test is_valid_adjustment(mag, :X, :Y, z)
+    end
+end
+
+@testitem "proper backdoor graph removes causal edges" begin
+    mag = caugi(
+        directed(:X, :M),
+        directed(:M, :Y),
+        directed(:A, :X),
+        directed(:A, :Y);
+        class = MAG,
+    )
+
+    @test is_valid_adjustment(mag, :X, :Y, [:A])
+    @test !is_valid_adjustment(mag, :X, :Y)
+end

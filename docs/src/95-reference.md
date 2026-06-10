@@ -110,8 +110,9 @@ all_backdoor_sets
 frontdoor_set
 is_valid_frontdoor
 all_frontdoor_sets
-is_valid_adjustment_admg
-all_adjustment_sets_admg
+is_valid_adjustment
+all_adjustment_sets
+adjustment_set
 ```
 
 ## Simulation
