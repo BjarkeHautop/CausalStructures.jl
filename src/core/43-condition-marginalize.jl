@@ -5,7 +5,7 @@
 # Returns true iff a and b cannot be m-separated by any Z ⊆ other_nodes,
 # when cond_vars are always included in the conditioning set.
 function _not_m_separated_for_all_subsets(
-    cg::Union{DAG,AG},
+    cg::Union{DAG,AbstractAG},
     a::Symbol,
     b::Symbol,
     other_nodes::Vector{Symbol},
@@ -62,7 +62,7 @@ end
 # Marginalize and/or condition on variables in a DAG or AG (Definition 4.2.1,
 # Richardson & Spirtes 2002). Returns an AG over the remaining nodes.
 """
-    condition_marginalize(cg::Union{DAG,AG};
+    condition_marginalize(cg::Union{DAG,AbstractAG};
                           cond_vars = Symbol[], marg_vars = Symbol[]) -> AG
 
 Return the [`AG`](@ref) over the remaining nodes after conditioning on
@@ -96,7 +96,7 @@ Richardson, T. & Spirtes, P. (2002). Ancestral graph Markov models.
 *Annals of Statistics*, 30(4):962-1030.
 """
 function condition_marginalize(
-    cg::Union{DAG,AG};
+    cg::Union{DAG,AbstractAG};
     cond_vars::AbstractVector{Symbol} = Symbol[],
     marg_vars::AbstractVector{Symbol} = Symbol[],
 )

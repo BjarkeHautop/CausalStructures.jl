@@ -502,6 +502,14 @@ end
     @test :U ∉ nodes(mg)
 end
 
+@testitem "condition_marginalize: accepts MAG input" tags = [:unit] begin
+    mag = caugi(directed(:X, :Y), directed(:X, :Z), bidirected(:Y, :Z); class = MAG)
+    result = condition_marginalize(mag; marg_vars = [:Z])
+    @test result isa AG
+    @test :Z ∉ nodes(result)
+    @test :X ∈ nodes(result) && :Y ∈ nodes(result)
+end
+
 # ── markov_equivalent ─────────────────────────────────────────────────────
 
 @testitem "markov_equivalent: identical DAGs are equivalent" tags = [:unit] begin

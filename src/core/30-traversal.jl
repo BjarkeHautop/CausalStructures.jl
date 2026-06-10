@@ -807,7 +807,7 @@ function _district_of_idx(B::ADMGBackend, node_idx::Int)
 end
 
 """
-    districts(cg::ADMG) -> Vector{Vector{Symbol}}
+    districts(cg::Union{ADMG,AbstractAG}) -> Vector{Vector{Symbol}}
 
 Return all districts (c-components) of `cg`.
 
@@ -826,7 +826,7 @@ julia> districts(admg)
  [:D, :E]
 ```
 """
-function districts(cg::ADMG)
+function districts(cg::Union{ADMG,AbstractAG})
     B = cg.backend
     n = length(B.nodes)
     comp = zeros(Int, n)

@@ -535,6 +535,18 @@ end
     @test length(districts(admg)) == 2
 end
 
+@testitem "districts works for AG" tags = [:unit] begin
+    ag = caugi(bidirected(:A, :B), bidirected(:B, :C), directed(:C, :D); class = AG)
+    @test length(districts(ag)) == 2
+end
+
+@testitem "districts works for MAG" tags = [:unit] begin
+    mag = caugi(bidirected(:A, :C), directed(:A, :B), directed(:C, :B); class = MAG)
+    dists = districts(mag)
+    @test length(dists) == 2
+    @test any(d -> Set(d) == Set([:A, :C]), dists)
+end
+
 # ── is_cpdag ──────────────────────────────────────────────────────────────────
 
 @testitem "is_cpdag: CPDAG class is always true" tags = [:unit] begin
