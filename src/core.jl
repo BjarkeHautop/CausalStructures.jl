@@ -15,21 +15,33 @@ const _PLOT_NODE_STROKEWIDTH_DEFAULT = @load_preference("plot_node_strokewidth",
 const _PLOT_EDGE_COLOR_DEFAULT = @load_preference("plot_edge_color", "black")
 const _PLOT_LINEWIDTH_DEFAULT = @load_preference("plot_linewidth", 1.5)
 
-include("core/00-defs.jl")
-include("core/05-edges.jl")
-include("core/06-constructors.jl")
-include("core/07-mutate.jl")
-include("core/10-validate.jl")
-include("core/20-backend.jl")
-include("core/30-traversal.jl")
-include("core/31-separation.jl")
-include("core/32-minimal-separator.jl")
-include("core/33-adjustment.jl")
-include("core/34-frontdoor.jl")
-include("core/40-skeleton-subgraph.jl")
-include("core/41-latent.jl")
-include("core/42-pdag.jl")
-include("core/43-condition-marginalize.jl")
-include("core/44-enumerate-dags.jl")
-include("core/50-utils.jl")
-include("core/60-layout.jl")
+# Foundation: types, edges, construction, mutation, validation, backend storage
+include("core/defs.jl")
+include("core/edges.jl")
+include("core/constructors.jl")
+include("core/mutate.jl")
+include("core/validate.jl")
+include("core/backend.jl")
+
+# Graph query algorithms: traversal, separation, minimal separators
+include("query/traversal.jl")
+include("query/separation.jl")
+include("query/minimal-separator.jl")
+
+# Causal identification: adjustment sets, frontdoor, conditioning
+include("identification/adjustment-admg.jl")
+include("identification/adjustment-mag.jl")
+include("identification/adjustment-pdag.jl")
+include("identification/backdoor.jl")
+include("identification/frontdoor.jl")
+include("identification/condition-marginalize.jl")
+
+# Graph transformations: skeleton, latent projection, PDAG ops, DAG enumeration
+include("transform/skeleton-subgraph.jl")
+include("transform/latent.jl")
+include("transform/pdag.jl")
+include("transform/enumerate-dags.jl")
+
+# I/O, generation, simulation, display, layout
+include("io/utils.jl")
+include("io/layout.jl")

@@ -1,0 +1,332 @@
+"""
+    is_valid_backdoor(cg::DAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+
+Return `true` if `z` satisfies the backdoor criterion for the causal effect of
+`x` on `y` in `cg`.
+
+`z` is a valid backdoor set if (1) no node in `z` is a descendant of `x`, and
+(2) `z` blocks every backdoor path from `x` to `y`. Equivalently, every parent
+of `x` is d-separated from `y` given `z ∪ {x}`.
+
+# Examples
+
+```jldoctest
+julia> cg = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG);
+
+julia> is_valid_backdoor(cg, :X, :Y)       # empty Z leaves the backdoor path A --> Y open
+false
+
+julia> is_valid_backdoor(cg, :X, :Y, [:A]) # conditioning on A blocks the backdoor path
+true
+```
+
+# References
+
+Pearl, J. (2009). *Causality: Models, Reasoning and Inference* (2nd ed.).
+Cambridge University Press.
+"""
+function is_valid_backdoor(
+    cg::DAG,
+    x::Symbol,
+    y::Symbol,
+    z::AbstractVector{Symbol} = Symbol[],
+)
+    B = cg.backend
+    n = length(B.nodes)
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+
+    # Reject any z member that is a descendant of x.
+    de_x = _descendants_bitmask(B, [x_idx])
+    z_idxs = Vector{Int}(undef, length(z))
+    for (i, v) in enumerate(z)
+        vi = node_index(cg, v)
+        de_x[vi] && return false
+        z_idxs[i] = vi
+    end
+
+    parents_x = _parents_slice(B, x_idx)
+    isempty(parents_x) && return true
+
+    # obs = z ∪ {x}.  Every parent p of x is an ancestor of x ∈ obs, so
+    # ancestors(p ∪ y ∪ obs) = ancestors(y ∪ obs) for all parents p.
+    # Precompute the ancestor mask, moral adjacency, and blocked set once.
+    obs_idxs = push!(copy(z_idxs), x_idx)
+    seeds = unique!([y_idx; obs_idxs])
+    mask = _ancestors_bitmask(B, seeds)
+    adj = _moral_adj_in_mask(B, mask)
+
+    blocked = falses(n)
+    for v in obs_idxs
+        blocked[v] = true
+    end
+
+    # Reuse BFS buffers across all parent checks.
+    visited = falses(n)
+    queue = Int[]
+    sizehint!(queue, n)
+
+    for p_idx in parents_x
+        blocked[p_idx] && continue  # p is in obs --> trivially d-separated
+        fill!(visited, false)
+        empty!(queue)
+        visited[p_idx] = true
+        push!(queue, p_idx)
+        head = 1
+        while head <= length(queue)
+            u = queue[head];
+            head += 1
+            for w in adj[u]
+                visited[w] && continue
+                blocked[w] && continue
+                w == y_idx && return false
+                visited[w] = true
+                push!(queue, w)
+            end
+        end
+    end
+    return true
+end
+
+"""
+    all_backdoor_sets(cg::DAG, x::Symbol, y::Symbol;
+                      minimal::Bool = true, max_size::Int = 3)
+        -> Vector{Vector{Symbol}}
+
+Return all sets satisfying the backdoor criterion for the causal effect of `x`
+on `y` in `cg`, up to size `max_size`.
+
+Sets are validated using [`is_valid_backdoor`](@ref). When `minimal = true`
+(default), only inclusion-minimal sets are returned. Descendants of `x` and `y`
+itself are never candidates.
+
+# Examples
+
+```jldoctest
+julia> cg = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG);
+
+julia> all_backdoor_sets(cg, :X, :Y)
+1-element Vector{Vector{Symbol}}:
+ [:A]
+```
+"""
+function all_backdoor_sets(
+    cg::DAG,
+    x::Symbol,
+    y::Symbol;
+    minimal::Bool = true,
+    max_size::Int = 3,
+)
+    B = cg.backend
+    n = length(B.nodes)
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+
+    de_x = _descendants_bitmask(B, [x_idx])
+    universe = [v for v = 1:n if v != x_idx && v != y_idx && !de_x[v]]
+
+    valid_sets = Vector{Vector{Symbol}}()
+    cur = Int[]
+
+    function enumerate!(start, k_rem)
+        if k_rem == 0
+            z = [B.nodes[v] for v in cur]
+            is_valid_backdoor(cg, x, y, z) && push!(valid_sets, sort(z))
+            return
+        end
+        for i = start:length(universe)
+            push!(cur, universe[i])
+            enumerate!(i + 1, k_rem - 1)
+            pop!(cur)
+        end
+    end
+
+    for k = 0:min(max_size, length(universe))
+        enumerate!(1, k)
+    end
+
+    minimal && _prune_minimal!(valid_sets)
+    return valid_sets
+end
+
+"""
+    adjustment_set(cg::DAG, x::Symbol, y::Symbol; type::Symbol = :optimal) -> Vector{Symbol}
+
+Compute an adjustment set for the causal effect of `x` on `y` in `cg`.
+
+Three types are supported:
+
+- `:parents`: ``\\bigcup \\mathrm{Pa}(x) \\setminus \\{x, y\\}``.
+- `:backdoor`: Pearl backdoor formula.
+- `:optimal`: O-set ``\\mathrm{Pa}(\\mathrm{cn}(x,y)) \\setminus (\\{x\\} \\cup \\mathrm{cn}(x,y))``,
+  where ``\\mathrm{cn}(x,y) = \\mathrm{De}(x) \\cap \\mathrm{An}(y)``.
+
+# Examples
+
+```jldoctest
+julia> cg = caugi(
+           directed(:C, :X), directed(:X, :F), directed(:X, :D),
+           directed(:A, :X), directed(:A, :K), directed(:K, :Y),
+           directed(:D, :Y), directed(:D, :G), directed(:Y, :H);
+           class = DAG);
+
+julia> sort(adjustment_set(cg, :X, :Y; type = :parents))
+2-element Vector{Symbol}:
+ :A
+ :C
+
+julia> is_valid_backdoor(cg, :X, :Y, adjustment_set(cg, :X, :Y; type = :backdoor))
+true
+
+julia> adjustment_set(cg, :X, :Y; type = :optimal)
+1-element Vector{Symbol}:
+ :K
+```
+
+# References
+
+Henckel, Y., Perković, E., & Maathuis, M. H. (2022). Graphical Criteria for Efficient Total
+Effect Estimation Via Adjustment in Causal Linear Models.
+*Journal of the Royal Statistical Society: Series B*, 84:579-599.
+(`:optimal`)
+
+Pearl, J. (2009). *Causality: Models, Reasoning and Inference* (2nd ed.).
+Cambridge University Press. (`:parents` and `:backdoor`)
+"""
+function adjustment_set(cg::DAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
+    B = cg.backend
+    n = length(B.nodes)
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+
+    if type === :parents
+        keep = falses(n)
+        for p in _parents_slice(B, x_idx)
+            keep[p] = true
+        end
+        keep[x_idx] = false
+        keep[y_idx] = false
+        return [B.nodes[v] for v = 1:n if keep[v]]
+
+    elseif type === :backdoor
+        keep = falses(n)
+        for p in _parents_slice(B, x_idx)
+            keep[p] = true
+        end
+        keep[x_idx] = false
+        keep[y_idx] = false
+        return [B.nodes[v] for v = 1:n if keep[v]]
+
+    elseif type === :optimal
+        de_x = _descendants_bitmask(B, [x_idx])
+        de_x[x_idx] = false  # exclude x itself
+
+        an_y = _ancestors_bitmask(B, [y_idx])  # includes y_idx
+
+        cn_mask = falses(n)
+        for v = 1:n
+            de_x[v] && an_y[v] && (cn_mask[v] = true)
+        end
+        de_x[y_idx] && (cn_mask[y_idx] = true)  # add y if y ∈ De(x)
+
+        pacn_mask = falses(n)
+        for v = 1:n
+            cn_mask[v] || continue
+            for p in _parents_slice(B, v)
+                pacn_mask[p] = true
+            end
+        end
+        pacn_mask[x_idx] = false
+        for v = 1:n
+            cn_mask[v] && (pacn_mask[v] = false)
+        end
+        return [B.nodes[v] for v = 1:n if pacn_mask[v]]
+
+    else
+        throw(
+            ArgumentError(
+                "Unknown adjustment_set type $type. Use :parents, :backdoor, or :optimal.",
+            ),
+        )
+    end
+end
+
+"""
+    adjustment_set(cg::AbstractPDAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
+        -> Vector{Symbol}
+
+Compute an adjustment set for the causal effect of `x` on `y` in `cg`.
+
+Two types are supported:
+
+- `:parents`: directed parents of `x`.
+- `:optimal`: O-set ``\\mathrm{Pa}(\\mathrm{Cn}(x,y)) \\setminus (\\{x\\} \\cup \\mathrm{Cn}(x,y))``,
+  where ``\\mathrm{Cn}(x,y) = \\mathrm{PossibleDe}(x) \\cap \\mathrm{PossibleAn}(y)`` (nodes
+  on possibly directed paths from `x` to `y`).
+
+The returned set is guaranteed to satisfy [`is_valid_adjustment`](@ref) when one
+exists. Returns an empty vector if `x` has no causal path to `y`.
+
+# Examples
+
+```jldoctest
+julia> pdag = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = PDAG);
+
+julia> adjustment_set(pdag, :X, :Y)
+1-element Vector{Symbol}:
+ :A
+
+julia> is_valid_adjustment(pdag, :X, :Y, [:A])
+true
+```
+
+# References
+
+Henckel, Y., Perković, E., & Maathuis, M. H. (2022). Graphical Criteria for Efficient Total
+Effect Estimation Via Adjustment in Causal Linear Models.
+*Journal of the Royal Statistical Society: Series B*, 84:579-599.
+"""
+function adjustment_set(cg::AbstractPDAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
+    B = cg.backend
+    n = length(B.nodes)
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+
+    if type === :parents
+        keep = falses(n)
+        for p in _parents_slice(B, x_idx)
+            keep[p] = true
+        end
+        keep[x_idx] = false
+        keep[y_idx] = false
+        return [B.nodes[v] for v = 1:n if keep[v]]
+
+    elseif type === :optimal
+        poss_de_x = _possible_descendants_bitmask(B, [x_idx])
+        poss_de_x[x_idx] = false
+
+        ant_y = _anterior_bitmask(B, [y_idx])
+
+        cn_mask = falses(n)
+        for v = 1:n
+            poss_de_x[v] && ant_y[v] && (cn_mask[v] = true)
+        end
+        poss_de_x[y_idx] && (cn_mask[y_idx] = true)
+
+        pacn_mask = falses(n)
+        for v = 1:n
+            cn_mask[v] || continue
+            for p in _parents_slice(B, v)
+                pacn_mask[p] = true
+            end
+        end
+        pacn_mask[x_idx] = false
+        for v = 1:n
+            cn_mask[v] && (pacn_mask[v] = false)
+        end
+        return [B.nodes[v] for v = 1:n if pacn_mask[v]]
+
+    else
+        throw(ArgumentError("Unknown adjustment_set type $type. Use :parents or :optimal."))
+    end
+end
