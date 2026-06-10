@@ -105,14 +105,13 @@ d_separated
 m_separated
 minimal_separator
 adjustment_set
+is_valid_adjustment
+all_adjustment_sets
 is_valid_backdoor
 all_backdoor_sets
 frontdoor_set
 is_valid_frontdoor
 all_frontdoor_sets
-is_valid_adjustment
-all_adjustment_sets
-adjustment_set
 ```
 
 ## Simulation
