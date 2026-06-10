@@ -93,7 +93,7 @@ end
 
 Return `true` if `x` and `y` are d-separated given `z` in `cg`.
 
-Applicable to [`DAG`](@ref) and [`AbstractPDAG`](@ref) (PDAG, CPDAG, MPDAG).
+Applicable to [`DAG`](@ref) and [`AbstractPDAG`](@ref).
 
 Two nodes are d-separated given a conditioning set `z` if every path between
 them is blocked. A path is blocked if it contains either a non-collider node

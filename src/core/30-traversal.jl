@@ -344,8 +344,6 @@ from `node` to `V`: a path on which no edge is compelled in the direction away
 from `node`. Each step traverses either an undirected edge or a directed edge
 pointing away from `node`.
 
-Applicable to [`AbstractPDAG`](@ref).
-
 When `open = true` (default), `node` itself is excluded. When `open = false`
 (closed definition), `node` is included. The default can be changed via
 Preferences.jl: `set_preferences!(CausalGraphInterface, "open" => false)`.
@@ -419,7 +417,6 @@ end
 Return the anteriors of `node` in `cg`: all nodes from which `node` is reachable
 by following directed edges backward or traversing undirected edges.
 
-Applicable to [`DAG`](@ref), [`AbstractPDAG`](@ref), and [`AbstractAG`](@ref).
 For a [`DAG`](@ref), anteriors are equivalent to [`ancestors`](@ref) (no
 undirected edges exist). For [`AbstractPDAG`](@ref) and [`AbstractAG`](@ref),
 undirected edges extend the reachable set beyond strict ancestors.
@@ -542,7 +539,6 @@ end
 Return the posteriors of `node` in `cg`: all nodes reachable from `node` by
 following directed edges forward or traversing undirected edges.
 
-Applicable to [`DAG`](@ref), [`AbstractPDAG`](@ref), and [`AbstractAG`](@ref).
 For a [`DAG`](@ref), posteriors are equivalent to [`descendants`](@ref) (no
 undirected edges exist). For [`AbstractPDAG`](@ref) and [`AbstractAG`](@ref),
 undirected edges extend the reachable set beyond strict descendants.
@@ -774,8 +770,6 @@ end
 
 Return the spouses of `node` in `cg`: nodes connected to `node` via a
 bidirected edge (`node <-> spouse`).
-
-Applicable to [`ADMG`](@ref) and [`AG`](@ref).
 
 # Examples
 

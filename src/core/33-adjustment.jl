@@ -497,7 +497,7 @@ effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
 
 Uses the same criterion as [`is_valid_adjustment`](@ref ADMG): `z` must contain
 no forbidden node and must m-separate `x` from `y` in the proper backdoor graph
-of `cg`. Applicable to [`AG`](@ref) and [`MAG`](@ref).
+of `cg`.
 
 # Examples
 
@@ -541,7 +541,7 @@ end
         -> Vector{Vector{Symbol}}
 
 Return all valid adjustment sets for the total causal effect of `x` on `y` in
-`cg`, up to size `max_size`. Applicable to [`AG`](@ref) and [`MAG`](@ref).
+`cg`, up to size `max_size`.
 
 Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 (default), only inclusion-minimal sets are returned.
@@ -762,8 +762,7 @@ end
 Return `true` if `z` is a valid adjustment set for estimating the total causal
 effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
 
-Applicable to [`PDAG`](@ref), [`CPDAG`](@ref), and [`MPDAG`](@ref). The
-forbidden set is computed using possible descendants (nodes reachable via
+The forbidden set is computed using possible descendants (nodes reachable via
 directed or undirected edges) and the separation check uses the moralized
 proper backdoor graph.
 
