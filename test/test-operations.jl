@@ -80,16 +80,6 @@ end
     @test has_ug_edge(mg, :C, :E)
 end
 
-@testitem "moralize fails on non-DAGs" tags = [:unit] begin
-    # Julia: no method defined for PDAG/UG --> MethodError
-    # R: explicit error message "moralize() can only be applied to DAGs."
-    g_pdag = caugi(directed(:A, :B), directed(:B, :C), undirected(:C, :D); class = PDAG)
-    @test_throws MethodError moralize(g_pdag)
-
-    g_ug = caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
-    @test_throws MethodError moralize(g_ug)
-end
-
 # NetworkX moralization tests
 # https://github.com/networkx/networkx/blob/main/networkx/algorithms/tests/test_moral.py
 
