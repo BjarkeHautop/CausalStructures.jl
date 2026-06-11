@@ -98,7 +98,8 @@ ag_to_mag
 
 ## Separation & Adjustment
 
-See the [Causal Identification guide](@ref causal-identification-guide) for worked examples.
+See the \[Causal Identification guide\](@ref causal-identification-guide) for
+worked examples.
 
 ```@docs
 d_separated
@@ -133,7 +134,7 @@ reclass
 
 ## Plotting
 
-See the [Plotting guide](@ref plotting-guide) for full examples.
+See the \[Plotting guide\](@ref plotting-guide) for full examples.
 
 ```@docs
 layout

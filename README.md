@@ -18,7 +18,9 @@ validating, and manipulating causal graphs. Rather than treating every graph as
 an arbitrary collection of nodes and edges, graph classes explicitly encode
 their structural assumptions and invariants.
 
-The package is inspired by the design principles of the R package [caugi](https://caugi.org/) and aims to provide a similarly expressive and extensible foundation for causal graphs in Julia.
+The package is inspired by the design principles of the R package
+[caugi](https://caugi.org/) and aims to provide a similarly expressive and
+extensible foundation for causal graphs in Julia.
 
 ## Design Philosophy
 
@@ -85,7 +87,8 @@ admg = latent_project(dag, [:U])
 Figure out a better syntax than using `directed(), undirected()`, etc. Ideally,
 we would support edge operators similar to the syntax used in R.
 
-Maybe use `Edge(..., directed)` instead of `directed(...)`, and similar for the rest?
+Maybe use `Edge(..., directed)` instead of `directed(...)`, and similar for the
+rest?
 
 Allow one of the arguments to be a vector (but not both at the same time)? I.e.
 `directed([:U, :Y], :X)` to mean `directed(:U, :X)` and `directed(:Y, :X)`?

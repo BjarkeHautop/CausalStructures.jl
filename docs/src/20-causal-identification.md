@@ -59,8 +59,8 @@ minimal_separator(dag2, :X, :Y; include = [:M])
 
 ## Frontdoor Adjustment
 
-When confounders are unobserved the backdoor criterion may not apply.
-`M` is a descendant of `X` and therefore fails it:
+When confounders are unobserved the backdoor criterion may not apply. `M` is a
+descendant of `X` and therefore fails it:
 
 ```@example id
 dag3 = caugi(
@@ -113,8 +113,8 @@ frontdoor_set(dag4, :X, :Y; include = [:C], restrict = [:A, :B, :C, :D])
 
 In an ADMG, bidirected edges represent hidden common causes directly, keeping
 only the observed nodes in the graph. [`is_valid_adjustment`](@ref) and
-[`all_adjustment_sets`](@ref) implement the Generalized Adjustment
-Criterion for such graphs.
+[`all_adjustment_sets`](@ref) implement the Generalized Adjustment Criterion for
+such graphs.
 
 The bidirected edge `X <-> Z` represents a hidden common cause of `X` and `Z`.
 Since `Z` also has a direct effect on `Y`, this opens the confounding path

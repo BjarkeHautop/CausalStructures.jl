@@ -6,7 +6,11 @@ The core data structure in CausalGraphInterface is a compressed sparse row (CSR)
 representation of the graph. This is memory efficient, but does mean that any
 rebuilding of the graph would be expensive.
 
-The graph object also stores important query information in the object, leading to parent, child, and neighbor queries being done in $O(1)$. While this increases the memory footprint, many causal graph algorithms are built from repeated applications of these basic queries, making the additional storage worthwhile.
+The graph object also stores important query information in the object, leading
+to parent, child, and neighbor queries being done in $O(1)$. While this
+increases the memory footprint, many causal graph algorithms are built from
+repeated applications of these basic queries, making the additional storage
+worthwhile.
 
 ## Performance
 
@@ -51,9 +55,10 @@ d_separated(dag, :V50, :V70, valid_adjustment_set)
 ## Comparison with common R packages
 
 Here we compare the performance of CausalGraphInterface to various popular R
-packages[^1].
+packages\[^1\].
 
-[^1]: Please let me know if there are any Julia packages I should compare against as well.
+\[^1\]: Please let me know if there are any Julia packages I should compare
+against as well.
 
 In particular we compare against [caugi](https://caugi.org/index.html),
 [igraph](https://r.igraph.org/), [bnlearn](https://www.bnlearn.com/),
@@ -61,10 +66,12 @@ In particular we compare against [caugi](https://caugi.org/index.html),
 [ggm](https://cran.r-project.org/package=ggm).
 
 Like in the Julia code above, we generate a DAG with 1000 nodes and edge
-probability 0.25. We then see how fast each package is to find the parents of a random
-node:
+probability 0.25. We then see how fast each package is to find the parents of a
+random node:
 
-Benchmarks were performed on a system running Linux Mint 22.3 with an AMD Ryzen 7 8845HS processor and 14 GB RAM. Reported runtimes are median values obtained using BenchmarkTools.jl (Julia) and bench (R) after an initial warm-up run.
+Benchmarks were performed on a system running Linux Mint 22.3 with an AMD Ryzen
+7 8845HS processor and 14 GB RAM. Reported runtimes are median values obtained
+using BenchmarkTools.jl (Julia) and bench (R) after an initial warm-up run.
 
 ```@raw html
 <details><summary>Click to see R code</summary>
@@ -118,13 +125,10 @@ bench::mark(
 
 Here we compare the speed of retrieving parent nodes across different packages:
 
-| **Median** | **Package**           |
-| ---------- | --------------------- |
-| 0.17 µs    | CausalGraphInterface  |
-| 2.8 µs     | caugi                 |
-| 12µs       | bnlearn               |
-| 127 µs     | igraph                |
-| 5.1ms      | ggm                   |
-| 887ms      | daggity               |
+\| **Median** \| **Package** \| \| ---------- \| --------------------- \| \|
+0.17 µs \| CausalGraphInterface \| \| 2.8 µs \| caugi \| \| 12µs \| bnlearn \|
+\| 127 µs \| igraph \| \| 5.1ms \| ggm \| \| 887ms \| daggity \|
 
-As shown above, CausalGraphInterface is substantially faster than the competing R packages for a simple query such as retrieving parent nodes. The same pattern holds across all other benchmarked operations.
+As shown above, CausalGraphInterface is substantially faster than the competing
+R packages for a simple query such as retrieving parent nodes. The same pattern
+holds across all other benchmarked operations.
