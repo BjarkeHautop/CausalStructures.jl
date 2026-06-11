@@ -47,6 +47,38 @@ end
     )
 end
 
+# ── subgraph ──────────────────────────────────────────────────────────────────
+
+@testitem "subgraph on DAG returns DAG" tags = [:unit] begin
+    cg = caugi(directed(:A, :B), directed(:B, :C), directed(:A, :C); class = DAG)
+    sg = subgraph(cg, [:A, :B])
+    @test sg isa DAG
+    @test Set(nodes(sg)) == Set([:A, :B])
+    @test has_edge(sg, :A, :B)
+end
+
+@testitem "subgraph on CPDAG with v-structure: removing collider orphans directed edge" tags =
+    [:unit] begin
+    # V-structure: A-->B<--C, A and C not adjacent.
+    # A-->B is protected by VS (C-->B, C not adj A).
+    # C-->B is protected by VS (A-->B, A not adj C).
+    # After removing C, A-->B has no protection -- must downgrade to PDAG.
+    cpdag = caugi(directed(:A, :B), directed(:C, :B); class = CPDAG)
+    sg = subgraph(cpdag, [:A, :B])
+    @test sg isa PDAG
+    @test !(sg isa CPDAG)
+    @test !is_cpdag(sg)
+    @test has_edge(sg, :A, :B)
+end
+
+@testitem "subgraph on MPDAG preserves MPDAG class" tags = [:unit] begin
+    # Meek rules fire on edge-presence conditions; removing nodes only removes
+    # edges, so no new violation can appear.
+    mpdag = caugi(directed(:A, :B), directed(:B, :C); class = MPDAG)
+    sg = subgraph(mpdag, [:A, :B])
+    @test sg isa MPDAG
+end
+
 # ── moralize ──────────────────────────────────────────────────────────────────
 
 @testitem "moralize works on DAGs" tags = [:unit] begin

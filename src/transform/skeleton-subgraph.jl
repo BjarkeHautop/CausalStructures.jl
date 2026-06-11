@@ -110,11 +110,26 @@ function _subgraph_edges(edges::Vector{CausalEdge}, keep::Set{Symbol})
     return [edge for edge in edges if edge.src in keep && edge.dst in keep]
 end
 
+# CPDAG subgraphs need not satisfy strong protection (removing a node can
+# orphan a directed edge that was only protected by that node), so downgrade
+# to PDAG. MPDAG subgraphs are always valid MPDAGs: Meek rules fire on edge
+# presence/absence conditions, and removing nodes can only remove edges, never
+# create a new pattern that would fire. MAG subgraphs need not be maximal, so
+# downgrade to AG.
+_subgraph_type(::Type{CPDAG}) = PDAG
+_subgraph_type(::Type{MAG}) = AG
+_subgraph_type(T::Type{<:CausalGraph}) = T
+
 """
     subgraph(cg::CausalGraph, nodes::AbstractVector{Symbol}) -> CausalGraph
 
-Return the subgraph of `cg` induced by `nodes`: the same graph class restricted
-to the given node set, keeping only edges whose both endpoints are in `nodes`.
+Return the subgraph of `cg` induced by `nodes`: restricted to the given node
+set, keeping only edges whose both endpoints are in `nodes`.
+
+The return type matches `cg` for most classes. [`CPDAG`](@ref) subgraphs are
+returned as [`PDAG`](@ref): removing a node can orphan a directed edge that
+was only strongly protected by that node. [`MAG`](@ref) subgraphs are returned
+as [`AG`](@ref) (maximality need not hold).
 
 # Examples
 
@@ -131,5 +146,5 @@ DAG with 2 nodes and 1 edge:
 function subgraph(cg::CausalGraph, nodes::AbstractVector{Symbol})
     keep = Set(nodes)
     edges = _subgraph_edges(cg.edges, keep)
-    return typeof(cg)(keep, edges)
+    return _subgraph_type(typeof(cg))(keep, edges)
 end
