@@ -278,3 +278,67 @@ function all_adjustment_sets(
     minimal && _prune_minimal!(valid_sets)
     return valid_sets
 end
+
+"""
+    adjustment_set(cg::AbstractAG, x::Symbol, y::Symbol) -> Vector{Symbol}
+
+Return a single valid adjustment set for the causal effect of `x` on `y` in `cg`,
+preferring smaller sets. Returns the smallest valid adjustment set found by trying
+sizes 0, 1, 2, ... in order and stopping at the first valid set.
+
+# Examples
+
+```jldoctest
+julia> mag = caugi(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG);
+
+julia> adjustment_set(mag, :X, :Y)
+1-element Vector{Symbol}:
+ :A
+```
+
+# References
+
+Perković, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete Graphical
+Characterization and Construction of Adjustment Sets in Markov Equivalence Classes
+of Ancestral Graphs. *Journal of Machine Learning Research*, 18:1-62.
+"""
+function adjustment_set(cg::AbstractAG, x::Symbol, y::Symbol)
+    B = cg.backend
+    n = length(B.nodes)
+    xs = [node_index(cg, x)]
+    ys = [node_index(cg, y)]
+
+    forbidden = _forbidden_set(B, xs, ys)
+    y_mask = falses(n)
+    for yi in ys
+        y_mask[yi] = true
+    end
+
+    universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
+    removed = _pbg_removed(B, xs, ys)
+
+    cur = Int[]
+
+    function enumerate!(start, k_rem)
+        if k_rem == 0
+            if _m_separated_pbg_ag(B, xs, ys, cur, removed)
+                return [B.nodes[v] for v in cur]
+            end
+            return Symbol[]
+        end
+        for i = start:length(universe)
+            push!(cur, universe[i])
+            result = enumerate!(i + 1, k_rem - 1)
+            pop!(cur)
+            !isempty(result) && return result
+        end
+        return Symbol[]
+    end
+
+    for k = 0:length(universe)
+        result = enumerate!(1, k)
+        !isempty(result) && return result
+    end
+
+    return Symbol[]
+end

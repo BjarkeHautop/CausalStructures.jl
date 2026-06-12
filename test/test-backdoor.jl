@@ -261,3 +261,17 @@ end
     @test is_valid_adjustment(mag, :X, :Y, [:A])
     @test !is_valid_adjustment(mag, :X, :Y)
 end
+
+@testitem "adjustment_set AbstractAG: returns valid set, prefers smaller" tags = [:unit] begin
+    mag = caugi(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG)
+    z = adjustment_set(mag, :X, :Y)
+    @test is_valid_adjustment(mag, :X, :Y, z)
+    @test z == [:A]
+end
+
+@testitem "adjustment_set AbstractAG: empty set valid" tags = [:unit] begin
+    mag = caugi(bidirected(:A, :X), bidirected(:A, :Y), directed(:X, :Y); class = MAG)
+    z = adjustment_set(mag, :X, :Y)
+    @test is_valid_adjustment(mag, :X, :Y, z)
+    @test z == Symbol[]
+end
