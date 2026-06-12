@@ -145,7 +145,11 @@ ADMGs also support [`m_separated`](@ref), which generalises d-separation to
 graphs with bidirected edges. Consider a graph where `A --> B` and `A <-> C`:
 
 ```@example id
-admg2 = caugi(directed(:A, :B), bidirected(:A, :C); class = ADMG)
+admg2 = caugi(
+       directed(:A, :B),
+       bidirected(:A, :C);
+       class = ADMG,
+)
 ```
 
 Since `A --> B`, the two are directly connected and not m-separated:

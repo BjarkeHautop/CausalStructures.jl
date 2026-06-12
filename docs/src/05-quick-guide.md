@@ -18,7 +18,13 @@ Construct the graph with [`caugi`](@ref):
 ```@example quick
 using CausalGraphInterface
 
-dag = caugi(directed(:A, :X), directed(:A, :Y), directed(:X, :M), directed(:M, :Y); class = DAG)
+dag = caugi(
+       directed(:A, :X),
+       directed(:A, :Y),
+       directed(:X, :M),
+       directed(:M, :Y);
+       class = DAG,
+)
 ```
 
 Graphs are validated when constructed. Invalid DAGs, such as graphs containing
