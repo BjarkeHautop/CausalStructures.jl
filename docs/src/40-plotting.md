@@ -29,13 +29,14 @@ Makie.plot(dag)
 
 All six edge types are rendered with their conventional endpoint marks:
 
-\| Constructor \| Appearance \| Endpoints \|
-\|--------------------------------\|-------------\|------------------------\| \|
-`directed(:A, :B)` \| `A --> B` \| tail – arrowhead \| \| `undirected(:A, :B)`
-\| `A --- B` \| tail – tail \| \| `bidirected(:A, :B)` \| `A <-> B` \| arrowhead
-– arrowhead \| \| `partially_directed(:A, :B)` \| `A o-> B` \| circle –
-arrowhead \| \| `partially_undirected(:A, :B)` \| `A o-- B` \| circle – tail \|
-\| `partial(:A, :B)` \| `A o-o B` \| circle – circle \|
+| Constructor | Appearance |
+|--------------------------------|-------------|
+| `directed(:A, :B)` | `A --> B` |
+| `undirected(:A, :B)` | `A --- B` |
+| `bidirected(:A, :B)` | `A <-> B` |
+| `partially_directed(:A, :B)` | `A o-> B` |
+| `partially_undirected(:A, :B)` | `A o-- B` |
+| `partial(:A, :B)` | `A o-o B` |
 
 A graph combining several edge types:
 
@@ -52,14 +53,18 @@ Makie.plot(cg)
 ## [Layouts](@id plot-layouts)
 
 The `layout` keyword controls node placement. The `:circle` layout is always
-available. All others require NetworkLayout.
+available. All other layouts require NetworkLayout. We provide convinience
+wrappers of layout for the ones shown in the table below.
 
-\| `layout` \| Algorithm \|
-\|---------------\|-------------------------------------\| \| `:circle` \|
-Evenly spaced on a circle (default) \| \| `:spring` \| Fruchterman-Reingold
-force-directed \| \| `:stress` \| Stress majorization \| \| `:sfdp` \| Scalable
-Force-Directed Placement \| \| `:spectral` \| Spectral layout \| \| `:shell` \|
-Concentric shells \| \| `:squaregrid` \| Square grid \|
+| `layout` | Algorithm |
+|-----------|-----------|
+| `:circle` | Evenly spaced on a circle (default) |
+| `:spring` | Fruchterman-Reingold force-directed |
+| `:stress` | Stress majorization |
+| `:sfdp` | Scalable Force-Directed Placement |
+| `:spectral` | Spectral layout |
+| `:shell` | Concentric shells |
+| `:squaregrid` | Square grid |
 
 Extra keyword arguments are forwarded to the NetworkLayout algorithm:
 
@@ -84,11 +89,11 @@ Makie.plot(dag; layout = positions)
 Three keyword arguments control the geometry. All must be positive `Real`
 values; the defaults scale with the number of nodes.
 
-\| Keyword \| Controls \| Default \|
-\|----------------\|---------------------------------\|-----------------------------\|
-\| `node_radius` \| radius of each node circle \| `max(0.12, 0.4 sin(π / n))` \|
-\| `arrow_size` \| length of arrowhead triangles \| `0.4 × node_radius` \| \|
-`circle_size` \| radius of open-circle endpoints \| `0.28 × node_radius` \|
+| Keyword | Controls | Default |
+|----------------|---------------------------------|-----------------------------|
+| `node_radius` | radius of each node circle | `max(0.12, 0.4 sin(π / n))` |
+| `arrow_size` | length of arrowhead triangles | `0.4 × node_radius` | |
+`circle_size` | radius of open-circle endpoints | `0.28 × node_radius` |
 
 ```@example plot
 Makie.plot(dag; node_radius = 0.18, arrow_size = 0.07, circle_size = 0.05)
@@ -100,11 +105,11 @@ Each node style argument accepts either a **scalar** (applied to all nodes) or a
 **`Dict{Symbol, <value>}`** keyed by node name. Use `:default` inside the dict
 as a fallback for nodes not listed explicitly.
 
-\| Keyword \| Default \| Controls \|
-\|--------------------\|----------\|-------------------------------\| \|
-`node_color` \| `:white` \| fill color \| \| `node_strokecolor` \| `:black` \|
-border color \| \| `node_strokewidth` \| `2.0` \| border line width (positive)
-\|
+| Keyword | Default | Controls |
+|--------------------|----------|-------------------------------|
+| `node_color` | `:white` | fill color |
+| `node_strokecolor` | `:black` | border color |
+| `node_strokewidth` | `2.0` | border line width (positive)|
 
 Global styling:
 
@@ -138,10 +143,10 @@ may be keyed by:
 3. `:default` inside the dict
 4. Hard-coded fallback
 
-\| Keyword \| Default \| Controls \|
-\|--------------\|----------\|-------------------------------\| \| `edge_color`
-\| `:black` \| line / marker color \| \| `linewidth` \| `1.5` \| line width
-(positive) \|
+| Keyword | Default | Controls |
+|--------------|----------|-------------------------------|
+| `edge_color` | `:black` | line / marker color |
+| `linewidth` | `1.5` | line width (positive) |
 
 Global edge color:
 
