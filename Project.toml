@@ -20,6 +20,7 @@ MakieExt = "Makie"
 NetworkLayoutExt = "NetworkLayout"
 
 [compat]
+Makie = "0.24.11"
 NetworkLayout = "0.4.10"
 Preferences = "1.5.2"
 Random = "1.11.0"
