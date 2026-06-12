@@ -33,11 +33,11 @@ end
     )
 end
 
-@testitem "print: partially_undirected edge (--o)" tags = [:unit] begin
+@testitem "print: partially_undirected edge (o--)" tags = [:unit] begin
     cg = caugi(partially_undirected(:A, :B), partially_undirected(:B, :C); class = UNKNOWN)
     @test contains(
         sprint(show, cg),
-        """UNKNOWN with 3 nodes and 2 edges:\n  nodes: A, B, C\n  edges:\n    A --o B, B --o C\n""",
+        """UNKNOWN with 3 nodes and 2 edges:\n  nodes: A, B, C\n  edges:\n    A o-- B, B o-- C\n""",
     )
 end
 

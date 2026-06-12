@@ -34,7 +34,7 @@ All six edge types are rendered with their conventional endpoint marks:
 `directed(:A, :B)` \| `A --> B` \| tail – arrowhead \| \| `undirected(:A, :B)`
 \| `A --- B` \| tail – tail \| \| `bidirected(:A, :B)` \| `A <-> B` \| arrowhead
 – arrowhead \| \| `partially_directed(:A, :B)` \| `A o-> B` \| circle –
-arrowhead \| \| `partially_undirected(:A, :B)` \| `A --o B` \| tail – circle \|
+arrowhead \| \| `partially_undirected(:A, :B)` \| `A o-- B` \| circle – tail \|
 \| `partial(:A, :B)` \| `A o-o B` \| circle – circle \|
 
 A graph combining several edge types:

@@ -8,7 +8,7 @@
 #   ---   Tail  - Tail    : plain line
 #   <->   Arrow - Arrow   : line + arrowheads at both ends
 #   o->   Circle- Arrow   : open circle at src + arrowhead at dst
-#   --o   Tail  - Circle  : line + open circle at dst
+#   o--   Circle- Tail    : open circle at src + line
 #   o-o   Circle- Circle  : open circles at both ends
 
 const _Tail = CausalGraphInterface.Tail
@@ -106,7 +106,7 @@ function _edge_type(e::CausalEdge)
     s === _Tail && d === _Tail && return :undirected
     s === _Arrow && d === _Arrow && return :bidirected
     s === _Circle && d === _Arrow && return :partially_directed
-    s === _Tail && d === _Circle && return :partially_undirected
+    s === _Circle && d === _Tail && return :partially_undirected
     s === _Circle && d === _Circle && return :partial
     return :unknown
 end

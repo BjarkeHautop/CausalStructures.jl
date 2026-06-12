@@ -52,12 +52,12 @@ Planned future additions include
 
 The following edge types exists:
 
-- `directed(:A, :B)` for A --> B
-- `undirected(:A, :B)` for A --- B
-- `bidirected(:A, :B)` for A <-> B
-- `partially_directed(:A, :B)` for A o-> B
-- `partially_undirected(:A, :B)` for A --o B
-- `partial(:A, :B)` for A o-o B
+- `directed(:A, :B)` for `A --> B`
+- `undirected(:A, :B)` for `A --- B`
+- `bidirected(:A, :B)` for `A <-> B`
+- `partially_directed(:A, :B)` for `A o-> B`
+- `partially_undirected(:A, :B)` for `A o-- B`
+- `partial(:A, :B)` for `A o-o B`
 
 ## Quick Start
 
@@ -85,7 +85,14 @@ admg = latent_project(dag, [:U])
 ## To Do
 
 Figure out a better syntax than using `directed(), undirected()`, etc. Ideally,
-we would support edge operators similar to the syntax used in R.
+we would support edge operators similar to the syntax used in R. I.e. in R you
+can do
+
+```r
+A %o->% B
+```
+
+for a parially directed edge.
 
 Maybe use `Edge(..., directed)` instead of `directed(...)`, and similar for the
 rest?

@@ -61,7 +61,7 @@ UNKNOWN with 3 nodes and 2 edges:
 """
 partially_directed(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Circle, Arrow)
 """
-    partially_undirected(src, dst) -> CausalEdge   # src --o dst
+    partially_undirected(src, dst) -> CausalEdge   # src o-- dst
 
 # Examples
 
@@ -70,10 +70,10 @@ julia> caugi(partially_undirected(:A, :B), partially_undirected(:B, :C); class =
 UNKNOWN with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
-    A --o B, B --o C
+    A o-- B, B o-- C
 ```
 """
-partially_undirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Tail, Circle)
+partially_undirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Circle, Tail)
 """
     partial(src, dst) -> CausalEdge   # src o-o dst
 
