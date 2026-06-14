@@ -50,7 +50,7 @@ argument is not passed explicitly. They require loading a Makie backend.
 | `:circle` | `String` | `:circle`, `:spring`, `:stress`, `:sfdp`, `:spectral`, `:shell`, `:squaregrid` |
 
 Note, that all algorithms except `:circle` require NetworkLayout, see the
-\[Layouts\](@ref plot-layouts) section for more details.
+[Layouts](@ref plot-layouts) section for more details.
 
 ```julia
 set_preferences!(CausalGraphInterface, "plot_layout" => "spring")

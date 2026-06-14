@@ -19,6 +19,7 @@ First, let's generate a random DAG with 1000 nodes and an edge probability of
 
 ```@example performance
 using CausalGraphInterface
+node_name = :V45
 dag = generate_graph(1000; p = 0.25, seed = 1405)
 ```
 
@@ -26,7 +27,6 @@ Let's see how fast common queries such as finding parents, children, ancestors,
 and descendants are:
 
 ```@setup performance
-node_name = :V45
 parents(dag, node_name);
 children(dag, node_name);
 ancestors(dag, node_name);
@@ -61,9 +61,9 @@ d_separated(dag, :V50, :V70, valid_adjustment_set);
 ## Comparison with common R packages
 
 Here we compare the performance of CausalGraphInterface to various popular R
-packages\[^1\].
+packages[^1].
 
-\[^1\]: Please let me know if there are any Julia packages I should compare
+[^1]: Please let me know if there are any Julia packages I should compare
 against as well.
 
 In particular we compare against [caugi](https://caugi.org/index.html),
