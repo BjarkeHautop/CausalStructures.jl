@@ -1,166 +1,133 @@
 # [Causal Identification](@id causal-identification-guide)
 
-This guide demonstrates more of the package's identification capabilities,
-building on the [Getting Started](@ref) tutorial.
-
-## Adjustment Strategies
-
-[`adjustment_set`](@ref) supports three strategies via the `type` keyword.
-Consider a graph with multiple confounders and mediators:
+This guide expands on the [Getting Started](@ref) tutorial with more advanced
+identification techniques. We'll explore different adjustment strategies, minimal
+separators, and frontdoor adjustment — all using the same running example graph.
 
 ```@example id
 using CausalGraphInterface
+using CairoMakie
+using NetworkLayout
+```
 
+## Adjustment strategies
+
+The [`adjustment_set`](@ref) function supports three different strategies for
+finding adjustment sets. Let's build a DAG with multiple confounders and mediators:
+
+```@example id
 dag = caugi(
        directed(:C, :X), directed(:A, :X), directed(:X, :F), directed(:X, :D),
        directed(:A, :K), directed(:K, :Y),
        directed(:D, :Y), directed(:D, :G), directed(:Y, :H);
        class = DAG,
 )
+Makie.plot(dag; layout = :stress)
 ```
 
-`:parents` adjusts for all parents of `X`:
+**Parents strategy**: Adjusts for all parents of `X`. Simple but often includes
+unnecessary variables:
 
 ```@example id
 adjustment_set(dag, :X, :Y; type = :parents)
 ```
 
-`:optimal` computes the O-set, see documentation for more details:
+**Backdoor strategy**: Applies Pearl's backdoor criterion to find valid adjustment
+sets that block all confounding paths:
+
+```@example id
+adjustment_set(dag, :X, :Y; type = :backdoor)
+```
+
+**Optimal strategy** (default): Computes the O-set, which minimizes the
+asymptotic variance of the causal effect estimator:
 
 ```@example id
 adjustment_set(dag, :X, :Y; type = :optimal)
 ```
 
-## Minimal Separator
+## Minimal separator
 
-[`minimal_separator`](@ref) finds a minimal d-separating set between two nodes.
+Sometimes we need the smallest set of variables that d-separates two nodes.
+The [`minimal_separator`](@ref) function finds one:
+
+```@example id
+minimal_separator(dag, :X, :Y)
+```
+
+The `restrict` keyword limits the search to a specific pool of variables. If no
+separator exists within that pool, the function returns `nothing`:
+
+```@example id
+minimal_separator(dag, :X, :Y; restrict = [:D, :K])
+```
+
+```@example id
+minimal_separator(dag, :X, :Y; restrict = [:D])
+```
+
+The `include` keyword forces certain variables to always be in the result:
+
+```@example id
+minimal_separator(dag, :X, :Y; include = [:K])
+```
+
+## Frontdoor adjustment
+
+When confounders are unobserved, the backdoor criterion doesn't apply. Consider
+a graph where an unobserved confounder `U` affects both the treatment `X` and
+outcome `Y`:
 
 ```@example id
 dag2 = caugi(
-       directed(:A, :X), directed(:X, :M), directed(:M, :Y), directed(:A, :Y);
-       class = DAG,
-)
-
-minimal_separator(dag2, :X, :Y)
-```
-
-`restrict` limits the candidate pool, and `minimal_separator` returns `nothing`
-if no separator exists:
-
-```@example id
-minimal_separator(dag2, :X, :Y; restrict = [:M])
-```
-
-`include` forces nodes into the result:
-
-```@example id
-minimal_separator(dag2, :X, :Y; include = [:M])
-```
-
-## Frontdoor Adjustment
-
-When confounders are unobserved the backdoor criterion may not apply. `M` is a
-descendant of `X` and therefore fails it:
-
-```@example id
-dag3 = caugi(
        directed(:U, :X), directed(:U, :Y),
        directed(:X, :M), directed(:M, :Y);
        class = DAG,
 )
-
-is_valid_backdoor(dag3, :X, :Y, [:M])
+Makie.plot(dag2; layout = :stress)
 ```
 
-The frontdoor criterion handles this case. [`is_valid_frontdoor`](@ref) checks
-whether a set satisfies it:
+The mediator `M` is a descendant of `X`, so adjusting for it violates the
+backdoor criterion:
 
 ```@example id
-is_valid_frontdoor(dag3, :X, :Y, [:M])
+is_valid_backdoor(dag2, :X, :Y, [:M])
 ```
 
-[`frontdoor_set`](@ref) finds a valid set automatically:
+However, `M` intercepts every causal path from `X` to `Y` and is itself
+unconfounded, this is exactly the *frontdoor criterion*:
 
 ```@example id
-frontdoor_set(dag3, :X, :Y)
+is_valid_frontdoor(dag2, :X, :Y, [:M])
 ```
-
-### Multiple Candidates
-
-[`all_frontdoor_sets`](@ref) enumerates every valid frontdoor set within a
-candidate pool. With `restrict` the pool can be limited to observed nodes:
 
 ```@example id
-dag4 = caugi(
-         directed(:U1, :X), directed(:U1, :Y),
-         directed(:U2, :X), directed(:U2, :D),
-         directed(:X, :A),
-         directed(:A, :B), directed(:A, :C), directed(:A, :D),
-         directed(:B, :Y), directed(:C, :Y), directed(:D, :Y);
-         class = DAG,
-)
-
-sort(all_frontdoor_sets(dag4, :X, :Y; restrict = [:A, :B, :C, :D]))
+frontdoor_set(dag2, :X, :Y)
 ```
 
-`include` forces specific nodes into every returned set:
+## ADMG adjustment
+
+In an ADMG (Acyclic Directed Mixed Graph), bidirected edges `<->` represent
+hidden common causes directly, without explicitly keeping the unobserved nodes in
+the graph. An ADMG arises naturally by projecting unobserved variables out of a
+DAG via [`latent_project`](@ref). Let's project `U` out of `dag2`:
 
 ```@example id
-frontdoor_set(dag4, :X, :Y; include = [:C], restrict = [:A, :B, :C, :D])
+admg = latent_project(dag2, [:U])
 ```
 
-## ADMG Adjustment
-
-In an ADMG, bidirected edges represent hidden common causes directly, keeping
-only the observed nodes in the graph. [`is_valid_adjustment`](@ref) and
-[`all_adjustment_sets`](@ref) implement the Generalized Adjustment Criterion for
-such graphs.
-
-The bidirected edge `X <-> Z` represents a hidden common cause of `X` and `Z`.
-Since `Z` also has a direct effect on `Y`, this opens the confounding path
-`X <-> Z -> Y`:
-
-```@example id
-admg = caugi(
-       directed(:X, :Y),
-       directed(:Z, :Y),
-       bidirected(:X, :Z);
-       class = ADMG,
-)
-```
-
-Without conditioning, this path remains open:
+Removing `U` introduces `X <-> Y`, which captures its confounding effect. The
+[`is_valid_adjustment`](@ref) and [`all_adjustment_sets`](@ref) functions
+implement the Generalized Adjustment Criterion for ADMGs. With a direct
+bidirected edge between treatment and outcome, no valid adjustment set exists:
 
 ```@example id
 is_valid_adjustment(admg, :X, :Y)
 ```
 
-All valid adjustment sets, here only `{Z}`, which blocks the confounding path:
-
 ```@example id
 all_adjustment_sets(admg, :X, :Y)
 ```
 
-ADMGs also support [`m_separated`](@ref), which generalises d-separation to
-graphs with bidirected edges. Consider a graph where `A --> B` and `A <-> C`:
-
-```@example id
-admg2 = caugi(
-       directed(:A, :B),
-       bidirected(:A, :C);
-       class = ADMG,
-)
-```
-
-Since `A --> B`, the two are directly connected and not m-separated:
-
-```@example id
-m_separated(admg2, :A, :B)
-```
-
-The only path between `B` and `C` runs through `A`; conditioning on it
-m-separates them:
-
-```@example id
-m_separated(admg2, :B, :C, [:A])
-```
+This is why the frontdoor approach was needed in the first place. Once we
+project out `U`, backdoor adjustment becomes impossible.

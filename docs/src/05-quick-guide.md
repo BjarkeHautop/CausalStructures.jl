@@ -5,18 +5,12 @@ graph (DAG).
 
 ## Constructing a graph
 
-Suppose we have the following DAG:
-
-```text
-A --> X
-A --> Y
-X --> M --> Y
-```
-
-Construct the graph with [`caugi`](@ref):
+Let's build a DAG with a confounder `A` that affects both `X` and `Y`, and a
+mediator `M` between `X` and `Y`:
 
 ```@example quick
 using CausalGraphInterface
+using CairoMakie
 
 dag = caugi(
        directed(:A, :X),
@@ -27,62 +21,86 @@ dag = caugi(
 )
 ```
 
-Graphs are validated when constructed. Invalid DAGs, such as graphs containing
-directed cycles, raise an error immediately.
+and visualize it:
+
+```@example quick
+Makie.plot(dag)
+```
+
+For more plotting details and customization options, see the [Plotting](@ref
+plotting-guide) guide.
+
+## Validation on construction
+
+Graphs are validated when you construct them. Here we make an invalid
+DAG:
+
+```@example quick
+try
+    invalid_dag = caugi(
+        directed(:A, :B),
+        directed(:B, :C),
+        directed(:C, :A);  # Creates a cycle!
+        class = DAG,
+    )
+catch e
+    println("Error: $(e.msg)")
+end
+```
+
+Since cycles are not allowed in DAGs, an error is thrown.
 
 ## Testing conditional independence
 
-One of the central tasks in causal inference is determining whether two
-variables are conditionally independent. For DAGs, this is done using
-d-separation.
+A central question in causal inference is whether two variables are
+conditionally independent. For DAGs, this is determined using *d-separation*.
 
-Consider the relationship between `X` and `Y`:
+Are `X` and `Y` independent?
 
 ```@example quick
 d_separated(dag, :X, :Y)
 ```
 
-This is expected because there is a directed path from `X` to `Y`.
+No, there is a directed path `X --> M --> Y`.
 
-Conditioning on `A` blocks the backdoor path, but the path `X --> M --> Y`
-remains open:
+If we condition on the mediator `M`, does that make them independent?
 
 ```@example quick
-d_separated(dag, :X, :Y, [:A])
+d_separated(dag, :X, :Y, [:M])
 ```
 
-Conditioning on the `A` and `M` blocks every path between `X` and `Y`:
+Still no, the backdoor path via `A`: `X <-- A --> Y` remains open.
+
+What if we condition on both `A` and `M`?
 
 ```@example quick
 d_separated(dag, :X, :Y, [:A, :M])
 ```
 
+Yes, now all paths are blocked.
+
 ## Finding adjustment sets
 
-Suppose we want to estimate the causal effect of `X` on `Y`.
+Now suppose we want to estimate the causal effect of `X` on `Y`. The backdoor
+path `X <-- A --> Y` introduces confounding bias, so we need to block it by
+conditioning on a valid adjustment set.
 
-The backdoor path
-
-```text
-X <-- A --> Y
-```
-
-introduces confounding and must be blocked. A valid adjustment set can be
-obtained automatically:
+Let's find one automatically:
 
 ```@example quick
 adjustment_set(dag, :X, :Y)
 ```
 
-Candidate adjustment sets can also be verified explicitly:
+We can also verify that a specific set is valid:
 
 ```@example quick
 is_valid_backdoor(dag, :X, :Y, [:A])
 ```
 
-and all minimal valid backdoor adjustment sets can be enumerated (which is only
-`A` in this case):
+And enumerate all minimal valid adjustment sets:
 
 ```@example quick
 all_backdoor_sets(dag, :X, :Y)
 ```
+
+In this case, `{A}` is the only minimal set that blocks the backdoor.

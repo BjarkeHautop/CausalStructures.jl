@@ -12,6 +12,7 @@ DocMeta.setdocmeta!(
 # Add titles of sections and overrides page titles
 const titles = Dict(
     "05-quick-guide.md" => "Getting Started",
+    "15-equivalence-classes.md" => "Equivalence Classes",
     "20-causal-identification.md" => "Causal Identification",
     "40-plotting.md" => "Plotting",
     "50-benchmark.md" => "Performance",
@@ -76,7 +77,12 @@ makedocs(;
     format = Documenter.HTML(;
         canonical = "https://BjarkeHautop.github.io/CausalGraphInterface.jl",
         example_size_threshold = nothing,
-        size_threshold_ignore = ["40-plotting.md", "95-reference.md"],
+        size_threshold_ignore = [
+            "15-equivalence-classes.md",
+            "20-causal-identification.md",
+            "40-plotting.md",
+            "95-reference.md",
+        ],
     ),
     pages = list_pages(),
 )

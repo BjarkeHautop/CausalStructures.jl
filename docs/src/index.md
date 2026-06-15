@@ -16,8 +16,7 @@ Julia.
 Different causal graph classes represent different assumptions, both on the
 allowed edge types and on the graph structure itself. For example, a DAG must be
 acyclic, while a CPDAG must satisfy additional equivalence-class constraints.
-Graphs are validated during construction, ensuring that every graph instance
-satisfies the invariants of its class.
+Graphs are validated during construction, ensuring that every graph instance satisfies the invariants required by its class.
 
 ## Supported Graph Classes
 

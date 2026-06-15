@@ -2,21 +2,19 @@
 
 Several defaults can be changed project-wide using
 [Preferences.jl](https://github.com/JuliaPackageOrganizations/Preferences.jl).
-Set a preference once, restart Julia, and the new value becomes the default for
-every call in that project.
+
+These preferences are stored per-project. After setting a value, restart Julia for changes to take effect globally within the project.
 
 ```julia
 using Preferences, CausalGraphInterface
 
 set_preferences!(CausalGraphInterface, "key" => value)
-# restart Julia
 ```
 
-To restore a preference to its built-in default, delete it:
+To restore a preference to its default value, delete it:
 
 ```julia
 delete_preferences!(CausalGraphInterface, "key")
-# restart Julia
 ```
 
 --------------------------------------------------------------------------------
@@ -40,23 +38,27 @@ set_preferences!(CausalGraphInterface, "open" => false)
 
 ## Plotting
 
-All plot preferences affect `Makie.plot(cg; ...)` when the corresponding keyword
-argument is not passed explicitly. They require loading a Makie backend.
+Controls default visual configuration used by `Makie.plot(cg; ...)`.
+A Makie backend is required for plotting.
 
-### `"plot_layout"`: default layout algorithm
+### `"plot_layout"`
+
+Default graph layout algorithm.
 
 | Default | Type | Valid values |
 | ------- | ---- | ------------ |
 | `:circle` | `String` | `:circle`, `:spring`, `:stress`, `:sfdp`, `:spectral`, `:shell`, `:squaregrid` |
 
-Note, that all algorithms except `:circle` require NetworkLayout, see the
+Note: all layouts except `:circle` require NetworkLayout, see the
 [Layouts](@ref plot-layouts) section for more details.
 
 ```julia
 set_preferences!(CausalGraphInterface, "plot_layout" => "spring")
 ```
 
-### `"plot_node_color"`: default node fill colour
+### `"plot_node_color"`
+
+Default node fill colour
 
 | Default | Type |
 | ------- | ---- |
@@ -69,7 +71,9 @@ string](https://docs.makie.org/stable/explanations/colors).
 set_preferences!(CausalGraphInterface, "plot_node_color" => "lightblue")
 ```
 
-### `"plot_node_strokecolor"`: default node border colour
+### `"plot_node_strokecolor"`
+
+Default node border colour.
 
 | Default | Type |
 | ------- | ---- |
@@ -79,7 +83,9 @@ set_preferences!(CausalGraphInterface, "plot_node_color" => "lightblue")
 set_preferences!(CausalGraphInterface, "plot_node_strokecolor" => "gray30")
 ```
 
-### `"plot_node_strokewidth"`: default node border width
+### `"plot_node_strokewidth"`
+
+Default node border width.
 
 | Default | Type |
 | ------- | ---- |
@@ -89,7 +95,9 @@ set_preferences!(CausalGraphInterface, "plot_node_strokecolor" => "gray30")
 set_preferences!(CausalGraphInterface, "plot_node_strokewidth" => 1.5)
 ```
 
-### `"plot_edge_color"`: default edge colour
+### `"plot_edge_color"`
+
+Default edge color.
 
 | Default | Type |
 | ------- | ---- |
@@ -99,7 +107,9 @@ set_preferences!(CausalGraphInterface, "plot_node_strokewidth" => 1.5)
 set_preferences!(CausalGraphInterface, "plot_edge_color" => "steelblue")
 ```
 
-### `"plot_linewidth"`: default edge line width
+### `"plot_linewidth"`
+
+Default edge line width.
 
 | Default | Type |
 | ------- | ---- |

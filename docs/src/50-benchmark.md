@@ -63,8 +63,7 @@ d_separated(dag, :V50, :V70, valid_adjustment_set);
 Here we compare the performance of CausalGraphInterface to various popular R
 packages[^1].
 
-[^1]: Please let me know if there are any Julia packages I should compare
-against as well.
+[^1]: Please let me know if there are any Julia packages I should compare against as well.
 
 In particular we compare against [caugi](https://caugi.org/index.html),
 [igraph](https://r.igraph.org/), [bnlearn](https://www.bnlearn.com/),
