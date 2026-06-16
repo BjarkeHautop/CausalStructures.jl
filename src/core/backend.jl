@@ -211,6 +211,11 @@ function build_backend(::Type{UNKNOWN}, nodes, edges::Vector{CausalEdge})
     return UNKNOWNBackend(ordered_nodes, index, colptr, deg, rowval)
 end
 
+# PAG reuses the UNKNOWN backend layout (4 buckets, circle-endpoint edges land in
+# the undirected bucket). PAG queries go through the edge list, not these buckets.
+build_backend(::Type{PAG}, nodes, edges::Vector{CausalEdge}) =
+    build_backend(UNKNOWN, nodes, edges)
+
 # Slice into bucket b (1-indexed) of node i for backends with a deg matrix
 function bucket_slice(
     B::Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend,UNKNOWNBackend},

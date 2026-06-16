@@ -82,8 +82,8 @@ end
     CausalGraph
 
 Abstract supertype for all causal graph classes. Concrete subtypes: [`DAG`](@ref),
-[`UG`](@ref), [`AbstractPDAG`](@ref), [`ADMG`](@ref), [`AbstractAG`](@ref), and
-[`UNKNOWN`](@ref).
+[`UG`](@ref), [`AbstractPDAG`](@ref), [`ADMG`](@ref), [`AbstractAG`](@ref),
+[`PAG`](@ref), and [`UNKNOWN`](@ref).
 """
 abstract type CausalGraph end
 
@@ -235,6 +235,32 @@ struct UNKNOWN <: CausalGraph
     simple::Bool
 end
 
+"""
+    PAG
+
+A Partial Ancestral Graph. The graph representing a Markov equivalence class of
+[`MAG`](@ref)s (and thus of DAGs with latent confounders and selection bias). It
+has the same skeleton as every MAG in the class, and each endpoint carries an
+*invariant* mark shared by every MAG in the class: an arrowhead (`>`), a tail
+(`-`), or a circle (`o`) where the mark varies across the class. All six edge
+kinds are allowed (`-->`, `---`, `<->`, `o->`, `o--`, `o-o`).
+
+A `PAG` is validated on construction: it must be the image of some MAG under
+[`mag_to_pag`](@ref), checked by resolving it to a MAG with [`mag_from_pag`](@ref)
+and confirming the round-trip recovers the same graph. Construct one with
+[`mag_to_pag`](@ref), or directly via `caugi(...; class = PAG)`.
+
+# References
+
+Zhang, J. (2008). On the completeness of orientation rules for causal discovery in
+the presence of latent confounders and selection bias.
+*Artificial Intelligence*, 172(16-17):1873-1896.
+"""
+struct PAG <: CausalGraph
+    edges::Vector{CausalEdge}
+    backend::UNKNOWNBackend
+end
+
 function _build_graph(
     ::Type{T},
     nodes,
@@ -281,6 +307,10 @@ end
 
 function UNKNOWN(nodes, edges::Vector{CausalEdge}; simple::Bool = true)
     return _build_graph(UNKNOWN, nodes, edges, simple)
+end
+
+function PAG(nodes, edges::Vector{CausalEdge})
+    return _build_graph(PAG, nodes, edges)
 end
 
 struct GraphNode

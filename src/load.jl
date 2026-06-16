@@ -40,7 +40,9 @@ include("identification/condition-marginalize.jl")
 include("transform/skeleton-subgraph.jl")
 include("transform/latent.jl")
 include("transform/pdag.jl")
+include("transform/mag.jl")
 include("transform/enumerate-dags.jl")
+include("transform/enumerate-mags.jl")
 
 # I/O, generation, simulation, display, layout
 include("io/utils.jl")

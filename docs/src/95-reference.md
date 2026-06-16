@@ -34,6 +34,7 @@ MPDAG
 ADMG
 AG
 MAG
+PAG
 UNKNOWN
 CausalEdge
 caugi
@@ -73,6 +74,7 @@ is_ug
 is_admg
 is_ag
 is_mag
+is_pag
 is_simple
 is_acyclic
 markov_equivalent
@@ -94,6 +96,10 @@ condition_marginalize
 enumerate_dags
 count_dags
 ag_to_mag
+enumerate_mags
+count_mags
+mag_to_pag
+mag_from_pag
 ```
 
 ## Separation & Adjustment

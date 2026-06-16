@@ -149,6 +149,28 @@ false
 is_mag(cg::CausalGraph) = _class_matches_or_satisfies(cg, MAGConstraints())
 
 """
+    is_pag(cg::CausalGraph) -> Bool
+
+Check whether `cg` is a valid [`PAG`](@ref) (partial ancestral graph): the marks
+are the invariant marks of the Markov equivalence class of some [`MAG`](@ref),
+independent of `cg`'s declared graph class. Verified by resolving `cg` to a MAG with
+[`mag_from_pag`](@ref) and checking that [`mag_to_pag`](@ref) recovers `cg`.
+
+# Examples
+
+```jldoctest
+julia> pag = mag_to_pag(caugi(directed(:A, :B), directed(:C, :B); class = MAG));
+
+julia> is_pag(pag)
+true
+
+julia> is_pag(caugi(directed(:A, :B); class = UNKNOWN))
+false
+```
+"""
+is_pag(cg::CausalGraph) = _class_matches_or_satisfies(cg, PAGConstraints())
+
+"""
     nodes(cg::CausalGraph) -> Vector{Symbol}
 
 Return the nodes of `cg` in alphabetical order.

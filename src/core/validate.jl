@@ -15,6 +15,7 @@ struct AGConstraints <: GraphConstraints end
 struct MAGConstraints <: GraphConstraints end
 struct CPDAGConstraints <: GraphConstraints end
 struct MPDAGConstraints <: GraphConstraints end
+struct PAGConstraints <: GraphConstraints end
 struct UNKNOWNConstraints <: GraphConstraints end
 
 function directed_cycle_detected(cg::CausalGraph)
@@ -110,6 +111,35 @@ function validation_errors(::UNKNOWNConstraints, cg::UNKNOWN)
     return errors
 end
 
+function validation_errors(::PAGConstraints, cg::CausalGraph)
+    errors = String[]
+
+    all(e -> e.src != e.dst, cg.edges) || push!(errors, "self-loops are not allowed in PAG")
+    is_simple(cg) || push!(errors, "parallel edges are not allowed in PAG")
+    isempty(errors) || return errors
+
+    # A PAG must be realizable: it is the image of some MAG under mag_to_pag.
+    # Resolve it to a MAG with mag_from_pag (which builds and validates that MAG),
+    # then require the round-trip mag_to_pag to recover the same marks.
+    local mag
+    try
+        mag = _mag_from_pag(cg.backend.nodes, cg.edges)
+    catch err
+        push!(errors, "not a valid PAG: " * sprint(showerror, err))
+        return errors
+    end
+
+    if _pag_signature(_mag_to_pag_edges(mag)) != _pag_signature(cg.edges)
+        push!(
+            errors,
+            "not a valid PAG: the marks are not the invariant marks of a Markov " *
+            "equivalence class (mag_to_pag does not map a member back to this graph)",
+        )
+    end
+
+    return errors
+end
+
 _satisfies_constraints(c::GraphConstraints, cg::CausalGraph) =
     isempty(validation_errors(c, cg))
 
@@ -130,6 +160,7 @@ _fast_skip(cg::CausalGraph, ::UGConstraints) = cg isa UG
 _fast_skip(cg::CausalGraph, ::ADMGConstraints) = cg isa ADMG || cg isa DAG
 _fast_skip(cg::CausalGraph, ::AGConstraints) = cg isa AbstractAG || cg isa DAG
 _fast_skip(cg::CausalGraph, ::MAGConstraints) = cg isa MAG || cg isa DAG
+_fast_skip(cg::CausalGraph, ::PAGConstraints) = cg isa PAG
 
 function _class_matches_or_satisfies(cg::CausalGraph, constraints::GraphConstraints)
     _fast_skip(cg, constraints) && return true
@@ -571,6 +602,7 @@ graph_class_name(::UGConstraints) = "UG"
 graph_class_name(::ADMGConstraints) = "ADMG"
 graph_class_name(::AGConstraints) = "AG"
 graph_class_name(::MAGConstraints) = "MAG"
+graph_class_name(::PAGConstraints) = "PAG"
 graph_class_name(::UNKNOWNConstraints) = "UNKNOWN"
 
 function validate(cg::CausalGraph, c::GraphConstraints)
@@ -597,5 +629,7 @@ validate(cg::CausalGraph, ::Type{ADMG}) = validate(cg, ADMGConstraints())
 validate(cg::CausalGraph, ::Type{AG}) = validate(cg, AGConstraints())
 
 validate(cg::CausalGraph, ::Type{MAG}) = validate(cg, MAGConstraints())
+
+validate(cg::CausalGraph, ::Type{PAG}) = validate(cg, PAGConstraints())
 
 validate(cg::CausalGraph, ::Type{UNKNOWN}) = validate(cg, UNKNOWNConstraints())
