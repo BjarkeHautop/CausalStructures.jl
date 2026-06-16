@@ -267,8 +267,7 @@ kinds are allowed (`-->`, `---`, `<->`, `o->`, `o--`, `o-o`).
 
 A `PAG` is validated on construction: it must be the image of some MAG under
 [`mag_to_pag`](@ref), checked by resolving it to a MAG with [`mag_from_pag`](@ref)
-and confirming the round-trip recovers the same graph. Construct one with
-[`mag_to_pag`](@ref), or directly via `caugi(...; class = PAG)`.
+and confirming the round-trip recovers the same graph.
 
 # References
 
