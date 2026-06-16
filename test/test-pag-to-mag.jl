@@ -22,7 +22,7 @@ end
 @testitem "mag_from_pag: o-> becomes --> (docstring)" tags = [:unit] begin
     include("helper-mag-to-pag.jl")
     # A o-> B <-o C  =>  A --> B <-- C
-    pag = caugi(partially_directed(:A, :B), partially_directed(:C, :B); class = UNKNOWN)
+    pag = caugi(partially_directed(:A, :B), partially_directed(:C, :B); class = PAG)
     out = mag_from_pag(pag)
     @test pag_edge(out, :A, :B) == "-->"
     @test pag_edge(out, :C, :B) == "-->"
@@ -99,7 +99,7 @@ end
     include("helper-mag-to-pag.jl")
     # A o-o B o-o C, A,C non-adjacent: the only forbidden orientation is the
     # collider A --> B <-- C. Whatever member is chosen, B is not a collider.
-    pag = caugi(partial(:A, :B), partial(:B, :C); class = UNKNOWN)
+    pag = caugi(partial(:A, :B), partial(:B, :C); class = PAG)
     out = mag_from_pag(pag)
     @test is_mag(out)
     into_b = (pag_edge(out, :A, :B) == "-->") + (pag_edge(out, :C, :B) == "-->")
@@ -110,7 +110,7 @@ end
 @testitem "mag_from_pag: shielded circle triangle stays acyclic" tags = [:unit] begin
     # A o-o B o-o C o-o A (a triangle): every orientation is shielded, so any
     # acyclic tournament is a valid MAG in the class.
-    pag = caugi(partial(:A, :B), partial(:B, :C), partial(:A, :C); class = UNKNOWN)
+    pag = caugi(partial(:A, :B), partial(:B, :C), partial(:A, :C); class = PAG)
     out = mag_from_pag(pag)
     @test is_mag(out)
     @test is_dag(out)   # a chordal triangle orients to a DAG
@@ -120,7 +120,7 @@ end
 # ── Determinism ─────────────────────────────────────────────────────────────────
 
 @testitem "mag_from_pag: is deterministic" tags = [:unit] begin
-    pag = caugi(partial(:A, :B), partial(:B, :C); class = UNKNOWN)
+    pag = caugi(partial(:A, :B), partial(:B, :C); class = PAG)
     @test Set(mag_from_pag(pag).edges) == Set(mag_from_pag(pag).edges)
 end
 
@@ -128,11 +128,19 @@ end
 
 @testitem "mag_from_pag: o-- becomes a directed edge (docstring)" tags = [:unit] begin
     include("helper-mag-to-pag.jl")
-    # A o-- B  =>  B --> A: the circle becomes an arrowhead, the tail is kept.
-    pag = caugi(partially_undirected(:A, :B); class = UNKNOWN)
+    mag = caugi(
+        undirected(:A, :B),
+        undirected(:B, :C),
+        undirected(:C, :D),
+        undirected(:A, :D),
+        directed(:B, :E);
+        class = MAG,
+    )
+    pag = mag_to_pag(mag)
+    @test pag_edge(pag, :E, :B) == "o--"
     out = mag_from_pag(pag)
     @test is_mag(out)
-    @test pag_edge(out, :A, :B) == "<--"
+    @test pag_edge(out, :E, :B) == "<--"
 end
 
 @testitem "mag_from_pag: keeps undirected (---) edges and round-trips" tags = [:unit] begin

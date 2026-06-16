@@ -10,7 +10,7 @@ using CausalGraphInterface
 @testitem "mag_to_pag: returns an UNKNOWN graph" tags = [:unit] begin
     mag = caugi(directed(:A, :B), directed(:C, :B); class = MAG)
     pag = mag_to_pag(mag)
-    @test pag isa UNKNOWN
+    @test pag isa PAG
     @test Set(nodes(pag)) == Set([:A, :B, :C])
 end
 

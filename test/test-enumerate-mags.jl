@@ -4,18 +4,18 @@ using CausalGraphInterface
 # ── Basic counts ────────────────────────────────────────────────────────────────
 
 @testitem "count_mags: all-circle 2-path has 8 members" tags = [:unit] begin
-    pag = caugi(partial(:A, :B), partial(:B, :C); class = UNKNOWN)
+    pag = caugi(partial(:A, :B), partial(:B, :C); class = PAG)
     @test count_mags(pag) == 8
 end
 
 @testitem "count_mags: collider PAG has 4 members" tags = [:unit] begin
-    pag = caugi(partially_directed(:A, :B), partially_directed(:C, :B); class = UNKNOWN)
+    pag = caugi(partially_directed(:A, :B), partially_directed(:C, :B); class = PAG)
     @test count_mags(pag) == 4
 end
 
 @testitem "count_mags: an edgeless PAG has a single member" tags = [:unit] begin
     # No adjacencies => the empty MAG is the only graph in the class.
-    pag = caugi(node(:A), node(:B); class = UNKNOWN)
+    pag = caugi(node(:A), node(:B); class = PAG)
     @test count_mags(pag) == 1
     @test length(enumerate_mags(pag)) == 1
 end
@@ -60,7 +60,7 @@ end
 # ── count_mags and enumerate_mags agree ─────────────────────────────────────────
 
 @testitem "enumerate_mags: count matches length, members are valid MAGs" tags = [:unit] begin
-    pag = caugi(partial(:A, :B), partial(:B, :C); class = UNKNOWN)
+    pag = caugi(partial(:A, :B), partial(:B, :C); class = PAG)
     mags = enumerate_mags(pag)
     @test length(mags) == count_mags(pag)
     @test all(is_mag, mags)
@@ -93,7 +93,7 @@ end
 
 @testitem "enumerate_mags: contains the mag_from_pag representative" tags = [:unit] begin
     include("helper-enumerate-mags.jl")
-    pag = caugi(partial(:A, :B), partial(:B, :C); class = UNKNOWN)
+    pag = caugi(partial(:A, :B), partial(:B, :C); class = PAG)
     rep = mag_from_pag(pag)
     @test any(m -> mag_sig(m) == mag_sig(rep), enumerate_mags(pag))
 end
@@ -102,7 +102,7 @@ end
 
 @testitem "enumerate_mags: members are pairwise distinct" tags = [:unit] begin
     include("helper-enumerate-mags.jl")
-    pag = caugi(partial(:A, :B), partial(:B, :C); class = UNKNOWN)
+    pag = caugi(partial(:A, :B), partial(:B, :C); class = PAG)
     mags = enumerate_mags(pag)
     sigs = Set(mag_sig(m) for m in mags)
     @test length(sigs) == length(mags)
