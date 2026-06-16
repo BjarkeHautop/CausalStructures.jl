@@ -766,7 +766,7 @@ function markov_blanket(cg::AbstractAG, node::Symbol)
 end
 
 """
-    spouses(cg::Union{ADMG,AG}, node::Symbol) -> Vector{Symbol}
+    spouses(cg::Union{ADMG,AG,PAG}, node::Symbol) -> Vector{Symbol}
 
 Return the spouses of `node` in `cg`: nodes connected to `node` via a
 bidirected edge (`node <-> spouse`).
@@ -784,7 +784,7 @@ julia> spouses(admg, :B)
 Symbol[]
 ```
 """
-function spouses(cg::Union{ADMG,AbstractAG}, node::Symbol)
+function spouses(cg::Union{ADMG,AbstractAG,PAG}, node::Symbol)
     B = cg.backend
     idx = node_index(cg, node)
     return B.nodes[_spouses_slice(B, idx)]

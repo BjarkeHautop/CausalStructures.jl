@@ -78,6 +78,26 @@ struct UNKNOWNBackend <: CausalBackend
     rowval::Vector{Int}
 end
 
+# PAG backend: 9 buckets, one per distinct (near-mark, far-mark) endpoint pair, so
+# every PAG edge kind is recoverable from the node's neighborhood. Bucket order, from
+# the focal node X's perspective (near = mark at X, far = mark at the neighbor):
+#   1 parents      X <-- Y   (Arrow,  Tail)
+#   2 children     X --> Y   (Tail,   Arrow)
+#   3 undirected   X --- Y   (Tail,   Tail)
+#   4 spouses      X <-> Y   (Arrow,  Arrow)
+#   5 circle_children   X o-> Y  (Circle, Arrow)
+#   6 circle_parents    X <-o Y  (Arrow,  Circle)
+#   7 circle_undirected_out X o-- Y  (Circle, Tail)
+#   8 circle_undirected_in  X --o Y  (Tail,   Circle)
+#   9 circle_circle     X o-o Y  (Circle, Circle)
+struct PAGBackend <: CausalBackend
+    nodes::Vector{Symbol}
+    index::Dict{Symbol,Int}
+    colptr::Vector{Int}
+    deg::Matrix{Int}       # 9 × n
+    rowval::Vector{Int}
+end
+
 """
     CausalGraph
 
@@ -258,7 +278,7 @@ the presence of latent confounders and selection bias.
 """
 struct PAG <: CausalGraph
     edges::Vector{CausalEdge}
-    backend::UNKNOWNBackend
+    backend::PAGBackend
 end
 
 function _build_graph(

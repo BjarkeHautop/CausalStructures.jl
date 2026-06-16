@@ -211,14 +211,40 @@ function build_backend(::Type{UNKNOWN}, nodes, edges::Vector{CausalEdge})
     return UNKNOWNBackend(ordered_nodes, index, colptr, deg, rowval)
 end
 
-# PAG reuses the UNKNOWN backend layout (4 buckets, circle-endpoint edges land in
-# the undirected bucket). PAG queries go through the edge list, not these buckets.
-build_backend(::Type{PAG}, nodes, edges::Vector{CausalEdge}) =
-    build_backend(UNKNOWN, nodes, edges)
+function _pag_bucket(near::Endpoint, far::Endpoint)
+    near == Arrow && far == Tail && return 1    # X <-- Y  (parents)
+    near == Tail && far == Arrow && return 2    # X --> Y  (children)
+    near == Tail && far == Tail && return 3     # X --- Y  (undirected)
+    near == Arrow && far == Arrow && return 4   # X <-> Y  (spouses)
+    near == Circle && far == Arrow && return 5  # X o-> Y
+    near == Arrow && far == Circle && return 6  # X <-o Y
+    near == Circle && far == Tail && return 7   # X o-- Y
+    near == Tail && far == Circle && return 8   # X --o Y
+    return 9                                     # X o-o Y
+end
+
+function build_backend(::Type{PAG}, nodes, edges::Vector{CausalEdge})
+    ordered_nodes = sort!(unique(collect(nodes)))
+    index = Dict(n => i for (i, n) in enumerate(ordered_nodes))
+    n = length(ordered_nodes)
+
+    bucket_rows = [[Int[] for _ = 1:9] for _ = 1:n]
+
+    for edge in edges
+        si = index[edge.src]
+        di = index[edge.dst]
+        # At src the near mark is src_end; at dst the near mark is dst_end.
+        push!(bucket_rows[si][_pag_bucket(edge.src_end, edge.dst_end)], di)
+        push!(bucket_rows[di][_pag_bucket(edge.dst_end, edge.src_end)], si)
+    end
+
+    colptr, deg, rowval = _build_packed_csr(n, 9, bucket_rows)
+    return PAGBackend(ordered_nodes, index, colptr, deg, rowval)
+end
 
 # Slice into bucket b (1-indexed) of node i for backends with a deg matrix
 function bucket_slice(
-    B::Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend,UNKNOWNBackend},
+    B::Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend,UNKNOWNBackend,PAGBackend},
     i::Int,
     bucket::Int,
 )
@@ -257,6 +283,18 @@ _undirected_slice(B::UNKNOWNBackend, i::Int) = bucket_slice(B, i, 2)
 _spouses_slice(B::UNKNOWNBackend, i::Int) = bucket_slice(B, i, 3)
 _children_slice(B::UNKNOWNBackend, i::Int) = bucket_slice(B, i, 4)
 
+# Definite (non-circle) relations.
+_parents_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 1)
+_children_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 2)
+_undirected_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 3)
+_spouses_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 4)
+# Circle-endpoint relations (from focal node X to neighbor Y).
+_circle_children_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 5)         # X o-> Y
+_circle_parents_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 6)          # X <-o Y
+_circle_undirected_out_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 7)   # X o-- Y
+_circle_undirected_in_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 8)    # X --o Y
+_circle_circle_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 9)           # X o-o Y
+
 function node_index(cg::CausalGraph, node::Symbol)
     idx = get(cg.backend.index, node, 0)
     idx == 0 && error("Unknown node: $(node)")
@@ -271,10 +309,14 @@ Return neighbors of `node` in `cg`, filtered by edge type via `mode`.
 `mode` values:
 
 - `:all`: all adjacent nodes (default; all graph classes)
-- `:in`: parents: nodes `p` with `p --> node` (DAG, PDAG, CPDAG, ADMG, AG, UNKNOWN)
-- `:out`: children: nodes `c` with `node --> c` (DAG, PDAG, CPDAG, ADMG, AG, UNKNOWN)
-- `:undirected`: undirected neighbors `node --- c` (UG, PDAG, CPDAG, AG, UNKNOWN)
-- `:bidirected`: bidirected neighbors `node <-> c` (ADMG, AG, UNKNOWN)
+- `:in`: parents: nodes `p` with `p --> node` (DAG, PDAG, CPDAG, ADMG, AG, PAG, UNKNOWN)
+- `:out`: children: nodes `c` with `node --> c` (DAG, PDAG, CPDAG, ADMG, AG, PAG, UNKNOWN)
+- `:undirected`: undirected neighbors `node --- c` (UG, PDAG, CPDAG, AG, PAG, UNKNOWN)
+- `:bidirected`: bidirected neighbors `node <-> c` (ADMG, AG, PAG, UNKNOWN)
+
+For a [`PAG`](@ref) the `:in`, `:out`, `:undirected`, and `:bidirected` modes return
+only neighbors joined by the corresponding *definite* (circle-free) edge. Neighbors
+joined by circle-mark edges (`o->`, `o--`, `o-o`) are reported by `:all` only.
 
 # Examples
 
@@ -309,19 +351,21 @@ function neighbors(cg::CausalGraph, node::Symbol; mode::Symbol = :all)
     if mode === :all
         return B.nodes[_all_nbrs_slice(B, idx)]
     elseif mode === :in
-        B isa Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend,UNKNOWNBackend} ||
+        B isa
+        Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend,UNKNOWNBackend,PAGBackend} ||
             error("mode :in is not supported for $(nameof(typeof(cg)))")
         return B.nodes[_parents_slice(B, idx)]
     elseif mode === :out
-        B isa Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend,UNKNOWNBackend} ||
+        B isa
+        Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend,UNKNOWNBackend,PAGBackend} ||
             error("mode :out is not supported for $(nameof(typeof(cg)))")
         return B.nodes[_children_slice(B, idx)]
     elseif mode === :undirected
-        B isa Union{UGBackend,PDAGBackend,AGBackend,UNKNOWNBackend} ||
+        B isa Union{UGBackend,PDAGBackend,AGBackend,UNKNOWNBackend,PAGBackend} ||
             error("mode :undirected is not supported for $(nameof(typeof(cg)))")
         return B.nodes[_undirected_slice(B, idx)]
     elseif mode === :bidirected
-        B isa Union{ADMGBackend,AGBackend,UNKNOWNBackend} ||
+        B isa Union{ADMGBackend,AGBackend,UNKNOWNBackend,PAGBackend} ||
             error("mode :bidirected is not supported for $(nameof(typeof(cg)))")
         return B.nodes[_spouses_slice(B, idx)]
     else
@@ -337,7 +381,9 @@ end
 Return the parents of `node` in `cg`: nodes `p` such that `p --> node` is an edge in `cg`.
 
 Equivalent to `neighbors(cg, node; mode = :in)`. Applicable to [`DAG`](@ref),
-[`AbstractPDAG`](@ref), [`ADMG`](@ref), [`AbstractAG`](@ref), and [`UNKNOWN`](@ref).
+[`AbstractPDAG`](@ref), [`ADMG`](@ref), [`AbstractAG`](@ref), [`PAG`](@ref), and
+[`UNKNOWN`](@ref). For a [`PAG`](@ref) only *definite* parents (`p --> node`) are
+returned; a circle endpoint at `node` is not a parent.
 
 # Examples
 
@@ -353,7 +399,7 @@ julia> parents(cg, :A)
 Symbol[]
 ```
 """
-parents(cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG,UNKNOWN}, node::Symbol) =
+parents(cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG,PAG,UNKNOWN}, node::Symbol) =
     neighbors(cg, node; mode = :in)
 
 """
@@ -362,7 +408,9 @@ parents(cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG,UNKNOWN}, node::Symbol) =
 Return the children of `node` in `cg`: nodes `c` such that `node --> c` is an edge in `cg`.
 
 Equivalent to `neighbors(cg, node; mode = :out)`. Applicable to [`DAG`](@ref),
-[`AbstractPDAG`](@ref), [`ADMG`](@ref), [`AbstractAG`](@ref), and [`UNKNOWN`](@ref).
+[`AbstractPDAG`](@ref), [`ADMG`](@ref), [`AbstractAG`](@ref), [`PAG`](@ref), and
+[`UNKNOWN`](@ref). For a [`PAG`](@ref) only *definite* children (`node --> c`) are
+returned; a circle endpoint at the child is not a definite child.
 
 # Examples
 
@@ -378,7 +426,7 @@ julia> children(cg, :B)
 Symbol[]
 ```
 """
-children(cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG,UNKNOWN}, node::Symbol) =
+children(cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG,PAG,UNKNOWN}, node::Symbol) =
     neighbors(cg, node; mode = :out)
 
 """
