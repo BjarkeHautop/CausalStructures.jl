@@ -386,6 +386,66 @@ end
     end
 end
 
+# ── possible_ancestors / possible_descendants on PAG ─────────────────────────
+
+@testitem "possible_ancestors on PAG: unshielded collider (o-> edges)" tags = [:unit] begin
+    # A --> B <-- C (no A-C edge) produces PAG: A o-> B <-o C
+    pag = mag_to_pag(caugi(directed(:A, :B), directed(:C, :B); class = MAG))
+    # A and C are circle-parents of B; their circles can become tails giving A-->B and C-->B
+    @test Set(possible_ancestors(pag, :B)) == Set([:A, :C])
+    # A has no possible ancestors: B's circle-child arrow at B is a fixed arrowhead
+    @test isempty(possible_ancestors(pag, :A))
+    @test isempty(possible_ancestors(pag, :C))
+end
+
+@testitem "possible_descendants on PAG: unshielded collider (o-> edges)" tags = [:unit] begin
+    # A --> B <-- C produces PAG: A o-> B <-o C
+    pag = mag_to_pag(caugi(directed(:A, :B), directed(:C, :B); class = MAG))
+    @test Set(possible_descendants(pag, :A)) == Set([:B])
+    @test Set(possible_descendants(pag, :C)) == Set([:B])
+    # B has no possible descendants: both incident edges have fixed arrowheads at B
+    @test isempty(possible_descendants(pag, :B))
+end
+
+@testitem "possible_ancestors on PAG: all-circle chain (o-o edges)" tags = [:unit] begin
+    # A --> B --> C: no unshielded collider, so PAG is A o-o B o-o C
+    pag = mag_to_pag(caugi(directed(:A, :B), directed(:B, :C); class = MAG))
+    @test Set(possible_ancestors(pag, :C)) == Set([:A, :B])
+    @test Set(possible_ancestors(pag, :A)) == Set([:B, :C])
+    @test Set(possible_ancestors(pag, :B)) == Set([:A, :C])
+end
+
+@testitem "possible_descendants on PAG: all-circle chain (o-o edges)" tags = [:unit] begin
+    # A --> B --> C produces PAG: A o-o B o-o C
+    pag = mag_to_pag(caugi(directed(:A, :B), directed(:B, :C); class = MAG))
+    @test Set(possible_descendants(pag, :A)) == Set([:B, :C])
+    @test Set(possible_descendants(pag, :C)) == Set([:A, :B])
+end
+
+@testitem "possible_ancestors on PAG: R1-propagated tail (invariant directed edge)" tags =
+    [:unit] begin
+    # A --> C <-- B, C --> D: R1 makes C --> D invariant. PAG: A o-> C <-o B, C --> D
+    pag =
+        mag_to_pag(caugi(directed(:A, :C), directed(:B, :C), directed(:C, :D); class = MAG))
+    # Possible ancestors of D: C (definite parent), A and B (possible parents of C)
+    @test Set(possible_ancestors(pag, :D)) == Set([:A, :B, :C])
+    @test isempty(possible_ancestors(pag, :A))
+end
+
+@testitem "possible_descendants on PAG: R1-propagated tail" tags = [:unit] begin
+    # A --> C <-- B, C --> D: PAG: A o-> C <-o B, C --> D
+    pag =
+        mag_to_pag(caugi(directed(:A, :C), directed(:B, :C), directed(:C, :D); class = MAG))
+    @test Set(possible_descendants(pag, :A)) == Set([:C, :D])
+    @test isempty(possible_descendants(pag, :D))
+end
+
+@testitem "possible_ancestors on PAG: open/closed kwarg" tags = [:unit] begin
+    pag = mag_to_pag(caugi(directed(:A, :B), directed(:C, :B); class = MAG))
+    @test :B ∉ possible_ancestors(pag, :B)
+    @test :B ∈ possible_ancestors(pag, :B; open = false)
+end
+
 # ── anteriors / posteriors ────────────────────────────────────────────────────
 
 @testitem "anteriors works for DAG (equals ancestors)" tags = [:unit] begin

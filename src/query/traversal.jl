@@ -412,6 +412,163 @@ function possible_descendants(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN
 end
 
 """
+    possible_ancestors(cg::PAG, node::Symbol; open::Bool = true) -> Vector{Symbol}
+
+Return the possible ancestors of `node` in `cg`: all nodes `V` for which there
+exists at least one MAG in the equivalence class represented by `cg` in which
+`V` is an ancestor of `node`.
+
+`V` is a possible ancestor of `node` if there is a **possibly directed path**
+from `V` to `node`: a path where no edge has an arrowhead at the source side of
+each step. Each step traverses a neighbor whose far-mark (the mark at the
+neighbor's endpoint) is not an arrowhead: parents (`<--`), undirected (`---`),
+circle-parents (`<-o`), circle-undirected-out (`o--`), and circle-circle
+(`o-o`) edges all qualify. Spouses (`<->`), children (`-->`), and
+circle-children (`o->`) are excluded because the far-mark is a fixed arrowhead.
+Circle-undirected-in (`--o`) edges are also excluded: the near-mark is an
+invariant tail, so the neighbor can never be an ancestor of `node` through that
+edge in any MAG.
+
+When `open = true` (default), `node` itself is excluded. When `open = false`
+(closed definition), `node` is included. The default can be changed via
+Preferences.jl: `set_preferences!(CausalGraphInterface, "open" => false)`.
+
+# Examples
+
+```jldoctest
+julia> using CausalGraphInterface
+
+julia> pag = caugi(partially_directed(:A, :B), partially_directed(:C, :B); class = PAG);
+
+julia> sort(possible_ancestors(pag, :B))
+2-element Vector{Symbol}:
+ :A
+ :C
+
+julia> possible_ancestors(pag, :A)
+Symbol[]
+```
+
+# References
+
+Perkovic, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete
+Graphical Characterization and Construction of Adjustment Sets in
+Markov Equivalence Classes of Ancestral Graphs.
+*Journal of Machine Learning Research 18*, 1-62.
+"""
+function possible_ancestors(cg::PAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
+    B = cg.backend
+    n = length(B.nodes)
+    node_idx = node_index(cg, node)
+    seen = falses(n)
+    seen[node_idx] = true
+    stack = Int[]
+    sizehint!(stack, n)
+    function _enqueue_possible_parents!(idx)
+        for nb in _parents_slice(B, idx)                    # X <-- Y  far=Tail
+            seen[nb] || (seen[nb] = true; push!(stack, nb))
+        end
+        for nb in _undirected_slice(B, idx)                 # X --- Y  far=Tail
+            seen[nb] || (seen[nb] = true; push!(stack, nb))
+        end
+        for nb in _circle_parents_slice(B, idx)             # X <-o Y  far=Circle
+            seen[nb] || (seen[nb] = true; push!(stack, nb))
+        end
+        for nb in _circle_undirected_out_slice(B, idx)      # X o-- Y  far=Tail
+            seen[nb] || (seen[nb] = true; push!(stack, nb))
+        end
+        for nb in _circle_circle_slice(B, idx)              # X o-o Y  far=Circle
+            seen[nb] || (seen[nb] = true; push!(stack, nb))
+        end
+    end
+    _enqueue_possible_parents!(node_idx)
+    while !isempty(stack)
+        _enqueue_possible_parents!(pop!(stack))
+    end
+    seen[node_idx] = false
+    result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
+    return open ? result : [node; result]
+end
+
+"""
+    possible_descendants(cg::PAG, node::Symbol; open::Bool = true) -> Vector{Symbol}
+
+Return the possible descendants of `node` in `cg`: all nodes `V` for which
+there exists at least one MAG in the equivalence class represented by `cg` in
+which `V` is a descendant of `node`.
+
+`V` is a possible descendant of `node` if there is a **possibly directed path**
+from `node` to `V`: a path where no edge has an arrowhead at the source side of
+each step. Each step traverses a neighbor where the near-mark at the current
+node is not an arrowhead: children (`-->`), undirected (`---`),
+circle-children (`o->`), circle-undirected-in (`--o`), and circle-circle
+(`o-o`) edges all qualify. Parents (`<--`), spouses (`<->`), and
+circle-parents (`<-o`) are excluded because the near-mark is a fixed arrowhead.
+Circle-undirected-out (`o--`) edges are also excluded: the far-mark is an
+invariant tail, so `node` can never be an ancestor of the neighbor through that
+edge in any MAG.
+
+When `open = true` (default), `node` itself is excluded. When `open = false`
+(closed definition), `node` is included. The default can be changed via
+Preferences.jl: `set_preferences!(CausalGraphInterface, "open" => false)`.
+
+# Examples
+
+```jldoctest
+julia> using CausalGraphInterface
+
+julia> pag = caugi(partially_directed(:A, :B), partially_directed(:C, :B); class = PAG);
+
+julia> possible_descendants(pag, :A)
+1-element Vector{Symbol}:
+ :B
+
+julia> possible_descendants(pag, :B)
+Symbol[]
+```
+
+# References
+
+Perkovic, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete
+Graphical Characterization and Construction of Adjustment Sets in
+Markov Equivalence Classes of Ancestral Graphs.
+*Journal of Machine Learning Research 18*, 1-62.
+"""
+function possible_descendants(cg::PAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
+    B = cg.backend
+    n = length(B.nodes)
+    node_idx = node_index(cg, node)
+    seen = falses(n)
+    seen[node_idx] = true
+    stack = Int[]
+    sizehint!(stack, n)
+    function _enqueue_possible_children!(idx)
+        for nb in _children_slice(B, idx)                   # X --> Y  near=Tail
+            seen[nb] || (seen[nb] = true; push!(stack, nb))
+        end
+        for nb in _undirected_slice(B, idx)                 # X --- Y  near=Tail
+            seen[nb] || (seen[nb] = true; push!(stack, nb))
+        end
+        for nb in _circle_children_slice(B, idx)            # X o-> Y  near=Circle
+            seen[nb] || (seen[nb] = true; push!(stack, nb))
+        end
+        for nb in _circle_undirected_in_slice(B, idx)       # X --o Y  near=Tail
+            seen[nb] || (seen[nb] = true; push!(stack, nb))
+        end
+        for nb in _circle_circle_slice(B, idx)              # X o-o Y  near=Circle
+            seen[nb] || (seen[nb] = true; push!(stack, nb))
+        end
+    end
+    _enqueue_possible_children!(node_idx)
+    while !isempty(stack)
+        _enqueue_possible_children!(pop!(stack))
+    end
+    seen[node_idx] = false
+    result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
+    return open ? result : [node; result]
+end
+
+"""
     anteriors(cg::Union{DAG,AbstractPDAG,AbstractAG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
 
 Return the anteriors of `node` in `cg`: all nodes from which `node` is reachable
