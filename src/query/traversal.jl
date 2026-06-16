@@ -15,7 +15,7 @@ returned vector.
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
 
 julia> topological_sort(cg)
 3-element Vector{Symbol}:
@@ -78,7 +78,7 @@ Applicable to [`DAG`](@ref), [`AbstractPDAG`](@ref),
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
 
 julia> ancestors(cg, :A)
 Symbol[]
@@ -142,7 +142,7 @@ Applicable to [`DAG`](@ref), [`AbstractPDAG`](@ref),
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
 
 julia> descendants(cg, :A)
 2-element Vector{Symbol}:
@@ -208,19 +208,19 @@ undirected edge is not considered exogenous.
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
 
 julia> exogenous_nodes(cg)
 1-element Vector{Symbol}:
  :A
 
-julia> ug = caugi(undirected(:A, :B), node(:C); class = UG);
+julia> ug = cgraph(undirected(:A, :B), node(:C); class = UG);
 
 julia> exogenous_nodes(ug)  # only the isolated node C
 1-element Vector{Symbol}:
  :C
 
-julia> pdag = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG);
+julia> pdag = cgraph(directed(:A, :B), undirected(:B, :C); class = PDAG);
 
 julia> exogenous_nodes(pdag)
 2-element Vector{Symbol}:
@@ -272,7 +272,7 @@ Preferences.jl: `set_preferences!(CausalGraphInterface, "open" => false)`.
 # Examples
 
 ```jldoctest
-julia> cpdag = caugi(undirected(:A, :B), undirected(:B, :C); class = CPDAG);
+julia> cpdag = cgraph(undirected(:A, :B), undirected(:B, :C); class = CPDAG);
 
 julia> ancestors(cpdag, :C)
 Symbol[]
@@ -351,7 +351,7 @@ Preferences.jl: `set_preferences!(CausalGraphInterface, "open" => false)`.
 # Examples
 
 ```jldoctest
-julia> cpdag = caugi(undirected(:A, :B), undirected(:B, :C); class = CPDAG);
+julia> cpdag = cgraph(undirected(:A, :B), undirected(:B, :C); class = CPDAG);
 
 julia> descendants(cpdag, :A)
 Symbol[]
@@ -438,7 +438,7 @@ Preferences.jl: `set_preferences!(CausalGraphInterface, "open" => false)`.
 ```jldoctest
 julia> using CausalGraphInterface
 
-julia> pag = caugi(partially_directed(:A, :B), partially_directed(:C, :B); class = PAG);
+julia> pag = cgraph(partially_directed(:A, :B), partially_directed(:C, :B); class = PAG);
 
 julia> sort(possible_ancestors(pag, :B))
 2-element Vector{Symbol}:
@@ -517,7 +517,7 @@ Preferences.jl: `set_preferences!(CausalGraphInterface, "open" => false)`.
 ```jldoctest
 julia> using CausalGraphInterface
 
-julia> pag = caugi(partially_directed(:A, :B), partially_directed(:C, :B); class = PAG);
+julia> pag = cgraph(partially_directed(:A, :B), partially_directed(:C, :B); class = PAG);
 
 julia> possible_descendants(pag, :A)
 1-element Vector{Symbol}:
@@ -586,14 +586,14 @@ default can be changed project-wide via Preferences.jl:
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
 
 julia> anteriors(cg, :C)  # same as ancestors for a DAG
 2-element Vector{Symbol}:
  :A
  :B
 
-julia> pdag = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG);
+julia> pdag = cgraph(directed(:A, :B), undirected(:B, :C); class = PDAG);
 
 julia> anteriors(pdag, :A)
 Symbol[]
@@ -708,14 +708,14 @@ default can be changed project-wide via Preferences.jl:
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
 
 julia> posteriors(cg, :A)  # same as descendants for a DAG
 2-element Vector{Symbol}:
  :B
  :C
 
-julia> pdag = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG);
+julia> pdag = cgraph(directed(:A, :B), undirected(:B, :C); class = PDAG);
 
 julia> posteriors(pdag, :A)  # B via directed edge, C via undirected edge from B
 2-element Vector{Symbol}:
@@ -828,7 +828,7 @@ co-parents, spouses, and undirected neighbors.
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :B), directed(:B, :C), directed(:D, :C); class = DAG);
+julia> cg = cgraph(directed(:A, :B), directed(:B, :C), directed(:D, :C); class = DAG);
 
 julia> markov_blanket(cg, :B)
 3-element Vector{Symbol}:
@@ -931,7 +931,7 @@ bidirected edge (`node <-> spouse`).
 # Examples
 
 ```jldoctest
-julia> admg = caugi(directed(:A, :B), bidirected(:A, :C); class = ADMG);
+julia> admg = cgraph(directed(:A, :B), bidirected(:A, :C); class = ADMG);
 
 julia> spouses(admg, :A)
 1-element Vector{Symbol}:
@@ -974,7 +974,7 @@ nodes with no bidirected edges each form their own district.
 # Examples
 
 ```jldoctest
-julia> admg = caugi(directed(:A, :B), bidirected(:A, :C), bidirected(:D, :E); class = ADMG);
+julia> admg = cgraph(directed(:A, :B), bidirected(:A, :C), bidirected(:D, :E); class = ADMG);
 
 julia> districts(admg)
 3-element Vector{Vector{Symbol}}:

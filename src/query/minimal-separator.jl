@@ -133,23 +133,23 @@ restricted to the first result, and the outputs are intersected.
 # Examples
 
 ```jldoctest
-julia> dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
 
 julia> minimal_separator(dag, :A, :C)  # chain A --> B --> C: separator is {B}
 1-element Vector{Symbol}:
  :B
 
-julia> dag_coll = caugi(directed(:A, :C), directed(:B, :C); class = DAG);
+julia> dag_coll = cgraph(directed(:A, :C), directed(:B, :C); class = DAG);
 
 julia> minimal_separator(dag_coll, :A, :B)  # collider A --> C <-- B: already d-separated
 Symbol[]
 
-julia> dag_edge = caugi(directed(:A, :B); class = DAG);
+julia> dag_edge = cgraph(directed(:A, :B); class = DAG);
 
 julia> minimal_separator(dag_edge, :A, :B) === nothing  # direct edge: no separator exists
 true
 
-julia> dag4 = caugi(directed(:A, :X), directed(:X, :M), directed(:M, :Y), directed(:A, :Y); class = DAG);
+julia> dag4 = cgraph(directed(:A, :X), directed(:X, :M), directed(:M, :Y), directed(:A, :Y); class = DAG);
 
 julia> minimal_separator(dag4, :X, :Y)  # two paths require both A and M
 2-element Vector{Symbol}:
@@ -164,7 +164,7 @@ julia> minimal_separator(dag4, :X, :Y, include = [:M])  # force M in; A still ne
 julia> minimal_separator(dag4, :X, :Y, restrict = [:M]) === nothing  # M alone cannot block X <-- A --> Y
 true
 
-julia> admg = caugi(directed(:A, :B), directed(:B, :C); class = ADMG);
+julia> admg = cgraph(directed(:A, :B), directed(:B, :C); class = ADMG);
 
 julia> minimal_separator(admg, :A, :C)
 1-element Vector{Symbol}:

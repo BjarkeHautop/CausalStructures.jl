@@ -321,7 +321,7 @@ joined by circle-mark edges (`o->`, `o--`, `o-o`) are reported by `:all` only.
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :B), directed(:C, :B); class = DAG);
+julia> cg = cgraph(directed(:A, :B), directed(:C, :B); class = DAG);
 
 julia> neighbors(cg, :B)
 2-element Vector{Symbol}:
@@ -337,7 +337,7 @@ julia> neighbors(cg, :A, mode = :out)
 1-element Vector{Symbol}:
  :B
 
-julia> pdag = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG);
+julia> pdag = cgraph(directed(:A, :B), undirected(:B, :C); class = PDAG);
 
 julia> neighbors(pdag, :B, mode = :undirected)
 1-element Vector{Symbol}:
@@ -388,7 +388,7 @@ returned; a circle endpoint at `node` is not a parent.
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :B), directed(:C, :B); class = DAG);
+julia> cg = cgraph(directed(:A, :B), directed(:C, :B); class = DAG);
 
 julia> parents(cg, :B)
 2-element Vector{Symbol}:
@@ -415,7 +415,7 @@ returned; a circle endpoint at the child is not a definite child.
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :B), directed(:A, :C); class = DAG);
+julia> cg = cgraph(directed(:A, :B), directed(:A, :C); class = DAG);
 
 julia> children(cg, :A)
 2-element Vector{Symbol}:
@@ -437,7 +437,7 @@ Return `true` if there is any edge between `src` and `dst` in `cg`.
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :B); class = DAG);
+julia> cg = cgraph(directed(:A, :B); class = DAG);
 
 julia> has_edge(cg, :A, :B)
 true

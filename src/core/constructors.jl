@@ -18,7 +18,7 @@ build_graph(
 ) = UNKNOWN(nodes, edges; simple = simple)
 
 """
-    caugi(items...; class::Type{<:CausalGraph}=DAG, simple::Bool=true) -> CausalGraph
+    cgraph(items...; class::Type{<:CausalGraph}=DAG, simple::Bool=true) -> CausalGraph
 
 Construct a causal graph from edges and optionally isolated nodes.
 
@@ -37,7 +37,7 @@ multiple edges between the same pair of nodes.
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
 
 julia> nodes(cg)
 3-element Vector{Symbol}:
@@ -45,14 +45,14 @@ julia> nodes(cg)
  :B
  :C
 
-julia> admg = caugi(directed(:X, :Y), bidirected(:X, :Y); class = ADMG);
+julia> admg = cgraph(directed(:X, :Y), bidirected(:X, :Y); class = ADMG);
 
 julia> nodes(admg)
 2-element Vector{Symbol}:
  :X
  :Y
 
-julia> dag_iso = caugi(directed(:A, :B), node(:C); class = DAG);
+julia> dag_iso = cgraph(directed(:A, :B), node(:C); class = DAG);
 
 julia> nodes(dag_iso)
 3-element Vector{Symbol}:
@@ -60,7 +60,7 @@ julia> nodes(dag_iso)
  :B
  :C
 
-julia> ug = caugi(undirected(:A, :B), undirected(:B, :C); class = UG);
+julia> ug = cgraph(undirected(:A, :B), undirected(:B, :C); class = UG);
 
 julia> nodes(ug)
 3-element Vector{Symbol}:
@@ -69,12 +69,12 @@ julia> nodes(ug)
  :C
 ```
 """
-function caugi(items...; class::Type{<:CausalGraph} = DAG, simple::Bool = true)
-    nodes, edges = _caugi_collect(items...)
+function cgraph(items...; class::Type{<:CausalGraph} = DAG, simple::Bool = true)
+    nodes, edges = _cgraph_collect(items...)
     return build_graph(class, nodes, edges; simple = simple)
 end
 
-function _caugi_collect(items...)
+function _cgraph_collect(items...)
     nodes = Set{Symbol}()
     edges = CausalEdge[]
 

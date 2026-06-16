@@ -158,7 +158,7 @@ proper backdoor graph.
 # Examples
 
 ```jldoctest
-julia> pdag = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = PDAG);
+julia> pdag = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = PDAG);
 
 julia> is_valid_adjustment(pdag, :X, :Y)
 false
@@ -205,7 +205,7 @@ Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 # Examples
 
 ```jldoctest
-julia> mpdag = caugi(
+julia> mpdag = cgraph(
            directed(:A, :X), directed(:B, :X),
            directed(:X, :Y), directed(:A, :Y),
            undirected(:B, :K), directed(:K, :Y);

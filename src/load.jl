@@ -1,5 +1,3 @@
-# Most algorithms are adapted from the caugi R/Rust package (caugi/).
-# Functions not present in caugi are implemented directly from the cited papers.
 
 using Preferences
 using Random

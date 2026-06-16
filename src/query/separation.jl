@@ -110,7 +110,7 @@ removing `z`.
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
 
 julia> d_separated(cg, :A, :C)        # chain A --> B --> C is open
 false
@@ -118,7 +118,7 @@ false
 julia> d_separated(cg, :A, :C, [:B]) # conditioning on B blocks the chain
 true
 
-julia> coll = caugi(directed(:A, :C), directed(:B, :C); class = DAG);
+julia> coll = cgraph(directed(:A, :C), directed(:B, :C); class = DAG);
 
 julia> d_separated(coll, :A, :B)         # collider A --> C <-- B: blocked without conditioning
 true
@@ -126,7 +126,7 @@ true
 julia> d_separated(coll, :A, :B, [:C])  # conditioning on collider C opens the path
 false
 
-julia> mpdag = caugi(undirected(:A, :B), directed(:B, :C); class = MPDAG);
+julia> mpdag = cgraph(undirected(:A, :B), directed(:B, :C); class = MPDAG);
 
 julia> d_separated(mpdag, :A, :C, [:B]) # B blocks whether A --> B or A <-- B
 true
@@ -265,7 +265,7 @@ the anterior set of `x`, `y`, and `z`.
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
 
 julia> m_separated(cg, :A, :C)        # equivalent to d_separated on a DAG
 false
@@ -273,7 +273,7 @@ false
 julia> m_separated(cg, :A, :C, [:B])
 true
 
-julia> admg = caugi(directed(:A, :B), bidirected(:A, :C); class = ADMG);
+julia> admg = cgraph(directed(:A, :B), bidirected(:A, :C); class = ADMG);
 
 julia> m_separated(admg, :B, :C)        # B and C are connected via the bidirected edge at A
 false

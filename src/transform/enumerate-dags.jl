@@ -225,7 +225,7 @@ can be very large.
 # Examples
 
 ```jldoctest
-julia> pdag = caugi(undirected(:A, :B), undirected(:B, :C); class = PDAG);
+julia> pdag = cgraph(undirected(:A, :B), undirected(:B, :C); class = PDAG);
 
 julia> dags = enumerate_dags(pdag);
 
@@ -265,7 +265,7 @@ calling [`enumerate_dags`](@ref).
 # Examples
 
 ```jldoctest
-julia> pdag = caugi(undirected(:A, :B), undirected(:B, :C); class = PDAG);
+julia> pdag = cgraph(undirected(:A, :B), undirected(:B, :C); class = PDAG);
 
 julia> count_dags(pdag)
 3

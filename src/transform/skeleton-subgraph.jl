@@ -28,7 +28,7 @@ directed or partially-directed edge with an undirected edge.
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
 
 julia> sk = skeleton(cg);
 
@@ -55,7 +55,7 @@ undirected neighbors are included in the skeleton but do not form a clique.
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :C), directed(:B, :C); class = DAG);
+julia> cg = cgraph(directed(:A, :C), directed(:B, :C); class = DAG);
 
 julia> m = moralize(cg);
 
@@ -64,7 +64,7 @@ julia> neighbors(m, :C)   # A and B are now married
  :A
  :B
 
-julia> pdag = caugi(directed(:A, :C), directed(:B, :C), undirected(:D, :C); class = PDAG);
+julia> pdag = cgraph(directed(:A, :C), directed(:B, :C), undirected(:D, :C); class = PDAG);
 
 julia> mp = moralize(pdag);
 
@@ -134,7 +134,7 @@ as [`AG`](@ref) (maximality need not hold).
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :B), directed(:B, :C), directed(:A, :C); class = DAG);
+julia> cg = cgraph(directed(:A, :B), directed(:B, :C), directed(:A, :C); class = DAG);
 
 julia> sg = subgraph(cg, [:A, :B])
 DAG with 2 nodes and 1 edge:

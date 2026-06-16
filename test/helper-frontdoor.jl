@@ -15,7 +15,7 @@
 
 # Fig. 1b as a DAG with explicit latents.
 function _jeong2022_fig1b()
-    caugi(
+    cgraph(
         directed(:U1, :X),
         directed(:U1, :Y),
         directed(:U2, :X),
@@ -34,7 +34,7 @@ end
 # Fig. 6a: G with two parallel mediating paths and one latent confounder.
 # 9 valid FD adjustment sets (3^2): each path i can be intercepted by Ai, Bi, or {Ai,Bi}.
 function _jeong2022_fig6a()
-    caugi(
+    cgraph(
         directed(:U, :X),
         directed(:U, :Y),
         directed(:X, :A1),
@@ -50,7 +50,7 @@ end
 # Fig. 6b: G' = G with a third parallel mediating path added.
 # 27 valid FD adjustment sets (3^3).
 function _jeong2022_fig6b()
-    caugi(
+    cgraph(
         directed(:U, :X),
         directed(:U, :Y),
         directed(:X, :A1),

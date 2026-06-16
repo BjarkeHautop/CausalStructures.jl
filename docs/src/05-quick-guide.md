@@ -12,7 +12,7 @@ mediator `M` between `X` and `Y`:
 using CausalGraphInterface
 using CairoMakie
 
-dag = caugi(
+dag = cgraph(
        directed(:A, :X),
        directed(:A, :Y),
        directed(:X, :M),
@@ -37,7 +37,7 @@ DAG:
 
 ```@example quick
 try
-    invalid_dag = caugi(
+    invalid_dag = cgraph(
         directed(:A, :B),
         directed(:B, :C),
         directed(:C, :A);  # Creates a cycle!

@@ -10,7 +10,7 @@ end
 # Examples
 
 ```jldoctest
-julia> caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+julia> cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
 DAG with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
@@ -24,7 +24,7 @@ directed(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Tail, Arrow)
 # Examples
 
 ```jldoctest
-julia> caugi(undirected(:A, :B), undirected(:B, :C); class = UG)
+julia> cgraph(undirected(:A, :B), undirected(:B, :C); class = UG)
 UG with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
@@ -38,7 +38,7 @@ undirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Tail, Tail)
 # Examples
 
 ```jldoctest
-julia> caugi(bidirected(:A, :B), bidirected(:B, :C); class = ADMG)
+julia> cgraph(bidirected(:A, :B), bidirected(:B, :C); class = ADMG)
 ADMG with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
@@ -52,7 +52,7 @@ bidirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Arrow, Arrow)
 # Examples
 
 ```jldoctest
-julia> caugi(partially_directed(:A, :B), partially_directed(:B, :C); class = UNKNOWN)
+julia> cgraph(partially_directed(:A, :B), partially_directed(:B, :C); class = UNKNOWN)
 UNKNOWN with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
@@ -66,7 +66,7 @@ partially_directed(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Circle, Arro
 # Examples
 
 ```jldoctest
-julia> caugi(partially_undirected(:A, :B), partially_undirected(:B, :C); class = UNKNOWN)
+julia> cgraph(partially_undirected(:A, :B), partially_undirected(:B, :C); class = UNKNOWN)
 UNKNOWN with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
@@ -80,7 +80,7 @@ partially_undirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Circle, Ta
 # Examples
 
 ```jldoctest
-julia> caugi(partial(:A, :B), partial(:B, :C); class = UNKNOWN)
+julia> cgraph(partial(:A, :B), partial(:B, :C); class = UNKNOWN)
 UNKNOWN with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:

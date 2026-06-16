@@ -51,7 +51,7 @@ Construct graphs by specifying edges and the desired graph class:
 ```@example example
 using CausalGraphInterface
 
-dag = caugi(
+dag = cgraph(
     directed(:U, :X),
     directed(:U, :Y),
     directed(:X, :Y);

@@ -6,7 +6,7 @@ using CausalGraphInterface
 # Z = {M} is the canonical front-door set.
 
 @testitem "is_valid_frontdoor: M satisfies criterion on classic graph" tags = [:unit] begin
-    cg = caugi(
+    cg = cgraph(
         directed(:U, :X),
         directed(:X, :M),
         directed(:M, :Y),
@@ -17,7 +17,7 @@ using CausalGraphInterface
 end
 
 @testitem "is_valid_frontdoor: empty Z fails when directed path exists" tags = [:unit] begin
-    cg = caugi(
+    cg = cgraph(
         directed(:U, :X),
         directed(:X, :M),
         directed(:M, :Y),
@@ -29,7 +29,7 @@ end
 
 @testitem "is_valid_frontdoor: U fails condition (i) - does not intercept X -> M -> Y" tags =
     [:unit] begin
-    cg = caugi(
+    cg = cgraph(
         directed(:U, :X),
         directed(:X, :M),
         directed(:M, :Y),
@@ -43,7 +43,7 @@ end
     [:unit] begin
     # A -> X, A -> M, X -> M, M -> Y
     # Backdoor path from X to M: X <- A -> M is open.
-    cg = caugi(
+    cg = cgraph(
         directed(:A, :X),
         directed(:A, :M),
         directed(:X, :M),
@@ -57,7 +57,7 @@ end
     [:unit] begin
     # X --> M, M --> Y, B --> M, B --> Y
     # Backdoor path from M to Y: M <-- B --> Y is not blocked by X.
-    cg = caugi(
+    cg = cgraph(
         directed(:X, :M),
         directed(:M, :Y),
         directed(:B, :M),
@@ -70,7 +70,7 @@ end
 @testitem "is_valid_frontdoor: X --> Y direct edge violates condition (i)" tags = [:unit] begin
     # If there is a direct edge X --> Y alongside X --> M --> Y, then M alone does
     # not intercept the direct path.
-    cg = caugi(
+    cg = cgraph(
         directed(:U, :X),
         directed(:X, :M),
         directed(:M, :Y),
@@ -86,7 +86,7 @@ end
 @testitem "is_valid_frontdoor: chain mediators - each singleton is valid" tags = [:unit] begin
     # U --> X --> M1 --> M2 --> Y, U --> Y
     # Both {M1} and {M2} individually intercept all directed paths.
-    cg = caugi(
+    cg = cgraph(
         directed(:U, :X),
         directed(:X, :M1),
         directed(:M1, :M2),
@@ -102,7 +102,7 @@ end
 @testitem "is_valid_frontdoor: no causal path - empty Z valid" tags = [:unit] begin
     # X --> A, B --> Y: no directed path from X to Y at all.
     # Empty Z vacuously intercepts all (zero) directed paths.
-    cg = caugi(directed(:X, :A), directed(:B, :Y); class = DAG)
+    cg = cgraph(directed(:X, :A), directed(:B, :Y); class = DAG)
     @test is_valid_frontdoor(cg, :X, :Y)
 end
 
@@ -430,7 +430,7 @@ end
 # ── ListFDSets ────────────────────────────────────────────────────────────────
 
 @testitem "ListFDSets: classic single mediator" tags = [:unit] begin
-    cg = caugi(
+    cg = cgraph(
         directed(:U, :X),
         directed(:U, :Y),
         directed(:X, :Z),

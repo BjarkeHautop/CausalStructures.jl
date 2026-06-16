@@ -100,7 +100,7 @@ end
     using Statistics
     # B --> A, B --> C: A and C share a common cause.
     # d_sep(A, C) = false; d_sep(A, C, [B]) = true.
-    dag = caugi(directed(:B, :A), directed(:B, :C); class = DAG)
+    dag = cgraph(directed(:B, :A), directed(:B, :C); class = DAG)
     data = simulate_data(dag; samples = 50_000, standardize = false, seed = 1)
     n = 50_000
 
@@ -119,7 +119,7 @@ end
     [:sim] begin
     using Statistics
     # A --> B --> C: A and C are d-connected marginally but d-separated given B.
-    dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
     data = simulate_data(dag; samples = 50_000, standardize = false, seed = 2)
     n = 50_000
 
@@ -138,7 +138,7 @@ end
     [:sim] begin
     using Statistics
     # A --> C <-- B: A and B are d-separated marginally but d-connected given C.
-    dag = caugi(directed(:A, :C), directed(:B, :C); class = DAG)
+    dag = cgraph(directed(:A, :C), directed(:B, :C); class = DAG)
     data = simulate_data(dag; samples = 50_000, standardize = false, seed = 3)
     n = 50_000
 
@@ -159,7 +159,7 @@ end
     # True causal effect X --> Y = 1.0.
     # Without adjustment: OLS coefficient of Y ~ X is biased away from 1.
     # Adjusted for valid backdoor set {A}: coefficient of Y ~ X + A converges to 1.
-    dag = caugi(directed(:A, :X), directed(:A, :Y), directed(:X, :Y); class = DAG)
+    dag = cgraph(directed(:A, :X), directed(:A, :Y), directed(:X, :Y); class = DAG)
 
     z = adjustment_set(dag, :X, :Y; type = :backdoor)
     @test :A in z

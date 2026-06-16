@@ -18,7 +18,7 @@ formula, even in the presence of unmeasured confounders between `x` and `y`.
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:U, :X), directed(:X, :M), directed(:M, :Y), directed(:U, :Y); class = DAG);
+julia> cg = cgraph(directed(:U, :X), directed(:X, :M), directed(:M, :Y), directed(:U, :Y); class = DAG);
 
 julia> is_valid_frontdoor(cg, :X, :Y, [:M])  # M mediates X -> Y and satisfies all conditions
 true
@@ -378,7 +378,7 @@ The returned set is the full R'' from Steps 1-2 (not necessarily minimal).
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:U, :X), directed(:U, :Y), directed(:X, :Z), directed(:Z, :Y); class = DAG);
+julia> cg = cgraph(directed(:U, :X), directed(:U, :Y), directed(:X, :Z), directed(:Z, :Y); class = DAG);
 
 julia> frontdoor_set(cg, :X, :Y; restrict = [:Z])
 1-element Vector{Symbol}:
@@ -387,7 +387,7 @@ julia> frontdoor_set(cg, :X, :Y; restrict = [:Z])
 
 ```jldoctest
 julia> # Jeong (2022) Fig. 1b
-       cg = caugi(
+       cg = cgraph(
            directed(:U1, :X), directed(:U1, :Y), directed(:U2, :X), directed(:U2, :D),
            directed(:X, :A), directed(:A, :B), directed(:A, :C), directed(:A, :D),
            directed(:B, :Y), directed(:C, :Y), directed(:D, :Y);
@@ -581,7 +581,7 @@ polynomial time and takes polynomial time between consecutive results.
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:U, :X), directed(:U, :Y), directed(:X, :Z), directed(:Z, :Y); class = DAG);
+julia> cg = cgraph(directed(:U, :X), directed(:U, :Y), directed(:X, :Z), directed(:Z, :Y); class = DAG);
 
 julia> all_frontdoor_sets(cg, :X, :Y; restrict = [:Z])
 1-element Vector{Vector{Symbol}}:
@@ -589,7 +589,7 @@ julia> all_frontdoor_sets(cg, :X, :Y; restrict = [:Z])
 ```
 
 ```jldoctest
-julia> cg = caugi(
+julia> cg = cgraph(
            directed(:U1, :X), directed(:U1, :Y), directed(:U2, :X), directed(:U2, :D),
            directed(:X, :A), directed(:A, :B), directed(:A, :C), directed(:A, :D),
            directed(:B, :Y), directed(:C, :Y), directed(:D, :Y);

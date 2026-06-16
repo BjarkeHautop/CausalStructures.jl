@@ -172,7 +172,7 @@ of `cg`.
 # Examples
 
 ```jldoctest
-julia> mag = caugi(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG);
+julia> mag = cgraph(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG);
 
 julia> is_valid_adjustment(mag, :X, :Y)
 false
@@ -219,7 +219,7 @@ Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 # Examples
 
 ```jldoctest
-julia> mag = caugi(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG);
+julia> mag = cgraph(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG);
 
 julia> all_adjustment_sets(mag, :X, :Y)
 1-element Vector{Vector{Symbol}}:
@@ -289,7 +289,7 @@ sizes 0, 1, 2, ... in order and stopping at the first valid set.
 # Examples
 
 ```jldoctest
-julia> mag = caugi(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG);
+julia> mag = cgraph(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG);
 
 julia> adjustment_set(mag, :X, :Y)
 1-element Vector{Symbol}:

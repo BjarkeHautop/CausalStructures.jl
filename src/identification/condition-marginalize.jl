@@ -81,7 +81,7 @@ be disjoint.
 # Examples
 
 ```jldoctest
-julia> dag = caugi(directed(:U, :X), directed(:U, :Y); class = DAG);
+julia> dag = cgraph(directed(:U, :X), directed(:U, :Y); class = DAG);
 
 julia> ag = condition_marginalize(dag; marg_vars = [:U])
 AG with 2 nodes and 1 edge:

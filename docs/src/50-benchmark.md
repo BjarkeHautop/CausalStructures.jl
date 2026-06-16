@@ -84,11 +84,11 @@ using BenchmarkTools.jl (Julia) and bench (R) after an initial warm-up run.
 
 ```r
 generate_graphs <- function(n, p) {
-  cg <- caugi::generate_graph(n = n, p = p, class = "DAG")
-  ig <- caugi::as_igraph(cg)
-  ggmg <- caugi::as_adjacency(cg)
-  bng <- caugi::as_bnlearn(cg)
-  dg <- caugi::as_dagitty(cg)
+  cg <- cgraph::generate_graph(n = n, p = p, class = "DAG")
+  ig <- cgraph::as_igraph(cg)
+  ggmg <- cgraph::as_adjacency(cg)
+  bng <- cgraph::as_bnlearn(cg)
+  dg <- cgraph::as_dagitty(cg)
   list(cg = cg, ig = ig, ggmg = ggmg, bng = bng, dg = dg)
 }
 
@@ -99,14 +99,14 @@ ggmg <- graphs$ggmg
 bng <- graphs$bng
 dg <- graphs$dg
 
-# build the caugi to reflect correct runtime
-cg <- caugi::build(cg)
+# build the cgraph to reflect correct runtime
+cg <- cgraph::build(cg)
 
 node_name = "V45"
 
 bench::mark(
-  caugi = {
-    caugi::parents(cg, node_name)
+  cgraph = {
+    cgraph::parents(cg, node_name)
   },
   igraph = {
     igraph::neighbors(ig, node_name, mode = "in")
@@ -133,7 +133,7 @@ Here we compare the speed of retrieving parent nodes across different packages:
 | **Median** | **Package** |
 | ---------- | --------------------- |
 | 0.17 µs | CausalGraphInterface |
-| 2.8 µs | caugi |
+| 2.8 µs | cgraph |
 | 12µs | bnlearn |
 | 127 µs | igraph |
 | 5.1ms | ggm |

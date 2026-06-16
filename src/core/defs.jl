@@ -339,11 +339,11 @@ end
 """
     node(name::Symbol) -> GraphNode
 
-Wrap a symbol as an isolated node for inclusion in [`caugi`](@ref).
+Wrap a symbol as an isolated node for inclusion in [`cgraph`](@ref).
 
 # Examples
 ```jldoctest
-julia> caugi(node(:A), node(:B), node(:C); class = DAG)
+julia> cgraph(node(:A), node(:B), node(:C); class = DAG)
 DAG with 3 nodes and 0 edges:
   nodes: A, B, C
   edges:

@@ -16,7 +16,7 @@ The [`adjustment_set`](@ref) function supports three different strategies for
 finding adjustment sets. Let's build a DAG with multiple confounders and mediators:
 
 ```@example id
-dag = caugi(
+dag = cgraph(
        directed(:C, :X), directed(:A, :X), directed(:X, :F), directed(:X, :D),
        directed(:A, :K), directed(:K, :Y),
        directed(:D, :Y), directed(:D, :G), directed(:Y, :H);
@@ -79,7 +79,7 @@ a graph where an unobserved confounder `U` affects both the treatment `X` and
 outcome `Y`:
 
 ```@example id
-dag2 = caugi(
+dag2 = cgraph(
        directed(:U, :X), directed(:U, :Y),
        directed(:X, :M), directed(:M, :Y);
        class = DAG,

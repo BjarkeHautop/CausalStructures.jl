@@ -7,20 +7,20 @@ using CausalGraphInterface
 
 @testitem "is_admg identifies ADMG graphs" tags = [:unit] begin
     # Pure DAG is also a valid ADMG
-    dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
     @test is_admg(dag)
 
-    admg = caugi(directed(:A, :B), bidirected(:A, :C); class = ADMG)
+    admg = cgraph(directed(:A, :B), bidirected(:A, :C); class = ADMG)
     @test is_admg(admg)
     @test admg isa ADMG
 end
 
 @testitem "ADMG rejects undirected edges" tags = [:unit] begin
-    @test_throws ErrorException caugi(directed(:A, :B), undirected(:B, :C); class = ADMG)
+    @test_throws ErrorException cgraph(directed(:A, :B), undirected(:B, :C); class = ADMG)
 end
 
 @testitem "ADMG rejects directed cycles" tags = [:unit] begin
-    @test_throws ErrorException caugi(
+    @test_throws ErrorException cgraph(
         directed(:A, :B),
         directed(:B, :C),
         directed(:C, :A);
@@ -31,7 +31,7 @@ end
 # ── parents / children for ADMG ───────────────────────────────────────────────
 
 @testitem "parents and children work for ADMG (directed edges only)" tags = [:unit] begin
-    admg = caugi(directed(:A, :B), directed(:B, :C), bidirected(:A, :C); class = ADMG)
+    admg = cgraph(directed(:A, :B), directed(:B, :C), bidirected(:A, :C); class = ADMG)
     @test parents(admg, :B) == [:A]
     @test children(admg, :A) == [:B]
     @test parents(admg, :C) == [:B]
@@ -39,7 +39,7 @@ end
 end
 
 @testitem "neighbors for ADMG includes bidirected adjacency" tags = [:unit] begin
-    admg = caugi(directed(:A, :B), bidirected(:B, :C); class = ADMG)
+    admg = cgraph(directed(:A, :B), bidirected(:B, :C); class = ADMG)
     # B is adjacent to both A (directed) and C (bidirected)
     @test Set(neighbors(admg, :B)) == Set([:A, :C])
 end
@@ -47,17 +47,17 @@ end
 # ── ancestors / descendants for ADMG ──────
 
 @testitem "ancestors follows directed edges only in ADMG" tags = [:unit] begin
-    admg = caugi(directed(:A, :B), directed(:B, :C), bidirected(:A, :D); class = ADMG)
+    admg = cgraph(directed(:A, :B), directed(:B, :C), bidirected(:A, :D); class = ADMG)
     @test Set(ancestors(admg, :C)) == Set([:A, :B])
 end
 
 @testitem "descendants follows directed edges only in ADMG" tags = [:unit] begin
-    admg = caugi(directed(:A, :B), directed(:B, :C), bidirected(:A, :D); class = ADMG)
+    admg = cgraph(directed(:A, :B), directed(:B, :C), bidirected(:A, :D); class = ADMG)
     @test Set(descendants(admg, :A)) == Set([:B, :C])
 end
 
 @testitem "no ancestors via bidirected edges in ADMG" tags = [:unit] begin
-    admg = caugi(directed(:A, :B), directed(:B, :C), bidirected(:A, :D); class = ADMG)
+    admg = cgraph(directed(:A, :B), directed(:B, :C), bidirected(:A, :D); class = ADMG)
     # D has no directed parents --> no ancestors
     @test isempty(ancestors(admg, :D))
 end
@@ -65,13 +65,13 @@ end
 # ── spouses ─────────────────────────────────────────────
 
 @testitem "spouses returns bidirected neighbors" tags = [:unit] begin
-    admg = caugi(directed(:A, :B), bidirected(:A, :C), bidirected(:B, :C); class = ADMG)
+    admg = cgraph(directed(:A, :B), bidirected(:A, :C), bidirected(:B, :C); class = ADMG)
     @test spouses(admg, :A) == [:C]
     @test Set(spouses(admg, :C)) == Set([:A, :B])
 end
 
 @testitem "spouses returns empty for nodes with no bidirected edges" tags = [:unit] begin
-    admg = caugi(directed(:A, :B), directed(:B, :C); class = ADMG)
+    admg = cgraph(directed(:A, :B), directed(:B, :C); class = ADMG)
     @test isempty(spouses(admg, :A))
     @test isempty(spouses(admg, :B))
 end
@@ -79,32 +79,32 @@ end
 # ── districts ───────────────────────────────────────────
 
 @testitem "districts returns c-components" tags = [:unit] begin
-    admg = caugi(directed(:A, :B), bidirected(:A, :C), bidirected(:D, :E); class = ADMG)
+    admg = cgraph(directed(:A, :B), bidirected(:A, :C), bidirected(:D, :E); class = ADMG)
     dists = districts(admg)
     @test length(dists) == 3  # {A,C}, {B}, {D,E}
 end
 
 @testitem "districts with only directed edges gives singletons" tags = [:unit] begin
-    admg = caugi(directed(:A, :B), directed(:B, :C); class = ADMG)
+    admg = cgraph(directed(:A, :B), directed(:B, :C); class = ADMG)
     dists = districts(admg)
     @test length(dists) == 3
     @test all(d -> length(d) == 1, dists)
 end
 
 @testitem "m_separated works for chain" tags = [:unit] begin
-    admg = caugi(directed(:A, :B), directed(:B, :C); class = ADMG)
+    admg = cgraph(directed(:A, :B), directed(:B, :C); class = ADMG)
     @test !m_separated(admg, :A, :C)
     @test m_separated(admg, :A, :C, [:B])
 end
 
 @testitem "m_separated works for collider" tags = [:unit] begin
-    admg = caugi(directed(:A, :C), directed(:B, :C); class = ADMG)
+    admg = cgraph(directed(:A, :C), directed(:B, :C); class = ADMG)
     @test m_separated(admg, :A, :B)
     @test !m_separated(admg, :A, :B, [:C])
 end
 
 @testitem "m_separated handles bidirected confounding" tags = [:unit] begin
-    admg = caugi(directed(:L, :X), directed(:L, :Y); class = ADMG)
+    admg = cgraph(directed(:L, :X), directed(:L, :Y); class = ADMG)
     @test !m_separated(admg, :X, :Y)
     @test m_separated(admg, :X, :Y, [:L])
 end
@@ -112,7 +112,7 @@ end
 # ── markov_blanket for ADMG ─────────────────────────────
 
 @testitem "markov_blanket district-based for ADMG" tags = [:unit] begin
-    admg = caugi(directed(:L, :X), directed(:X, :Y), bidirected(:X, :Z); class = ADMG)
+    admg = cgraph(directed(:L, :X), directed(:X, :Y), bidirected(:X, :Z); class = ADMG)
     mb = markov_blanket(admg, :X)
     @test :L in mb
     @test :Z in mb
@@ -120,7 +120,7 @@ end
 end
 
 @testitem "markov_blanket includes parents of district members for ADMG" tags = [:unit] begin
-    admg = caugi(directed(:A, :X), directed(:B, :Y), bidirected(:X, :Y); class = ADMG)
+    admg = cgraph(directed(:A, :X), directed(:B, :Y), bidirected(:X, :Y); class = ADMG)
     mb = markov_blanket(admg, :X)
     @test :A in mb
     @test :B in mb
@@ -130,7 +130,7 @@ end
 # ── exogenous_nodes for ADMG ────────────────────────────
 
 @testitem "exogenous_nodes works for ADMG" tags = [:unit] begin
-    admg = caugi(directed(:A, :B), bidirected(:C, :D); class = ADMG)
+    admg = cgraph(directed(:A, :B), bidirected(:C, :D); class = ADMG)
     exo = exogenous_nodes(admg)
     @test Set(exo) == Set([:A, :C, :D])
 end
@@ -138,14 +138,14 @@ end
 # ── adjustment ────────────────────────────────────────────────────────────────
 
 @testitem "is_valid_adjustment: classic confounding L-->X-->Y, L-->Y" tags = [:unit] begin
-    admg = caugi(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG)
+    admg = cgraph(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG)
     @test !is_valid_adjustment(admg, :X, :Y)
     @test !is_valid_adjustment(admg, :X, :Y, Symbol[])
     @test is_valid_adjustment(admg, :X, :Y, [:L])
 end
 
 @testitem "is_valid_adjustment: rejects forbidden descendants" tags = [:unit] begin
-    admg = caugi(
+    admg = cgraph(
         directed(:X, :M),
         directed(:M, :Y),
         directed(:L, :X),
@@ -157,13 +157,13 @@ end
 end
 
 @testitem "all_adjustment_sets: finds minimal set" tags = [:unit] begin
-    admg = caugi(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG)
+    admg = cgraph(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG)
     sets = all_adjustment_sets(admg, :X, :Y; minimal = true)
     @test any(s -> Set(s) == Set([:L]), sets)
 end
 
 @testitem "all_adjustment_sets: with extra non-confounding node" tags = [:unit] begin
-    admg = caugi(
+    admg = cgraph(
         directed(:L, :X),
         directed(:X, :Y),
         directed(:L, :Y),
@@ -180,7 +180,7 @@ end
 @testitem "all_adjustment_sets: no valid set when all paths blocked by collider" tags =
     [:unit] begin
     # Instrumental variable + bidirected: Z-->X-->Y, X<->Y - cannot block all paths
-    admg = caugi(directed(:Z, :X), directed(:X, :Y), bidirected(:X, :Y); class = ADMG)
+    admg = cgraph(directed(:Z, :X), directed(:X, :Y), bidirected(:X, :Y); class = ADMG)
     sets = all_adjustment_sets(admg, :X, :Y; minimal = true, max_size = 3)
     @test isempty(sets)
 end

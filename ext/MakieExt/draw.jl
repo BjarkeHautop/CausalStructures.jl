@@ -1,4 +1,4 @@
-# Drawing primitives and the caugi_plot implementation.
+# Drawing primitives and the cgraph_plot implementation.
 #
 # Endpoint semantics per CausalEdge:
 #   src_end / dst_end : Tail | Arrow | Circle
@@ -212,7 +212,7 @@ Extra keyword arguments are forwarded to the NetworkLayout algorithm
 ```julia
 using CausalGraphInterface, CairoMakie
 
-dag = caugi(directed(:A, :X), directed(:A, :Y), directed(:X, :Y); class = DAG)
+dag = cgraph(directed(:A, :X), directed(:A, :Y), directed(:X, :Y); class = DAG)
 
 # Global styling
 Makie.plot(dag; node_color = :lightblue, edge_color = :gray40)
@@ -221,7 +221,7 @@ Makie.plot(dag; node_color = :lightblue, edge_color = :gray40)
 Makie.plot(dag; node_color = Dict(:A => :salmon, :default => :white))
 
 # Per-edge-type colors
-admg = caugi(directed(:X, :Y), bidirected(:X, :Z); class = ADMG)
+admg = cgraph(directed(:X, :Y), bidirected(:X, :Z); class = ADMG)
 Makie.plot(admg; edge_color = Dict(:directed => :steelblue, :bidirected => :crimson))
 
 # Highlight a specific edge

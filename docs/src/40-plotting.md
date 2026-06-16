@@ -14,7 +14,7 @@ using CairoMakie
 Pass any `CausalGraph` to `Makie.plot`:
 
 ```@example plot
-dag = caugi(
+dag = cgraph(
        directed(:A, :X),
        directed(:A, :Y),
        directed(:X, :Y);
@@ -37,7 +37,7 @@ All six edge types are rendered with their conventional endpoint marks:
 | `partial(:A, :B)`              | `A o-o B`  |
 
 ```@example plot
-cg = caugi(
+cg = cgraph(
     partial(:X, :Y),
     partially_directed(:X, :Z),
     partially_undirected(:Z, :W);
@@ -129,7 +129,7 @@ Each edge style argument accepts either a **scalar** or a **`Dict`** keyed by:
 Color edges by type:
 
 ```@example plot
-admg = caugi(
+admg = cgraph(
        directed(:X, :Y),
        bidirected(:X, :Z),
        directed(:Z, :Y);
@@ -153,7 +153,7 @@ Makie.plot(dag;
 ## Combining options
 
 ```@example plot
-admg2 = caugi(
+admg2 = cgraph(
     directed(:U, :X),
     directed(:U, :Y),
     directed(:X, :Y),

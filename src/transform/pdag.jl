@@ -16,7 +16,7 @@ and removes it. Raises an error if no valid DAG extension exists.
 # Examples
 
 ```jldoctest
-julia> pdag = caugi(undirected(:A, :B), undirected(:B, :C); class = PDAG);
+julia> pdag = cgraph(undirected(:A, :B), undirected(:B, :C); class = PDAG);
 
 julia> dag = dag_from_pdag(pdag)
 DAG with 3 nodes and 2 edges:
@@ -113,7 +113,7 @@ The four rules are:
 # Examples
 
 ```jldoctest
-julia> pdag = caugi(directed(:A, :B), undirected(:B, :C); class = PDAG);
+julia> pdag = cgraph(directed(:A, :B), undirected(:B, :C); class = PDAG);
 
 julia> result = meek_closure(pdag)
 MPDAG with 3 nodes and 2 edges:
@@ -259,7 +259,7 @@ applies [`meek_closure`](@ref) to propagate all implied orientations.
 # Examples
 
 ```jldoctest
-julia> dag = caugi(directed(:A, :B); class = DAG);
+julia> dag = cgraph(directed(:A, :B); class = DAG);
 
 julia> cpdag = dag_to_cpdag(dag)
 CPDAG with 2 nodes and 1 edge:
@@ -334,14 +334,14 @@ characterization (Verma & Pearl, 1990).
 # Examples
 
 ```jldoctest
-julia> g1 = caugi(directed(:A, :B), directed(:C, :B); class = DAG);
+julia> g1 = cgraph(directed(:A, :B), directed(:C, :B); class = DAG);
 
-julia> g2 = caugi(directed(:A, :B), directed(:C, :B); class = DAG);
+julia> g2 = cgraph(directed(:A, :B), directed(:C, :B); class = DAG);
 
 julia> markov_equivalent(g1, g2)
 true
 
-julia> g3 = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> g3 = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
 
 julia> markov_equivalent(g1, g3)
 false
@@ -422,7 +422,7 @@ If `cg` is already maximal (is a MAG), it is returned unchanged.
 # Examples
 
 ```jldoctest
-julia> ag = caugi(directed(:A, :B), directed(:B, :C); class = AG);
+julia> ag = cgraph(directed(:A, :B), directed(:B, :C); class = AG);
 
 julia> ag_to_mag(ag)
 MAG with 3 nodes and 2 edges:

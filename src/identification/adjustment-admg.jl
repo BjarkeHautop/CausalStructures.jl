@@ -226,7 +226,7 @@ of `cg`.
 # Examples
 
 ```jldoctest
-julia> admg = caugi(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG);
+julia> admg = cgraph(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG);
 
 julia> is_valid_adjustment(admg, :X, :Y)       # empty Z does not block L --> Y
 false
@@ -274,7 +274,7 @@ inclusion-minimal sets are returned.
 # Examples
 
 ```jldoctest
-julia> admg = caugi(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG);
+julia> admg = cgraph(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG);
 
 julia> all_adjustment_sets(admg, :X, :Y)
 1-element Vector{Vector{Symbol}}:

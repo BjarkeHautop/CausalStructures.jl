@@ -11,7 +11,7 @@ of `x` is d-separated from `y` given `z ∪ {x}`.
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG);
+julia> cg = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG);
 
 julia> is_valid_backdoor(cg, :X, :Y)       # empty Z leaves the backdoor path A --> Y open
 false
@@ -103,7 +103,7 @@ itself are never candidates.
 # Examples
 
 ```jldoctest
-julia> cg = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG);
+julia> cg = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG);
 
 julia> all_backdoor_sets(cg, :X, :Y)
 1-element Vector{Vector{Symbol}}:
@@ -164,7 +164,7 @@ Three types are supported:
 # Examples
 
 ```jldoctest
-julia> cg = caugi(
+julia> cg = cgraph(
            directed(:C, :X), directed(:X, :F), directed(:X, :D),
            directed(:A, :X), directed(:A, :K), directed(:K, :Y),
            directed(:D, :Y), directed(:D, :G), directed(:Y, :H);
@@ -270,7 +270,7 @@ exists. Returns an empty vector if `x` has no causal path to `y`.
 # Examples
 
 ```jldoctest
-julia> pdag = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = PDAG);
+julia> pdag = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = PDAG);
 
 julia> adjustment_set(pdag, :X, :Y)
 1-element Vector{Symbol}:

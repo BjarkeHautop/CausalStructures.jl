@@ -51,7 +51,7 @@ The result is returned as a [`PAG`](@ref).
 # Examples
 
 ```jldoctest
-julia> mag = caugi(directed(:A, :B), directed(:C, :B); class = MAG);
+julia> mag = cgraph(directed(:A, :B), directed(:C, :B); class = MAG);
 
 julia> mag_to_pag(mag)
 PAG with 3 nodes and 2 edges:
@@ -492,7 +492,7 @@ the result is a MAG in the same class.
 # Examples
 
 ```jldoctest
-julia> pag = caugi(partially_directed(:A, :B), partially_directed(:C, :B); class = PAG);
+julia> pag = cgraph(partially_directed(:A, :B), partially_directed(:C, :B); class = PAG);
 
 julia> mag_from_pag(pag)
 MAG with 3 nodes and 2 edges:
@@ -504,7 +504,7 @@ MAG with 3 nodes and 2 edges:
 Selection bias is supported: undirected (`---`) edges are kept.
 
 ```jldoctest
-julia> mag = caugi(undirected(:A, :B), undirected(:B, :C), undirected(:C, :D),
+julia> mag = cgraph(undirected(:A, :B), undirected(:B, :C), undirected(:C, :D),
                    undirected(:A, :D); class = MAG);
 
 julia> mag_from_pag(mag_to_pag(mag))

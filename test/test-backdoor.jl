@@ -38,7 +38,7 @@ end
 @testitem "all_backdoor_sets: empty set valid when v-structure blocks backdoor" tags =
     [:unit] begin
     # A-->L, K-->L forms a collider on L, blocking A-->X backdoor path
-    cg = caugi(
+    cg = cgraph(
         directed(:C, :X),
         directed(:X, :F),
         directed(:X, :D),
@@ -60,20 +60,20 @@ end
 end
 
 @testitem "is_valid_backdoor: mediator graph" tags = [:unit] begin
-    cg = caugi(directed(:X, :M), directed(:M, :Y), directed(:Y, :S); class = DAG)
+    cg = cgraph(directed(:X, :M), directed(:M, :Y), directed(:Y, :S); class = DAG)
     @test is_valid_backdoor(cg, :X, :Y)
     @test !is_valid_backdoor(cg, :X, :Y, [:M])   # M is a descendant of X
 end
 
 @testitem "all_backdoor_sets: mediator graph returns only empty set" tags = [:unit] begin
-    cg = caugi(directed(:X, :M), directed(:M, :Y), directed(:Y, :S); class = DAG)
+    cg = cgraph(directed(:X, :M), directed(:M, :Y), directed(:Y, :S); class = DAG)
     sets = all_backdoor_sets(cg, :X, :Y; minimal = true, max_size = 1)
     @test length(sets) == 1
     @test sets[1] == Symbol[]
 end
 
 @testitem "is_valid_backdoor: collider-driven candidates" tags = [:unit] begin
-    cg = caugi(
+    cg = cgraph(
         directed(:A, :Z),
         directed(:B, :Z),
         directed(:A, :X),
@@ -87,7 +87,7 @@ end
 end
 
 @testitem "all_backdoor_sets: collider graph non-minimal" tags = [:unit] begin
-    cg = caugi(
+    cg = cgraph(
         directed(:A, :Z),
         directed(:B, :Z),
         directed(:A, :X),
@@ -102,7 +102,7 @@ end
 end
 
 @testitem "is_valid_backdoor: chain graph empty set valid" tags = [:unit] begin
-    cg = caugi(directed(:A, :B), directed(:B, :C); class = DAG)
+    cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
     @test is_valid_backdoor(cg, :A, :C)
     @test !is_valid_backdoor(cg, :A, :C, [:B])  # B is a descendant of A
 end
@@ -130,7 +130,7 @@ end
     # B is a parent of X but NOT an ancestor of Y.
     # Backdoor path: X <-- B <-- C --> Y must be
     # blocked by including B (or C).
-    cg = caugi(directed(:C, :B), directed(:B, :X), directed(:C, :Y); class = DAG)
+    cg = cgraph(directed(:C, :B), directed(:B, :X), directed(:C, :Y); class = DAG)
     z = adjustment_set(cg, :X, :Y; type = :backdoor)
     @test is_valid_backdoor(cg, :X, :Y, z)
     @test :B ∈ z || :C ∈ z
@@ -146,7 +146,7 @@ end
 
 @testitem "adjustment_set: optimal default on simple confounder" tags = [:unit] begin
     # A-->X, X-->Y, A-->Y: optimal set should be {A}
-    cg = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG)
+    cg = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG)
     z = adjustment_set(cg, :X, :Y)  # default :optimal
     @test is_valid_backdoor(cg, :X, :Y, z)
     @test Set(z) == Set([:A])
@@ -154,14 +154,14 @@ end
 
 @testitem "adjustment_set: optimal empty on chain" tags = [:unit] begin
     # X-->Y: no confounders, optimal set is empty
-    cg = caugi(directed(:X, :Y); class = DAG)
+    cg = cgraph(directed(:X, :Y); class = DAG)
     @test adjustment_set(cg, :X, :Y; type = :optimal) == Symbol[]
     @test adjustment_set(cg, :X, :Y; type = :parents) == Symbol[]
     @test adjustment_set(cg, :X, :Y; type = :backdoor) == Symbol[]
 end
 
 @testitem "adjustment_set: unknown type throws ArgumentError" tags = [:unit] begin
-    cg = caugi(directed(:X, :Y); class = DAG)
+    cg = cgraph(directed(:X, :Y); class = DAG)
     @test_throws ArgumentError adjustment_set(cg, :X, :Y; type = :unknown)
 end
 
@@ -169,7 +169,7 @@ end
 
 @testitem "is_valid_adjustment: simple confounder (DAG-as-MAG)" tags = [:unit] begin
     # A --> X --> Y, A --> Y: A is a common cause (pure directed MAG = DAG)
-    mag = caugi(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = MAG)
+    mag = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = MAG)
     @test is_valid_adjustment(mag, :X, :Y, [:A])
     @test !is_valid_adjustment(mag, :X, :Y)       # open path X <-- A --> Y
 end
@@ -178,7 +178,7 @@ end
     # A <-> X, A --> Y, X --> Y: hidden common cause of A and X; A also causes Y.
     # A is not ancestor of X (no directed path A --> X), so A <-> X is a valid MAG edge.
     # The open non-causal path X <-- (A <-> X) --> Y is blocked by conditioning on A.
-    mag = caugi(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG)
+    mag = cgraph(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG)
     @test is_valid_adjustment(mag, :X, :Y, [:A])
     @test !is_valid_adjustment(mag, :X, :Y)
 end
@@ -188,14 +188,14 @@ end
     # A <-> X, A <-> Y, X --> Y: A is an unobserved collider between the two hidden
     # common-cause paths. The empty set is valid because A naturally blocks the
     # non-causal path. Conditioning on A would OPEN the collider path.
-    mag = caugi(bidirected(:A, :X), bidirected(:A, :Y), directed(:X, :Y); class = MAG)
+    mag = cgraph(bidirected(:A, :X), bidirected(:A, :Y), directed(:X, :Y); class = MAG)
     @test is_valid_adjustment(mag, :X, :Y)         # empty set valid
     @test !is_valid_adjustment(mag, :X, :Y, [:A])  # conditioning on A opens path
 end
 
 @testitem "is_valid_adjustment: descendant of X is forbidden" tags = [:unit] begin
     # A --> X --> M --> Y: M is a descendant of X, invalid adjustment
-    mag = caugi(
+    mag = cgraph(
         directed(:A, :X),
         directed(:X, :M),
         directed(:M, :Y),
@@ -207,12 +207,12 @@ end
 end
 
 @testitem "is_valid_adjustment: chain has valid empty set" tags = [:unit] begin
-    mag = caugi(directed(:X, :Y); class = MAG)
+    mag = cgraph(directed(:X, :Y); class = MAG)
     @test is_valid_adjustment(mag, :X, :Y)
 end
 
 @testitem "all_adjustment_sets: bidirected confounder returns {A}" tags = [:unit] begin
-    mag = caugi(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG)
+    mag = cgraph(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG)
     sets = all_adjustment_sets(mag, :X, :Y)
     @test length(sets) == 1
     @test sets[1] == [:A]
@@ -220,14 +220,14 @@ end
 
 @testitem "all_adjustment_sets: collider structure returns only empty set" tags = [:unit] begin
     # Collider A blocks non-causal paths; only the empty adjustment set is valid.
-    mag = caugi(bidirected(:A, :X), bidirected(:A, :Y), directed(:X, :Y); class = MAG)
+    mag = cgraph(bidirected(:A, :X), bidirected(:A, :Y), directed(:X, :Y); class = MAG)
     sets = all_adjustment_sets(mag, :X, :Y)
     @test length(sets) == 1
     @test sets[1] == Symbol[]
 end
 
 @testitem "all_adjustment_sets: chain returns empty set" tags = [:unit] begin
-    mag = caugi(directed(:X, :Y); class = MAG)
+    mag = cgraph(directed(:X, :Y); class = MAG)
     sets = all_adjustment_sets(mag, :X, :Y)
     @test length(sets) == 1
     @test sets[1] == Symbol[]
@@ -236,7 +236,7 @@ end
 @testitem "all_adjustment_sets: consistent with is_valid_adjustment" tags = [:unit] begin
     # Verify that every set returned is valid and all valid sets (up to size) are found.
     # A --> X, B --> X, X --> Y, A --> Y: pure directed MAG (= DAG); A and B confound X.
-    mag = caugi(
+    mag = cgraph(
         directed(:A, :X),
         directed(:B, :X),
         directed(:X, :Y),
@@ -250,7 +250,7 @@ end
 end
 
 @testitem "proper backdoor graph removes causal edges" begin
-    mag = caugi(
+    mag = cgraph(
         directed(:X, :M),
         directed(:M, :Y),
         directed(:A, :X),
@@ -263,14 +263,14 @@ end
 end
 
 @testitem "adjustment_set AbstractAG: returns valid set, prefers smaller" tags = [:unit] begin
-    mag = caugi(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG)
+    mag = cgraph(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG)
     z = adjustment_set(mag, :X, :Y)
     @test is_valid_adjustment(mag, :X, :Y, z)
     @test z == [:A]
 end
 
 @testitem "adjustment_set AbstractAG: empty set valid" tags = [:unit] begin
-    mag = caugi(bidirected(:A, :X), bidirected(:A, :Y), directed(:X, :Y); class = MAG)
+    mag = cgraph(bidirected(:A, :X), bidirected(:A, :Y), directed(:X, :Y); class = MAG)
     z = adjustment_set(mag, :X, :Y)
     @test is_valid_adjustment(mag, :X, :Y, z)
     @test z == Symbol[]

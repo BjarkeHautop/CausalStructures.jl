@@ -31,7 +31,7 @@ Extra `kwargs` are forwarded to the NetworkLayout algorithm (e.g. `seed`,
 ```julia
 using CausalGraphInterface
 
-dag = caugi(directed(:A, :X), directed(:X, :Y); class = DAG)
+dag = cgraph(directed(:A, :X), directed(:X, :Y); class = DAG)
 
 # Always available:
 layout(dag)               # circle layout

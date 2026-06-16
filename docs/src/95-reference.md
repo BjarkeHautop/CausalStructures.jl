@@ -37,7 +37,7 @@ MAG
 PAG
 UNKNOWN
 CausalEdge
-caugi
+cgraph
 node
 directed
 undirected

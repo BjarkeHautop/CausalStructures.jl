@@ -15,7 +15,7 @@ are added automatically if not already present.
 # Examples
 
 ```jldoctest
-julia> dag = caugi(directed(:A, :B); class = DAG);
+julia> dag = cgraph(directed(:A, :B); class = DAG);
 
 julia> dag2 = add_edge(dag, directed(:B, :C));
 
@@ -44,7 +44,7 @@ isolated are retained. Throws `ArgumentError` if `e` is not present.
 # Examples
 
 ```jldoctest
-julia> dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
 
 julia> dag2 = remove_edge(dag, directed(:A, :B));
 
@@ -75,7 +75,7 @@ If `n` is already present, returns `cg` unchanged.
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B); class = DAG);
+julia> g = cgraph(directed(:A, :B); class = DAG);
 
 julia> g2 = add_node(g, :C);
 
@@ -100,7 +100,7 @@ Throws `ArgumentError` if `n` is not present.
 # Examples
 
 ```jldoctest
-julia> g = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> g = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
 
 julia> g2 = remove_node(g, :B);
 
@@ -130,7 +130,7 @@ Throws if the edges violate the structural constraints of `T`.
 # Examples
 
 ```jldoctest
-julia> dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
 
 julia> pdag = reclass(dag, PDAG);
 

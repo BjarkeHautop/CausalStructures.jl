@@ -63,7 +63,7 @@ Construct graphs by specifying edges and the desired graph class:
 ```julia
 using CausalGraphInterface
 
-dag = caugi(
+dag = cgraph(
     directed(:U, :X),
     directed(:U, :Y),
     directed(:X, :Y);
@@ -80,6 +80,8 @@ admg = latent_project(dag, [:U])
 ```
 
 ## To Do
+
+Rename package to something else? Maybe CausalStructures.jl?
 
 Figure out a better syntax than using `directed(), undirected()`, etc. Ideally,
 we would support edge operators similar to the syntax used in R. I.e. in R you

@@ -69,7 +69,7 @@ as the number of MAGs in a class can be very large.
 # Examples
 
 ```jldoctest
-julia> pag = caugi(partial(:A, :B), partial(:B, :C); class = PAG);
+julia> pag = cgraph(partial(:A, :B), partial(:B, :C); class = PAG);
 
 julia> length(enumerate_mags(pag))
 8
@@ -97,7 +97,7 @@ before calling [`enumerate_mags`](@ref).
 # Examples
 
 ```jldoctest
-julia> pag = caugi(partial(:A, :B), partial(:B, :C); class = PAG);
+julia> pag = cgraph(partial(:A, :B), partial(:B, :C); class = PAG);
 
 julia> count_mags(pag)
 8

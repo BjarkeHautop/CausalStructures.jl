@@ -22,7 +22,7 @@ edges `s <-> c` are added for every sibling `s` (bidirected neighbor) and child
 # Examples
 
 ```jldoctest
-julia> dag = caugi(directed(:U, :X), directed(:U, :Y), directed(:X, :Y); class = DAG);
+julia> dag = cgraph(directed(:U, :X), directed(:U, :Y), directed(:X, :Y); class = DAG);
 
 julia> latent_project(dag, [:U])
 ADMG with 2 nodes and 2 edges:
@@ -126,7 +126,7 @@ children to preserve reachability.
 # Examples
 
 ```jldoctest
-julia> dag = caugi(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
 
 julia> dag2 = exogenize(dag, [:B])
 DAG with 3 nodes and 2 edges:
@@ -198,7 +198,7 @@ Lemmas 1-3):
 # Examples
 
 ```jldoctest
-julia> dag = caugi(directed(:A, :U), directed(:U, :X), directed(:U, :Y); class = DAG);
+julia> dag = cgraph(directed(:A, :U), directed(:U, :X), directed(:U, :Y); class = DAG);
 
 julia> result = normalize_latent_structure(dag, [:U])
 DAG with 4 nodes and 4 edges:

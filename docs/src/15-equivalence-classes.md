@@ -20,7 +20,7 @@ In CausalGraphInterface, all PDAG types are encoded as subtypes of [`AbstractPDA
 Given a DAG, [`dag_to_cpdag`](@ref) computes its CPDAG:
 
 ```@example ec
-dag = caugi(
+dag = cgraph(
     directed(:C, :X), directed(:A, :X),
     directed(:A, :Y), directed(:Y, :Z);
     class = DAG,
@@ -58,7 +58,7 @@ An [`MPDAG`](@ref) (maximally oriented partially directed acyclic graph) can, fo
 [`meek_closure`](@ref) propagates all further orientations implied by Meek's rules on a PDAG to obtain an MPDAG:
 
 ```@example ec
-pdag = caugi(
+pdag = cgraph(
     undirected(:C, :X), directed(:A, :X),
     undirected(:A, :Y), directed(:Y, :Z);
     class = PDAG,
@@ -87,7 +87,7 @@ Each Markov equivalence class of MAGs has a unique [`PAG`](@ref) (Partial Ancest
 Consider a MAG where `A` and `B` share a hidden common cause, `C` directly causes `B`, and `B` directly causes `D`:
 
 ```@example ec
-mag = caugi(bidirected(:A, :B), directed(:C, :B), directed(:B, :D); class = MAG)
+mag = cgraph(bidirected(:A, :B), directed(:C, :B), directed(:B, :D); class = MAG)
 ```
 
 [`mag_to_pag`](@ref) computes the PAG representing the Markov equivalence class of this MAG, so all MAGs that encode the same conditional independences:
