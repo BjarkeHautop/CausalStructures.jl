@@ -455,6 +455,26 @@ function simulate_data(
     return data
 end
 
+"""
+    edges(cg::CausalGraph) -> Vector{CausalEdge}
+
+Return the edges of `cg`.
+
+# Examples
+
+```jldoctest
+julia> cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
+
+julia> edges(cg)
+2-element Vector{CausalEdge}:
+ A --> B
+ B --> C
+```
+"""
+function edges(cg::CausalGraph)
+    return copy(cg.edges)
+end
+
 # Pretty printing
 import Base: show
 
@@ -478,6 +498,10 @@ function _edge_display(edge::CausalEdge)
     return "$(edge.src_end) - $(edge.dst_end)"
 end
 
+function show(io::IO, edge::CausalEdge)
+    print(io, "$(edge.src) $(_edge_display(edge)) $(edge.dst)")
+end
+
 function show(io::IO, cg::CausalGraph)
     B = cg.backend
     typename = typeof(cg)
@@ -498,7 +522,7 @@ function show(io::IO, cg::CausalGraph)
     println(io, "  edges:")
     if n_edges == 0
         println(io, "    (none)")
-    elseif n_edges <= 20
+    elseif n_edges <= 5
         println(
             io,
             "    ",
@@ -506,7 +530,7 @@ function show(io::IO, cg::CausalGraph)
         )
     else
         sample =
-            join(["$(e.src) $(_edge_display(e)) $(e.dst)" for e in cg.edges[1:10]], ", ")
-        println(io, "    ", sample, ", … ($(n_edges - 10) more)")
+            join(["$(e.src) $(_edge_display(e)) $(e.dst)" for e in cg.edges[1:5]], ", ")
+        println(io, "    ", sample, ", … ($(n_edges - 5) more)")
     end
 end

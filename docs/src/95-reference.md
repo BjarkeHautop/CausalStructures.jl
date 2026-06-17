@@ -51,6 +51,7 @@ partial
 
 ```@docs
 nodes
+edges
 topological_sort
 ancestors
 descendants
