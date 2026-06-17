@@ -1,5 +1,5 @@
 using Test
-using CausalGraphInterface
+using CausalStructures
 
 # Classic front-door graph: U --> X --> M --> Y, U --> Y
 # M mediates the entire causal effect of X on Y; U is an unmeasured confounder.
@@ -137,16 +137,16 @@ end
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
-    gx = CausalGraphInterface._build_gx(cg, :X)
+    gx = CausalStructures._build_gx(cg, :X)
 
     # I = ∅, R = {A, B, C, D}
     i_mask = falses(n)
     r_mask = falses(n)
     for s in [:A, :B, :C, :D]
-        r_mask[CausalGraphInterface.node_index(cg, s)] = true
+        r_mask[CausalStructures.node_index(cg, s)] = true
     end
 
-    r_prime = CausalGraphInterface._getcand2ndfdc(gx, :X, B.nodes, i_mask, r_mask)
+    r_prime = CausalStructures._getcand2ndfdc(gx, :X, B.nodes, i_mask, r_mask)
 
     @test r_prime !== nothing
     @test Set(B.nodes[v] for v = 1:n if r_prime[v]) == Set([:A, :B, :C])
@@ -157,17 +157,17 @@ end
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
-    gx = CausalGraphInterface._build_gx(cg, :X)
+    gx = CausalStructures._build_gx(cg, :X)
 
     # I = {D}: D must be included but has a BD path from X --> infeasible
     i_mask = falses(n)
-    i_mask[CausalGraphInterface.node_index(cg, :D)] = true
+    i_mask[CausalStructures.node_index(cg, :D)] = true
     r_mask = falses(n)
     for s in [:A, :B, :C, :D]
-        r_mask[CausalGraphInterface.node_index(cg, s)] = true
+        r_mask[CausalStructures.node_index(cg, s)] = true
     end
 
-    @test CausalGraphInterface._getcand2ndfdc(gx, :X, B.nodes, i_mask, r_mask) === nothing
+    @test CausalStructures._getcand2ndfdc(gx, :X, B.nodes, i_mask, r_mask) === nothing
 end
 
 # ── Example 3: GETCAND3RDFDC ─────────────────────────────────────────────────
@@ -181,21 +181,20 @@ end
     B = cg.backend
     n = length(B.nodes)
 
-    x_idx = CausalGraphInterface.node_index(cg, :X)
+    x_idx = CausalStructures.node_index(cg, :X)
     x_set = falses(n)
     x_set[x_idx] = true
 
     y_mask = falses(n)
-    y_mask[CausalGraphInterface.node_index(cg, :Y)] = true
+    y_mask[CausalStructures.node_index(cg, :Y)] = true
 
     i_mask = falses(n)
     r_prime_mask = falses(n)
     for s in [:A, :B, :C]
-        r_prime_mask[CausalGraphInterface.node_index(cg, s)] = true
+        r_prime_mask[CausalStructures.node_index(cg, s)] = true
     end
 
-    r_dbl_prime =
-        CausalGraphInterface._getcand3rdfdc(B, x_set, y_mask, i_mask, r_prime_mask)
+    r_dbl_prime = CausalStructures._getcand3rdfdc(B, x_set, y_mask, i_mask, r_prime_mask)
 
     @test r_dbl_prime !== nothing
     @test Set(B.nodes[v] for v = 1:n if r_dbl_prime[v]) == Set([:A, :B, :C])
@@ -210,21 +209,21 @@ end
     B = cg.backend
     n = length(B.nodes)
 
-    x_idx = CausalGraphInterface.node_index(cg, :X)
+    x_idx = CausalStructures.node_index(cg, :X)
     x_set = falses(n)
     x_set[x_idx] = true
 
     y_mask = falses(n)
-    y_mask[CausalGraphInterface.node_index(cg, :Y)] = true
+    y_mask[CausalStructures.node_index(cg, :Y)] = true
 
     i_mask = falses(n)
-    i_mask[CausalGraphInterface.node_index(cg, :B)] = true  # B required, but GETDEP fails
+    i_mask[CausalStructures.node_index(cg, :B)] = true  # B required, but GETDEP fails
     r_prime_mask = falses(n)
     for s in [:B, :C]
-        r_prime_mask[CausalGraphInterface.node_index(cg, s)] = true
+        r_prime_mask[CausalStructures.node_index(cg, s)] = true
     end
 
-    @test CausalGraphInterface._getcand3rdfdc(B, x_set, y_mask, i_mask, r_prime_mask) ===
+    @test CausalStructures._getcand3rdfdc(B, x_set, y_mask, i_mask, r_prime_mask) ===
           nothing
 end
 
@@ -241,22 +240,22 @@ end
     B = cg.backend
     n = length(B.nodes)
 
-    x_idx = CausalGraphInterface.node_index(cg, :X)
+    x_idx = CausalStructures.node_index(cg, :X)
     x_set = falses(n)
     x_set[x_idx] = true
 
     y_mask = falses(n)
-    y_mask[CausalGraphInterface.node_index(cg, :Y)] = true
+    y_mask[CausalStructures.node_index(cg, :Y)] = true
 
     r_prime_mask = falses(n)
     for s in [:A, :B, :C]
-        r_prime_mask[CausalGraphInterface.node_index(cg, s)] = true
+        r_prime_mask[CausalStructures.node_index(cg, s)] = true
     end
 
     t_mask = falses(n)
-    t_mask[CausalGraphInterface.node_index(cg, :A)] = true
+    t_mask[CausalStructures.node_index(cg, :A)] = true
 
-    z_prime = CausalGraphInterface._get_dep(B, x_set, y_mask, t_mask, r_prime_mask)
+    z_prime = CausalStructures._get_dep(B, x_set, y_mask, t_mask, r_prime_mask)
 
     @test z_prime !== nothing
     @test Set(B.nodes[v] for v = 1:n if z_prime[v]) == Set{Symbol}()
@@ -268,22 +267,22 @@ end
     B = cg.backend
     n = length(B.nodes)
 
-    x_idx = CausalGraphInterface.node_index(cg, :X)
+    x_idx = CausalStructures.node_index(cg, :X)
     x_set = falses(n)
     x_set[x_idx] = true
 
     y_mask = falses(n)
-    y_mask[CausalGraphInterface.node_index(cg, :Y)] = true
+    y_mask[CausalStructures.node_index(cg, :Y)] = true
 
     r_prime_mask = falses(n)
     for s in [:A, :B, :C]
-        r_prime_mask[CausalGraphInterface.node_index(cg, s)] = true
+        r_prime_mask[CausalStructures.node_index(cg, s)] = true
     end
 
     t_mask = falses(n)
-    t_mask[CausalGraphInterface.node_index(cg, :B)] = true
+    t_mask[CausalStructures.node_index(cg, :B)] = true
 
-    z_prime = CausalGraphInterface._get_dep(B, x_set, y_mask, t_mask, r_prime_mask)
+    z_prime = CausalStructures._get_dep(B, x_set, y_mask, t_mask, r_prime_mask)
 
     @test z_prime !== nothing
     @test Set(B.nodes[v] for v = 1:n if z_prime[v]) == Set([:A])
@@ -295,22 +294,22 @@ end
     B = cg.backend
     n = length(B.nodes)
 
-    x_idx = CausalGraphInterface.node_index(cg, :X)
+    x_idx = CausalStructures.node_index(cg, :X)
     x_set = falses(n)
     x_set[x_idx] = true
 
     y_mask = falses(n)
-    y_mask[CausalGraphInterface.node_index(cg, :Y)] = true
+    y_mask[CausalStructures.node_index(cg, :Y)] = true
 
     r_prime_mask = falses(n)
     for s in [:A, :B, :C]
-        r_prime_mask[CausalGraphInterface.node_index(cg, s)] = true
+        r_prime_mask[CausalStructures.node_index(cg, s)] = true
     end
 
     t_mask = falses(n)
-    t_mask[CausalGraphInterface.node_index(cg, :C)] = true
+    t_mask[CausalStructures.node_index(cg, :C)] = true
 
-    z_prime = CausalGraphInterface._get_dep(B, x_set, y_mask, t_mask, r_prime_mask)
+    z_prime = CausalStructures._get_dep(B, x_set, y_mask, t_mask, r_prime_mask)
 
     @test z_prime !== nothing
     @test Set(B.nodes[v] for v = 1:n if z_prime[v]) == Set([:A])
@@ -337,23 +336,23 @@ end
     B = cg.backend
     n = length(B.nodes)
 
-    x_idx = CausalGraphInterface.node_index(cg, :X)
+    x_idx = CausalStructures.node_index(cg, :X)
     x_set = falses(n)
     x_set[x_idx] = true
 
     y_mask = falses(n)
-    y_mask[CausalGraphInterface.node_index(cg, :Y)] = true
+    y_mask[CausalStructures.node_index(cg, :Y)] = true
 
     # R' = {B, C} — smaller candidate pool than Example 4
     r_prime_mask = falses(n)
     for s in [:B, :C]
-        r_prime_mask[CausalGraphInterface.node_index(cg, s)] = true
+        r_prime_mask[CausalStructures.node_index(cg, s)] = true
     end
 
     t_mask = falses(n)
-    t_mask[CausalGraphInterface.node_index(cg, :B)] = true
+    t_mask[CausalStructures.node_index(cg, :B)] = true
 
-    @test CausalGraphInterface._get_dep(B, x_set, y_mask, t_mask, r_prime_mask) === nothing
+    @test CausalStructures._get_dep(B, x_set, y_mask, t_mask, r_prime_mask) === nothing
 end
 
 # ── Example 7: GETCAUSALPATHGRAPH ────────────────────────────────────────────
@@ -370,11 +369,11 @@ end
     n = length(B.nodes)
 
     x_set = falses(n)
-    x_set[CausalGraphInterface.node_index(cg, :X)] = true
+    x_set[CausalStructures.node_index(cg, :X)] = true
     y_mask = falses(n)
-    y_mask[CausalGraphInterface.node_index(cg, :Y)] = true
+    y_mask[CausalStructures.node_index(cg, :Y)] = true
 
-    cpg_mask, _ = CausalGraphInterface._get_causal_path_graph(B, x_set, y_mask)
+    cpg_mask, _ = CausalStructures._get_causal_path_graph(B, x_set, y_mask)
 
     @test Set(B.nodes[v] for v = 1:n if cpg_mask[v]) == Set([:X, :A, :B, :C, :D, :Y])
 end
@@ -386,14 +385,13 @@ end
     n = length(B.nodes)
 
     x_set = falses(n)
-    x_set[CausalGraphInterface.node_index(cg, :X)] = true
+    x_set[CausalStructures.node_index(cg, :X)] = true
     y_mask = falses(n)
-    y_mask[CausalGraphInterface.node_index(cg, :Y)] = true
+    y_mask[CausalStructures.node_index(cg, :Y)] = true
 
-    _, cpg_children = CausalGraphInterface._get_causal_path_graph(B, x_set, y_mask)
+    _, cpg_children = CausalStructures._get_causal_path_graph(B, x_set, y_mask)
 
-    children(s) =
-        Set(B.nodes[c] for c in cpg_children[CausalGraphInterface.node_index(cg, s)])
+    children(s) = Set(B.nodes[c] for c in cpg_children[CausalStructures.node_index(cg, s)])
     @test children(:X) == Set([:A])
     @test children(:A) == Set([:B, :C, :D])
     @test children(:B) == Set([:Y])

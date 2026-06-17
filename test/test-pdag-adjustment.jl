@@ -1,7 +1,7 @@
 # Tests for is_valid_adjustment and all_adjustment_sets on AbstractPDAG.
 
 using Test
-using CausalGraphInterface
+using CausalStructures
 
 # ── is_valid_adjustment ───────────────────────────────────────────────────────
 

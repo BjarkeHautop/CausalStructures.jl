@@ -4,7 +4,7 @@ Equivalence classes of graphs arise in several settings, for instance, during ca
 guide covers the graph types that represent such classes and how to work with them.
 
 ```@example ec
-using CausalGraphInterface
+using CausalStructures
 using CairoMakie
 using NetworkLayout
 ```
@@ -15,7 +15,7 @@ A [`PDAG`](@ref) (partially directed acyclic graph) is a graph whose edges may b
 
 Each Markov equivalence class of DAGs has a unique [`CPDAG`](@ref) (completed partially directed acyclic graph) representation. In a CPDAG, an edge is directed precisely when it has the same orientation in every DAG in the equivalence class; otherwise it remains undirected.
 
-In CausalGraphInterface, all PDAG types are encoded as subtypes of [`AbstractPDAG`](@ref).
+In CausalStructures, all PDAG types are encoded as subtypes of [`AbstractPDAG`](@ref).
 
 Given a DAG, [`dag_to_cpdag`](@ref) computes its CPDAG:
 

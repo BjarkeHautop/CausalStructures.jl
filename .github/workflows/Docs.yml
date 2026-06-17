@@ -45,9 +45,9 @@ jobs:
         run: |
           julia --project=docs -e '
             using Documenter: DocMeta, doctest
-            using CausalGraphInterface
-            DocMeta.setdocmeta!(CausalGraphInterface, :DocTestSetup, :(using CausalGraphInterface); recursive=true)
-            doctest(CausalGraphInterface)'
+            using CausalStructures
+            DocMeta.setdocmeta!(CausalStructures, :DocTestSetup, :(using CausalStructures); recursive=true)
+            doctest(CausalStructures)'
       - name: Generate and deploy documentation
         run: julia --project=docs docs/make.jl
         env:

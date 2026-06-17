@@ -1,4 +1,4 @@
-module CausalGraphInterface
+module CausalStructures
 
 include("load.jl")
 

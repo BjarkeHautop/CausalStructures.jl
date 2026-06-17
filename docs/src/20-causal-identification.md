@@ -5,7 +5,7 @@ identification techniques. We'll explore different adjustment strategies, minima
 separators, and frontdoor adjustment — all using the same running example graph.
 
 ```@example id
-using CausalGraphInterface
+using CausalStructures
 using CairoMakie
 using NetworkLayout
 ```

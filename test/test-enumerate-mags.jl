@@ -1,5 +1,5 @@
 using Test
-using CausalGraphInterface
+using CausalStructures
 
 # ── Basic counts ────────────────────────────────────────────────────────────────
 

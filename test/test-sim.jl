@@ -2,7 +2,7 @@
 # structural and statistical properties hold empirically across many instances.
 
 using Test
-using CausalGraphInterface
+using CausalStructures
 
 # ── Random-graph structural tests ─────────────────────────────────────────────
 

@@ -5,7 +5,7 @@ Plotting is provided by the `MakieExt` extension and requires loading a
 CairoMakie:
 
 ```@example plot
-using CausalGraphInterface
+using CausalStructures
 using CairoMakie
 ```
 

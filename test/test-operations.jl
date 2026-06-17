@@ -1,7 +1,7 @@
 # Tests adapted in part from caugi/tests/testthat/test-operations.R
 
 using Test
-using CausalGraphInterface
+using CausalStructures
 
 # ── skeleton ──────────────────────────────────────────────────────────────────
 
@@ -19,9 +19,7 @@ using CausalGraphInterface
     @test skel isa UG
     @test Set(nodes(skel)) == Set(nodes(cg))
     @test all(
-        e ->
-            e.src_end == CausalGraphInterface.Tail &&
-            e.dst_end == CausalGraphInterface.Tail,
+        e -> e.src_end == CausalStructures.Tail && e.dst_end == CausalStructures.Tail,
         skel.edges,
     )
 end
@@ -40,9 +38,7 @@ end
     @test skel isa UG
     @test Set(nodes(skel)) == Set(nodes(cg))
     @test all(
-        e ->
-            e.src_end == CausalGraphInterface.Tail &&
-            e.dst_end == CausalGraphInterface.Tail,
+        e -> e.src_end == CausalStructures.Tail && e.dst_end == CausalStructures.Tail,
         skel.edges,
     )
 end
@@ -96,9 +92,7 @@ end
     @test mg isa UG
     @test Set(nodes(mg)) == Set(nodes(cg))
     @test all(
-        e ->
-            e.src_end == CausalGraphInterface.Tail &&
-            e.dst_end == CausalGraphInterface.Tail,
+        e -> e.src_end == CausalStructures.Tail && e.dst_end == CausalStructures.Tail,
         mg.edges,
     )
 
@@ -228,9 +222,7 @@ end
     dag = dag_from_pdag(pdag)
     @test dag isa DAG
     @test all(
-        e ->
-            e.src_end == CausalGraphInterface.Tail &&
-            e.dst_end == CausalGraphInterface.Arrow,
+        e -> e.src_end == CausalStructures.Tail && e.dst_end == CausalStructures.Arrow,
         dag.edges,
     )
     @test Set(nodes(dag)) == Set(nodes(pdag))
@@ -276,9 +268,7 @@ end
     @test has_dir(dag, :B, :C)
     @test xor(has_dir(dag, :A, :D), has_dir(dag, :D, :A))
     @test !any(
-        e ->
-            e.src_end == CausalGraphInterface.Tail &&
-            e.dst_end == CausalGraphInterface.Tail,
+        e -> e.src_end == CausalStructures.Tail && e.dst_end == CausalStructures.Tail,
         dag.edges,
     )
     @test length(dag.edges) == 3
@@ -427,10 +417,10 @@ end
     @test mg isa AG
     @test Set(nodes(mg)) == Set([:A, :B, :X, :Y])
     has_edge_type(cg, u, v, f) = any(e -> e.src == u && e.dst == v && f(e), cg.edges)
-    @test has_edge_type(mg, :A, :X, e -> CausalGraphInterface.is_directed(e))
-    @test has_edge_type(mg, :B, :Y, e -> CausalGraphInterface.is_directed(e))
+    @test has_edge_type(mg, :A, :X, e -> CausalStructures.is_directed(e))
+    @test has_edge_type(mg, :B, :Y, e -> CausalStructures.is_directed(e))
     @test any(
-        e -> CausalGraphInterface.is_bidirected(e) && Set([e.src, e.dst]) == Set([:X, :Y]),
+        e -> CausalStructures.is_bidirected(e) && Set([e.src, e.dst]) == Set([:X, :Y]),
         mg.edges,
     )
 end
@@ -492,7 +482,7 @@ end
     @test result isa AG
     @test Set(nodes(result)) == Set([:A, :B, :C, :D, :S])
     has_dir(cg, u, v) =
-        any(e -> e.src == u && e.dst == v && CausalGraphInterface.is_directed(e), cg.edges)
+        any(e -> e.src == u && e.dst == v && CausalStructures.is_directed(e), cg.edges)
     @test has_dir(result, :A, :B)
     @test has_dir(result, :B, :S)
     @test has_dir(result, :S, :D)

@@ -44,9 +44,3 @@ repos:
     rev: v2.0.0
     hooks:
       - id: julia-formatter
-# Disable panache for now because of https://github.com/jolars/panache/issues/367
-#- repo: https://github.com/jolars/panache-pre-commit
-#  rev: v2.53.0
-#  hooks:
-#    - id: panache-format
-#    - id: panache-lint

@@ -1,7 +1,7 @@
 # Tests adapted in part from caugi/tests/testthat/test-admg.R
 
 using Test
-using CausalGraphInterface
+using CausalStructures
 
 # ── ADMG construction and validation ─────────────────────────────────────────
 

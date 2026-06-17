@@ -70,7 +70,7 @@ reachable by following directed edges forward.
 When `open = true` (open definition, default), `node` itself is excluded from
 the result. When `open = false` (closed definition), `node` is included. The
 default can be changed project-wide via Preferences.jl:
-`set_preferences!(CausalGraphInterface, "open" => false)` (restart Julia after).
+`set_preferences!(CausalStructures, "open" => false)` (restart Julia after).
 
 Applicable to [`DAG`](@ref), [`AbstractPDAG`](@ref),
 [`ADMG`](@ref), and [`AbstractAG`](@ref).
@@ -134,7 +134,7 @@ following directed edges forward.
 When `open = true` (open definition, default), `node` itself is excluded from
 the result. When `open = false` (closed definition), `node` is included. The
 default can be changed project-wide via Preferences.jl:
-`set_preferences!(CausalGraphInterface, "open" => false)` (restart Julia after).
+`set_preferences!(CausalStructures, "open" => false)` (restart Julia after).
 
 Applicable to [`DAG`](@ref), [`AbstractPDAG`](@ref),
 [`ADMG`](@ref), and [`AbstractAG`](@ref).
@@ -267,7 +267,7 @@ pointing toward `node`.
 
 When `open = true` (default), `node` itself is excluded. When `open = false`
 (closed definition), `node` is included. The default can be changed via
-Preferences.jl: `set_preferences!(CausalGraphInterface, "open" => false)`.
+Preferences.jl: `set_preferences!(CausalStructures, "open" => false)`.
 
 # Examples
 
@@ -346,7 +346,7 @@ pointing away from `node`.
 
 When `open = true` (default), `node` itself is excluded. When `open = false`
 (closed definition), `node` is included. The default can be changed via
-Preferences.jl: `set_preferences!(CausalGraphInterface, "open" => false)`.
+Preferences.jl: `set_preferences!(CausalStructures, "open" => false)`.
 
 # Examples
 
@@ -431,12 +431,12 @@ edge in any MAG.
 
 When `open = true` (default), `node` itself is excluded. When `open = false`
 (closed definition), `node` is included. The default can be changed via
-Preferences.jl: `set_preferences!(CausalGraphInterface, "open" => false)`.
+Preferences.jl: `set_preferences!(CausalStructures, "open" => false)`.
 
 # Examples
 
 ```jldoctest
-julia> using CausalGraphInterface
+julia> using CausalStructures
 
 julia> pag = cgraph(partially_directed(:A, :B), partially_directed(:C, :B); class = PAG);
 
@@ -510,12 +510,12 @@ edge in any MAG.
 
 When `open = true` (default), `node` itself is excluded. When `open = false`
 (closed definition), `node` is included. The default can be changed via
-Preferences.jl: `set_preferences!(CausalGraphInterface, "open" => false)`.
+Preferences.jl: `set_preferences!(CausalStructures, "open" => false)`.
 
 # Examples
 
 ```jldoctest
-julia> using CausalGraphInterface
+julia> using CausalStructures
 
 julia> pag = cgraph(partially_directed(:A, :B), partially_directed(:C, :B); class = PAG);
 
@@ -581,7 +581,7 @@ undirected edges extend the reachable set beyond strict ancestors.
 When `open = true` (open definition, default), `node` itself is excluded from
 the result. When `open = false` (closed definition), `node` is included. The
 default can be changed project-wide via Preferences.jl:
-`set_preferences!(CausalGraphInterface, "open" => false)` (restart Julia after).
+`set_preferences!(CausalStructures, "open" => false)` (restart Julia after).
 
 # Examples
 
@@ -703,7 +703,7 @@ undirected edges extend the reachable set beyond strict descendants.
 When `open = true` (open definition, default), `node` itself is excluded from
 the result. When `open = false` (closed definition), `node` is included. The
 default can be changed project-wide via Preferences.jl:
-`set_preferences!(CausalGraphInterface, "open" => false)` (restart Julia after).
+`set_preferences!(CausalStructures, "open" => false)` (restart Julia after).
 
 # Examples
 

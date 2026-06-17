@@ -1,7 +1,7 @@
 # Tests adapted in part from caugi/tests/testthat/test-adjustment.R
 
 using Test
-using CausalGraphInterface
+using CausalStructures
 
 @testitem "is_valid_backdoor: canonical choices on ECI graph" tags = [:unit] begin
     include("helper-backdoor.jl")

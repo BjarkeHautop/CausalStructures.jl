@@ -1,21 +1,21 @@
 module NetworkLayoutExt
 
-using CausalGraphInterface
+using CausalStructures
 import NetworkLayout
 
-function CausalGraphInterface._layout_impl(cg::CausalGraph, ::Val{:spring}; kwargs...)
+function CausalStructures._layout_impl(cg::CausalGraph, ::Val{:spring}; kwargs...)
     return _nl_layout(cg, NetworkLayout.Spring(; kwargs...))
 end
 
-function CausalGraphInterface._layout_impl(cg::CausalGraph, ::Val{:stress}; kwargs...)
+function CausalStructures._layout_impl(cg::CausalGraph, ::Val{:stress}; kwargs...)
     return _nl_layout(cg, NetworkLayout.Stress(; kwargs...))
 end
 
-function CausalGraphInterface._layout_impl(cg::CausalGraph, ::Val{:sfdp}; kwargs...)
+function CausalStructures._layout_impl(cg::CausalGraph, ::Val{:sfdp}; kwargs...)
     return _nl_layout(cg, NetworkLayout.SFDP(; kwargs...))
 end
 
-function CausalGraphInterface._layout_impl(
+function CausalStructures._layout_impl(
     cg::CausalGraph,
     ::Val{:spectral};
     dim = 2,
@@ -24,11 +24,11 @@ function CausalGraphInterface._layout_impl(
     return _nl_layout(cg, NetworkLayout.Spectral(; dim = dim, kwargs...))
 end
 
-function CausalGraphInterface._layout_impl(cg::CausalGraph, ::Val{:shell}; kwargs...)
+function CausalStructures._layout_impl(cg::CausalGraph, ::Val{:shell}; kwargs...)
     return _nl_layout(cg, NetworkLayout.Shell(; kwargs...))
 end
 
-function CausalGraphInterface._layout_impl(cg::CausalGraph, ::Val{:squaregrid}; kwargs...)
+function CausalStructures._layout_impl(cg::CausalGraph, ::Val{:squaregrid}; kwargs...)
     return _nl_layout(cg, NetworkLayout.SquareGrid(; kwargs...))
 end
 

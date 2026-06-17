@@ -1,7 +1,7 @@
 # Tests adapted in part from caugi/tests/testthat/test-topological-sort.R
 
 using Test
-using CausalGraphInterface
+using CausalStructures
 
 @testitem "topological_sort on simple chain DAG" tags = [:unit] begin
     include("helpers.jl")

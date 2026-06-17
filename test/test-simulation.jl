@@ -1,7 +1,7 @@
 # Tests adapted in part from caugi/tests/testthat/test-simulation.R
 
 using Test
-using CausalGraphInterface
+using CausalStructures
 # ── generate_graph ────────────────────────────────────────────────────────────
 
 @testitem "generate_graph: errors on invalid n" tags = [:unit] begin
@@ -48,9 +48,7 @@ end
     dag = generate_graph(n; m = tot, seed = 11, class = DAG)
     @test length(dag.edges) == tot
     @test all(
-        e ->
-            e.src_end == CausalGraphInterface.Tail &&
-            e.dst_end == CausalGraphInterface.Arrow,
+        e -> e.src_end == CausalStructures.Tail && e.dst_end == CausalStructures.Arrow,
         dag.edges,
     )
 end

@@ -9,7 +9,7 @@ Let's build a DAG with a confounder `A` that affects both `X` and `Y`, and a
 mediator `M` between `X` and `Y`:
 
 ```@example quick
-using CausalGraphInterface
+using CausalStructures
 using CairoMakie
 
 dag = cgraph(

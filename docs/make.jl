@@ -1,11 +1,11 @@
-using CausalGraphInterface
+using CausalStructures
 using CairoMakie
 using Documenter
 
 DocMeta.setdocmeta!(
-    CausalGraphInterface,
+    CausalStructures,
     :DocTestSetup,
-    :(using CausalGraphInterface);
+    :(using CausalStructures);
     recursive = true,
 )
 
@@ -70,12 +70,12 @@ function list_pages()
 end
 
 makedocs(;
-    modules = [CausalGraphInterface],
+    modules = [CausalStructures],
     authors = "Bjarke Hautop Kristensen <bjarke.hautop@gmail.com>",
-    repo = "https://github.com/BjarkeHautop/CausalGraphInterface.jl/blob/{commit}{path}#{line}",
-    sitename = "CausalGraphInterface.jl",
+    repo = "https://github.com/BjarkeHautop/CausalStructures.jl/blob/{commit}{path}#{line}",
+    sitename = "CausalStructures.jl",
     format = Documenter.HTML(;
-        canonical = "https://BjarkeHautop.github.io/CausalGraphInterface.jl",
+        canonical = "https://BjarkeHautop.github.io/CausalStructures.jl",
         example_size_threshold = nothing,
         size_threshold_ignore = [
             "15-equivalence-classes.md",
@@ -87,4 +87,4 @@ makedocs(;
     pages = list_pages(),
 )
 
-deploydocs(; repo = "github.com/BjarkeHautop/CausalGraphInterface.jl")
+deploydocs(; repo = "github.com/BjarkeHautop/CausalStructures.jl")

@@ -1,8 +1,8 @@
-Here we will show the performance of various queries in CausalGraphInterface.
+Here we will show the performance of various queries in CausalStructures.
 
 ## Design choices
 
-The core data structure in CausalGraphInterface is a compressed sparse row (CSR)
+The core data structure in CausalStructures is a compressed sparse row (CSR)
 representation of the graph. This is memory efficient, but does mean that any
 rebuilding of the graph would be expensive.
 
@@ -18,7 +18,7 @@ First, let's generate a random DAG with 1000 nodes and an edge probability of
 0.25.
 
 ```@example performance
-using CausalGraphInterface
+using CausalStructures
 node_name = :V45
 dag = generate_graph(1000; p = 0.25, seed = 1405)
 ```
@@ -60,7 +60,7 @@ d_separated(dag, :V50, :V70, valid_adjustment_set);
 
 ## Comparison with common R packages
 
-Here we compare the performance of CausalGraphInterface to various popular R
+Here we compare the performance of CausalStructures to various popular R
 packages[^1].
 
 [^1]: Please let me know if there are any Julia packages I should compare against as well.
@@ -132,13 +132,13 @@ Here we compare the speed of retrieving parent nodes across different packages:
 
 | **Median** | **Package** |
 | ---------- | --------------------- |
-| 0.17 µs | CausalGraphInterface |
+| 0.17 µs | CausalStructures |
 | 2.8 µs | cgraph |
 | 12µs | bnlearn |
 | 127 µs | igraph |
 | 5.1ms | ggm |
 | 887ms | daggity |
 
-As shown above, CausalGraphInterface is substantially faster than the competing
+As shown above, CausalStructures is substantially faster than the competing
 R packages for a simple query such as retrieving parent nodes. The same pattern
 holds across all other benchmarked operations.

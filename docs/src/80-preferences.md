@@ -6,15 +6,15 @@ Several defaults can be changed project-wide using
 These preferences are stored per-project. After setting a value, restart Julia for changes to take effect globally within the project.
 
 ```julia
-using Preferences, CausalGraphInterface
+using Preferences, CausalStructures
 
-set_preferences!(CausalGraphInterface, "key" => value)
+set_preferences!(CausalStructures, "key" => value)
 ```
 
 To restore a preference to its default value, delete it:
 
 ```julia
-delete_preferences!(CausalGraphInterface, "key")
+delete_preferences!(CausalStructures, "key")
 ```
 
 --------------------------------------------------------------------------------
@@ -31,7 +31,7 @@ When `true` (open definition), the queried node itself is excluded from the
 result. Set to `false` to use the closed definition (node included).
 
 ```julia
-set_preferences!(CausalGraphInterface, "open" => false)
+set_preferences!(CausalStructures, "open" => false)
 ```
 
 --------------------------------------------------------------------------------
@@ -53,7 +53,7 @@ Note: all layouts except `:circle` require NetworkLayout, see the
 [Layouts](@ref plot-layouts) section for more details.
 
 ```julia
-set_preferences!(CausalGraphInterface, "plot_layout" => "spring")
+set_preferences!(CausalStructures, "plot_layout" => "spring")
 ```
 
 ### `"plot_node_color"`
@@ -68,7 +68,7 @@ Any [Makie-compatible colour name or hex
 string](https://docs.makie.org/stable/explanations/colors).
 
 ```julia
-set_preferences!(CausalGraphInterface, "plot_node_color" => "lightblue")
+set_preferences!(CausalStructures, "plot_node_color" => "lightblue")
 ```
 
 ### `"plot_node_strokecolor"`
@@ -80,7 +80,7 @@ Default node border colour.
 | `"black"` | `String` |
 
 ```julia
-set_preferences!(CausalGraphInterface, "plot_node_strokecolor" => "gray30")
+set_preferences!(CausalStructures, "plot_node_strokecolor" => "gray30")
 ```
 
 ### `"plot_node_strokewidth"`
@@ -92,7 +92,7 @@ Default node border width.
 | `2.0` | `Number` |
 
 ```julia
-set_preferences!(CausalGraphInterface, "plot_node_strokewidth" => 1.5)
+set_preferences!(CausalStructures, "plot_node_strokewidth" => 1.5)
 ```
 
 ### `"plot_edge_color"`
@@ -104,7 +104,7 @@ Default edge color.
 | `"black"` | `String` |
 
 ```julia
-set_preferences!(CausalGraphInterface, "plot_edge_color" => "steelblue")
+set_preferences!(CausalStructures, "plot_edge_color" => "steelblue")
 ```
 
 ### `"plot_linewidth"`
@@ -116,5 +116,5 @@ Default edge line width.
 | `1.5` | `Number` |
 
 ```julia
-set_preferences!(CausalGraphInterface, "plot_linewidth" => 2.0)
+set_preferences!(CausalStructures, "plot_linewidth" => 2.0)
 ```

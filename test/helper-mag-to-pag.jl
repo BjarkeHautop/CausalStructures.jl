@@ -1,10 +1,8 @@
 # Helpers for mag_to_pag tests.
 
 function pag_edge(cg, x::Symbol, y::Symbol)
-    left(m) =
-        m == CausalGraphInterface.Arrow ? '<' : m == CausalGraphInterface.Tail ? '-' : 'o'
-    right(m) =
-        m == CausalGraphInterface.Arrow ? '>' : m == CausalGraphInterface.Tail ? '-' : 'o'
+    left(m) = m == CausalStructures.Arrow ? '<' : m == CausalStructures.Tail ? '-' : 'o'
+    right(m) = m == CausalStructures.Arrow ? '>' : m == CausalStructures.Tail ? '-' : 'o'
     for e in cg.edges
         if e.src == x && e.dst == y
             return string(left(e.src_end), '-', right(e.dst_end))

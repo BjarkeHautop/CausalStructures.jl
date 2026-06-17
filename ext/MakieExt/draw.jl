@@ -11,9 +11,9 @@
 #   o--   Circle- Tail    : open circle at src + line
 #   o-o   Circle- Circle  : open circles at both ends
 
-const _Tail = CausalGraphInterface.Tail
-const _Arrow = CausalGraphInterface.Arrow
-const _Circle = CausalGraphInterface.Circle
+const _Tail = CausalStructures.Tail
+const _Arrow = CausalStructures.Arrow
+const _Circle = CausalStructures.Circle
 
 function _norm2(p::Point2f)
     sqrt(p[1]^2 + p[2]^2)
@@ -210,7 +210,7 @@ Extra keyword arguments are forwarded to the NetworkLayout algorithm
 ## Examples
 
 ```julia
-using CausalGraphInterface, CairoMakie
+using CausalStructures, CairoMakie
 
 dag = cgraph(directed(:A, :X), directed(:A, :Y), directed(:X, :Y); class = DAG)
 
@@ -240,15 +240,15 @@ Makie.plot(dag; layout = positions)
 """
 function Makie.plot(
     cg::CausalGraph;
-    layout::Union{Symbol,AbstractVector} = CausalGraphInterface._PLOT_LAYOUT_DEFAULT,
+    layout::Union{Symbol,AbstractVector} = CausalStructures._PLOT_LAYOUT_DEFAULT,
     node_radius::Union{Real,Nothing} = nothing,
     arrow_size::Union{Real,Nothing} = nothing,
     circle_size::Union{Real,Nothing} = nothing,
-    node_color = CausalGraphInterface._PLOT_NODE_COLOR_DEFAULT,
-    node_strokecolor = CausalGraphInterface._PLOT_NODE_STROKECOLOR_DEFAULT,
-    node_strokewidth = CausalGraphInterface._PLOT_NODE_STROKEWIDTH_DEFAULT,
-    edge_color = CausalGraphInterface._PLOT_EDGE_COLOR_DEFAULT,
-    linewidth = CausalGraphInterface._PLOT_LINEWIDTH_DEFAULT,
+    node_color = CausalStructures._PLOT_NODE_COLOR_DEFAULT,
+    node_strokecolor = CausalStructures._PLOT_NODE_STROKECOLOR_DEFAULT,
+    node_strokewidth = CausalStructures._PLOT_NODE_STROKEWIDTH_DEFAULT,
+    edge_color = CausalStructures._PLOT_EDGE_COLOR_DEFAULT,
+    linewidth = CausalStructures._PLOT_LINEWIDTH_DEFAULT,
     layout_kwargs...,
 )
     n = length(cg.backend.nodes)

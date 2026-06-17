@@ -1,4 +1,4 @@
-using CausalGraphInterface
+using CausalStructures
 using Test
 
 @testitem "print: directed edge (-->)" tags = [:unit] begin

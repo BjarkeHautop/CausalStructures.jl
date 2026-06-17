@@ -1,19 +1,19 @@
-# CausalGraphInterface
+# CausalStructures
 
 [![Stable
-Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://BjarkeHautop.github.io/CausalGraphInterface.jl/stable)
+Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://BjarkeHautop.github.io/CausalStructures.jl/stable)
 [![Development
-documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://BjarkeHautop.github.io/CausalGraphInterface.jl/dev)
+documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://BjarkeHautop.github.io/CausalStructures.jl/dev)
 [![Test workflow
-status](https://github.com/BjarkeHautop/CausalGraphInterface.jl/actions/workflows/Test.yml/badge.svg?branch=main)](https://github.com/BjarkeHautop/CausalGraphInterface.jl/actions/workflows/Test.yml?query=branch%3Amain)
-[![Coverage](https://codecov.io/gh/BjarkeHautop/CausalGraphInterface.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/BjarkeHautop/CausalGraphInterface.jl)
+status](https://github.com/BjarkeHautop/CausalStructures.jl/actions/workflows/Test.yml/badge.svg?branch=main)](https://github.com/BjarkeHautop/CausalStructures.jl/actions/workflows/Test.yml?query=branch%3Amain)
+[![Coverage](https://codecov.io/gh/BjarkeHautop/CausalStructures.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/BjarkeHautop/CausalStructures.jl)
 [![Lint workflow
-Status](https://github.com/BjarkeHautop/CausalGraphInterface.jl/actions/workflows/Lint.yml/badge.svg?branch=main)](https://github.com/BjarkeHautop/CausalGraphInterface.jl/actions/workflows/Lint.yml?query=branch%3Amain)
+Status](https://github.com/BjarkeHautop/CausalStructures.jl/actions/workflows/Lint.yml/badge.svg?branch=main)](https://github.com/BjarkeHautop/CausalStructures.jl/actions/workflows/Lint.yml?query=branch%3Amain)
 [![Docs workflow
-Status](https://github.com/BjarkeHautop/CausalGraphInterface.jl/actions/workflows/Docs.yml/badge.svg?branch=main)](https://github.com/BjarkeHautop/CausalGraphInterface.jl/actions/workflows/Docs.yml?query=branch%3Amain)
+Status](https://github.com/BjarkeHautop/CausalStructures.jl/actions/workflows/Docs.yml/badge.svg?branch=main)](https://github.com/BjarkeHautop/CausalStructures.jl/actions/workflows/Docs.yml?query=branch%3Amain)
 [![BestieTemplate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JuliaBesties/BestieTemplate.jl/main/docs/src/assets/badge.json)](https://github.com/JuliaBesties/BestieTemplate.jl)
 
-CausalGraphInterface.jl provides a type-driven interface for representing,
+CausalStructures.jl provides a type-driven interface for representing,
 validating, and manipulating causal graphs. Rather than treating every graph as
 an arbitrary collection of nodes and edges, graph classes explicitly encode
 their structural assumptions and invariants.
@@ -61,7 +61,7 @@ The following edge types exists:
 Construct graphs by specifying edges and the desired graph class:
 
 ```julia
-using CausalGraphInterface
+using CausalStructures
 
 dag = cgraph(
     directed(:U, :X),
@@ -80,8 +80,6 @@ admg = latent_project(dag, [:U])
 ```
 
 ## To Do
-
-Rename package to something else? Maybe CausalStructures.jl?
 
 Figure out a better syntax than using `directed(), undirected()`, etc. Ideally,
 we would support edge operators similar to the syntax used in R. I.e. in R you

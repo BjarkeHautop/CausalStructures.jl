@@ -1,6 +1,6 @@
 module MakieExt
 
-using CausalGraphInterface
+using CausalStructures
 import Makie
 using Makie: Point2f
 

@@ -29,7 +29,7 @@ Extra `kwargs` are forwarded to the NetworkLayout algorithm (e.g. `seed`,
 ## Examples
 
 ```julia
-using CausalGraphInterface
+using CausalStructures
 
 dag = cgraph(directed(:A, :X), directed(:X, :Y); class = DAG)
 

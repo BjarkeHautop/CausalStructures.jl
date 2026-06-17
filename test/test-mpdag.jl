@@ -2,7 +2,7 @@
 # Tests adapted in part from caugi/tests/testthat/test-operations.R
 
 using Test
-using CausalGraphInterface
+using CausalStructures
 
 # ── construction ──────────────────────────────────────────────────────────────
 

@@ -14,4 +14,4 @@ function mag_sig(m)
 end
 
 # Signature of the PAG that `m` belongs to (its Markov equivalence class).
-class_of(m) = mag_sig(CausalGraphInterface.mag_to_pag(m))
+class_of(m) = mag_sig(CausalStructures.mag_to_pag(m))
