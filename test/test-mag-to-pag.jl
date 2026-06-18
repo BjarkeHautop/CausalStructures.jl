@@ -1,6 +1,3 @@
-using Test
-using CausalStructures
-
 # Tests for mag_to_pag: the MAG -> PAG (Markov equivalence class) transform.
 # Edges below are checked with helper-mag-to-pag.jl's `pag_edge`, which returns
 # the edge in standard notation: "-->", "o->", "<->", "o-o", "o--", "---".

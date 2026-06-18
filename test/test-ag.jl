@@ -1,6 +1,3 @@
-using Test
-using CausalStructures
-
 # ── Construction & validation ──────────────────────────────────────────────────
 
 @testitem "AG: directed chain constructs" tags = [:unit] begin

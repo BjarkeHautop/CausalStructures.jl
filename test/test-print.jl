@@ -1,6 +1,3 @@
-using CausalStructures
-using Test
-
 @testitem "print: directed edge (-->)" tags = [:unit] begin
     cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
     @test contains(

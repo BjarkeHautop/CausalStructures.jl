@@ -1,7 +1,5 @@
 # Tests adapted in part from caugi/tests/testthat/test-queries.R
 
-using Test
-using CausalStructures
 
 # ── is_acyclic / is_simple ────────────────────────────────────────────────────
 

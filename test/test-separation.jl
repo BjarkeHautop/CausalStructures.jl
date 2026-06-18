@@ -1,7 +1,5 @@
 # Tests adapted in part from caugi/tests/testthat/test-separation.R
 
-using Test
-using CausalStructures
 # ── d_separated ───────────────────────────────────────────────────────────────
 
 @testitem "d_separated: chain structure" tags = [:unit] begin

@@ -1,9 +1,6 @@
 # Tests for enumerate_dags and count_dags
 # Tests adapted in part from caugi/src/rust/src/graph/pdag/enumerate.rs
 
-using Test
-using CausalStructures
-
 @testitem "enumerate_dags: chain A--B--C has 3 DAGs, none is A->B<-C" tags = [:unit] begin
     pdag = cgraph(undirected(:A, :B), undirected(:B, :C); class = PDAG)
     dags = enumerate_dags(pdag)

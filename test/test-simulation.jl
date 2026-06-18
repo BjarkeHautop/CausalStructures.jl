@@ -1,7 +1,5 @@
 # Tests adapted in part from caugi/tests/testthat/test-simulation.R
 
-using Test
-using CausalStructures
 # ── generate_graph ────────────────────────────────────────────────────────────
 
 @testitem "generate_graph: errors on invalid n" tags = [:unit] begin

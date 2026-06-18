@@ -1,6 +1,3 @@
-using Test
-using CausalStructures
-
 # Classic front-door graph: U --> X --> M --> Y, U --> Y
 # M mediates the entire causal effect of X on Y; U is an unmeasured confounder.
 # Z = {M} is the canonical front-door set.

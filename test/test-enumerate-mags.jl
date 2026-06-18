@@ -1,6 +1,3 @@
-using Test
-using CausalStructures
-
 @testsnippet MagSig begin
     # Orientation-independent structural signature of a MAG (or any graph), so two
     # graphs compare equal regardless of how each edge's endpoints are ordered.

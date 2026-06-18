@@ -1,8 +1,5 @@
 # Tests adapted in part from caugi/tests/testthat/test-adjustment.R
 
-using Test
-using CausalStructures
-
 @testsnippet EciGraph begin
     # Figure 6.5 from Elements of Causal Inference (p. 115)
     # C-->X, X-->F, X-->D, A-->X, A-->K, K-->Y, D-->Y, D-->G, Y-->H

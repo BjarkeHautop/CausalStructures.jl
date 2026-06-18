@@ -1,6 +1,3 @@
-using Test
-using CausalStructures
-
 # ── add_edge ──────────────────────────────────────────────────────────────────
 
 @testitem "add_edge adds edge and preserves class" tags = [:unit] begin

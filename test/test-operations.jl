@@ -1,7 +1,5 @@
 # Tests adapted in part from caugi/tests/testthat/test-operations.R
 
-using Test
-using CausalStructures
 
 # ── skeleton ──────────────────────────────────────────────────────────────────
 

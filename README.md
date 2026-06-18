@@ -12,6 +12,7 @@ Status](https://github.com/BjarkeHautop/CausalStructures.jl/actions/workflows/Li
 [![Docs workflow
 Status](https://github.com/BjarkeHautop/CausalStructures.jl/actions/workflows/Docs.yml/badge.svg?branch=main)](https://github.com/BjarkeHautop/CausalStructures.jl/actions/workflows/Docs.yml?query=branch%3Amain)
 [![BestieTemplate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JuliaBesties/BestieTemplate.jl/main/docs/src/assets/badge.json)](https://github.com/JuliaBesties/BestieTemplate.jl)
+[![Aqua QA](https://juliatesting.github.io/Aqua.jl/dev/assets/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
 CausalStructures.jl provides a type-driven interface for representing,
 validating, and manipulating causal graphs. Rather than treating every graph as

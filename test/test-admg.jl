@@ -1,8 +1,5 @@
 # Tests adapted in part from caugi/tests/testthat/test-admg.R
 
-using Test
-using CausalStructures
-
 # ── ADMG construction and validation ─────────────────────────────────────────
 
 @testitem "is_admg identifies ADMG graphs" tags = [:unit] begin

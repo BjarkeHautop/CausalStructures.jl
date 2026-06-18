@@ -1,8 +1,6 @@
 # Simulation-based tests: generate random graphs and data to verify that
 # structural and statistical properties hold empirically across many instances.
 
-using Test
-using CausalStructures
 
 # ── Random-graph structural tests ─────────────────────────────────────────────
 

@@ -1,6 +1,3 @@
-using Test
-using CausalStructures
-
 # Tests for mag_from_pag: the PAG (Markov equivalence class) -> MAG transform.
 # It is a left inverse of mag_to_pag, so the central property checked here is the
 # round-trip mag_to_pag(mag_from_pag(pag)) == pag.

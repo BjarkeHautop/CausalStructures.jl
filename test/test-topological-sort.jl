@@ -1,7 +1,5 @@
 # Tests adapted in part from caugi/tests/testthat/test-topological-sort.R
 
-using Test
-using CausalStructures
 
 @testitem "topological_sort on simple chain DAG" setup=[DagHelpers] tags = [:unit] begin
     dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
