@@ -89,7 +89,7 @@ can do
 A %o->% B
 ```
 
-for a parially directed edge.
+for a partially directed edge.
 
 Maybe use `Edge(..., directed)` instead of `directed(...)`, and similar for the
 rest?
