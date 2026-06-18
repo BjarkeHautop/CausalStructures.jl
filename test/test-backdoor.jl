@@ -3,8 +3,27 @@
 using Test
 using CausalStructures
 
-@testitem "is_valid_backdoor: canonical choices on ECI graph" tags = [:unit] begin
-    include("helper-backdoor.jl")
+@testsnippet EciGraph begin
+    # Figure 6.5 from Elements of Causal Inference (p. 115)
+    # C-->X, X-->F, X-->D, A-->X, A-->K, K-->Y, D-->Y, D-->G, Y-->H
+    function _eci_graph()
+        cgraph(
+            directed(:C, :X),
+            directed(:X, :F),
+            directed(:X, :D),
+            directed(:A, :X),
+            directed(:A, :K),
+            directed(:K, :Y),
+            directed(:D, :Y),
+            directed(:D, :G),
+            directed(:Y, :H);
+            class = DAG,
+        )
+    end
+end
+
+@testitem "is_valid_backdoor: canonical choices on ECI graph" setup=[EciGraph] tags =
+    [:unit] begin
     cg = _eci_graph()
     @test is_valid_backdoor(cg, :X, :Y, [:A])
     @test is_valid_backdoor(cg, :X, :Y, [:K])
@@ -13,8 +32,7 @@ using CausalStructures
     @test !is_valid_backdoor(cg, :X, :Y)             # empty set: backdoor path A-->X open
 end
 
-@testitem "all_backdoor_sets: minimal sets on ECI graph" tags = [:unit] begin
-    include("helper-backdoor.jl")
+@testitem "all_backdoor_sets: minimal sets on ECI graph" setup=[EciGraph] tags = [:unit] begin
     cg = _eci_graph()
     sets = all_backdoor_sets(cg, :X, :Y; minimal = true)
     @test length(sets) == 2
@@ -22,8 +40,7 @@ end
     @test any(s -> s == [:K], sets)
 end
 
-@testitem "all_backdoor_sets: non-minimal with max_size=2" tags = [:unit] begin
-    include("helper-backdoor.jl")
+@testitem "all_backdoor_sets: non-minimal with max_size=2" setup=[EciGraph] tags = [:unit] begin
     cg = _eci_graph()
     sets = all_backdoor_sets(cg, :X, :Y; minimal = false, max_size = 2)
     @test length(sets) == 5
@@ -109,15 +126,15 @@ end
 
 # ── adjustment_set ─────────────────────────────────────────────────────────────
 
-@testitem "adjustment_set: parents type returns Pa(X) \\ {X,Y}" tags = [:unit] begin
-    include("helper-backdoor.jl")
+@testitem "adjustment_set: parents type returns Pa(X) \\ {X,Y}" setup=[EciGraph] tags =
+    [:unit] begin
     cg = _eci_graph()
     z = adjustment_set(cg, :X, :Y; type = :parents)
     @test Set(z) == Set([:A, :C])
 end
 
-@testitem "adjustment_set: backdoor type returns a valid backdoor set" tags = [:unit] begin
-    include("helper-backdoor.jl")
+@testitem "adjustment_set: backdoor type returns a valid backdoor set" setup=[EciGraph] tags =
+    [:unit] begin
     cg = _eci_graph()
     z = adjustment_set(cg, :X, :Y; type = :backdoor)
     @test is_valid_backdoor(cg, :X, :Y, z)
@@ -136,8 +153,8 @@ end
     @test :B ∈ z || :C ∈ z
 end
 
-@testitem "adjustment_set: optimal type returns K on ECI graph" tags = [:unit] begin
-    include("helper-backdoor.jl")
+@testitem "adjustment_set: optimal type returns K on ECI graph" setup=[EciGraph] tags =
+    [:unit] begin
     cg = _eci_graph()
     z = adjustment_set(cg, :X, :Y; type = :optimal)
     @test is_valid_backdoor(cg, :X, :Y, z)

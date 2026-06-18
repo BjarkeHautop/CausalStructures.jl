@@ -5,6 +5,73 @@ using CausalStructures
 # M mediates the entire causal effect of X on Y; U is an unmeasured confounder.
 # Z = {M} is the canonical front-door set.
 
+@testsnippet JeongGraphs begin
+    # ── Jeong, Tian & Bareinboim (2022) Fig. 1 ───────────────────────────────────
+    #
+    # Fig. 1b: G': X --> A --> {B, C, D} --> Y
+    #   Bidirected X <-> Y (latent U1 -> X, U1 -> Y)
+    #   Bidirected X <-> D (latent U2 -> X, U2 -> D)
+    #
+    #   The four valid FD sets relative to (X, Y) are: {A}, {A,B}, {A,C}, {A,B,C}.
+    #   D is excluded from every valid set because the BD path X <-- U2 --> D is open.
+    #
+    # Reference: Jeong, Tian & Bareinboim (2022). Finding and Listing Front-Door
+    #   Adjustment Sets. NeurIPS 2022.
+
+    # Fig. 1b as a DAG with explicit latents.
+    function _jeong2022_fig1b()
+        cgraph(
+            directed(:U1, :X),
+            directed(:U1, :Y),
+            directed(:U2, :X),
+            directed(:U2, :D),
+            directed(:X, :A),
+            directed(:A, :B),
+            directed(:A, :C),
+            directed(:A, :D),
+            directed(:B, :Y),
+            directed(:C, :Y),
+            directed(:D, :Y);
+            class = DAG,
+        )
+    end
+
+    # Fig. 6a: G with two parallel mediating paths and one latent confounder.
+    # 9 valid FD adjustment sets (3^2): each path i can be intercepted by Ai, Bi, or {Ai,Bi}.
+    function _jeong2022_fig6a()
+        cgraph(
+            directed(:U, :X),
+            directed(:U, :Y),
+            directed(:X, :A1),
+            directed(:A1, :B1),
+            directed(:B1, :Y),
+            directed(:X, :A2),
+            directed(:A2, :B2),
+            directed(:B2, :Y);
+            class = DAG,
+        )
+    end
+
+    # Fig. 6b: G' = G with a third parallel mediating path added.
+    # 27 valid FD adjustment sets (3^3).
+    function _jeong2022_fig6b()
+        cgraph(
+            directed(:U, :X),
+            directed(:U, :Y),
+            directed(:X, :A1),
+            directed(:A1, :B1),
+            directed(:B1, :Y),
+            directed(:X, :A2),
+            directed(:A2, :B2),
+            directed(:B2, :Y),
+            directed(:X, :A3),
+            directed(:A3, :B3),
+            directed(:B3, :Y);
+            class = DAG,
+        )
+    end
+end
+
 @testitem "is_valid_frontdoor: M satisfies criterion on classic graph" tags = [:unit] begin
     cg = cgraph(
         directed(:U, :X),
@@ -108,8 +175,8 @@ end
 
 # ── is_valid_frontdoor on G' (Fig. 1b) ───────────────────────────────────────
 
-@testitem "is_valid_frontdoor: Jeong Fig 1b - four valid sets" tags = [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "is_valid_frontdoor: Jeong Fig 1b - four valid sets" setup=[JeongGraphs] tags =
+    [:unit] begin
     cg = _jeong2022_fig1b()
     @test is_valid_frontdoor(cg, :X, :Y, [:A])
     @test is_valid_frontdoor(cg, :X, :Y, [:A, :B])
@@ -117,8 +184,8 @@ end
     @test is_valid_frontdoor(cg, :X, :Y, [:A, :B, :C])
 end
 
-@testitem "is_valid_frontdoor: Jeong Fig 1b - invalid sets" tags = [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "is_valid_frontdoor: Jeong Fig 1b - invalid sets" setup=[JeongGraphs] tags =
+    [:unit] begin
     cg = _jeong2022_fig1b()
     @test !is_valid_frontdoor(cg, :X, :Y, [:B])       # condition (i): A -> C -> Y bypasses B
     @test !is_valid_frontdoor(cg, :X, :Y, [:C])       # condition (i): A -> B -> Y bypasses C
@@ -131,9 +198,9 @@ end
 # With I = ∅ and R = {A, B, C, D}, GETCAND2NDFDC outputs {A, B, C}.
 # D is excluded because TESTSEP(G_X, X, D, ∅) = false: the BD path X <- U2 -> D is open.
 
-@testitem "GETCAND2NDFDC: Jeong (2022) Example 2 - D excluded, A B C retained" tags =
-    [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "GETCAND2NDFDC: Jeong (2022) Example 2 - D excluded, A B C retained" setup=[
+    JeongGraphs,
+] tags = [:unit] begin
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
@@ -152,8 +219,9 @@ end
     @test Set(B.nodes[v] for v = 1:n if r_prime[v]) == Set([:A, :B, :C])
 end
 
-@testitem "GETCAND2NDFDC: Jeong (2022) Example 2 - infeasible when D ∈ I" tags = [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "GETCAND2NDFDC: Jeong (2022) Example 2 - infeasible when D ∈ I" setup=[
+    JeongGraphs,
+] tags = [:unit] begin
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
@@ -175,8 +243,8 @@ end
 # Given I = {} and R' = {A, B, C}, GETCAND3RDFDC outputs R'' = {A, B, C}
 # because GETDEP succeeds for every v in R'.
 
-@testitem "GETCAND3RDFDC: Jeong (2022) Example 3 - all of R' retained" tags = [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "GETCAND3RDFDC: Jeong (2022) Example 3 - all of R' retained" setup=[JeongGraphs] tags =
+    [:unit] begin
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
@@ -200,9 +268,9 @@ end
     @test Set(B.nodes[v] for v = 1:n if r_dbl_prime[v]) == Set([:A, :B, :C])
 end
 
-@testitem "GETCAND3RDFDC: Jeong (2022) Example 3 - infeasible when v in I fails GETDEP" tags =
-    [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "GETCAND3RDFDC: Jeong (2022) Example 3 - infeasible when v in I fails GETDEP" setup=[
+    JeongGraphs,
+] tags = [:unit] begin
     # R' = {B, C}: GETDEP returns nothing for v=B (Example 5), so if B is required
     # via I, GETCAND3RDFDC must return nothing.
     cg = _jeong2022_fig1b()
@@ -234,8 +302,7 @@ end
 #   v = B => T = {B}, GETDEP returns Z' = {A}   (Example 4 in the paper)
 #   v = C => T = {C}, GETDEP returns Z' = {A}
 
-@testitem "GETDEP: Jeong (2022) Example 4 - T={A}" tags = [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "GETDEP: Jeong (2022) Example 4 - T={A}" setup=[JeongGraphs] tags = [:unit] begin
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
@@ -261,8 +328,7 @@ end
     @test Set(B.nodes[v] for v = 1:n if z_prime[v]) == Set{Symbol}()
 end
 
-@testitem "GETDEP: Jeong (2022) Example 4 - T={B}" tags = [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "GETDEP: Jeong (2022) Example 4 - T={B}" setup=[JeongGraphs] tags = [:unit] begin
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
@@ -288,8 +354,7 @@ end
     @test Set(B.nodes[v] for v = 1:n if z_prime[v]) == Set([:A])
 end
 
-@testitem "GETDEP: Jeong (2022) Example 4 - T={C}" tags = [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "GETDEP: Jeong (2022) Example 4 - T={C}" setup=[JeongGraphs] tags = [:unit] begin
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
@@ -330,8 +395,9 @@ end
 #   u=U2 => all neighbors visited
 #   u=Y  => u in Y => return nothing
 
-@testitem "GETDEP: Jeong (2022) Example 5 - R'={B,C}, T={B} returns nothing" tags = [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "GETDEP: Jeong (2022) Example 5 - R'={B,C}, T={B} returns nothing" setup=[
+    JeongGraphs,
+] tags = [:unit] begin
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
@@ -362,8 +428,8 @@ end
 # CPG nodes = {X, A, B, C, D, Y}  (latent U1, U2 excluded).
 # CPG edges: X --> A --> {B, C, D} --> Y (incoming to X and outgoing from Y removed).
 
-@testitem "GETCAUSALPATHGRAPH: Jeong (2022) Example 7 - node set" tags = [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "GETCAUSALPATHGRAPH: Jeong (2022) Example 7 - node set" setup=[JeongGraphs] tags =
+    [:unit] begin
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
@@ -378,8 +444,8 @@ end
     @test Set(B.nodes[v] for v = 1:n if cpg_mask[v]) == Set([:X, :A, :B, :C, :D, :Y])
 end
 
-@testitem "GETCAUSALPATHGRAPH: Jeong (2022) Example 7 - edges" tags = [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "GETCAUSALPATHGRAPH: Jeong (2022) Example 7 - edges" setup=[JeongGraphs] tags =
+    [:unit] begin
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
@@ -402,25 +468,26 @@ end
 
 # ── Example 1: FindFDSet ──────────────────────────────────────────────────────
 
-@testitem "FindFDSet: Jeong (2022) Example 1 - include={}, restrict={A,B,C,D}" tags =
-    [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "FindFDSet: Jeong (2022) Example 1 - include={}, restrict={A,B,C,D}" setup=[
+    JeongGraphs,
+] tags = [:unit] begin
     cg = _jeong2022_fig1b()
     z = frontdoor_set(cg, :X, :Y; restrict = [:A, :B, :C, :D])
     @test z !== nothing
     @test Set(z) == Set([:A, :B, :C])
 end
 
-@testitem "FindFDSet: Jeong (2022) Example 1 - I={C}, R={A,C}" tags = [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "FindFDSet: Jeong (2022) Example 1 - I={C}, R={A,C}" setup=[JeongGraphs] tags =
+    [:unit] begin
     cg = _jeong2022_fig1b()
     z = frontdoor_set(cg, :X, :Y; include = [:C], restrict = [:A, :C])
     @test z !== nothing
     @test Set(z) == Set([:A, :C])
 end
 
-@testitem "FindFDSet: Jeong (2022) Example 1 - I={D}, R={A,B,C,D} infeasible" tags = [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "FindFDSet: Jeong (2022) Example 1 - I={D}, R={A,B,C,D} infeasible" setup=[
+    JeongGraphs,
+] tags = [:unit] begin
     cg = _jeong2022_fig1b()
     @test frontdoor_set(cg, :X, :Y; include = [:D], restrict = [:A, :B, :C, :D]) === nothing
 end
@@ -438,22 +505,23 @@ end
     @test all_frontdoor_sets(cg, :X, :Y; restrict = [:Z]) == [[:Z]]
 end
 
-@testitem "ListFDSets: Jeong (2022) Fig. 1b - all 4 valid sets" tags = [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "ListFDSets: Jeong (2022) Fig. 1b - all 4 valid sets" setup=[JeongGraphs] tags =
+    [:unit] begin
     cg = _jeong2022_fig1b()
     zs = all_frontdoor_sets(cg, :X, :Y; restrict = [:A, :B, :C, :D])
     @test Set(zs) == Set([[:A], [:A, :B], [:A, :C], [:A, :B, :C]])
 end
 
-@testitem "ListFDSets: Jeong (2022) Fig. 1b - required C restricts listing" tags = [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "ListFDSets: Jeong (2022) Fig. 1b - required C restricts listing" setup=[
+    JeongGraphs,
+] tags = [:unit] begin
     cg = _jeong2022_fig1b()
     zs = all_frontdoor_sets(cg, :X, :Y; include = [:C], restrict = [:A, :B, :C, :D])
     @test Set(zs) == Set([[:A, :C], [:A, :B, :C]])
 end
 
-@testitem "ListFDSets: Jeong (2022) Fig. 1b - required D returns empty" tags = [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "ListFDSets: Jeong (2022) Fig. 1b - required D returns empty" setup=[JeongGraphs] tags =
+    [:unit] begin
     cg = _jeong2022_fig1b()
     @test isempty(
         all_frontdoor_sets(cg, :X, :Y; include = [:D], restrict = [:A, :B, :C, :D]),
@@ -464,8 +532,8 @@ end
 # Each parallel path X --> Ai --> Bi --> Y can be intercepted by {Ai}, {Bi}, or
 # {Ai,Bi}, giving 3^n valid FD sets for n parallel paths (Example 9 in the paper).
 
-@testitem "ListFDSets: Jeong (2022) Fig. 6a - 9 valid sets (3^2)" tags = [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "ListFDSets: Jeong (2022) Fig. 6a - 9 valid sets (3^2)" setup=[JeongGraphs] tags =
+    [:unit] begin
     cg = _jeong2022_fig6a()
     zs = all_frontdoor_sets(cg, :X, :Y; restrict = [:A1, :B1, :A2, :B2])
     @test length(zs) == 9
@@ -483,8 +551,8 @@ end
     ])
 end
 
-@testitem "ListFDSets: Jeong (2022) Fig. 6b - 27 valid sets (3^3)" tags = [:unit] begin
-    include("helper-frontdoor.jl")
+@testitem "ListFDSets: Jeong (2022) Fig. 6b - 27 valid sets (3^3)" setup=[JeongGraphs] tags =
+    [:unit] begin
     cg = _jeong2022_fig6b()
     zs = all_frontdoor_sets(cg, :X, :Y; restrict = [:A1, :B1, :A2, :B2, :A3, :B3])
     @test length(zs) == 27

@@ -32,8 +32,8 @@ end
     @test count_dags(pdag) == 1
 end
 
-@testitem "enumerate_dags: undirected triangle has 6 DAGs (all distinct)" tags = [:unit] begin
-    include("helpers.jl")
+@testitem "enumerate_dags: undirected triangle has 6 DAGs (all distinct)" setup=[DagHelpers] tags =
+    [:unit] begin
     pdag = cgraph(undirected(:A, :B), undirected(:A, :C), undirected(:B, :C); class = PDAG)
     dags = enumerate_dags(pdag)
     @test length(dags) == 6

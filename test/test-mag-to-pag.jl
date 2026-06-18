@@ -14,8 +14,7 @@ using CausalStructures
     @test Set(nodes(pag)) == Set([:A, :B, :C])
 end
 
-@testitem "mag_to_pag: preserves the skeleton" tags = [:unit] begin
-    include("helper-mag-to-pag.jl")
+@testitem "mag_to_pag: preserves the skeleton" setup=[PagEdge] tags = [:unit] begin
     mag = cgraph(
         directed(:A, :C),
         directed(:B, :C),
@@ -35,9 +34,9 @@ end
 
 # ── Unshielded colliders ────────────────────────────────────────────────────────
 
-@testitem "mag_to_pag: unshielded collider gets invariant arrowheads (docstring)" tags =
-    [:unit] begin
-    include("helper-mag-to-pag.jl")
+@testitem "mag_to_pag: unshielded collider gets invariant arrowheads (docstring)" setup=[
+    PagEdge,
+] tags = [:unit] begin
     # A --> B <-- C, A and C non-adjacent => A o-> B <-o C in the PAG.
     mag = cgraph(directed(:A, :B), directed(:C, :B); class = MAG)
     pag = mag_to_pag(mag)
@@ -45,8 +44,7 @@ end
     @test pag_edge(pag, :C, :B) == "o->"
 end
 
-@testitem "mag_to_pag: collider from a latent-free DAG" tags = [:unit] begin
-    include("helper-mag-to-pag.jl")
+@testitem "mag_to_pag: collider from a latent-free DAG" setup=[PagEdge] tags = [:unit] begin
     # A --> B --> D <-- C, with A,C and A,D and B,C non-adjacent.
     mag = cgraph(directed(:A, :B), directed(:B, :D), directed(:C, :D); class = MAG)
     pag = mag_to_pag(mag)
@@ -57,8 +55,7 @@ end
 
 # ── No collider: everything stays a circle ──────────────────────────────────────
 
-@testitem "mag_to_pag: directed chain has no invariant marks" tags = [:unit] begin
-    include("helper-mag-to-pag.jl")
+@testitem "mag_to_pag: directed chain has no invariant marks" setup=[PagEdge] tags = [:unit] begin
     # A --> B --> C: no unshielded collider, so the PAG is all circles.
     mag = cgraph(directed(:A, :B), directed(:B, :C); class = MAG)
     pag = mag_to_pag(mag)
@@ -66,8 +63,7 @@ end
     @test pag_edge(pag, :B, :C) == "o-o"
 end
 
-@testitem "mag_to_pag: fork is equivalent to the chain" tags = [:unit] begin
-    include("helper-mag-to-pag.jl")
+@testitem "mag_to_pag: fork is equivalent to the chain" setup=[PagEdge] tags = [:unit] begin
     # B --> A, B --> C is Markov equivalent to the chain: same all-circle PAG.
     mag = cgraph(directed(:B, :A), directed(:B, :C); class = MAG)
     pag = mag_to_pag(mag)
@@ -75,15 +71,15 @@ end
     @test pag_edge(pag, :B, :C) == "o-o"
 end
 
-@testitem "mag_to_pag: single directed edge has no invariant marks" tags = [:unit] begin
-    include("helper-mag-to-pag.jl")
+@testitem "mag_to_pag: single directed edge has no invariant marks" setup=[PagEdge] tags =
+    [:unit] begin
     mag = cgraph(directed(:A, :B); class = MAG)
     pag = mag_to_pag(mag)
     @test pag_edge(pag, :A, :B) == "o-o"
 end
 
-@testitem "mag_to_pag: single bidirected edge has no invariant marks" tags = [:unit] begin
-    include("helper-mag-to-pag.jl")
+@testitem "mag_to_pag: single bidirected edge has no invariant marks" setup=[PagEdge] tags =
+    [:unit] begin
     # With only two adjacent vertices, no endpoint is invariant.
     mag = cgraph(bidirected(:A, :B); class = MAG)
     pag = mag_to_pag(mag)
@@ -92,8 +88,7 @@ end
 
 # ── Orientation rule propagation ────────────────────────────────────────────────
 
-@testitem "mag_to_pag: R1 propagates a tail off a collider" tags = [:unit] begin
-    include("helper-mag-to-pag.jl")
+@testitem "mag_to_pag: R1 propagates a tail off a collider" setup=[PagEdge] tags = [:unit] begin
     # A --> C <-- B (collider at C), C --> D with A,D and B,D non-adjacent.
     # The collider gives A o-> C <-o B; R1 then orients C --> D.
     mag = cgraph(directed(:A, :C), directed(:B, :C), directed(:C, :D); class = MAG)
@@ -112,8 +107,8 @@ end
 
 # ── Discriminating path (R4) ────────────────────────────────────────────────────
 
-@testitem "mag_to_pag: discriminating path orients the collider (R4)" tags = [:unit] begin
-    include("helper-mag-to-pag.jl")
+@testitem "mag_to_pag: discriminating path orients the collider (R4)" setup=[PagEdge] tags =
+    [:unit] begin
     # Discriminating path <D, A, B, C> for B: D <-> A <-> B with A --> C and D
     # not adjacent to C. Here B <-> C, so B is a collider on the path and R4
     # orients B <-> C with both arrowheads invariant.
@@ -129,8 +124,8 @@ end
     @test pag_edge(pag, :A, :C) == "-->"
 end
 
-@testitem "mag_to_pag: discriminating path orients the non-collider (R4)" tags = [:unit] begin
-    include("helper-mag-to-pag.jl")
+@testitem "mag_to_pag: discriminating path orients the non-collider (R4)" setup=[PagEdge] tags =
+    [:unit] begin
     # Same configuration but with B --> C, so B is a non-collider on the
     # discriminating path and R4 orients B --> C (tail at B invariant).
     mag = cgraph(

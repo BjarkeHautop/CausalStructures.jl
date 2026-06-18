@@ -1,6 +1,24 @@
 using Test
 using CausalStructures
 
+@testsnippet MagSig begin
+    # Orientation-independent structural signature of a MAG (or any graph), so two
+    # graphs compare equal regardless of how each edge's endpoints are ordered.
+    function mag_sig(m)
+        return Set(
+            (
+                min(e.src, e.dst),
+                max(e.src, e.dst),
+                e.src <= e.dst ? e.src_end : e.dst_end,
+                e.src <= e.dst ? e.dst_end : e.src_end,
+            ) for e in m.edges
+        )
+    end
+
+    # Signature of the PAG that `m` belongs to (its Markov equivalence class).
+    class_of(m) = mag_sig(CausalStructures.mag_to_pag(m))
+end
+
 # ── Basic counts ────────────────────────────────────────────────────────────────
 
 @testitem "count_mags: all-circle 2-path has 8 members" tags = [:unit] begin
@@ -37,8 +55,7 @@ end
     @test all(is_mag, enumerate_mags(pag))
 end
 
-@testitem "enumerate_mags: handles a PAG with an o-- edge" tags = [:unit] begin
-    include("helper-enumerate-mags.jl")
+@testitem "enumerate_mags: handles a PAG with an o-- edge" setup=[MagSig] tags = [:unit] begin
     # The pendant B --> E surfaces as E o-- B; both resolutions of the circle at E
     # (the directed edge and the undirected edge) are valid members of the class.
     mag = cgraph(
@@ -68,8 +85,7 @@ end
 
 # ── Every member is in the class; the class is closed ───────────────────────────
 
-@testitem "enumerate_mags: every member maps back to the PAG" tags = [:unit] begin
-    include("helper-enumerate-mags.jl")
+@testitem "enumerate_mags: every member maps back to the PAG" setup=[MagSig] tags = [:unit] begin
     mag = cgraph(directed(:A, :C), directed(:B, :C), directed(:C, :D); class = MAG)
     pag = mag_to_pag(mag)
     target = mag_sig(pag)
@@ -78,8 +94,7 @@ end
     end
 end
 
-@testitem "enumerate_mags: contains the originating MAG" tags = [:unit] begin
-    include("helper-enumerate-mags.jl")
+@testitem "enumerate_mags: contains the originating MAG" setup=[MagSig] tags = [:unit] begin
     mag = cgraph(
         bidirected(:D, :A),
         bidirected(:A, :B),
@@ -91,8 +106,8 @@ end
     @test any(m -> mag_sig(m) == mag_sig(mag), enumerate_mags(pag))
 end
 
-@testitem "enumerate_mags: contains the mag_from_pag representative" tags = [:unit] begin
-    include("helper-enumerate-mags.jl")
+@testitem "enumerate_mags: contains the mag_from_pag representative" setup=[MagSig] tags =
+    [:unit] begin
     pag = cgraph(partial(:A, :B), partial(:B, :C); class = PAG)
     rep = mag_from_pag(pag)
     @test any(m -> mag_sig(m) == mag_sig(rep), enumerate_mags(pag))
@@ -100,8 +115,7 @@ end
 
 # ── Members are distinct ─────────────────────────────────────────────────────────
 
-@testitem "enumerate_mags: members are pairwise distinct" tags = [:unit] begin
-    include("helper-enumerate-mags.jl")
+@testitem "enumerate_mags: members are pairwise distinct" setup=[MagSig] tags = [:unit] begin
     pag = cgraph(partial(:A, :B), partial(:B, :C); class = PAG)
     mags = enumerate_mags(pag)
     sigs = Set(mag_sig(m) for m in mags)

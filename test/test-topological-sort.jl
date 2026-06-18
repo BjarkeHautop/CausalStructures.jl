@@ -3,8 +3,7 @@
 using Test
 using CausalStructures
 
-@testitem "topological_sort on simple chain DAG" tags = [:unit] begin
-    include("helpers.jl")
+@testitem "topological_sort on simple chain DAG" setup=[DagHelpers] tags = [:unit] begin
     dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
     order = topological_sort(dag)
     @test length(order) == 3
@@ -12,8 +11,7 @@ using CausalStructures
     @test verify_topo_order(dag, order)
 end
 
-@testitem "topological_sort on diamond DAG" tags = [:unit] begin
-    include("helpers.jl")
+@testitem "topological_sort on diamond DAG" setup=[DagHelpers] tags = [:unit] begin
     cg = cgraph(
         directed(:A, :B),
         directed(:A, :C),
@@ -27,8 +25,7 @@ end
     @test verify_topo_order(cg, order)
 end
 
-@testitem "topological_sort with isolated nodes" tags = [:unit] begin
-    include("helpers.jl")
+@testitem "topological_sort with isolated nodes" setup=[DagHelpers] tags = [:unit] begin
     dag = cgraph(directed(:A, :B), node(:C); class = DAG)
     order = topological_sort(dag)
     @test length(order) == 3
@@ -64,8 +61,8 @@ end
     @test_throws MethodError topological_sort(ug)
 end
 
-@testitem "topological_sort returns all nodes exactly once" tags = [:unit] begin
-    include("helpers.jl")
+@testitem "topological_sort returns all nodes exactly once" setup=[DagHelpers] tags =
+    [:unit] begin
     cg = cgraph(
         directed(:A, :B),
         directed(:A, :C),
@@ -83,8 +80,7 @@ end
 # NetworkX topological sort tests
 # https://github.com/networkx/networkx/blob/main/networkx/algorithms/tests/test_dag.py
 
-@testitem "topological_sort NetworkX 1 test" tags = [:unit] begin
-    include("helpers.jl")
+@testitem "topological_sort NetworkX 1 test" setup=[DagHelpers] tags = [:unit] begin
     # A -> B, A -> C, B -> C
     dag = cgraph(directed(:A, :B), directed(:A, :C), directed(:B, :C); class = DAG)
     order = topological_sort(dag)
@@ -98,8 +94,7 @@ end
     @test verify_topo_order(g2, order2)
 end
 
-@testitem "topological_sort NetworkX 2 test" tags = [:unit] begin
-    include("helpers.jl")
+@testitem "topological_sort NetworkX 2 test" setup=[DagHelpers] tags = [:unit] begin
     cg = cgraph(
         directed(:A, :B),
         directed(:B, :C),
