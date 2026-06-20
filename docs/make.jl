@@ -76,6 +76,7 @@ makedocs(;
     sitename = "CausalStructures.jl",
     format = Documenter.HTML(;
         canonical = "https://BjarkeHautop.github.io/CausalStructures.jl",
+        repolink = "https://github.com/BjarkeHautop/CausalStructures.jl",
         example_size_threshold = nothing,
         size_threshold_ignore = [
             "15-equivalence-classes.md",
