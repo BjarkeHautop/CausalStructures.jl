@@ -122,3 +122,51 @@ end
     sets = all_iv_sets(cg, :X, :Y)
     @test isempty(sets)
 end
+
+# ── ADMG ──────────────────────────────────────────────────────────────────────
+
+@testitem "is_valid_iv (ADMG): Z is valid instrument with bidirected confounder" tags =
+    [:unit] begin
+    # X <-> Y encodes the hidden common cause; Z --> X is the instrument
+    admg = cgraph(bidirected(:X, :Y), directed(:Z, :X), directed(:X, :Y); class = ADMG)
+    @test is_valid_iv(admg, :X, :Y, [:Z])
+end
+
+@testitem "is_valid_iv (ADMG): isolated node fails relevance" tags = [:unit] begin
+    admg = cgraph(bidirected(:X, :Y), directed(:Z, :X), directed(:X, :Y); class = ADMG)
+    @test !is_valid_iv(admg, :X, :Y, [:X])
+    @test !is_valid_iv(admg, :X, :Y, [:Y])
+    @test !is_valid_iv(admg, :X, :Y, Symbol[])
+end
+
+@testitem "is_valid_iv (ADMG): bidirected Z <-> Y violates exclusion restriction" tags =
+    [:unit] begin
+    # Z <-> Y creates a hidden path from Z to Y not through X
+    admg = cgraph(
+        bidirected(:X, :Y),
+        bidirected(:Z, :Y),
+        directed(:Z, :X),
+        directed(:X, :Y);
+        class = ADMG,
+    )
+    @test !is_valid_iv(admg, :X, :Y, [:Z])
+end
+
+@testitem "all_iv_sets (ADMG): finds the valid instrument" tags = [:unit] begin
+    admg = cgraph(bidirected(:X, :Y), directed(:Z, :X), directed(:X, :Y); class = ADMG)
+    sets = all_iv_sets(admg, :X, :Y)
+    @test length(sets) == 1
+    @test sets[1] == [:Z]
+end
+
+@testitem "all_iv_sets (ADMG): consistent with DAG latent projection" tags = [:unit] begin
+    dag = cgraph(
+        directed(:U, :X),
+        directed(:U, :Y),
+        directed(:Z, :X),
+        directed(:X, :Y);
+        class = DAG,
+    )
+    admg = latent_project(dag, [:U])
+    @test all_iv_sets(dag, :X, :Y) == all_iv_sets(admg, :X, :Y)
+end

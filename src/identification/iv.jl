@@ -1,25 +1,39 @@
 # Instrumental Variables (Brito & Pearl 2002)
 
 # G_{overline{X}}: G with all incoming directed edges to X removed (do(X) intervention).
+# Works for both DAG and ADMG: bidirected edges in an ADMG are not incoming directed
+# edges and are left intact.
 function _build_g_do_x(cg::DAG, x::Symbol)
-    edges = filter(e -> !(e.dst == x && e.dst_end == Arrow), cg.edges)
-    return build_graph(DAG, Set(cg.backend.nodes), edges)
+    return build_graph(
+        DAG,
+        Set(cg.backend.nodes),
+        filter(e -> !(is_directed(e) && e.dst == x), cg.edges),
+    )
+end
+
+function _build_g_do_x(cg::ADMG, x::Symbol)
+    return build_graph(
+        ADMG,
+        Set(cg.backend.nodes),
+        filter(e -> !(is_directed(e) && e.dst == x), cg.edges),
+    )
 end
 
 """
-    is_valid_iv(cg::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol}) -> Bool
+    is_valid_iv(cg::Union{DAG,ADMG}, x::Symbol, y::Symbol, z::AbstractVector{Symbol}) -> Bool
 
 Return `true` if `z` is a valid instrumental set for the causal effect of `x` on `y`
 in `cg`.
 
 `z` is a valid instrumental set if:
-1. Every `zi ∈ z` is d-separated from `y` given `{x}` in the interventional graph
-   `G_{overline{x}}` (obtained by deleting all incoming edges to `x`). This is the
-   **exclusion restriction**: `z` can only affect `y` through `x`.
-2. At least one `zi ∈ z` is d-connected to `x` in `G`. This is the **relevance
+1. Every `zi ∈ z` is d-/m-separated from `y` given `{x}` in the interventional graph
+   `G_{overline{x}}` (obtained by deleting all incoming directed edges to `x`). This
+   is the **exclusion restriction**: `z` can only affect `y` through `x`.
+2. At least one `zi ∈ z` is d-/m-connected to `x` in `G`. This is the **relevance
    condition**: `z` must be associated with the treatment.
 
-Neither `x` nor `y` may appear in `z`.
+Applicable to [`DAG`](@ref) and [`ADMG`](@ref). Uses d-separation for DAGs and
+m-separation for ADMGs. Neither `x` nor `y` may appear in `z`.
 
 # Examples
 
@@ -35,9 +49,17 @@ true
 
 julia> is_valid_iv(cg, :X, :Y, [:U])  # U confounds X and Y; fails exclusion restriction
 false
+```
 
-julia> is_valid_iv(cg, :X, :Y, Symbol[])  # empty set fails relevance
-false
+```jldoctest
+julia> # ADMG: X <-> Y encodes the hidden confounder directly
+       admg = cgraph(
+           bidirected(:X, :Y),
+           directed(:Z, :X), directed(:X, :Y);
+           class = ADMG);
+
+julia> is_valid_iv(admg, :X, :Y, [:Z])
+true
 ```
 
 # References
@@ -48,7 +70,7 @@ Brito, C. & Pearl, J. (2002). Generalized Instrumental Variables.
 Pearl, J. (2009). *Causality: Models, Reasoning and Inference* (2nd ed.).
 Cambridge University Press. Definition 7.4.1.
 """
-function is_valid_iv(cg::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol})
+function is_valid_iv(cg::Union{DAG,ADMG}, x::Symbol, y::Symbol, z::AbstractVector{Symbol})
     isempty(z) && return false
     x_idx = node_index(cg, x)
     y_idx = node_index(cg, y)
@@ -57,22 +79,22 @@ function is_valid_iv(cg::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol})
         (zi_idx == x_idx || zi_idx == y_idx) && return false
     end
 
-    # Condition (ii): at least one zi is d-connected to X in G
-    if all(zi -> d_separated(cg, zi, x), z)
+    # Condition (ii): at least one zi is m-connected to X in G
+    if all(zi -> m_separated(cg, zi, x), z)
         return false
     end
 
-    # Condition (i): every zi is d-separated from Y given {X} in G_{overline{X}}
+    # Condition (i): every zi is m-separated from Y given {X} in G_{overline{X}}
     g_do_x = _build_g_do_x(cg, x)
     for zi in z
-        d_separated(g_do_x, zi, y, [x]) || return false
+        m_separated(g_do_x, zi, y, [x]) || return false
     end
 
     return true
 end
 
 """
-    all_iv_sets(cg::DAG, x::Symbol, y::Symbol;
+    all_iv_sets(cg, x::Symbol, y::Symbol;
                 minimal::Bool = true, max_size::Int = 3)
         -> Vector{Vector{Symbol}}
 
@@ -81,6 +103,8 @@ up to size `max_size`.
 
 Sets are validated using [`is_valid_iv`](@ref). When `minimal = true` (default),
 only inclusion-minimal sets are returned. Neither `x` nor `y` is ever a candidate.
+
+Applicable to [`DAG`](@ref) and [`ADMG`](@ref).
 
 # Examples
 
@@ -102,7 +126,13 @@ julia> all_iv_sets(cg, :X, :Y)
 Brito, C. & Pearl, J. (2002). Generalized Instrumental Variables.
 *Uncertainty in Artificial Intelligence*, 18:85-93.
 """
-function all_iv_sets(cg::DAG, x::Symbol, y::Symbol; minimal::Bool = true, max_size::Int = 3)
+function all_iv_sets(
+    cg::Union{DAG,ADMG},
+    x::Symbol,
+    y::Symbol;
+    minimal::Bool = true,
+    max_size::Int = 3,
+)
     B = cg.backend
     n = length(B.nodes)
     x_idx = node_index(cg, x)
