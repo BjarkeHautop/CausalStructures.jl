@@ -609,3 +609,39 @@ function _mag_from_pag(nodes, edges::Vector{CausalEdge})
 
     return MAG(Set(node_vec), new_edges)
 end
+
+"""
+    markov_equivalent(g1::MAG, g2::MAG) -> Bool
+
+Return `true` if `g1` and `g2` belong to the same Markov equivalence class, i.e.
+they impose the same m-separation constraints.
+
+# Examples
+
+`A <-> B <-> C` and `A --> B <-- C` both have an unshielded collider at `B`, so
+they share the PAG `A o-> B <-o C` and are Markov equivalent. Replacing one
+bidirected edge with `B --> C` removes the collider, changing the class:
+
+```jldoctest
+julia> m1 = cgraph(bidirected(:A, :B), bidirected(:B, :C); class = MAG);
+
+julia> m2 = cgraph(directed(:A, :B), directed(:C, :B); class = MAG);
+
+julia> markov_equivalent(m1, m2)
+true
+
+julia> m3 = cgraph(bidirected(:A, :B), directed(:B, :C); class = MAG);
+
+julia> markov_equivalent(m1, m3)
+false
+```
+
+# References
+
+- Ali, R. A., Richardson, T. S. & Spirtes, P. (2009). Markov equivalence for
+  ancestral graphs. *Annals of Statistics*, 37(5B):2808-2837.
+"""
+function markov_equivalent(g1::MAG, g2::MAG)
+    Set(g1.backend.nodes) != Set(g2.backend.nodes) && return false
+    return _pag_signature(_mag_to_pag_edges(g1)) == _pag_signature(_mag_to_pag_edges(g2))
+end

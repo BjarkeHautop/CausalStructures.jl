@@ -622,3 +622,57 @@ end
         @test markov_equivalent(dags[i], dags[j]) == same_cpdag(dags[i], dags[j])
     end
 end
+
+# ── markov_equivalent (MAGs) ───────────────────────────────────────────────
+
+@testitem "markov_equivalent (MAG): identical MAGs are equivalent" tags = [:unit] begin
+    # A <-> B <- C: latent confounding on A-B plus a collider at B.
+    m1 = cgraph(bidirected(:A, :B), directed(:C, :B); class = MAG)
+    m2 = cgraph(bidirected(:A, :B), directed(:C, :B); class = MAG)
+    @test markov_equivalent(m1, m2)
+end
+
+@testitem "markov_equivalent (MAG): collider vs non-collider not equivalent" tags = [:unit] begin
+    # A <-> B <-> C (collider at B, A _||_ C) vs A <-> B --> C (no collider).
+    collider = cgraph(bidirected(:A, :B), bidirected(:B, :C); class = MAG)
+    noncollider = cgraph(bidirected(:A, :B), directed(:B, :C); class = MAG)
+    @test !markov_equivalent(collider, noncollider)
+end
+
+@testitem "markov_equivalent (MAG): different node sets not equivalent" tags = [:unit] begin
+    m1 = cgraph(bidirected(:A, :B); class = MAG)
+    m2 = cgraph(bidirected(:A, :C); class = MAG)
+    @test !markov_equivalent(m1, m2)
+end
+
+@testitem "markov_equivalent (MAG): single-edge orientations are equivalent" tags = [:unit] begin
+    # A single edge imposes no independence constraint, so A --> B and A <-> B
+    # are in the same class (both have PAG A o-o B).
+    @test markov_equivalent(
+        cgraph(directed(:A, :B); class = MAG),
+        cgraph(bidirected(:A, :B); class = MAG),
+    )
+end
+
+@testitem "markov_equivalent (MAG): same collider via different edge marks" tags = [:unit] begin
+    # A <-> B <-> C and A --> B <-- C both have an unshielded collider at B with
+    # A, C non-adjacent. The marks at A and C are not invariant, so both map to
+    # the PAG A o-> B <-o C and are Markov equivalent.
+    m1 = cgraph(bidirected(:A, :B), bidirected(:B, :C); class = MAG)
+    m2 = cgraph(directed(:A, :B), directed(:C, :B); class = MAG)
+    @test markov_equivalent(m1, m2)
+end
+
+@testitem "markov_equivalent (MAG): all class members are mutually equivalent" tags =
+    [:unit] begin
+    # Every MAG enumerate_mags returns for a PAG is in that PAG's class, so all
+    # pairs must be Markov equivalent; a MAG from a different class must not be.
+    pag = cgraph(partial(:A, :B), partial(:B, :C); class = PAG)
+    mags = enumerate_mags(pag)
+    @test length(mags) > 1
+    for i in eachindex(mags), j in eachindex(mags)
+        @test markov_equivalent(mags[i], mags[j])
+    end
+    other = cgraph(bidirected(:A, :B), bidirected(:C, :B); class = MAG)  # collider at B
+    @test !markov_equivalent(mags[1], other)
+end
