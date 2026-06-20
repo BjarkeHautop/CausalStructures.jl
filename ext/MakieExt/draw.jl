@@ -52,7 +52,25 @@ function _draw_arrowhead!(ax, tip::Point2f, dir::Point2f, size::Float32; color =
     Makie.poly!(ax, pts; color = color, strokecolor = color, strokewidth = 0.0f0)
 end
 
+# Sample a quadratic Bezier B(t) = (1-t)^2 p0 + 2(1-t)t c + t^2 p1.
+function _bezier(p0::Point2f, c::Point2f, p1::Point2f, t::Float32)
+    u = 1.0f0 - t
+    return u * u * p0 + 2.0f0 * u * t * c + t * t * p1
+end
+
+# Unit tangent of the quadratic Bezier at t (derivative 2(1-t)(c-p0) + 2t(p1-c)).
+function _bezier_tangent(p0::Point2f, c::Point2f, p1::Point2f, t::Float32)
+    u = 1.0f0 - t
+    d = 2.0f0 * u * (c - p0) + 2.0f0 * t * (p1 - c)
+    n = _norm2(d)
+    return n < 1.0f-6 ? Point2f(0, 0) : Point2f(d[1] / n, d[2] / n)
+end
+
 # Draw one edge with the correct endpoint decorations.
+#
+# `curvature` bows the edge perpendicular to the chord: 0 is a straight line,
+# positive curves to the left of the src->dst direction, negative to the right.
+# The control point is offset from the chord midpoint by `curvature * len`.
 function _draw_edge!(
     ax,
     e::CausalEdge,
@@ -63,13 +81,14 @@ function _draw_edge!(
     r_circle::Float32;
     color = :black,
     linewidth = 1.5f0,
+    curvature = 0.0f0,
 )
     diff = p_dst - p_src
     len = _norm2(diff)
     len < 1.0f-6 && return
     dir = Point2f(diff[1] / len, diff[2] / len)
 
-    # Points on the node boundaries along the edge direction.
+    # Points on the node boundaries along the (straight) edge direction.
     src_bnd = p_src + r_node * dir
     dst_bnd = p_dst - r_node * dir
 
@@ -78,25 +97,55 @@ function _draw_edge!(
     has_circle_src = e.src_end === _Circle
     has_circle_dst = e.dst_end === _Circle
 
-    # Pull the line ends back to leave room for arrowhead triangles.
-    line_start = has_arrow_src ? src_bnd + r_arrow * dir : src_bnd
-    line_end = has_arrow_dst ? dst_bnd - r_arrow * dir : dst_bnd
+    # Control point: chord midpoint offset perpendicular to the chord.
+    perp = Point2f(-dir[2], dir[1])
+    mid = 0.5f0 * (src_bnd + dst_bnd)
+    ctrl = mid + curvature * len * perp
+
+    # Endpoint tangents follow the curve, not the chord, so decorations line up.
+    tan_src = _bezier_tangent(src_bnd, ctrl, dst_bnd, 0.0f0)
+    tan_dst = _bezier_tangent(src_bnd, ctrl, dst_bnd, 1.0f0)
+
+    # Pull the shaft ends back along the local tangent to leave room for heads.
+    line_start = has_arrow_src ? src_bnd + r_arrow * tan_src : src_bnd
+    line_end = has_arrow_dst ? dst_bnd - r_arrow * tan_dst : dst_bnd
 
     if _norm2(line_end - line_start) > 1.0f-6
-        Makie.lines!(ax, [line_start, line_end]; color = color, linewidth = linewidth)
+        if abs(curvature) < 1.0f-6
+            Makie.lines!(ax, [line_start, line_end]; color = color, linewidth = linewidth)
+        else
+            nseg = 32
+            pts = [_bezier(line_start, ctrl, line_end, Float32(i) / nseg) for i = 0:nseg]
+            Makie.lines!(ax, pts; color = color, linewidth = linewidth)
+        end
     end
 
-    has_arrow_dst && _draw_arrowhead!(ax, dst_bnd, dir, r_arrow; color = color)
-    has_arrow_src &&
-        _draw_arrowhead!(ax, src_bnd, Point2f(-dir[1], -dir[2]), r_arrow; color = color)
+    has_arrow_dst && _draw_arrowhead!(ax, dst_bnd, tan_dst, r_arrow; color = color)
+    has_arrow_src && _draw_arrowhead!(
+        ax,
+        src_bnd,
+        Point2f(-tan_src[1], -tan_src[2]),
+        r_arrow;
+        color = color,
+    )
 
     # Open circles: centered one radius out from the node boundary so the
     # inner edge of the circle sits flush against the node.
     if has_circle_src
-        _draw_filled_circle!(ax, src_bnd + r_circle * dir, r_circle; strokecolor = color)
+        _draw_filled_circle!(
+            ax,
+            src_bnd + r_circle * tan_src,
+            r_circle;
+            strokecolor = color,
+        )
     end
     if has_circle_dst
-        _draw_filled_circle!(ax, dst_bnd - r_circle * dir, r_circle; strokecolor = color)
+        _draw_filled_circle!(
+            ax,
+            dst_bnd - r_circle * tan_dst,
+            r_circle;
+            strokecolor = color,
+        )
     end
 end
 
@@ -176,6 +225,11 @@ Each style argument accepts either a **scalar** (applied to all elements) or a
 |---------------|------------|------------------------------------------------|
 | `edge_color`  | `"black"`  | `Symbol` (edge type) or `(Symbol, Symbol)` (src, dst) |
 | `linewidth`   | `1.5`      | `Symbol` (edge type) or `(Symbol, Symbol)` (src, dst) |
+| `curvature`   | `0.0`      | `Symbol` (edge type) or `(Symbol, Symbol)` (src, dst) |
+
+`curvature` bows each edge perpendicular to the straight `src --> dst` chord:
+`0.0` draws a straight line, positive values bend to the left of that direction
+and negative to the right.
 
 **Edge-type symbols:** `:directed`, `:undirected`, `:bidirected`,
 `:partially_directed`, `:partially_undirected`, `:partial`.
@@ -227,6 +281,10 @@ Makie.plot(admg; edge_color = Dict(:directed => :steelblue, :bidirected => :crim
 # Highlight a specific edge
 Makie.plot(dag; edge_color = Dict((:A, :X) => :red, :default => :black))
 
+# Curve all edges; bow parallel edges apart in an ADMG
+Makie.plot(dag; curvature = 0.2)
+Makie.plot(admg; curvature = Dict(:directed => 0.2, :bidirected => -0.2))
+
 # Force-directed layout (requires NetworkLayout)
 using NetworkLayout
 Makie.plot(dag; layout = :spring)
@@ -249,6 +307,7 @@ function Makie.plot(
     node_strokewidth = CausalStructures._PLOT_NODE_STROKEWIDTH_DEFAULT,
     edge_color = CausalStructures._PLOT_EDGE_COLOR_DEFAULT,
     linewidth = CausalStructures._PLOT_LINEWIDTH_DEFAULT,
+    curvature = CausalStructures._PLOT_CURVATURE_DEFAULT,
     layout_kwargs...,
 )
     n = length(cg.backend.nodes)
@@ -281,6 +340,7 @@ function Makie.plot(
             r_circle;
             color = _resolve_edge(edge_color, e, :black),
             linewidth = Float32(_resolve_edge(linewidth, e, 1.5f0)),
+            curvature = Float32(_resolve_edge(curvature, e, 0.0f0)),
         )
     end
 

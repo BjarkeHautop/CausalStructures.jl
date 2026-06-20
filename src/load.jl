@@ -3,7 +3,6 @@ using Preferences
 using Random
 using Statistics
 
-
 const _OPEN_DEFAULT::Bool = @load_preference("open", true)
 
 const _PLOT_LAYOUT_DEFAULT::Symbol = Symbol(@load_preference("plot_layout", "circle"))
@@ -12,6 +11,7 @@ const _PLOT_NODE_STROKECOLOR_DEFAULT = @load_preference("plot_node_strokecolor",
 const _PLOT_NODE_STROKEWIDTH_DEFAULT = @load_preference("plot_node_strokewidth", 2.0)
 const _PLOT_EDGE_COLOR_DEFAULT = @load_preference("plot_edge_color", "black")
 const _PLOT_LINEWIDTH_DEFAULT = @load_preference("plot_linewidth", 1.5)
+const _PLOT_CURVATURE_DEFAULT = @load_preference("plot_curvature", 0.0)
 
 # Foundation: types, edges, construction, mutation, validation, backend storage
 include("core/defs.jl")

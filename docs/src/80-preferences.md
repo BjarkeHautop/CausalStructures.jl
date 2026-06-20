@@ -118,3 +118,16 @@ Default edge line width.
 ```julia
 set_preferences!(CausalStructures, "plot_linewidth" => 2.0)
 ```
+
+### `"plot_curvature"`
+
+Default edge curvature. `0.0` draws straight edges; positive values bow edges to
+the left of the `src --> dst` direction and negative values to the right.
+
+| Default | Type |
+| ------- | ---- |
+| `0.0` | `Number` |
+
+```julia
+set_preferences!(CausalStructures, "plot_curvature" => 0.2)
+```

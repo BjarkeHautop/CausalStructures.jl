@@ -58,6 +58,8 @@ using NetworkLayout
 Makie.plot(dag; layout = :spring)
 ```
 
+We provide these short-hand names for convenience:
+
 | `layout`      | Algorithm                           |
 | ------------- | ----------------------------------- |
 | `:circle`     | Evenly spaced on a circle (default) |
@@ -76,8 +78,7 @@ Makie.plot(dag; layout = :spring, seed = 42, iterations = 500)
 
 ## Node styling
 
-Each node style argument accepts either a **scalar** (applied to all nodes) or a
-**`Dict{Symbol, <value>}`** keyed by node name, with `:default` as a fallback.
+Each node style argument accepts either a scalar (applied to all nodes) or a `Dict{Symbol, <value>}` keyed by node name, with `:default` as a fallback.
 
 | Keyword             | Default                      | Controls                        |
 | ------------------- | ---------------------------- | ------------------------------- |
@@ -111,20 +112,18 @@ Makie.plot(dag; node_radius = 0.18, arrow_size = 0.07)
 
 ## Edge styling
 
-Each edge style argument accepts either a **scalar** or a **`Dict`** keyed by:
+Each edge style argument accepts either a scalar or a `Dict` keyed by (and follows this precendence):
 
-- an **edge-type symbol** (`:directed`, `:undirected`, `:bidirected`,
-  `:partially_directed`, `:partially_undirected`, `:partial`)
-- a **`(src, dst)` tuple** for a specific edge
+- a `(src, dst)` tuple for a specific edge
+- an edge-type symbol (`:directed`, `:undirected`, `:bidirected`, `:partially_directed`, `:partially_undirected`, `:partial`)
+- a `(src, dst)` tuple for a specific edge
 - `:default` as a fallback
 
-**Lookup precedence** (highest wins): specific edge tuple → edge-type symbol →
-`:default` → hard-coded fallback.
-
-| Keyword      | Default  | Controls              |
-| ------------ | -------- | --------------------- |
-| `edge_color` | `:black` | line / marker color   |
-| `linewidth`  | `1.5`    | line width            |
+| Keyword      | Default  | Controls               |
+| ------------ | -------- | ---------------------- |
+| `edge_color` | `:black` | line / marker color    |
+| `linewidth`  | `1.5`    | line width             |
+| `curvature`  | `0.0`    | how much the edge bows |
 
 Color edges by type:
 
@@ -150,6 +149,24 @@ Makie.plot(dag;
 )
 ```
 
+### Curved edges
+
+`curvature` bows an edge perpendicular to the straight `src --> dst` chord.
+`0.0` (the default) draws a straight line; positive values bend to the left of
+the `src --> dst` direction and negative values to the right.
+
+```@example plot
+admg_pair = cgraph(
+    directed(:X, :Y),
+    bidirected(:X, :Y);
+    class = ADMG,
+)
+
+Makie.plot(admg_pair;
+    curvature = Dict(:directed => 0.2, :bidirected => -0.2),
+)
+```
+
 ## Combining options
 
 ```@example plot
@@ -167,6 +184,7 @@ Makie.plot(
     node_strokecolor = :gray30,
     edge_color       = Dict(:directed => :gray20, :bidirected => :crimson),
     linewidth        = Dict(:bidirected => 2.0, :default => 1.5),
+    curvature        = Dict((:X, :Y) => 0.2, :bidirected => -0.2),
     node_radius      = 0.14,
 )
 ```
