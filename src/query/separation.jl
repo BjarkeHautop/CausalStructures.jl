@@ -89,11 +89,9 @@ function _moral_adj_in_mask(B::DAGBackend, mask::BitVector)
 end
 
 """
-    d_separated(cg, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    d_separated(cg::Union{DAG,AbstractPDAG}, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
 
 Return `true` if `x` and `y` are d-separated given `z` in `cg`.
-
-Applicable to [`DAG`](@ref) and [`AbstractPDAG`](@ref).
 
 Two nodes are d-separated given a conditioning set `z` if every path between
 them is blocked. A path is blocked if it contains either a non-collider node
@@ -246,21 +244,19 @@ function d_separated(
 end
 
 """
-    m_separated(cg, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    m_separated(cg::Union{DAG,ADMG,AbstractAG}, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
 
 Return `true` if `x` and `y` are m-separated given `z` in `cg`.
 
 M-separation generalizes d-separation to graphs with bidirected and undirected
 edges. For a [`DAG`](@ref), m-separation is equivalent to [`d_separated`](@ref).
 
-Applicable to [`DAG`](@ref), [`ADMG`](@ref), and [`AG`](@ref).
-
-**DAG / ADMG**: restricts to the ancestor graph of `x`, `y`, and `z`, then
+[`DAG`](@ref) / [`ADMG`](@ref): restricts to the ancestor graph of `x`, `y`, and `z`, then
 builds a moralized graph (parents and spouses of each node at each arrowhead
 form a clique), and checks connectivity after removing `z`.
 
-**AG**: uses the augmented graph of Richardson & Spirtes (2002) restricted to
-the anterior set of `x`, `y`, and `z`.
+[`AbstractAG`](@ref): uses the augmented graph of Richardson & Spirtes (2002)
+restricted to the anterior set of `x`, `y`, and `z`.
 
 # Examples
 

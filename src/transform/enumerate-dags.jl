@@ -262,6 +262,10 @@ Count the number of DAGs in the Markov equivalence class (MEC) of `cg`, without
 materializing them. Useful for sizing the problem before
 calling [`enumerate_dags`](@ref).
 
+Unlike calling `length(enumerate_dags(cg))`, this shares the same Chickering
+recursion but skips building a `DAG` (edge list, backend, validation) at every
+leaf of the search, only incrementing a counter instead.
+
 # Examples
 
 ```jldoctest

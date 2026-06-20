@@ -41,9 +41,6 @@ in `cg`.
 2. At least one `zi ∈ z` is d-/m-connected to `x` in `G`. This is the **relevance
    condition**: `z` must be associated with the treatment.
 
-Applicable to [`DAG`](@ref) and [`ADMG`](@ref). Uses d-separation for DAGs and
-m-separation for ADMGs. Neither `x` nor `y` may appear in `z`.
-
 # Examples
 
 ```jldoctest
@@ -86,17 +83,16 @@ function is_valid_iv(cg::Union{DAG,ADMG}, x::Symbol, y::Symbol, z::AbstractVecto
 end
 
 """
-    all_iv_sets(cg, x::Symbol, y::Symbol;
+    all_iv_sets(cg::Union{DAG,ADMG}, x::Symbol, y::Symbol;
                 minimal::Bool = true, max_size::Int = 3)
         -> Vector{Vector{Symbol}}
 
 Return all valid instrumental sets for the causal effect of `x` on `y` in `cg`,
 up to size `max_size`.
 
-Sets are validated using [`is_valid_iv`](@ref). When `minimal = true` (default),
-only inclusion-minimal sets are returned. Neither `x` nor `y` is ever a candidate.
-
-Applicable to [`DAG`](@ref) and [`ADMG`](@ref).
+Bruteforces over subsets of the allowed universe of nodes (nodes that are not `x` or `y`),
+checking each for validity using [`is_valid_iv`](@ref). When `minimal = true` (default),
+only inclusion-minimal sets are returned.
 
 # Examples
 

@@ -308,11 +308,11 @@ Return neighbors of `node` in `cg`, filtered by edge type via `mode`.
 
 `mode` values:
 
-- `:all`: all adjacent nodes (default; all graph classes)
-- `:in`: parents: nodes `p` with `p --> node` (DAG, PDAG, CPDAG, ADMG, AG, PAG, UNKNOWN)
-- `:out`: children: nodes `c` with `node --> c` (DAG, PDAG, CPDAG, ADMG, AG, PAG, UNKNOWN)
-- `:undirected`: undirected neighbors `node --- c` (UG, PDAG, CPDAG, AG, PAG, UNKNOWN)
-- `:bidirected`: bidirected neighbors `node <-> c` (ADMG, AG, PAG, UNKNOWN)
+- `:all`: all adjacent nodes
+- `:in`: parents: nodes `p` with `p --> node`
+- `:out`: children: nodes `c` with `node --> c`
+- `:undirected`: undirected neighbors `node --- c`
+- `:bidirected`: bidirected neighbors `node <-> c`
 
 For a [`PAG`](@ref) the `:in`, `:out`, `:undirected`, and `:bidirected` modes return
 only neighbors joined by the corresponding *definite* (circle-free) edge. Neighbors

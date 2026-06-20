@@ -38,7 +38,7 @@ is_pdag(cg::CausalGraph) = _class_matches_or_satisfies(cg, PDAGConstraints())
     is_cpdag(cg::CausalGraph) -> Bool
 
 Check whether `cg` satisfies the structural constraints of a [`CPDAG`](@ref)
-(completed partially directed acyclic graphs ), independent of its declared graph class.
+(completed partially directed acyclic graph), independent of its declared graph class.
 
 # Examples
 
@@ -111,8 +111,8 @@ is_admg(cg::CausalGraph) = _class_matches_or_satisfies(cg, ADMGConstraints())
 """
     is_ag(cg::CausalGraph) -> Bool
 
-Check whether `cg` satisfies the structural constraints of the given graph class,
-independent of its declared graph class.
+Check whether `cg` satisfies the structural constraints of a [`AG`](@ref)
+(ancestral graph), independent of its declared graph class.
 
 # Examples
 

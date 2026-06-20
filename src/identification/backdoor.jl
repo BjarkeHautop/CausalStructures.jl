@@ -96,9 +96,10 @@ end
 Return all sets satisfying the backdoor criterion for the causal effect of `x`
 on `y` in `cg`, up to size `max_size`.
 
-Sets are validated using [`is_valid_backdoor`](@ref). When `minimal = true`
-(default), only inclusion-minimal sets are returned. Descendants of `x` and `y`
-itself are never candidates.
+Bruteforces over subsets of the allowed universe of nodes (nodes that are not
+descendants of `x` and not `y`), checking each for validity using
+[`is_valid_backdoor`](@ref). When `minimal = true` (default), only
+inclusion-minimal sets are returned.
 
 # Examples
 
@@ -329,8 +330,7 @@ Two types are supported:
   where ``\\mathrm{Cn}(x,y) = \\mathrm{PossibleDe}(x) \\cap \\mathrm{PossibleAn}(y)`` (nodes
   on possibly directed paths from `x` to `y`).
 
-The returned set is guaranteed to satisfy [`is_valid_adjustment`](@ref) when one
-exists. Returns an empty vector if `x` has no causal path to `y`.
+Returns an empty vector if `x` has no causal path to `y`.
 
 # Examples
 

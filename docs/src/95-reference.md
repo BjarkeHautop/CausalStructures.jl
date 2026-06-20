@@ -98,7 +98,6 @@ enumerate_dags
 count_dags
 ag_to_mag
 enumerate_mags
-count_mags
 mag_to_pag
 mag_from_pag
 ```

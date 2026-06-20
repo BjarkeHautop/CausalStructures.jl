@@ -417,7 +417,6 @@ ancestor relationship in the current graph:
 
 Edges are added one at a time and the graph is re-evaluated after each addition,
 since each new edge can change m-separation and ancestor relationships.
-If `cg` is already maximal (is a MAG), it is returned unchanged.
 
 # Examples
 

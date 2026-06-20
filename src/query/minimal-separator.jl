@@ -122,12 +122,12 @@ Implements FINDMINSEP from van der Zander & Liśkiewicz (UAI 2020), running in
 ``O(n + m)`` time. FINDNEARESTSEP is called twice; once from `x`, once from `y`
 restricted to the first result, and the outputs are intersected.
 
-- **DAG**: directional Bayes-ball restricted to ancestors of `{x, y} ∪ include`.
-- **ADMG**: mark-based Bayes-ball over directed and bidirected edges,
+- [`DAG`](@ref): directional Bayes-ball restricted to ancestors of `{x, y} ∪ include`.
+- [`ADMG`](@ref): mark-based Bayes-ball over directed and bidirected edges,
   restricted to ancestors.
-- **AbstractAG**: same as ADMG but uses anteriors (ancestors reachable via directed
+- [`AbstractAG`](@ref): same as ADMG but uses anteriors (ancestors reachable via directed
   or undirected edges) and handles undirected edge marks.
-- **AbstractPDAG**: mark-based Bayes-ball over directed and undirected edges,
+- [`AbstractPDAG`](@ref): mark-based Bayes-ball over directed and undirected edges,
   restricted to anteriors.
 
 # Examples

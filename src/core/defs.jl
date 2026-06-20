@@ -123,7 +123,7 @@ Abstract supertype for ancestral graphs. Concrete subtypes: [`AG`](@ref) and [`M
 abstract type AbstractAG <: CausalGraph end
 
 """
-    DAG
+    DAG <: CausalGraph
 
 A Directed Acyclic Graph. Directed edges only, and no directed cycles allowed.
 """
@@ -133,7 +133,7 @@ struct DAG <: CausalGraph
 end
 
 """
-    UG
+    UG <: CausalGraph
 
 An Undirected Graph. Undirected edges only.
 """
@@ -143,7 +143,7 @@ struct UG <: CausalGraph
 end
 
 """
-    PDAG
+    PDAG <: AbstractPDAG
 
 A Partially Directed Acyclic Graph.
 Directed and undirected edges only, and no directed cycles allowed.
@@ -154,7 +154,7 @@ struct PDAG <: AbstractPDAG
 end
 
 """
-    CPDAG
+    CPDAG <: AbstractPDAG
 
 A Completed Partially Directed Acyclic Graph. The unique graph representing a Markov
 equivalence class (MEC) of DAGs. Directed edges represent compelled orientations shared
@@ -174,7 +174,7 @@ struct CPDAG <: AbstractPDAG
 end
 
 """
-    MPDAG
+    MPDAG <: AbstractPDAG
 
 A Maximally Partially Directed Acyclic Graph. A PDAG that is closed under Meek's
 orientation rules R1-R4: no further edge orientation can be implied. MPDAGs arise
@@ -191,7 +191,7 @@ struct MPDAG <: AbstractPDAG
 end
 
 """
-    ADMG
+    ADMG <: CausalGraph
 
 An Acyclic Directed Mixed Graph. Directed and bidirected edges only,
 and no directed cycles allowed.
@@ -207,7 +207,7 @@ struct ADMG <: CausalGraph
 end
 
 """
-    AG
+    AG <: AbstractAG
 
 An Ancestral Graph. Directed, undirected, and bidirected edges only.
 It contains no directed cycles, and if `X <-> Y` then neither `X` is an ancestor of
@@ -225,7 +225,7 @@ struct AG <: AbstractAG
 end
 
 """
-    MAG
+    MAG <: AbstractAG
 
 A Maximal Ancestral Graph. An [`AG`](@ref) in which every pair of non-adjacent nodes
 is m-separated by some subset of the remaining nodes. MAGs are the canonical
@@ -242,7 +242,7 @@ struct MAG <: AbstractAG
 end
 
 """
-    UNKNOWN
+    UNKNOWN <: CausalGraph
 
 A graph with no structural constraints enforced. Accepts all edge types. Intended as a
 fallback for graph classes not yet natively supported.
@@ -256,7 +256,7 @@ struct UNKNOWN <: CausalGraph
 end
 
 """
-    PAG
+    PAG <: CausalGraph
 
 A Partial Ancestral Graph. The graph representing a Markov equivalence class of
 [`MAG`](@ref)s (and thus of DAGs with latent confounders and selection bias). It

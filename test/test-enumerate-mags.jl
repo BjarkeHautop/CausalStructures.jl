@@ -18,26 +18,25 @@ end
 
 # ── Basic counts ────────────────────────────────────────────────────────────────
 
-@testitem "count_mags: all-circle 2-path has 8 members" tags = [:unit] begin
+@testitem "enumerate_mags: all-circle 2-path has 8 members" tags = [:unit] begin
     pag = cgraph(partial(:A, :B), partial(:B, :C); class = PAG)
-    @test count_mags(pag) == 8
+    @test length(enumerate_mags(pag)) == 8
 end
 
-@testitem "count_mags: collider PAG has 4 members" tags = [:unit] begin
+@testitem "enumerate_mags: collider PAG has 4 members" tags = [:unit] begin
     pag = cgraph(partially_directed(:A, :B), partially_directed(:C, :B); class = PAG)
-    @test count_mags(pag) == 4
+    @test length(enumerate_mags(pag)) == 4
 end
 
-@testitem "count_mags: an edgeless PAG has a single member" tags = [:unit] begin
+@testitem "enumerate_mags: an edgeless PAG has a single member" tags = [:unit] begin
     # No adjacencies => the empty MAG is the only graph in the class.
     pag = cgraph(node(:A), node(:B); class = PAG)
-    @test count_mags(pag) == 1
     @test length(enumerate_mags(pag)) == 1
 end
 
 # ── Selection bias (--- and o-- edges) ──────────────────────────────────────────
 
-@testitem "count_mags: undirected 4-cycle PAG has a single member" tags = [:unit] begin
+@testitem "enumerate_mags: undirected 4-cycle PAG has a single member" tags = [:unit] begin
     # A --- B --- C --- D --- A is a closed selection-bias PAG; only the 4-cycle
     # itself is in the class.
     mag = cgraph(
@@ -48,8 +47,9 @@ end
         class = MAG,
     )
     pag = mag_to_pag(mag)
-    @test count_mags(pag) == 1
-    @test all(is_mag, enumerate_mags(pag))
+    mags = enumerate_mags(pag)
+    @test length(mags) == 1
+    @test all(is_mag, mags)
 end
 
 @testitem "enumerate_mags: handles a PAG with an o-- edge" setup=[MagSig] tags = [:unit] begin
@@ -65,19 +65,9 @@ end
     )
     pag = mag_to_pag(mag)
     mags = enumerate_mags(pag)
-    @test length(mags) == count_mags(pag)
     @test all(is_mag, mags)
     @test all(m -> class_of(m) == mag_sig(pag), mags)
     @test any(m -> mag_sig(m) == mag_sig(mag), mags)   # the originating MAG is present
-end
-
-# ── count_mags and enumerate_mags agree ─────────────────────────────────────────
-
-@testitem "enumerate_mags: count matches length, members are valid MAGs" tags = [:unit] begin
-    pag = cgraph(partial(:A, :B), partial(:B, :C); class = PAG)
-    mags = enumerate_mags(pag)
-    @test length(mags) == count_mags(pag)
-    @test all(is_mag, mags)
 end
 
 # ── Every member is in the class; the class is closed ───────────────────────────

@@ -213,7 +213,7 @@ end
 # ── public API ────────────────────────────────────────────────────────────────
 
 """
-    is_valid_adjustment(cg::ADMG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    is_valid_adjustment(cg::Union{ADMG,AbstractAG}, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
 
 Return `true` if `z` is a valid adjustment set for estimating the total causal
 effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
@@ -232,6 +232,16 @@ julia> is_valid_adjustment(admg, :X, :Y)       # empty Z does not block L --> Y
 false
 
 julia> is_valid_adjustment(admg, :X, :Y, [:L]) # conditioning on L blocks the backdoor path
+true
+```
+
+```jldoctest
+julia> mag = cgraph(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG);
+
+julia> is_valid_adjustment(mag, :X, :Y)
+false
+
+julia> is_valid_adjustment(mag, :X, :Y, [:A])
 true
 ```
 
@@ -260,14 +270,15 @@ function is_valid_adjustment(
 end
 
 """
-    all_adjustment_sets(cg::ADMG, x::Symbol, y::Symbol;
+    all_adjustment_sets(cg::Union{ADMG,AbstractAG,AbstractPDAG}, x::Symbol, y::Symbol;
                         minimal::Bool = true, max_size::Int = 3)
         -> Vector{Vector{Symbol}}
 
 Return all valid adjustment sets for the total causal effect of `x` on `y` in
 `cg`, up to size `max_size`.
 
-Sets are validated using the Generalized Adjustment Criterion (GAC); see
+Bruteforces over subsets of the allowed universe of nodes (nodes that are not
+forbidden and not `y`), checking each for validity using
 [`is_valid_adjustment`](@ref). When `minimal = true` (default), only
 inclusion-minimal sets are returned.
 
@@ -279,6 +290,34 @@ julia> admg = cgraph(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class
 julia> all_adjustment_sets(admg, :X, :Y)
 1-element Vector{Vector{Symbol}}:
  [:L]
+```
+
+```jldoctest
+julia> mag = cgraph(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG);
+
+julia> all_adjustment_sets(mag, :X, :Y)
+1-element Vector{Vector{Symbol}}:
+ [:A]
+```
+
+```jldoctest
+julia> mpdag = cgraph(
+           directed(:A, :X), directed(:B, :X),
+           directed(:X, :Y), directed(:A, :Y),
+           undirected(:B, :K), directed(:K, :Y);
+           class = MPDAG,
+       );
+
+julia> all_adjustment_sets(mpdag, :X, :Y)
+2-element Vector{Vector{Symbol}}:
+ [:A, :B]
+ [:A, :K]
+
+julia> all_adjustment_sets(mpdag, :X, :Y, minimal = false)
+3-element Vector{Vector{Symbol}}:
+ [:A, :B]
+ [:A, :K]
+ [:A, :B, :K]
 ```
 """
 function all_adjustment_sets(

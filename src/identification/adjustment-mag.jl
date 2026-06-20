@@ -159,34 +159,6 @@ function _m_separated_pbg_ag(
     return true
 end
 
-"""
-    is_valid_adjustment(cg::AbstractAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
-
-Return `true` if `z` is a valid adjustment set for estimating the total causal
-effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
-
-Uses the same criterion as [`is_valid_adjustment`](@ref ADMG): `z` must contain
-no forbidden node and must m-separate `x` from `y` in the proper backdoor graph
-of `cg`.
-
-# Examples
-
-```jldoctest
-julia> mag = cgraph(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG);
-
-julia> is_valid_adjustment(mag, :X, :Y)
-false
-
-julia> is_valid_adjustment(mag, :X, :Y, [:A])
-true
-```
-
-# References
-
-Perković, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete Graphical
-Characterization and Construction of Adjustment Sets in Markov Equivalence Classes
-of Ancestral Graphs. *Journal of Machine Learning Research*, 18:1-62.
-"""
 function is_valid_adjustment(
     cg::AbstractAG,
     x::Symbol,
@@ -205,33 +177,6 @@ function is_valid_adjustment(
     return _m_separated_pbg_ag(B, xs, ys, z_idxs, removed)
 end
 
-"""
-    all_adjustment_sets(cg::AbstractAG, x::Symbol, y::Symbol;
-                        minimal::Bool = true, max_size::Int = 3)
-        -> Vector{Vector{Symbol}}
-
-Return all valid adjustment sets for the total causal effect of `x` on `y` in
-`cg`, up to size `max_size`.
-
-Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
-(default), only inclusion-minimal sets are returned.
-
-# Examples
-
-```jldoctest
-julia> mag = cgraph(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG);
-
-julia> all_adjustment_sets(mag, :X, :Y)
-1-element Vector{Vector{Symbol}}:
- [:A]
-```
-
-# References
-
-Perković, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete Graphical
-Characterization and Construction of Adjustment Sets in Markov Equivalence Classes
-of Ancestral Graphs. *Journal of Machine Learning Research*, 18:1-62.
-"""
 function all_adjustment_sets(
     cg::AbstractAG,
     x::Symbol,

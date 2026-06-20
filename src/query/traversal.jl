@@ -62,7 +62,7 @@ function topological_sort(cg::DAG)
 end
 
 """
-    ancestors(cg, node::Symbol; open::Bool = true) -> Vector{Symbol}
+    ancestors(cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
 
 Return the ancestors of `node` in `cg`: all nodes from which `node` is
 reachable by following directed edges forward.
@@ -71,9 +71,6 @@ When `open = true` (open definition, default), `node` itself is excluded from
 the result. When `open = false` (closed definition), `node` is included. The
 default can be changed project-wide via Preferences.jl:
 `set_preferences!(CausalStructures, "open" => false)` (restart Julia after).
-
-Applicable to [`DAG`](@ref), [`AbstractPDAG`](@ref),
-[`ADMG`](@ref), and [`AbstractAG`](@ref).
 
 # Examples
 
@@ -126,7 +123,7 @@ function ancestors(
 end
 
 """
-    descendants(cg, node::Symbol; open::Bool = true) -> Vector{Symbol}
+    descendants(cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
 
 Return the descendants of `node` in `cg`: all nodes reachable from `node` by
 following directed edges forward.
@@ -135,9 +132,6 @@ When `open = true` (open definition, default), `node` itself is excluded from
 the result. When `open = false` (closed definition), `node` is included. The
 default can be changed project-wide via Preferences.jl:
 `set_preferences!(CausalStructures, "open" => false)` (restart Julia after).
-
-Applicable to [`DAG`](@ref), [`AbstractPDAG`](@ref),
-[`ADMG`](@ref), and [`AbstractAG`](@ref).
 
 # Examples
 
@@ -814,15 +808,17 @@ function posteriors(cg::AbstractAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
 end
 
 """
-    markov_blanket(cg, node::Symbol) -> Vector{Symbol}
+    markov_blanket(cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG}, node::Symbol) -> Vector{Symbol}
 
-Return the Markov blanket of `node` in `cg`.
+Return the Markov blanket of `node` in `cg`. The Markov blanket is the minimal
+set of nodes that renders `node` conditionally independent of all other nodes in
+the graph.
 
 For a [`DAG`](@ref), the Markov blanket is the set of parents, children, and
-co-parents (other parents of `node`'s children). For a [`PDAG`](@ref) or
-[`CPDAG`](@ref), undirected neighbors are also included. For an [`ADMG`](@ref),
+co-parents (other parents of `node`'s children). For a [`AbstractPDAG`](@ref),
+undirected neighbors are also included. For an [`ADMG`](@ref),
 the blanket is the union of the parents of every node in `node`'s district
-(excluding `node` itself). For an [`AG`](@ref), it is parents, children,
+(excluding `node` itself). For an [`AbstractAG`](@ref), it is parents, children,
 co-parents, spouses, and undirected neighbors.
 
 # Examples
@@ -923,7 +919,7 @@ function markov_blanket(cg::AbstractAG, node::Symbol)
 end
 
 """
-    spouses(cg::Union{ADMG,AG,PAG}, node::Symbol) -> Vector{Symbol}
+    spouses(cg::Union{ADMG,AbstractAG,PAG}, node::Symbol) -> Vector{Symbol}
 
 Return the spouses of `node` in `cg`: nodes connected to `node` via a
 bidirected edge (`node <-> spouse`).

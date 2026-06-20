@@ -104,12 +104,7 @@ edge could be `A --> B` or `A <-> B`, and similarly for
 `C`. The `B --> D` edge is invariant via Zhang's orientation rule R1: since `A`
 and `D` are non-adjacent and `A o-> B --> D`, the tail at `B` is forced in all MAGs.
 
-[`count_mags`](@ref) and [`enumerate_mags`](@ref) let you explore the
-equivalence class:
-
-```@example ec
-count_mags(pag)
-```
+[`enumerate_mags`](@ref) lets you explore the equivalence class:
 
 ```@example ec
 enumerate_mags(pag)

@@ -110,14 +110,13 @@ function _subgraph_edges(edges::Vector{CausalEdge}, keep::Set{Symbol})
     return [edge for edge in edges if edge.src in keep && edge.dst in keep]
 end
 
-# CPDAG subgraphs need not satisfy strong protection (removing a node can
-# orphan a directed edge that was only protected by that node), so downgrade
-# to PDAG. MPDAG subgraphs are always valid MPDAGs: Meek rules fire on edge
-# presence/absence conditions, and removing nodes can only remove edges, never
-# create a new pattern that would fire. MAG subgraphs need not be maximal, so
-# downgrade to AG.
-_subgraph_type(::Type{CPDAG}) = PDAG
-_subgraph_type(::Type{MAG}) = AG
+#  CPDAG -> MPDAG: removing a node can orphan a directed edge that was only
+#  strongly protected by that node (and undirected components need not stay
+#  chordal). The result is still Meek-closed, so it is a valid MPDAG.
+#  PAG -> UNKNOWN: the invariant marks of a Markov equivalence class are not
+#  preserved by vertex restriction, so the result need not be a realizable PAG.
+_subgraph_type(::Type{CPDAG}) = MPDAG
+_subgraph_type(::Type{PAG}) = UNKNOWN
 _subgraph_type(T::Type{<:CausalGraph}) = T
 
 """
@@ -126,10 +125,15 @@ _subgraph_type(T::Type{<:CausalGraph}) = T
 Return the subgraph of `cg` induced by `nodes`: restricted to the given node
 set, keeping only edges whose both endpoints are in `nodes`.
 
-The return type matches `cg` for most classes. [`CPDAG`](@ref) subgraphs are
-returned as [`PDAG`](@ref): removing a node can orphan a directed edge that
-was only strongly protected by that node. [`MAG`](@ref) subgraphs are returned
-as [`AG`](@ref) (maximality need not hold).
+The return type matches `cg` for most classes, but two classes are downgraded, because the
+induced subgraph need not satisfy the stronger class invariant:
+
+- [`CPDAG`](@ref) subgraphs are returned as [`MPDAG`](@ref): removing a node can
+  orphan a directed edge that was only strongly protected by that node, but the
+  result is still Meek-closed and therefore a valid MPDAG.
+- [`PAG`](@ref) subgraphs are returned as [`UNKNOWN`](@ref): the invariant marks
+  of a Markov equivalence class are not preserved by vertex restriction, so the
+  result need not be a valid PAG.
 
 # Examples
 

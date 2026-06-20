@@ -42,11 +42,7 @@ are represented with the [`partial`](@ref) (`o-o`),
 
 The algorithm starts from the skeleton with all marks set to circles, orients
 unshielded colliders as they appear in `cg`, and then applies Zhang's complete
-orientation rules R1-R10 (including discriminating paths and the selection-bias
-and tail rules) until no further mark is implied. Whether a discriminating-path
-triple is a collider (rule R4) is read directly from `cg`.
-
-The result is returned as a [`PAG`](@ref).
+orientation rules R1-R10 until no further mark is implied.
 
 # Examples
 
@@ -486,9 +482,6 @@ construction (2008, Theorem 2):
   - The remaining `o-o` edges form a chordal component, oriented into a DAG with
     no new unshielded colliders by Dor-Tarsi simplicial elimination.
 
-For a closed PAG this never creates a collider with the already-oriented edges, so
-the result is a MAG in the same class.
-
 # Examples
 
 ```jldoctest
@@ -500,8 +493,6 @@ MAG with 3 nodes and 2 edges:
   edges:
     A --> B, C --> B
 ```
-
-Selection bias is supported: undirected (`---`) edges are kept.
 
 ```jldoctest
 julia> mag = cgraph(undirected(:A, :B), undirected(:B, :C), undirected(:C, :D),

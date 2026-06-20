@@ -51,18 +51,31 @@ end
     @test has_edge(sg, :A, :B)
 end
 
-@testitem "subgraph on CPDAG with v-structure: removing collider orphans directed edge" tags =
+@testitem "subgraph on CPDAG with v-structure: orphaned arrow downgrades to MPDAG" tags =
     [:unit] begin
     # V-structure: A-->B<--C, A and C not adjacent.
     # A-->B is protected by VS (C-->B, C not adj A).
     # C-->B is protected by VS (A-->B, A not adj C).
-    # After removing C, A-->B has no protection -- must downgrade to PDAG.
+    # After removing C, A-->B has no strong protection, so it is not a valid
+    # CPDAG. It is still Meek-closed, so it downgrades to a valid MPDAG.
     cpdag = cgraph(directed(:A, :B), directed(:C, :B); class = CPDAG)
     sg = subgraph(cpdag, [:A, :B])
-    @test sg isa PDAG
+    @test sg isa MPDAG
     @test !(sg isa CPDAG)
     @test !is_cpdag(sg)
+    @test is_mpdag(sg)
     @test has_edge(sg, :A, :B)
+end
+
+@testitem "subgraph on CPDAG: chordal undirected component stays MPDAG" tags = [:unit] begin
+    # Undirected triangle is a valid CPDAG; the induced subgraph on two of its
+    # nodes is a single undirected edge, a valid MPDAG.
+    cpdag =
+        cgraph(undirected(:A, :B), undirected(:B, :C), undirected(:A, :C); class = CPDAG)
+    sg = subgraph(cpdag, [:A, :B])
+    @test sg isa MPDAG
+    @test is_mpdag(sg)
+    @test has_edge(sg, :A, :B) || has_edge(sg, :B, :A)
 end
 
 @testitem "subgraph on MPDAG preserves MPDAG class" tags = [:unit] begin
@@ -71,6 +84,48 @@ end
     mpdag = cgraph(directed(:A, :B), directed(:B, :C); class = MPDAG)
     sg = subgraph(mpdag, [:A, :B])
     @test sg isa MPDAG
+end
+
+@testitem "subgraph on MAG stays a (maximal) MAG" tags = [:unit] begin
+    # Ancestry in the subgraph is a subset of ancestry in the original, so any
+    # inducing path between non-adjacent vertices in the subgraph would also be
+    # one in the original -- impossible in a maximal graph. So the subgraph is
+    # itself maximal and stays a MAG.
+    mag = cgraph(directed(:A, :M), bidirected(:M, :B), directed(:A, :B); class = MAG)
+    sg = subgraph(mag, [:A, :B])
+    @test sg isa MAG
+    @test is_mag(sg)
+    @test has_edge(sg, :A, :B)
+    @test Set(nodes(sg)) == Set([:A, :B])
+end
+
+@testitem "subgraph on MAG with bidirected edges stays a MAG" tags = [:unit] begin
+    mag = cgraph(bidirected(:A, :M), bidirected(:M, :B), bidirected(:A, :B); class = MAG)
+    sg = subgraph(mag, [:A, :B])
+    @test sg isa MAG
+    @test is_mag(sg)
+    @test has_edge(sg, :A, :B) || has_edge(sg, :B, :A)
+end
+
+@testitem "subgraph on PAG downgrades to UNKNOWN" tags = [:unit] begin
+    # A o-> B, C o-> B is a valid PAG. Dropping C leaves the lone edge A o-> B,
+    # whose marks are not the invariant marks of any equivalence class, so it is
+    # not a realizable PAG. It is returned as UNKNOWN, preserving the marks.
+    pag = cgraph(partially_directed(:A, :B), partially_directed(:C, :B); class = PAG)
+    sg = subgraph(pag, [:A, :B])
+    @test sg isa UNKNOWN
+    @test !(sg isa PAG)
+    @test Set(nodes(sg)) == Set([:A, :B])
+    @test has_edge(sg, :A, :B)
+end
+
+@testitem "subgraph on PAG: all-circle chain downgrades to UNKNOWN" tags = [:unit] begin
+    # A o-o B o-o C is a valid PAG; the induced subgraph keeps the circle marks
+    # but is returned as UNKNOWN rather than re-validated as a PAG.
+    pag = cgraph(partial(:A, :B), partial(:B, :C); class = PAG)
+    sg = subgraph(pag, [:A, :B])
+    @test sg isa UNKNOWN
+    @test has_edge(sg, :A, :B)
 end
 
 # ── moralize ──────────────────────────────────────────────────────────────────
