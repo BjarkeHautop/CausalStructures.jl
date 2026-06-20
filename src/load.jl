@@ -32,6 +32,7 @@ include("identification/adjustment-mag.jl")
 include("identification/adjustment-pdag.jl")
 include("identification/backdoor.jl")
 include("identification/frontdoor.jl")
+include("identification/iv.jl")
 include("identification/condition-marginalize.jl")
 
 # Graph transformations: skeleton, latent projection, PDAG ops, DAG enumeration

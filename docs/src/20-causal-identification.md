@@ -105,6 +105,37 @@ is_valid_frontdoor(dag2, :X, :Y, [:M])
 frontdoor_set(dag2, :X, :Y)
 ```
 
+## Instrumental variables
+
+When hidden confounders block backdoor adjustment and no suitable mediator exists
+for the frontdoor criterion, an *instrumental variable* (IV) can still identify the causal effect. An instrument `Z` must satisfy two conditions: it must be associated with the treatment `X` (relevance), and it can only affect the
+outcome `Y` through `X` (exclusion restriction).
+
+Consider a graph where `U` is an unobserved confounder and `Z` is an available instrument, but there is no mediator on the path from `X` to `Y`:
+
+```@example id
+dag3 = cgraph(
+       directed(:U, :X), directed(:U, :Y),
+       directed(:Z, :X), directed(:X, :Y);
+       class = DAG,
+)
+Makie.plot(dag3; layout = :stress)
+```
+
+Without a mediator, the frontdoor criterion cannot apply here:
+
+```@example id
+is_valid_frontdoor(dag3, :X, :Y, [:Z])
+```
+
+However, `Z` is a valid instrument since it is d-connected to `X` and d-separated from
+`Y` given `X` in the interventional graph `G_{overline{X}}` (the graph with all
+incoming edges to `X` removed):
+
+```@example id
+is_valid_iv(dag3, :X, :Y, [:Z])
+```
+
 ## ADMG adjustment
 
 In an ADMG (Acyclic Directed Mixed Graph), bidirected edges `<->` represent

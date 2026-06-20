@@ -120,6 +120,8 @@ all_backdoor_sets
 frontdoor_set
 is_valid_frontdoor
 all_frontdoor_sets
+is_valid_iv
+all_iv_sets
 ```
 
 ## Simulation
