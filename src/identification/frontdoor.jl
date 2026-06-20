@@ -89,6 +89,57 @@ function is_valid_frontdoor(
     return true
 end
 
+function is_valid_frontdoor(
+    cg::ADMG,
+    x::Symbol,
+    y::Symbol,
+    z::AbstractVector{Symbol} = Symbol[],
+)
+    B = cg.backend
+    n = length(B.nodes)
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+
+    # Condition (i): Z intercepts all directed paths from X to Y.
+    z_mask = falses(n)
+    for v in z
+        z_mask[node_index(cg, v)] = true
+    end
+    if !z_mask[x_idx]
+        visited = falses(n)
+        visited[x_idx] = true
+        queue = Int[]
+        push!(queue, x_idx)
+        head = 1
+        while head <= length(queue)
+            u = queue[head];
+            head += 1
+            for c in _children_slice(B, u)
+                z_mask[c] && continue
+                c == y_idx && return false
+                visited[c] && continue
+                visited[c] = true
+                push!(queue, c)
+            end
+        end
+    end
+
+    # Condition (ii): X ⊥_m Zi | ∅ in G_X for every Zi ∈ Z.
+    gx = _build_gx(cg, x)
+    for zi in z
+        m_separated(gx, x, zi, Symbol[]) || return false
+    end
+
+    # Condition (iii): Zi ⊥_m Y | {X} ∪ (Z \ {Zi}) in G_Zi for every Zi ∈ Z.
+    for (k, zi) in enumerate(z)
+        gzi = _build_gx(cg, zi)
+        cond = [x; [z[j] for j in eachindex(z) if j != k]]
+        m_separated(gzi, zi, y, cond) || return false
+    end
+
+    return true
+end
+
 # Find Front-door Adjustment Sets. Based on
 # Reference: Jeong, Tian & Bareinboim (2022). Finding and Listing Front-Door
 #   Adjustment Sets. NeurIPS 2022.
@@ -99,6 +150,14 @@ end
 function _build_gx(cg::DAG, x::Symbol)
     gx_edges = filter(e -> !(e.src == x && e.dst_end == Arrow), cg.edges)
     return build_graph(DAG, Set(cg.backend.nodes), gx_edges)
+end
+
+function _build_gx(cg::ADMG, x::Symbol)
+    return build_graph(
+        ADMG,
+        Set(cg.backend.nodes),
+        filter(e -> !(is_directed(e) && e.src == x), cg.edges),
+    )
 end
 
 # Moral adjacency restricted to mask with removed_mask nodes' outgoing edges omitted.

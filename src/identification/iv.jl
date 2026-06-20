@@ -19,6 +19,15 @@ function _build_g_do_x(cg::ADMG, x::Symbol)
     )
 end
 
+# Checks (ii) before (i) to skip the more expensive graph-build when relevance fails.
+function _check_iv(cg, x, y, z, g_do_x)
+    all(zi -> m_separated(cg, zi, x), z) && return false   # (ii) relevance: z must reach x
+    for zi in z
+        m_separated(g_do_x, zi, y, [x]) || return false    # (i)  exclusion: z ⊥ y | x in G_{do_x}
+    end
+    return true
+end
+
 """
     is_valid_iv(cg::Union{DAG,ADMG}, x::Symbol, y::Symbol, z::AbstractVector{Symbol}) -> Bool
 
@@ -72,25 +81,8 @@ Cambridge University Press. Definition 7.4.1.
 """
 function is_valid_iv(cg::Union{DAG,ADMG}, x::Symbol, y::Symbol, z::AbstractVector{Symbol})
     isempty(z) && return false
-    x_idx = node_index(cg, x)
-    y_idx = node_index(cg, y)
-    for zi in z
-        zi_idx = node_index(cg, zi)
-        (zi_idx == x_idx || zi_idx == y_idx) && return false
-    end
-
-    # Condition (ii): at least one zi is m-connected to X in G
-    if all(zi -> m_separated(cg, zi, x), z)
-        return false
-    end
-
-    # Condition (i): every zi is m-separated from Y given {X} in G_{overline{X}}
-    g_do_x = _build_g_do_x(cg, x)
-    for zi in z
-        m_separated(g_do_x, zi, y, [x]) || return false
-    end
-
-    return true
+    any(zi -> zi === x || zi === y, z) && return false
+    return _check_iv(cg, x, y, z, _build_g_do_x(cg, x))
 end
 
 """
@@ -139,6 +131,7 @@ function all_iv_sets(
     y_idx = node_index(cg, y)
 
     universe = [v for v = 1:n if v != x_idx && v != y_idx]
+    g_do_x = _build_g_do_x(cg, x)  # built once; x/y already excluded from universe
 
     valid_sets = Vector{Vector{Symbol}}()
     cur = Int[]
@@ -146,7 +139,7 @@ function all_iv_sets(
     function enumerate!(start, k_rem)
         if k_rem == 0
             z = [B.nodes[v] for v in cur]
-            is_valid_iv(cg, x, y, z) && push!(valid_sets, sort(z))
+            _check_iv(cg, x, y, z, g_do_x) && push!(valid_sets, sort(z))
             return
         end
         for i = start:length(universe)

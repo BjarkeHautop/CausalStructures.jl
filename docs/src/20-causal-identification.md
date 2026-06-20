@@ -1,8 +1,6 @@
 # [Causal Identification](@id causal-identification-guide)
 
-This guide expands on the [Getting Started](@ref) tutorial with more advanced
-identification techniques. We'll explore different adjustment strategies, minimal
-separators, and frontdoor adjustment — all using the same running example graph.
+This guide expands on the [Getting Started](@ref) tutorial with more advanced identification techniques.
 
 ```@example id
 using CausalStructures
@@ -129,7 +127,7 @@ is_valid_frontdoor(dag3, :X, :Y, [:Z])
 ```
 
 However, `Z` is a valid instrument since it is d-connected to `X` and d-separated from
-`Y` given `X` in the interventional graph `G_{overline{X}}` (the graph with all
+`Y` given `X` in the interventional graph ``G_{\overline{X}}`` (the graph with all
 incoming edges to `X` removed):
 
 ```@example id
@@ -141,24 +139,15 @@ is_valid_iv(dag3, :X, :Y, [:Z])
 In an ADMG (Acyclic Directed Mixed Graph), bidirected edges `<->` represent
 hidden common causes directly, without explicitly keeping the unobserved nodes in
 the graph. An ADMG arises naturally by projecting unobserved variables out of a
-DAG via [`latent_project`](@ref). Let's project `U` out of `dag2`:
+DAG via [`latent_project`](@ref). Let's project `U` out of `dag3`:
 
 ```@example id
-admg = latent_project(dag2, [:U])
+admg = latent_project(dag3, [:U])
 ```
 
-Removing `U` introduces `X <-> Y`, which captures its confounding effect. The
-[`is_valid_adjustment`](@ref) and [`all_adjustment_sets`](@ref) functions
-implement the Generalized Adjustment Criterion for ADMGs. With a direct
-bidirected edge between treatment and outcome, no valid adjustment set exists:
+Removing `U` introduces `X <-> Y`, which captures its confounding effect. The functions discussed here above also
+work on ADMGs, e.g.:
 
 ```@example id
-is_valid_adjustment(admg, :X, :Y)
+is_valid_iv(admg, :X, :Y, [:Z])
 ```
-
-```@example id
-all_adjustment_sets(admg, :X, :Y)
-```
-
-This is why the frontdoor approach was needed in the first place. Once we
-project out `U`, backdoor adjustment becomes impossible.

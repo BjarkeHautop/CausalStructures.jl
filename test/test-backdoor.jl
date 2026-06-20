@@ -289,3 +289,84 @@ end
     @test is_valid_adjustment(mag, :X, :Y, z)
     @test z == Symbol[]
 end
+
+# ── ADMG ──────────────────────────────────────────────────────────────────────
+
+@testitem "is_valid_backdoor (ADMG): confounder A blocks backdoor" tags = [:unit] begin
+    # A --> X --> Y with bidirected A <-> Y (hidden cause of A and Y)
+    # A --> X is a backdoor path; conditioning on A blocks it.
+    admg = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = ADMG)
+    @test is_valid_backdoor(admg, :X, :Y, [:A])
+    @test !is_valid_backdoor(admg, :X, :Y)
+end
+
+@testitem "is_valid_backdoor (ADMG): descendant of X rejected" tags = [:unit] begin
+    # X --> M --> Y with A --> X and A --> Y
+    admg = cgraph(
+        directed(:A, :X),
+        directed(:X, :M),
+        directed(:M, :Y),
+        directed(:A, :Y);
+        class = ADMG,
+    )
+    @test !is_valid_backdoor(admg, :X, :Y, [:M])  # M is a descendant of X
+end
+
+@testitem "is_valid_backdoor (ADMG): bidirected confounder requires adjustment" tags =
+    [:unit] begin
+    # X <-> Y: bidirected edge means hidden common cause; empty Z invalid
+    admg = cgraph(bidirected(:X, :Y), directed(:X, :Y); class = ADMG)
+    @test !is_valid_backdoor(admg, :X, :Y)
+end
+
+@testitem "is_valid_backdoor (ADMG): consistent with DAG latent projection" tags = [:unit] begin
+    dag = cgraph(
+        directed(:U, :X),
+        directed(:U, :Y),
+        directed(:A, :X),
+        directed(:X, :Y);
+        class = DAG,
+    )
+    admg = latent_project(dag, [:U])
+    @test is_valid_backdoor(dag, :X, :Y, [:A]) == is_valid_backdoor(admg, :X, :Y, [:A])
+    @test is_valid_backdoor(dag, :X, :Y, Symbol[]) ==
+          is_valid_backdoor(admg, :X, :Y, Symbol[])
+end
+
+@testitem "all_backdoor_sets (ADMG): finds valid adjustment sets" tags = [:unit] begin
+    admg = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = ADMG)
+    sets = all_backdoor_sets(admg, :X, :Y)
+    @test !isempty(sets)
+    @test any(s -> s == [:A], sets)
+    for z in sets
+        @test is_valid_backdoor(admg, :X, :Y, z)
+    end
+end
+
+@testitem "all_backdoor_sets (ADMG): consistent with DAG latent projection" tags = [:unit] begin
+    dag = cgraph(
+        directed(:W, :A),
+        directed(:W, :B),
+        directed(:A, :X),
+        directed(:A, :Y),
+        directed(:X, :Y);
+        class = DAG,
+    )
+    admg = latent_project(dag, [:W])
+    dag_sets = all_backdoor_sets(dag, :X, :Y)
+    admg_sets = all_backdoor_sets(admg, :X, :Y)
+    @test Set(dag_sets) == Set(admg_sets)
+end
+
+@testitem "all_backdoor_sets (ADMG): latent X-Y confounder is not identifiable" tags =
+    [:unit] begin
+    dag = cgraph(
+        directed(:U, :X),
+        directed(:U, :Y),
+        directed(:A, :X),
+        directed(:X, :Y);
+        class = DAG,
+    )
+    admg = latent_project(dag, [:U])
+    @test isempty(all_backdoor_sets(admg, :X, :Y))
+end

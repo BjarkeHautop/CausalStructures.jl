@@ -149,6 +149,71 @@ function all_backdoor_sets(
     return valid_sets
 end
 
+# ── ADMG ──────────────────────────────────────────────────────────────────────
+
+function is_valid_backdoor(
+    cg::ADMG,
+    x::Symbol,
+    y::Symbol,
+    z::AbstractVector{Symbol} = Symbol[],
+)
+    B = cg.backend
+    x_idx = node_index(cg, x)
+    de_x = _descendants_bitmask(B, [x_idx])
+    for v in z
+        de_x[node_index(cg, v)] && return false
+    end
+    gx = build_graph(
+        ADMG,
+        Set(B.nodes),
+        filter(e -> !(is_directed(e) && e.src == x), cg.edges),
+    )
+    return m_separated(gx, x, y, z)
+end
+
+function all_backdoor_sets(
+    cg::ADMG,
+    x::Symbol,
+    y::Symbol;
+    minimal::Bool = true,
+    max_size::Int = 3,
+)
+    B = cg.backend
+    n = length(B.nodes)
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+    de_x = _descendants_bitmask(B, [x_idx])
+    universe = [v for v = 1:n if v != x_idx && v != y_idx && !de_x[v]]
+    gx = build_graph(
+        ADMG,
+        Set(B.nodes),
+        filter(e -> !(is_directed(e) && e.src == x), cg.edges),
+    )
+
+    valid_sets = Vector{Vector{Symbol}}()
+    cur = Int[]
+
+    function enumerate!(start, k_rem)
+        if k_rem == 0
+            z = [B.nodes[v] for v in cur]
+            m_separated(gx, x, y, z) && push!(valid_sets, sort(z))
+            return
+        end
+        for i = start:length(universe)
+            push!(cur, universe[i])
+            enumerate!(i + 1, k_rem - 1)
+            pop!(cur)
+        end
+    end
+
+    for k = 0:min(max_size, length(universe))
+        enumerate!(1, k)
+    end
+
+    minimal && _prune_minimal!(valid_sets)
+    return valid_sets
+end
+
 """
     adjustment_set(cg::DAG, x::Symbol, y::Symbol; type::Symbol = :optimal) -> Vector{Symbol}
 

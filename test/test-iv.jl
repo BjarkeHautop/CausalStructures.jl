@@ -52,15 +52,22 @@ end
     @test !is_valid_iv(cg, :X, :Y, [:Z])
 end
 
-@testitem "is_valid_iv: set with multiple valid instruments" tags = [:unit] begin
-    cg = cgraph(
-        directed(:Z1, :X),
-        directed(:Z2, :X),
-        directed(:X, :Y),
-        directed(:U, :X),
-        directed(:U, :Y);
-        class = DAG,
-    )
+@testsnippet TwoInstrumentGraph begin
+    function _two_iv()
+        cgraph(
+            directed(:Z1, :X),
+            directed(:Z2, :X),
+            directed(:X, :Y),
+            directed(:U, :X),
+            directed(:U, :Y);
+            class = DAG,
+        )
+    end
+end
+
+@testitem "is_valid_iv: set with multiple valid instruments" setup = [TwoInstrumentGraph] tags =
+    [:unit] begin
+    cg = _two_iv()
     @test is_valid_iv(cg, :X, :Y, [:Z1])
     @test is_valid_iv(cg, :X, :Y, [:Z2])
     @test is_valid_iv(cg, :X, :Y, [:Z1, :Z2])
@@ -86,31 +93,17 @@ end
     @test sets[1] == [:Z]
 end
 
-@testitem "all_iv_sets: returns multiple minimal IV sets" tags = [:unit] begin
-    cg = cgraph(
-        directed(:Z1, :X),
-        directed(:Z2, :X),
-        directed(:X, :Y),
-        directed(:U, :X),
-        directed(:U, :Y);
-        class = DAG,
-    )
-    sets = all_iv_sets(cg, :X, :Y; minimal = true)
+@testitem "all_iv_sets: returns multiple minimal IV sets" setup = [TwoInstrumentGraph] tags =
+    [:unit] begin
+    sets = all_iv_sets(_two_iv(), :X, :Y; minimal = true)
     @test length(sets) == 2
     @test any(s -> s == [:Z1], sets)
     @test any(s -> s == [:Z2], sets)
 end
 
-@testitem "all_iv_sets: non-minimal includes supersets" tags = [:unit] begin
-    cg = cgraph(
-        directed(:Z1, :X),
-        directed(:Z2, :X),
-        directed(:X, :Y),
-        directed(:U, :X),
-        directed(:U, :Y);
-        class = DAG,
-    )
-    sets = all_iv_sets(cg, :X, :Y; minimal = false, max_size = 2)
+@testitem "all_iv_sets: non-minimal includes supersets" setup = [TwoInstrumentGraph] tags =
+    [:unit] begin
+    sets = all_iv_sets(_two_iv(), :X, :Y; minimal = false, max_size = 2)
     @test any(s -> s == [:Z1], sets)
     @test any(s -> s == [:Z2], sets)
     @test any(s -> sort(s) == [:Z1, :Z2], sets)

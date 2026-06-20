@@ -554,3 +554,40 @@ end
     zs = all_frontdoor_sets(cg, :X, :Y; restrict = [:A1, :B1, :A2, :B2, :A3, :B3])
     @test length(zs) == 27
 end
+
+# ── ADMG ──────────────────────────────────────────────────────────────────────
+
+@testitem "is_valid_frontdoor (ADMG): classic front-door with bidirected confounder" tags =
+    [:unit] begin
+    # X <-> Y (hidden U), X --> M --> Y: M is the front-door set
+    admg = cgraph(bidirected(:X, :Y), directed(:X, :M), directed(:M, :Y); class = ADMG)
+    @test is_valid_frontdoor(admg, :X, :Y, [:M])
+    @test !is_valid_frontdoor(admg, :X, :Y)
+end
+
+@testitem "is_valid_frontdoor (ADMG): M confounded with X fails condition (ii)" tags =
+    [:unit] begin
+    # X <-> Y and X <-> M: M has a backdoor path from X
+    admg = cgraph(
+        bidirected(:X, :Y),
+        bidirected(:X, :M),
+        directed(:X, :M),
+        directed(:M, :Y);
+        class = ADMG,
+    )
+    @test !is_valid_frontdoor(admg, :X, :Y, [:M])
+end
+
+@testitem "is_valid_frontdoor (ADMG): consistent with DAG latent projection" tags = [:unit] begin
+    dag = cgraph(
+        directed(:U, :X),
+        directed(:U, :Y),
+        directed(:X, :M),
+        directed(:M, :Y);
+        class = DAG,
+    )
+    admg = latent_project(dag, [:U])
+    @test is_valid_frontdoor(dag, :X, :Y, [:M]) == is_valid_frontdoor(admg, :X, :Y, [:M])
+    @test is_valid_frontdoor(dag, :X, :Y, Symbol[]) ==
+          is_valid_frontdoor(admg, :X, :Y, Symbol[])
+end
