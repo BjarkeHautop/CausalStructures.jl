@@ -314,7 +314,6 @@ function generate_graph(
     node_names = [Symbol("V$(i)") for i = 1:n]
 
     total_edges = n * (n - 1) ÷ 2
-    edge_count = 0
     if p !== nothing
         p = Float64(p)
         if !isfinite(p) || p < 0 || p > 1
@@ -351,10 +350,10 @@ function generate_graph(
     return _finalize_generate_graph(class, Set(node_names), node_items, edges)
 end
 
-_finalize_generate_graph(::Type{DAG}, node_set, node_items, edges) =
+_finalize_generate_graph(::Type{DAG}, _node_set, node_items, edges) =
     cgraph(edges, node_items...; class = DAG)
 
-function _finalize_generate_graph(::Type{CPDAG}, node_set, node_items, edges)
+function _finalize_generate_graph(::Type{CPDAG}, node_set, _node_items, edges)
     dag = DAG(node_set, edges)
     return dag_to_cpdag(dag)
 end
@@ -476,8 +475,6 @@ function edges(cg::CausalGraph)
 end
 
 # Pretty printing
-import Base: show
-
 function _edge_display(edge::CausalEdge)
     if edge.src_end == Tail && edge.dst_end == Arrow
         return "-->"
@@ -498,11 +495,11 @@ function _edge_display(edge::CausalEdge)
     return "$(edge.src_end) - $(edge.dst_end)"
 end
 
-function show(io::IO, edge::CausalEdge)
+function Base.show(io::IO, edge::CausalEdge)
     print(io, "$(edge.src) $(_edge_display(edge)) $(edge.dst)")
 end
 
-function show(io::IO, cg::CausalGraph)
+function Base.show(io::IO, cg::CausalGraph)
     B = cg.backend
     typename = typeof(cg)
     n_nodes = length(B.nodes)

@@ -52,7 +52,7 @@ _layout_impl(cg::CausalGraph, ::Val{:circle}; kwargs...) =
     _circle_positions(length(cg.backend.nodes))
 
 # Fallback for any method not handled by a loaded extension.
-function _layout_impl(cg::CausalGraph, ::Val{M}; kwargs...) where {M}
+function _layout_impl(::CausalGraph, ::Val{M}; kwargs...) where {M}
     error(
         "Unknown layout method $(repr(M)).\n" *
         "Built-in: :circle.\n" *
