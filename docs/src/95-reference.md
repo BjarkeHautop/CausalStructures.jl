@@ -133,10 +133,10 @@ simulate_data
 ## Mutation
 
 ```@docs
-add_edge
-remove_edge
-add_node
-remove_node
+add_edges
+remove_edges
+add_nodes
+remove_nodes
 reclass
 ```
 

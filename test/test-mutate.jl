@@ -1,108 +1,143 @@
-# ── add_edge ──────────────────────────────────────────────────────────────────
+# ── add_edges ─────────────────────────────────────────────────────────────────
 
-@testitem "add_edge adds edge and preserves class" tags = [:unit] begin
+@testitem "add_edges adds edge and preserves class" tags = [:unit] begin
     g = cgraph(directed(:A, :B); class = DAG)
-    g2 = add_edge(g, directed(:B, :C))
+    g2 = add_edges(g, directed(:B, :C))
     @test g2 isa DAG
     @test length(g2.edges) == 2
     @test Set(nodes(g2)) == Set([:A, :B, :C])
 end
 
-@testitem "add_edge auto-adds new nodes from edge" tags = [:unit] begin
+@testitem "add_edges adds multiple edges at once" tags = [:unit] begin
     g = cgraph(directed(:A, :B); class = DAG)
-    g2 = add_edge(g, directed(:B, :Z))
+    g2 = add_edges(g, directed(:B, :C), directed(:C, :D))
+    @test length(g2.edges) == 3
+    @test Set(nodes(g2)) == Set([:A, :B, :C, :D])
+end
+
+@testitem "add_edges auto-adds new nodes from edge" tags = [:unit] begin
+    g = cgraph(directed(:A, :B); class = DAG)
+    g2 = add_edges(g, directed(:B, :Z))
     @test :Z in nodes(g2)
     @test length(g2.edges) == 2
 end
 
-@testitem "add_edge does not mutate original" tags = [:unit] begin
+@testitem "add_edges does not mutate original" tags = [:unit] begin
     g = cgraph(directed(:A, :B); class = DAG)
-    _ = add_edge(g, directed(:B, :C))
+    _ = add_edges(g, directed(:B, :C))
     @test length(g.edges) == 1
     @test Set(nodes(g)) == Set([:A, :B])
 end
 
-@testitem "add_edge works on PDAG" tags = [:unit] begin
+@testitem "add_edges works on PDAG" tags = [:unit] begin
     g = cgraph(directed(:A, :B); class = PDAG)
-    g2 = add_edge(g, undirected(:B, :C))
+    g2 = add_edges(g, undirected(:B, :C))
     @test g2 isa PDAG
     @test length(g2.edges) == 2
 end
 
-@testitem "add_edge rejects invalid edge type for class" tags = [:unit] begin
+@testitem "add_edges rejects invalid edge type for class" tags = [:unit] begin
     g = cgraph(directed(:A, :B); class = DAG)
-    @test_throws Exception add_edge(g, undirected(:B, :C))
+    @test_throws Exception add_edges(g, undirected(:B, :C))
 end
 
-@testitem "add_edge on UNKNOWN preserves simple flag" tags = [:unit] begin
+@testitem "add_edges on UNKNOWN preserves simple flag" tags = [:unit] begin
     g = cgraph(directed(:A, :B); simple = false, class = UNKNOWN)
-    g2 = add_edge(g, directed(:A, :B))  # duplicate allowed
+    g2 = add_edges(g, directed(:A, :B))  # duplicate allowed
     @test g2 isa UNKNOWN
     @test length(g2.edges) == 2
 end
 
-# ── remove_edge ───────────────────────────────────────────────────────────────
+# ── remove_edges ──────────────────────────────────────────────────────────────
 
-@testitem "remove_edge removes the correct edge" tags = [:unit] begin
+@testitem "remove_edges removes the correct edge" tags = [:unit] begin
     g = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
-    g2 = remove_edge(g, directed(:A, :B))
+    g2 = remove_edges(g, directed(:A, :B))
     @test length(g2.edges) == 1
     @test g2.edges[1] == directed(:B, :C)
 end
 
-@testitem "remove_edge retains now-isolated nodes" tags = [:unit] begin
+@testitem "remove_edges removes multiple edges at once" tags = [:unit] begin
+    g = cgraph(directed(:A, :B), directed(:B, :C), directed(:A, :C); class = DAG)
+    g2 = remove_edges(g, directed(:A, :B), directed(:B, :C))
+    @test length(g2.edges) == 1
+    @test g2.edges[1] == directed(:A, :C)
+end
+
+@testitem "remove_edges retains now-isolated nodes" tags = [:unit] begin
     g = cgraph(directed(:A, :B); class = DAG)
-    g2 = remove_edge(g, directed(:A, :B))
+    g2 = remove_edges(g, directed(:A, :B))
     @test Set(nodes(g2)) == Set([:A, :B])
     @test length(g2.edges) == 0
 end
 
-@testitem "remove_edge throws on missing edge" tags = [:unit] begin
+@testitem "remove_edges throws on missing edge" tags = [:unit] begin
     g = cgraph(directed(:A, :B); class = DAG)
-    @test_throws ArgumentError remove_edge(g, directed(:B, :C))
+    @test_throws ArgumentError remove_edges(g, directed(:B, :C))
 end
 
-@testitem "remove_edge does not mutate original" tags = [:unit] begin
+@testitem "remove_edges does not mutate original" tags = [:unit] begin
     g = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
-    _ = remove_edge(g, directed(:A, :B))
+    _ = remove_edges(g, directed(:A, :B))
     @test length(g.edges) == 2
 end
 
-# ── add_node ──────────────────────────────────────────────────────────────────
+# ── add_nodes ─────────────────────────────────────────────────────────────────
 
-@testitem "add_node adds an isolated node" tags = [:unit] begin
+@testitem "add_nodes adds an isolated node" tags = [:unit] begin
     g = cgraph(directed(:A, :B); class = DAG)
-    g2 = add_node(g, :C)
+    g2 = add_nodes(g, :C)
     @test :C in nodes(g2)
     @test length(g2.edges) == 1
 end
 
-@testitem "add_node is idempotent for existing node" tags = [:unit] begin
+@testitem "add_nodes adds multiple isolated nodes" tags = [:unit] begin
     g = cgraph(directed(:A, :B); class = DAG)
-    g2 = add_node(g, :A)
+    g2 = add_nodes(g, :C, :D)
+    @test :C in nodes(g2)
+    @test :D in nodes(g2)
+    @test length(nodes(g2)) == 4
+end
+
+@testitem "add_nodes is idempotent for existing nodes" tags = [:unit] begin
+    g = cgraph(directed(:A, :B); class = DAG)
+    g2 = add_nodes(g, :A)
     @test g2 === g
 end
 
-# ── remove_node ───────────────────────────────────────────────────────────────
+@testitem "add_nodes ignores already-present nodes in a mixed call" tags = [:unit] begin
+    g = cgraph(directed(:A, :B); class = DAG)
+    g2 = add_nodes(g, :A, :C)
+    @test Set(nodes(g2)) == Set([:A, :B, :C])
+end
 
-@testitem "remove_node removes node and incident edges" tags = [:unit] begin
+# ── remove_nodes ──────────────────────────────────────────────────────────────
+
+@testitem "remove_nodes removes node and incident edges" tags = [:unit] begin
     g = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
-    g2 = remove_node(g, :B)
+    g2 = remove_nodes(g, :B)
     @test Set(nodes(g2)) == Set([:A, :C])
     @test length(g2.edges) == 0
 end
 
-@testitem "remove_node removes only incident edges" tags = [:unit] begin
+@testitem "remove_nodes removes multiple nodes and their incident edges" tags = [:unit] begin
+    g = cgraph(directed(:A, :B), directed(:B, :C), directed(:A, :C); class = DAG)
+    g2 = remove_nodes(g, :A, :B)
+    @test Set(nodes(g2)) == Set([:C])
+    @test length(g2.edges) == 0
+end
+
+@testitem "remove_nodes removes only incident edges" tags = [:unit] begin
     g = cgraph(directed(:A, :B), directed(:A, :C), directed(:B, :C); class = DAG)
-    g2 = remove_node(g, :B)
+    g2 = remove_nodes(g, :B)
     @test Set(nodes(g2)) == Set([:A, :C])
     @test length(g2.edges) == 1
     @test g2.edges[1] == directed(:A, :C)
 end
 
-@testitem "remove_node throws on missing node" tags = [:unit] begin
+@testitem "remove_nodes throws on missing node" tags = [:unit] begin
     g = cgraph(directed(:A, :B); class = DAG)
-    @test_throws ArgumentError remove_node(g, :Z)
+    @test_throws ArgumentError remove_nodes(g, :Z)
 end
 
 # ── reclass ───────────────────────────────────────────────────────────────────
@@ -124,6 +159,6 @@ end
     g = cgraph(directed(:A, :B); class = DAG)
     u = reclass(g, UNKNOWN; simple = false)
     @test u isa UNKNOWN
-    u2 = add_edge(u, directed(:A, :B))
+    u2 = add_edges(u, directed(:A, :B))
     @test length(u2.edges) == 2
 end
