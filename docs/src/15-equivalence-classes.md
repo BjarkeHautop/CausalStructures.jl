@@ -75,6 +75,26 @@ count_dags(pdag)
 all_adjustment_sets(cpdag, :X, :Z)
 ```
 
+!!! note "Only CPDAGs are guaranteed to be extendable"
+    Every [`CPDAG`](@ref) represents a non-empty Markov equivalence class, so it
+    always admits at least one consistent DAG extension and [`dag_from_pdag`](@ref)
+    is guaranteed to succeed. This is not true for a general [`PDAG`](@ref) or
+    [`MPDAG`](@ref): being acyclic (and, for an MPDAG, closed under Meek's rules)
+    is not sufficient to ensure a consistent extension exists. For example, a
+    chordless undirected cycle is a valid PDAG and MPDAG, yet it cannot be oriented
+    into a DAG without introducing a new v-structure:
+
+    ```@repl ec
+    cg = cgraph(
+        undirected(:A, :B), undirected(:B, :C),
+        undirected(:C, :D), undirected(:D, :A);
+        class = PDAG,
+    )
+    is_cpdag(cg)
+    is_mpdag(cg)
+    dag_from_pdag(cg)
+    ```
+
 ## Equivalence classes of MAGs
 
 Maximal Ancestral Graphs ([`MAG`](@ref)s) naturally arise when some common causes are
