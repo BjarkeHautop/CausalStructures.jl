@@ -57,6 +57,9 @@ The following edge types exists:
 - `partially_undirected(:A, :B)` for `A o-- B`
 - `partial(:A, :B)` for `A o-o B`
 
+These same markers can alternatively be used as a string in `cgraph`, see
+below.
+
 ## Quick Start
 
 Construct graphs by specifying edges and the desired graph class:
@@ -72,6 +75,13 @@ dag = cgraph(
 )
 ```
 
+Edges can also be written directly as a string using the same markers as above
+(`+` fans a marker out to, or in from, several nodes at once):
+
+```julia
+dag = cgraph("U --> X + Y, X --> Y"; class = DAG)
+```
+
 You can then run a variety of causal graph queries, transformations,
 adjustment-set computations, and separation criteria. For example, if `U` is
 unobserved, we can project it out to obtain an `ADMG`.
@@ -79,21 +89,3 @@ unobserved, we can project it out to obtain an `ADMG`.
 ```julia
 admg = latent_project(dag, [:U])
 ```
-
-## To Do
-
-Figure out a better syntax than using `directed(), undirected()`, etc. Ideally,
-we would support edge operators similar to the syntax used in R. I.e. in R you
-can do
-
-```r
-A %o->% B
-```
-
-for a partially directed edge.
-
-Maybe use `Edge(..., directed)` instead of `directed(...)`, and similar for the
-rest?
-
-Allow one of the arguments to be a vector (but not both at the same time)? I.e.
-`directed([:U, :Y], :X)` to mean `directed(:U, :X)` and `directed(:Y, :X)`?

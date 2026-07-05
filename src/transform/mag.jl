@@ -402,9 +402,9 @@ function _mag_to_pag_edges(cg::MAG)
             (mark[alpha, gamma] == Arrow && mark[gamma, alpha] == Circle) || continue
             par = [
                 v for v = 1:n if v != gamma &&
-                adj[v, gamma] &&
-                mark[v, gamma] == Arrow &&
-                mark[gamma, v] == Tail
+                    adj[v, gamma] &&
+                    mark[v, gamma] == Arrow &&
+                    mark[gamma, v] == Tail
             ]
             length(par) >= 2 || continue
             done = false

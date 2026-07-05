@@ -15,10 +15,8 @@ finding adjustment sets. Let's build a DAG with multiple confounders and mediato
 
 ```@example id
 dag = cgraph(
-       directed(:C, :X), directed(:A, :X), directed(:X, :F), directed(:X, :D),
-       directed(:A, :K), directed(:K, :Y),
-       directed(:D, :Y), directed(:D, :G), directed(:Y, :H);
-       class = DAG,
+    "C --> X, A --> X + K, X --> F + D, K --> Y, D --> Y + G, Y --> H";
+    class = DAG,
 )
 Makie.plot(dag; layout = :stress)
 ```
@@ -77,11 +75,7 @@ a graph where an unobserved confounder `U` affects both the treatment `X` and
 outcome `Y`:
 
 ```@example id
-dag2 = cgraph(
-       directed(:U, :X), directed(:U, :Y),
-       directed(:X, :M), directed(:M, :Y);
-       class = DAG,
-)
+dag2 = cgraph("U --> X + Y, X --> M --> Y"; class = DAG)
 Makie.plot(dag2; layout = :stress)
 ```
 
@@ -112,11 +106,7 @@ outcome `Y` through `X` (exclusion restriction).
 Consider a graph where `U` is an unobserved confounder and `Z` is an available instrument, but there is no mediator on the path from `X` to `Y`:
 
 ```@example id
-dag3 = cgraph(
-       directed(:U, :X), directed(:U, :Y),
-       directed(:Z, :X), directed(:X, :Y);
-       class = DAG,
-)
+dag3 = cgraph("U --> X + Y, Z --> X --> Y"; class = DAG)
 Makie.plot(dag3; layout = :stress)
 ```
 

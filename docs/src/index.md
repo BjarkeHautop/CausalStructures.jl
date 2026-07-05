@@ -44,6 +44,8 @@ The following edge types exists:
 - `partially_undirected(:A, :B)` for `A o-- B`
 - `partial(:A, :B)` for `A o-o B`
 
+These same markers can alternatively be used as a string in `cgraph`, see below.
+
 ## Quick Start
 
 Construct graphs by specifying edges and the desired graph class:
@@ -57,6 +59,13 @@ dag = cgraph(
     directed(:X, :Y);
     class = DAG,
 )
+```
+
+Edges can also be written directly as a string using the same markers as above
+(`+` fans a marker out to, or in from, several nodes at once):
+
+```@example example
+dag = cgraph("U --> X + Y, X --> Y"; class = DAG)
 ```
 
 You can then run a variety of causal graph queries, transformations,

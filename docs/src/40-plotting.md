@@ -14,36 +14,8 @@ using CairoMakie
 Pass any `CausalGraph` to `Makie.plot`:
 
 ```@example plot
-dag = cgraph(
-       directed(:A, :X),
-       directed(:A, :Y),
-       directed(:X, :Y);
-       class = DAG,
-)
+dag = cgraph("A --> X + Y, X --> Y"; class = DAG)
 Makie.plot(dag)
-```
-
-## Edge types
-
-All six edge types are rendered with their conventional endpoint marks:
-
-| Constructor                    | Appearance |
-| ------------------------------ | ---------- |
-| `directed(:A, :B)`             | `A --> B`  |
-| `undirected(:A, :B)`           | `A --- B`  |
-| `bidirected(:A, :B)`           | `A <-> B`  |
-| `partially_directed(:A, :B)`   | `A o-> B`  |
-| `partially_undirected(:A, :B)` | `A o-- B`  |
-| `partial(:A, :B)`              | `A o-o B`  |
-
-```@example plot
-cg = cgraph(
-    partial(:X, :Y),
-    partially_directed(:X, :Z),
-    partially_undirected(:Z, :W);
-    class = UNKNOWN,
-)
-Makie.plot(cg)
 ```
 
 ## [Layouts](@id plot-layouts)
@@ -128,12 +100,7 @@ Each edge style argument accepts either a scalar or a `Dict` keyed by (and follo
 Color edges by type:
 
 ```@example plot
-admg = cgraph(
-       directed(:X, :Y),
-       bidirected(:X, :Z),
-       directed(:Z, :Y);
-       class = ADMG,
-)
+admg = cgraph("X --> Y, X <-> Z, Z --> Y"; class = ADMG)
 
 Makie.plot(admg;
     edge_color = Dict(:directed => :steelblue, :bidirected => :crimson),
@@ -156,11 +123,7 @@ Makie.plot(dag;
 the `src --> dst` direction and negative values to the right.
 
 ```@example plot
-admg_pair = cgraph(
-    directed(:X, :Y),
-    bidirected(:X, :Y);
-    class = ADMG,
-)
+admg_pair = cgraph("X --> Y, X <-> Y"; class = ADMG)
 
 Makie.plot(admg_pair;
     curvature = Dict(:directed => 0.2, :bidirected => -0.2),
@@ -170,13 +133,7 @@ Makie.plot(admg_pair;
 ## Combining options
 
 ```@example plot
-admg2 = cgraph(
-    directed(:U, :X),
-    directed(:U, :Y),
-    directed(:X, :Y),
-    bidirected(:X, :Y);
-    class = ADMG,
-)
+admg2 = cgraph("U --> X + Y, X --> Y, X <-> Y"; class = ADMG)
 
 Makie.plot(
     admg2;

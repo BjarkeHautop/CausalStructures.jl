@@ -12,13 +12,7 @@ mediator `M` between `X` and `Y`:
 using CausalStructures
 using CairoMakie
 
-dag = cgraph(
-       directed(:A, :X),
-       directed(:A, :Y),
-       directed(:X, :M),
-       directed(:M, :Y);
-       class = DAG,
-)
+dag = cgraph("A --> X + Y, X --> M --> Y"; class = DAG)
 ```
 
 and visualize it:
@@ -37,12 +31,7 @@ DAG:
 
 ```@example quick
 try
-    invalid_dag = cgraph(
-        directed(:A, :B),
-        directed(:B, :C),
-        directed(:C, :A);  # Creates a cycle!
-        class = DAG,
-    )
+    invalid_dag = cgraph("A --> B --> C --> A"; class = DAG)  # Creates a cycle!
 catch e
     println("Error: $(e.msg)")
 end
