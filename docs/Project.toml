@@ -11,4 +11,5 @@ Preferences = "21216c6a-2e73-6563-6e65-726566657250"
 CausalStructures = {path = ".."}
 
 [compat]
+BenchmarkTools = "1.8.0"
 Documenter = "1"
