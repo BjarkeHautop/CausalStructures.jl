@@ -11,9 +11,12 @@
 # isolated node(s). Consecutive node_groups are connected pairwise (cartesian
 # product) by the edge_op between them, so chains ("A --> B --> C") and fan-outs
 # ("A --> B + C") both fall out of the same rule.
+#
+# A `!` prefix negates a directed marker ("A !--> B", "A !<-- B"), producing a
+# ForbiddenEdge for BackgroundKnowledge; only directed markers may be negated.
 
-const _GRAPH_STR_EDGE_TOKEN_RE = r"\A[<o]?-+[o>]?"
-const _GRAPH_STR_EDGE_MARKS_RE = r"\A([<o])?-+([o>])?\z"
+const _GRAPH_STR_EDGE_TOKEN_RE = r"\A!?[<o]?-+[o>]?"
+const _GRAPH_STR_EDGE_MARKS_RE = r"\A(!)?([<o])?-+([o>])?\z"
 
 function _lex_graph_string(s::AbstractString)
     tokens = Tuple{Symbol,Any}[]
@@ -29,8 +32,16 @@ function _lex_graph_string(s::AbstractString)
         elseif c == '+'
             push!(tokens, (:plus, "+"))
             i = nextind(s, i)
-        elseif c == '<' || c == '-' || (c == 'o' && i < n && s[nextind(s, i)] == '-')
+        elseif c == '!' ||
+               c == '<' ||
+               c == '-' ||
+               (c == 'o' && i < n && s[nextind(s, i)] == '-')
             m = match(_GRAPH_STR_EDGE_TOKEN_RE, SubString(s, i))
+            m === nothing && throw(
+                ArgumentError(
+                    "Unexpected character '$c' at position $i in graph string: $(repr(s))",
+                ),
+            )
             push!(tokens, (:edge, m.match))
             i += ncodeunits(m.match)
         elseif isletter(c) || c == '_'
@@ -53,17 +64,26 @@ end
 
 function _graph_str_edge_marks(tok::AbstractString)
     m = match(_GRAPH_STR_EDGE_MARKS_RE, tok)
-    left, right = m.captures
+    negated, left, right = m.captures
     left_mark = left === nothing ? Tail : (left == "<" ? Arrow : Circle)
     right_mark = right === nothing ? Tail : (right == ">" ? Arrow : Circle)
-    return left_mark, right_mark
+    return negated !== nothing, left_mark, right_mark
 end
 
 # `is_directed`/`is_bidirected`/etc. (edges.jl) only recognize the canonical mark
 # order (e.g. directed is (Tail, Arrow), never (Arrow, Tail)), so a reversed marker
 # like "<--" must swap src/dst rather than keep the literal left/right positions.
 function _graph_str_edge(left::Symbol, right::Symbol, tok::AbstractString)
-    left_mark, right_mark = _graph_str_edge_marks(tok)
+    negated, left_mark, right_mark = _graph_str_edge_marks(tok)
+    if negated
+        (left_mark, right_mark) == (Tail, Arrow) && return ForbiddenEdge(left, right)
+        (left_mark, right_mark) == (Arrow, Tail) && return ForbiddenEdge(right, left)
+        throw(
+            ArgumentError(
+                "Only directed markers can be negated ('!-->' or '!<--'), got '$tok'",
+            ),
+        )
+    end
     if (left_mark, right_mark) in ((Arrow, Tail), (Arrow, Circle), (Tail, Circle))
         return CausalEdge(right, left, right_mark, left_mark)
     end

@@ -98,6 +98,14 @@ function _cgraph_collect(items...)
                 push!(nodes, e.dst)
             end
 
+        elseif item isa RequiredEdge || item isa ForbiddenEdge
+            throw(
+                ArgumentError(
+                    "$(typeof(item)) is background knowledge, not a graph edge; " *
+                    "pass it to BackgroundKnowledge instead",
+                ),
+            )
+
         else
             throw(ArgumentError("Unsupported graph item: $(typeof(item))"))
         end

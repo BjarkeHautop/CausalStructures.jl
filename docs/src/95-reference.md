@@ -45,6 +45,11 @@ bidirected
 partially_directed
 partially_undirected
 partial
+RequiredEdge
+ForbiddenEdge
+required_directed
+forbidden_directed
+BackgroundKnowledge
 ```
 
 ## Queries
@@ -89,6 +94,8 @@ moralize
 subgraph
 dag_from_pdag
 dag_to_cpdag
+dag_to_mpdag
+apply_background_knowledge
 meek_closure
 latent_project
 exogenize

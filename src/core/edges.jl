@@ -89,6 +89,63 @@ UNKNOWN with 3 nodes and 2 edges:
 """
 partial(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Circle, Circle)
 
+"""
+    ForbiddenEdge
+
+A background-knowledge constraint stating that the directed edge `src --> dst` must
+not be present, displayed as `src !--> dst`. It is not a graph edge: it only carries
+meaning inside [`BackgroundKnowledge`](@ref) and is rejected by [`cgraph`](@ref).
+Use [`forbidden_directed`](@ref) to construct one.
+"""
+struct ForbiddenEdge
+    src::Symbol
+    dst::Symbol
+end
+
+"""
+    RequiredEdge
+
+A background-knowledge constraint stating that the directed edge `src --> dst` must be
+present, displayed as `src --> dst`. It is not a graph edge (unlike the
+[`CausalEdge`](@ref) from [`directed`](@ref)): it only carries meaning inside
+[`BackgroundKnowledge`](@ref) and is rejected by [`cgraph`](@ref).
+Use [`required_directed`](@ref) to construct one.
+"""
+struct RequiredEdge
+    src::Symbol
+    dst::Symbol
+end
+
+"""
+    required_directed(src, dst) -> RequiredEdge   # src --> dst
+
+Declare the directed edge `src --> dst` as required background knowledge, for use in
+[`BackgroundKnowledge`](@ref).
+
+# Examples
+
+```jldoctest
+julia> required_directed(:A, :B)
+A --> B
+```
+"""
+required_directed(src::Symbol, dst::Symbol) = RequiredEdge(src, dst)
+
+"""
+    forbidden_directed(src, dst) -> ForbiddenEdge   # src !--> dst
+
+Declare the directed edge `src --> dst` as forbidden background knowledge, for use in
+[`BackgroundKnowledge`](@ref).
+
+# Examples
+
+```jldoctest
+julia> forbidden_directed(:C, :D)
+C !--> D
+```
+"""
+forbidden_directed(src::Symbol, dst::Symbol) = ForbiddenEdge(src, dst)
+
 edge_kind(edge::CausalEdge) = (edge.src_end, edge.dst_end)
 
 is_directed(edge::CausalEdge) = edge_kind(edge) == (Tail, Arrow)

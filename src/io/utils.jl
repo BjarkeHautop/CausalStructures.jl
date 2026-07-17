@@ -499,6 +499,26 @@ function Base.show(io::IO, edge::CausalEdge)
     print(io, "$(edge.src) $(_edge_display(edge)) $(edge.dst)")
 end
 
+function Base.show(io::IO, r::RequiredEdge)
+    print(io, "$(r.src) --> $(r.dst)")
+end
+
+function Base.show(io::IO, f::ForbiddenEdge)
+    print(io, "$(f.src) !--> $(f.dst)")
+end
+
+function Base.show(io::IO, bk::BackgroundKnowledge)
+    n_req = length(bk.required)
+    n_forb = length(bk.forbidden)
+    print(io, "BackgroundKnowledge with $(n_req) required and $(n_forb) forbidden:")
+    for e in bk.required
+        print(io, "\n  required: $(e.src) --> $(e.dst)")
+    end
+    for f in bk.forbidden
+        print(io, "\n  forbidden: $(f.src) !--> $(f.dst)")
+    end
+end
+
 function Base.show(io::IO, cg::CausalGraph)
     B = cg.backend
     typename = typeof(cg)
