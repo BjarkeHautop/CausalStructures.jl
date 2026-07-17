@@ -9,3 +9,11 @@ TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 
 [sources]
 CausalStructures = {path = ".."}
+
+[compat]
+Aqua = "0.8"
+Statistics = "1"
+TOML = "1"
+Test = "1"
+TestItemRunner = "1"
+TestItems = "1"
