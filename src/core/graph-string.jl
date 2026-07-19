@@ -130,7 +130,7 @@ function _parse_graph_statement(tokens::Vector{Tuple{Symbol,Any}})
             push!(items, node(name))
         end
     else
-        for k = 1:length(ops)
+        for k in eachindex(ops)
             for src in groups[k], dst in groups[k+1]
                 push!(items, _graph_str_edge(src, dst, ops[k]))
             end
