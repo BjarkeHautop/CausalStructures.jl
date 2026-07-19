@@ -2,26 +2,6 @@
 #
 # DAG version was adapted from caugi: caugi/R/operations.R
 
-# Returns true iff a and b cannot be m-separated by any Z ⊆ other_nodes,
-# when cond_vars are always included in the conditioning set.
-function _not_m_separated_for_all_subsets(
-    cg::Union{DAG,AbstractAG},
-    a::Symbol,
-    b::Symbol,
-    other_nodes::Vector{Symbol},
-    cond_vars::AbstractVector{Symbol},
-)
-    n = length(other_nodes)
-    for mask = 0:(2^n-1)
-        z = collect(cond_vars)
-        for k = 0:(n-1)
-            (mask >> k) & 1 == 1 && push!(z, other_nodes[k+1])
-        end
-        m_separated(cg, a, b, z) && return false
-    end
-    return true
-end
-
 # Infer directed/undirected/bidirected edge type from anterior relationships.
 # Edge type between a and b is determined by:
 #   a ∈ Ant({b} ∪ S)?  b ∈ Ant({a} ∪ S)?  -->  edge
@@ -140,8 +120,18 @@ function condition_marginalize(
             is_adj = if adj_orig
                 true
             else
+                # a, b are adjacent in the margin iff no subset of the other
+                # remaining nodes (plus cond_vars, always included) separates
+                # them -- i.e. no such separator exists at all.
                 other = [remaining[k] for k = 1:n_rem if k != i && k != j]
-                _not_m_separated_for_all_subsets(cg, a, b, other, cond_vars)
+                sep = minimal_separator(
+                    cg,
+                    a,
+                    b;
+                    include = cond_vars,
+                    restrict = [other; collect(cond_vars)],
+                )
+                sep === nothing
             end
 
             if is_adj
