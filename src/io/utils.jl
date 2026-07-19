@@ -1,4 +1,4 @@
-# Inspired by cgraph
+# Inspired by caugi
 
 """
     is_dag(cg::CausalGraph)   -> Bool
@@ -365,15 +365,17 @@ function generate_graph(
         end
     end
 
-    node_items = [node(v) for v in node_names]
-    return _finalize_generate_graph(class, Set(node_names), node_items, edges)
+    return _finalize_generate_graph(class, Set(node_names), edges)
 end
 
-_finalize_generate_graph(::Type{DAG}, _node_set, node_items, edges) =
-    cgraph(edges, node_items...; class = DAG)
+# validate=false is safe here: edges are all `directed(...)` by construction
+# and oriented by a random topological ordering, so the result is acyclic by
+# construction.
+_finalize_generate_graph(::Type{DAG}, node_set, edges) =
+    DAG(node_set, edges; validate = false)
 
-function _finalize_generate_graph(::Type{CPDAG}, node_set, _node_items, edges)
-    dag = DAG(node_set, edges)
+function _finalize_generate_graph(::Type{CPDAG}, node_set, edges)
+    dag = DAG(node_set, edges; validate = false)
     return dag_to_cpdag(dag)
 end
 

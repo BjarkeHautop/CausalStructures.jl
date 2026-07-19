@@ -284,52 +284,58 @@ function _build_graph(
     ::Type{T},
     nodes,
     edges::Vector{CausalEdge},
-    backend_kwargs...,
+    backend_kwargs...;
+    validate::Bool = true,
 ) where {T<:CausalGraph}
     backend = build_backend(T, nodes, edges)
     cg = T(edges, backend, backend_kwargs...)
-    validate(cg, T)
+    validate && CausalStructures.validate(cg, T)
     return cg
 end
 
-function DAG(nodes, edges::Vector{CausalEdge})
-    return _build_graph(DAG, nodes, edges)
+function DAG(nodes, edges::Vector{CausalEdge}; validate::Bool = true)
+    return _build_graph(DAG, nodes, edges; validate)
 end
 
-function UG(nodes, edges::Vector{CausalEdge})
-    return _build_graph(UG, nodes, edges)
+function UG(nodes, edges::Vector{CausalEdge}; validate::Bool = true)
+    return _build_graph(UG, nodes, edges; validate)
 end
 
-function PDAG(nodes, edges::Vector{CausalEdge})
-    return _build_graph(PDAG, nodes, edges)
+function PDAG(nodes, edges::Vector{CausalEdge}; validate::Bool = true)
+    return _build_graph(PDAG, nodes, edges; validate)
 end
 
-function CPDAG(nodes, edges::Vector{CausalEdge})
-    return _build_graph(CPDAG, nodes, edges)
+function CPDAG(nodes, edges::Vector{CausalEdge}; validate::Bool = true)
+    return _build_graph(CPDAG, nodes, edges; validate)
 end
 
-function MPDAG(nodes, edges::Vector{CausalEdge})
-    return _build_graph(MPDAG, nodes, edges)
+function MPDAG(nodes, edges::Vector{CausalEdge}; validate::Bool = true)
+    return _build_graph(MPDAG, nodes, edges; validate)
 end
 
-function ADMG(nodes, edges::Vector{CausalEdge})
-    return _build_graph(ADMG, nodes, edges)
+function ADMG(nodes, edges::Vector{CausalEdge}; validate::Bool = true)
+    return _build_graph(ADMG, nodes, edges; validate)
 end
 
-function AG(nodes, edges::Vector{CausalEdge})
-    return _build_graph(AG, nodes, edges)
+function AG(nodes, edges::Vector{CausalEdge}; validate::Bool = true)
+    return _build_graph(AG, nodes, edges; validate)
 end
 
-function MAG(nodes, edges::Vector{CausalEdge})
-    return _build_graph(MAG, nodes, edges)
+function MAG(nodes, edges::Vector{CausalEdge}; validate::Bool = true)
+    return _build_graph(MAG, nodes, edges; validate)
 end
 
-function UNKNOWN(nodes, edges::Vector{CausalEdge}; simple::Bool = true)
-    return _build_graph(UNKNOWN, nodes, edges, simple)
+function UNKNOWN(
+    nodes,
+    edges::Vector{CausalEdge};
+    simple::Bool = true,
+    validate::Bool = true,
+)
+    return _build_graph(UNKNOWN, nodes, edges, simple; validate)
 end
 
-function PAG(nodes, edges::Vector{CausalEdge})
-    return _build_graph(PAG, nodes, edges)
+function PAG(nodes, edges::Vector{CausalEdge}; validate::Bool = true)
+    return _build_graph(PAG, nodes, edges; validate)
 end
 
 struct GraphNode
