@@ -297,6 +297,9 @@ Exactly one of `m` (exact edge count) or `p` (edge probability) must be given.
 Edges are sampled uniformly at random over all `n(n-1)/2` possible pairs and
 oriented by a random topological ordering, guaranteeing acyclicity.
 
+Randomness is controlled by either `rng` or `seed`. If `seed` is provided,
+a new RNG is initialized from that seed and `rng` is ignored.
+
 `class` may be [`DAG`](@ref) (default) or [`CPDAG`](@ref); for CPDAG the
 sampled DAG is converted via [`dag_to_cpdag`](@ref).
 
