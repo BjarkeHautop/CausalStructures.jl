@@ -251,24 +251,6 @@ function validation_errors(::AGConstraints, cg::CausalGraph)
     return errors
 end
 
-# Recursive subset search: tries all subsets of candidates[from:end] appended to z.
-function _mag_search_sep(
-    cg::AbstractAG,
-    u::Symbol,
-    v::Symbol,
-    candidates::Vector{Symbol},
-    z::Vector{Symbol},
-    from::Int,
-)
-    m_separated(cg, u, v, z) && return true
-    for i = from:length(candidates)
-        push!(z, candidates[i])
-        _mag_search_sep(cg, u, v, candidates, z, i + 1) && (pop!(z); return true)
-        pop!(z)
-    end
-    return false
-end
-
 function validation_errors(::MAGConstraints, cg::CausalGraph)
     errors = validation_errors(AGConstraints(), cg)
     isempty(errors) || return errors
@@ -283,7 +265,7 @@ function validation_errors(::MAGConstraints, cg::CausalGraph)
         # skip adjacent pairs
         v ∈ _all_nbrs_slice(B, u) && continue
         candidates = [B.nodes[w] for w = 1:n if w != u && w != v]
-        if !_mag_search_sep(ag, B.nodes[u], B.nodes[v], candidates, Symbol[], 1)
+        if minimal_separator(ag, B.nodes[u], B.nodes[v]; restrict = candidates) === nothing
             push!(
                 errors,
                 "MAG maximality violated: no m-separating set exists for " *

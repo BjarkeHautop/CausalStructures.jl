@@ -466,8 +466,8 @@ function ag_to_mag(cg::AG)
         for u = 1:n, v = (u+1):n
             v ∈ _all_nbrs_slice(B, u) && continue
             candidates = [B.nodes[w] for w = 1:n if w != u && w != v]
-            _mag_search_sep(current, B.nodes[u], B.nodes[v], candidates, Symbol[], 1) &&
-                continue
+            minimal_separator(current, B.nodes[u], B.nodes[v]; restrict = candidates) !==
+            nothing && continue
             u_sym, v_sym = B.nodes[u], B.nodes[v]
             if u_sym ∈ ancestors(current, v_sym)
                 push!(all_edges, directed(u_sym, v_sym))
