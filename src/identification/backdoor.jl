@@ -50,40 +50,25 @@ function is_valid_backdoor(
 
     # obs = z ∪ {x}.  Every parent p of x is an ancestor of x ∈ obs, so
     # ancestors(p ∪ y ∪ obs) = ancestors(y ∪ obs) for all parents p.
-    # Precompute the ancestor mask, moral adjacency, and blocked set once.
+    # Precompute the shared ancestor mask and blocked set once.
     obs_idxs = push!(copy(z_idxs), x_idx)
     seeds = unique!([y_idx; obs_idxs])
     mask = _ancestors_bitmask(B, seeds)
-    adj = _moral_adj_in_mask(B, mask)
 
     blocked = falses(n)
     for v in obs_idxs
         blocked[v] = true
     end
 
-    # Reuse BFS buffers across all parent checks.
-    visited = falses(n)
-    queue = Int[]
-    sizehint!(queue, n)
-
+    # Each parent is checked with its own Bayes-ball traversal (rather than one
+    # traversal seeded from all parents at once) so that a collider at x
+    # correctly reopens only when x ∈ obs, without artificially connecting two
+    # parents that only share x as a common child.
     for p_idx in parents_x
         blocked[p_idx] && continue  # p is in obs --> trivially d-separated
-        fill!(visited, false)
-        empty!(queue)
-        visited[p_idx] = true
-        push!(queue, p_idx)
-        head = 1
-        while head <= length(queue)
-            u = queue[head];
-            head += 1
-            for w in adj[u]
-                visited[w] && continue
-                blocked[w] && continue
-                w == y_idx && return false
-                visited[w] = true
-                push!(queue, w)
-            end
-        end
+        p_idx == y_idx && continue  # p is y itself, not a path to check
+        reached = _reachable_dag(B, [p_idx], mask, blocked)
+        reached[y_idx] && return false
     end
     return true
 end
