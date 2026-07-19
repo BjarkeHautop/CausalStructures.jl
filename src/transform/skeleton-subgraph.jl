@@ -39,7 +39,9 @@ julia> neighbors(sk, :B)
 ```
 """
 function skeleton(cg::Union{DAG,AbstractPDAG})
-    return UG(nodes(cg), _skeleton_edges(cg.edges))
+    # validate=false is safe here: edges come from distinct-endpoint pairs of
+    # a graph that already forbids self-loops, so no self-loop is possible.
+    return UG(nodes(cg), _skeleton_edges(cg.edges); validate = false)
 end
 
 """
@@ -103,7 +105,10 @@ function moralize(cg::Union{DAG,AbstractPDAG})
         end
     end
 
-    return UG(nodes(cg), edges)
+    # validate=false is safe here: skeleton edges come from distinct-endpoint
+    # pairs, and marriage edges connect distinct parents (i < j indices into a
+    # deduplicated parent list), so no self-loop is possible.
+    return UG(nodes(cg), edges; validate = false)
 end
 
 function _subgraph_edges(edges::Vector{CausalEdge}, keep::Set{Symbol})

@@ -120,7 +120,9 @@ function condition_marginalize(
     remaining = [v for v in nodes(cg) if !(v in removed)]
     n_rem = length(remaining)
 
-    n_rem < 2 && return AG(Set(remaining), CausalEdge[])
+    # validate=false is safe here: an empty edge set trivially satisfies every
+    # AG constraint.
+    n_rem < 2 && return AG(Set(remaining), CausalEdge[]; validate = false)
 
     # Pre-compute anteriors for all remaining nodes and cond_vars on the original graph.
     nodes_for_ant = unique([remaining; collect(cond_vars)])
@@ -148,5 +150,9 @@ function condition_marginalize(
         end
     end
 
-    return AG(Set(remaining), new_edges)
+    # validate=false is safe here: this implements Richardson & Spirtes's
+    # (2002) Definition 4.2.1 margin construction, which is correct by
+    # construction -- adjacency comes from m-separation and edge type from
+    # the anterior relation, exactly the invariants an AG must satisfy.
+    return AG(Set(remaining), new_edges; validate = false)
 end

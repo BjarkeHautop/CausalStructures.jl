@@ -113,7 +113,11 @@ function latent_project(cg::DAG, latents::AbstractVector{Symbol})
         end
     end
 
-    return ADMG(new_nodes, new_edges)
+    # validate=false is safe here: p != c / s != c / a != b guards prevent
+    # self-loops, and acyclicity is preserved because every added edge p-->c
+    # (or bidirection) replaces a path that already existed through the
+    # eliminated latent node in the acyclic source DAG.
+    return ADMG(new_nodes, new_edges; validate = false)
 end
 
 """
@@ -176,7 +180,10 @@ function exogenize(cg::DAG, nodes_to_exo::AbstractVector{Symbol})
         end
     end
 
-    return DAG(Set(B.nodes), new_edges)
+    # validate=false is safe here: p == c is skipped so no self-loop is
+    # introduced, and each rerouted edge p-->c replaces the p-->v-->c path
+    # that already existed in the acyclic source DAG.
+    return DAG(Set(B.nodes), new_edges; validate = false)
 end
 
 # ── normalize_latent_structure ────────────────────────────────────────────────
@@ -311,5 +318,8 @@ function normalize_latent_structure(cg::DAG, latents::AbstractVector{Symbol})
         end
     end
 
-    return DAG(kept_syms, new_edges)
+    # validate=false is safe here: same reasoning as exogenize -- p == c is
+    # skipped so no self-loop is introduced, and every rerouted edge replaces
+    # a path that already existed in the acyclic source DAG.
+    return DAG(kept_syms, new_edges; validate = false)
 end

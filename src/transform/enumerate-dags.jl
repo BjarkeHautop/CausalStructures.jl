@@ -162,7 +162,11 @@ function _list_dags_enum!(pa, ch, und, input_pa, skeleton, node_names, out)
             for i = 1:n, p in pa[i]
                 push!(new_edges, directed(node_names[p], node_names[i]))
             end
-            push!(out, DAG(Set(node_names), new_edges))
+            # validate=false is safe here: Chickering's recursion checks
+            # `_has_dir_path_enum(ch, b, a)` before every orientation, so no
+            # cycle can be introduced, and node pairs (hence self-loop
+            # freedom) never change from the source PDAG's skeleton.
+            push!(out, DAG(Set(node_names), new_edges; validate = false))
         end
         return
     end

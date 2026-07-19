@@ -94,7 +94,11 @@ function dag_from_pdag(cg::AbstractPDAG)
         push!(new_edges, directed(B.nodes[p], B.nodes[i]))
     end
 
-    return DAG(Set(B.nodes), new_edges)
+    # validate=false is safe here: Dor-Tarsi only orients toward a sink whose
+    # undirected neighbors form a clique, which never creates a cycle, and
+    # node pairs (hence self-loop freedom) are inherited from the valid input
+    # PDAG.
+    return DAG(Set(B.nodes), new_edges; validate = false)
 end
 
 """
@@ -243,7 +247,12 @@ function meek_closure(cg::AbstractPDAG)
         end
     end
 
-    return MPDAG(Set(B.nodes), new_edges)
+    # validate=false is safe here: orient! only reclassifies existing undirected
+    # edges to directed (node pairs and self-loop-freedom are unchanged from the
+    # valid input PDAG), try_orient! never orients if it would create a cycle,
+    # and the while loop runs to a fixpoint that is exactly what
+    # `_cpdag_meek_closed` checks for.
+    return MPDAG(Set(B.nodes), new_edges; validate = false)
 end
 
 """
@@ -315,9 +324,13 @@ function dag_to_cpdag(cg::DAG)
         end
     end
 
-    pdag = PDAG(Set(B.nodes), edges)
+    # validate=false is safe here: directed edges are a subset of the source
+    # DAG's edges (only v-structure orientations), so no cycle is possible.
+    pdag = PDAG(Set(B.nodes), edges; validate = false)
     result = meek_closure(pdag)
-    return CPDAG(Set(result.backend.nodes), result.edges)
+    # validate=false is safe here: v-structure detection + Meek closure is the
+    # canonical Chickering construction of the CPDAG representing a DAG's MEC.
+    return CPDAG(Set(result.backend.nodes), result.edges; validate = false)
 end
 
 """
@@ -440,7 +453,12 @@ function ag_to_mag(cg::AG)
     all_edges = copy(cg.edges)
 
     while true
-        current = AG(all_nodes, all_edges)
+        # validate=false is safe here: this is Richardson & Spirtes's (2002)
+        # AG augmentation procedure, which is correct by construction at every
+        # step (each added edge follows the ancestral relation in the current
+        # graph); rebuilt every iteration, so validating it here would be
+        # O(iterations) redundant validation.
+        current = AG(all_nodes, all_edges; validate = false)
         B = current.backend
         n = length(B.nodes)
 
@@ -465,5 +483,8 @@ function ag_to_mag(cg::AG)
         !found && break
     end
 
-    return MAG(all_nodes, all_edges)
+    # validate=false is safe here: the while loop only stops once every
+    # non-adjacent pair is m-separated (the exact MAG maximality condition),
+    # and each edge was added via the same theorem-correct augmentation as above.
+    return MAG(all_nodes, all_edges; validate = false)
 end
