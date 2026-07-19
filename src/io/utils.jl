@@ -268,6 +268,25 @@ function is_acyclic(cg::CausalGraph)
     return !directed_cycle_detected(cg)
 end
 
+# Floyd's algorithm: k distinct integers sampled uniformly at random from
+# 1:n, in O(k) time/space -- avoids materializing an O(n) permutation when
+# k << n (e.g. a sparse random graph on many nodes). A BitSet (not Set{Int})
+# keeps this faster than randperm across the whole density range, since the
+# candidates are dense integers in 1:n.
+function _sample_distinct(rng, n::Int, k::Int)
+    seen = BitSet()
+    sizehint!(seen, k)
+    for j = (n-k+1):n
+        t = rand(rng, 1:j)
+        if t in seen
+            push!(seen, j)
+        else
+            push!(seen, t)
+        end
+    end
+    return seen
+end
+
 """
     generate_graph(n; m=nothing, p=nothing, class=DAG, seed=nothing, rng=GLOBAL_RNG)
         -> CausalGraph
@@ -329,7 +348,7 @@ function generate_graph(
 
     edges = CausalEdge[]
     if edge_count > 0
-        ranks = randperm(local_rng, total_edges)[1:edge_count]
+        ranks = _sample_distinct(local_rng, total_edges, edge_count)
         row_lengths = (n-1):-1:1
         cum_lengths = cumsum(row_lengths)
         ordering = randperm(local_rng, n)
