@@ -19,36 +19,49 @@ struct PAGConstraints <: GraphConstraints end
 struct UNKNOWNConstraints <: GraphConstraints end
 
 function directed_cycle_detected(cg::CausalGraph)
-    nodes = cg.backend.nodes
+    index = cg.backend.index
+    n = length(cg.backend.nodes)
     edges = cg.edges
 
-    children_map = Dict(node => Set{Symbol}() for node in nodes)
-    indegree = Dict(node => 0 for node in nodes)
-
+    indegree = zeros(Int, n)
+    children = [Int[] for _ = 1:n]
     for edge in edges
         if is_directed(edge)
-            push!(children_map[edge.src], edge.dst)
-            indegree[edge.dst] += 1
+            si = index[edge.src]
+            di = index[edge.dst]
+            push!(children[si], di)
+            indegree[di] += 1
         end
     end
 
-    queue = [node for node in nodes if indegree[node] == 0]
+    # Kahn's algorithm with a preallocated array queue (head-pointer advance
+    # instead of popfirst!, which is O(n) per call on a Vector).
+    queue = Vector{Int}(undef, n)
+    qlen = 0
+    for i = 1:n
+        if indegree[i] == 0
+            qlen += 1
+            queue[qlen] = i
+        end
+    end
 
     visited = 0
-
-    while !isempty(queue)
-        node = popfirst!(queue)
+    head = 1
+    while head <= qlen
+        i = queue[head]
+        head += 1
         visited += 1
 
-        for child in children_map[node]
-            indegree[child] -= 1
-            if indegree[child] == 0
-                push!(queue, child)
+        for c in children[i]
+            indegree[c] -= 1
+            if indegree[c] == 0
+                qlen += 1
+                queue[qlen] = c
             end
         end
     end
 
-    return visited != length(nodes)
+    return visited != n
 end
 
 function validation_errors(::DAGConstraints, cg::CausalGraph)
