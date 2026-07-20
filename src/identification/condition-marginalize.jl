@@ -9,24 +9,12 @@
 #   yes                 yes                 -->  a --- b
 #   yes                 no                  -->  a --> b
 #   no                  yes                 -->  b --> a
-# ant_dict maps each node to its anterior set (open=true, node itself excluded).
-function _edge_from_anteriors(
-    a::Symbol,
-    b::Symbol,
-    cond_vars::AbstractVector{Symbol},
-    ant_dict::Dict{Symbol,Set{Symbol}},
-)
-    ant_b_S = Set{Symbol}([b; collect(cond_vars)])
-    for v in [b; collect(cond_vars)]
-        haskey(ant_dict, v) && union!(ant_b_S, ant_dict[v])
-    end
-    a_in_ant_b_S = a in ant_b_S
-
-    ant_a_S = Set{Symbol}([a; collect(cond_vars)])
-    for v in [a; collect(cond_vars)]
-        haskey(ant_dict, v) && union!(ant_a_S, ant_dict[v])
-    end
-    b_in_ant_a_S = b in ant_a_S
+#
+# `full_ant[v]` is Ant({v} ∪ S) precomputed once per remaining node (S = cond_vars,
+# fixed for the whole call), so each pair only needs two O(1) set membership tests.
+function _edge_from_anteriors(a::Symbol, b::Symbol, full_ant::Dict{Symbol,Set{Symbol}})
+    a_in_ant_b_S = a in full_ant[b]
+    b_in_ant_a_S = b in full_ant[a]
 
     if !a_in_ant_b_S && !b_in_ant_a_S
         return bidirected(a, b)
@@ -111,31 +99,59 @@ function condition_marginalize(
         ant_dict[v] = Set(anteriors(cg, v))  # open=true: v itself excluded
     end
 
+    # Ant(S), S = cond_vars: shared by every pair, so compute it once instead
+    # of re-unioning cond_vars's anterior sets inside the O(n^2) pair loop.
+    cond_closure = Set{Symbol}(cond_vars)
+    for v in cond_vars
+        haskey(ant_dict, v) && union!(cond_closure, ant_dict[v])
+    end
+    full_ant = Dict{Symbol,Set{Symbol}}()
+    for v in remaining
+        s = Set{Symbol}((v,))
+        haskey(ant_dict, v) && union!(s, ant_dict[v])
+        union!(s, cond_closure)
+        full_ant[v] = s
+    end
+
+    # Scratch buffer for the `restrict` argument passed to minimal_separator:
+    # remaining \ {a, b} followed by cond_vars. Reused across all O(n^2) pairs
+    # instead of allocating two fresh arrays (the filter and the concatenation)
+    # per pair.
+    cond_vec = collect(cond_vars)
+    n_cond = length(cond_vec)
+    restrict_buf = Vector{Symbol}(undef, n_rem - 2 + n_cond)
+    restrict_buf[(n_rem-1):end] = cond_vec
+
     new_edges = CausalEdge[]
     for i = 1:(n_rem-1)
         for j = (i+1):n_rem
             a, b = remaining[i], remaining[j]
 
-            adj_orig = b in neighbors(cg, a)
+            adj_orig = has_edge(cg, a, b)
             is_adj = if adj_orig
                 true
             else
                 # a, b are adjacent in the margin iff no subset of the other
                 # remaining nodes (plus cond_vars, always included) separates
                 # them -- i.e. no such separator exists at all.
-                other = [remaining[k] for k = 1:n_rem if k != i && k != j]
+                idx = 0
+                for k = 1:n_rem
+                    (k == i || k == j) && continue
+                    idx += 1
+                    restrict_buf[idx] = remaining[k]
+                end
                 sep = minimal_separator(
                     cg,
                     a,
                     b;
                     include = cond_vars,
-                    restrict = [other; collect(cond_vars)],
+                    restrict = restrict_buf,
                 )
                 sep === nothing
             end
 
             if is_adj
-                push!(new_edges, _edge_from_anteriors(a, b, cond_vars, ant_dict))
+                push!(new_edges, _edge_from_anteriors(a, b, full_ant))
             end
         end
     end

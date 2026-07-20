@@ -9,21 +9,18 @@
 
 # ── DAG ───────────────────────────────────────────────────────────────────────
 #
-# Uses the directional Bayes-ball (_d_connected_restricted_idxs) rather than
-# the mark-based _relax_mixed! approach, since the DAG algorithm predates the
-# generalized mixed-graph version and is kept for clarity.
+# Uses the directional Bayes-ball (_d_connected_restricted_mask) rather than
+# reusing the mark-based _relax_mixed! REACHABLE (separation.jl, used by the
+# ADMG/AG/PDAG paths below). Tried consolidating onto _relax_mixed! and
+# measured it consistently ~15-30% slower.
 
-function _d_connected_restricted_idxs(
+function _d_connected_restricted_mask(
     B::DAGBackend,
     start_idxs::Vector{Int},
-    cond_idxs::Vector{Int},
+    conditioned::BitVector,
     ancestor_mask::BitVector,
 )
     n = length(B.nodes)
-    conditioned = falses(n)
-    for v in cond_idxs
-        conditioned[v] = true
-    end
 
     visited = falses(n, 2)   # col 1 = Down (from parent), col 2 = Up (from child)
     reached = falses(n)
@@ -91,7 +88,7 @@ function _d_connected_restricted_idxs(
         end
     end
 
-    return [i for i in eachindex(reached) if reached[i]]
+    return reached
 end
 
 """
@@ -196,36 +193,45 @@ function minimal_separator(
         [node_index(cg, v) for v in restrict]
     end
 
-    res_set = Set(res_idxs)
-    for v in inc_idxs
-        v ∈ res_set || return nothing
+    if !isempty(inc_idxs)
+        res_set = Set(res_idxs)
+        for v in inc_idxs
+            v ∈ res_set || return nothing
+        end
     end
 
     seeds = unique([x_idx; y_idx; inc_idxs])
     ancestor_mask = _ancestors_bitmask(B, seeds)
 
-    z0_idxs = [r for r in res_idxs if ancestor_mask[r] && r != x_idx && r != y_idx]
-
-    x_star = _d_connected_restricted_idxs(B, [x_idx], z0_idxs, ancestor_mask)
-    x_star_set = Set(x_star)
-
-    y_idx ∈ x_star_set && return nothing
-
-    zx_set = Set{Int}(v for v in z0_idxs if v ∈ x_star_set)
-    for v in inc_idxs
-        push!(zx_set, v)
-    end
-    zx_idxs = collect(zx_set)
-
-    y_star = _d_connected_restricted_idxs(B, [y_idx], zx_idxs, ancestor_mask)
-    y_star_set = Set(y_star)
-
-    z_set = Set{Int}(v for v in zx_idxs if v ∈ y_star_set)
-    for v in inc_idxs
-        push!(z_set, v)
+    z0_mask = falses(n)
+    for r in res_idxs
+        if ancestor_mask[r] && r != x_idx && r != y_idx
+            z0_mask[r] = true
+        end
     end
 
-    return B.nodes[sort!(collect(z_set))]
+    x_star_mask = _d_connected_restricted_mask(B, [x_idx], z0_mask, ancestor_mask)
+    x_star_mask[y_idx] && return nothing
+
+    zx_mask = falses(n)
+    for v = 1:n
+        z0_mask[v] && x_star_mask[v] && (zx_mask[v] = true)
+    end
+    for v in inc_idxs
+        zx_mask[v] = true
+    end
+
+    y_star_mask = _d_connected_restricted_mask(B, [y_idx], zx_mask, ancestor_mask)
+
+    z_mask = falses(n)
+    for v = 1:n
+        zx_mask[v] && y_star_mask[v] && (z_mask[v] = true)
+    end
+    for v in inc_idxs
+        z_mask[v] = true
+    end
+
+    return B.nodes[[v for v = 1:n if z_mask[v]]]
 end
 
 # ── ADMG and AG: shared FINDNEARESTSEP skeleton ────────────────────────────────
@@ -238,19 +244,19 @@ function _find_nearest_sep(
     res_idxs::Vector{Int},
 )
     n = length(B.nodes)
-    res_set = Set(res_idxs)
-    for i in inc_idxs
-        i ∈ res_set || return nothing
+    if !isempty(inc_idxs)
+        res_set = Set(res_idxs)
+        for i in inc_idxs
+            i ∈ res_set || return nothing
+        end
     end
 
     seeds = unique([xs; ys; inc_idxs])
     a_mask = _ancestors_bitmask(B, seeds)
 
     z0_mask = falses(n)
-    xs_set = Set(xs)
-    ys_set = Set(ys)
     for r in res_idxs
-        if a_mask[r] && r ∉ xs_set && r ∉ ys_set
+        if a_mask[r] && r ∉ xs && r ∉ ys
             z0_mask[r] = true
         end
     end
@@ -276,19 +282,19 @@ function _find_nearest_sep(
     res_idxs::Vector{Int},
 )
     n = length(B.nodes)
-    res_set = Set(res_idxs)
-    for i in inc_idxs
-        i ∈ res_set || return nothing
+    if !isempty(inc_idxs)
+        res_set = Set(res_idxs)
+        for i in inc_idxs
+            i ∈ res_set || return nothing
+        end
     end
 
     seeds = unique([xs; ys; inc_idxs])
     a_mask = _anterior_bitmask(B, seeds)   # anteriors, not just ancestors
 
     z0_mask = falses(n)
-    xs_set = Set(xs)
-    ys_set = Set(ys)
     for r in res_idxs
-        if a_mask[r] && r ∉ xs_set && r ∉ ys_set
+        if a_mask[r] && r ∉ xs && r ∉ ys
             z0_mask[r] = true
         end
     end
@@ -417,19 +423,19 @@ function _find_nearest_sep(
     res_idxs::Vector{Int},
 )
     n = length(B.nodes)
-    res_set = Set(res_idxs)
-    for i in inc_idxs
-        i ∈ res_set || return nothing
+    if !isempty(inc_idxs)
+        res_set = Set(res_idxs)
+        for i in inc_idxs
+            i ∈ res_set || return nothing
+        end
     end
 
     seeds = unique([xs; ys; inc_idxs])
     a_mask = _anterior_bitmask(B, seeds)
 
     z0_mask = falses(n)
-    xs_set = Set(xs)
-    ys_set = Set(ys)
     for r in res_idxs
-        if a_mask[r] && r ∉ xs_set && r ∉ ys_set
+        if a_mask[r] && r ∉ xs && r ∉ ys
             z0_mask[r] = true
         end
     end

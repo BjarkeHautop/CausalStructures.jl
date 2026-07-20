@@ -53,6 +53,7 @@ function enumerate_mags(cg::PAG)
 
     target = _pag_signature(cg.edges)
     m = copy(mark)
+    node_set = Set(B.nodes)  # loop-invariant: `collect`ed fresh by build_backend each call, safe to share
 
     for bits = 0:(2^k-1)
         for (idx, (i, j)) in enumerate(circle_pos)
@@ -75,7 +76,7 @@ function enumerate_mags(cg::PAG)
         end
 
         candidate = try
-            MAG(Set(B.nodes), new_edges)
+            MAG(node_set, new_edges)
         catch
             continue   # not a valid MAG
         end

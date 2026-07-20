@@ -153,20 +153,71 @@ function _would_create_v_structure_enum(a::Int, b::Int, pa, ch, und)
     return false
 end
 
-function _list_dags_enum!(pa, ch, und, input_pa, skeleton, node_names, out)
+# Build a DAG directly from index-based parent/child adjacency, skipping the
+# generic edge-list -> counting-sort backend rebuild that `DAG(nodes, edges)`
+# would otherwise repeat identically at every leaf of the recursion: the node
+# set and its ordering/index are fixed for the whole enumeration (only edge
+# orientations change), so `ordered_nodes`/`index` from `build_backend` would
+# just recompute what `node_names`/`index` already are, and the counting sort
+# would just re-derive the same buckets `pa`/`ch` already hold.
+function _dag_from_index_adjacency(
+    node_names::Vector{Symbol},
+    index::Dict{Symbol,Int},
+    pa::Vector{Set{Int}},
+    ch::Vector{Set{Int}},
+)
+    n = length(node_names)
+    deg = Matrix{Int}(undef, 2, n)
+    for i = 1:n
+        deg[1, i] = length(pa[i])
+        deg[2, i] = length(ch[i])
+    end
+
+    colptr = Vector{Int}(undef, n + 1)
+    colptr[1] = 1
+    for i = 1:n
+        colptr[i+1] = colptr[i] + deg[1, i] + deg[2, i]
+    end
+
+    rowval = Vector{Int}(undef, colptr[n+1] - 1)
+    new_edges = CausalEdge[]
+    sizehint!(new_edges, (colptr[n+1] - 1) ÷ 2)  # each edge counted once as a parent-bucket entry
+    for i = 1:n
+        s = colptr[i]
+        np = deg[1, i]
+        k = s
+        for v in pa[i]
+            rowval[k] = v
+            k += 1
+        end
+        pview = view(rowval, s:(s+np-1))
+        sort!(pview)
+        for v in pview
+            push!(new_edges, directed(node_names[v], node_names[i]))
+        end
+
+        off = s + np
+        k = off
+        for v in ch[i]
+            rowval[k] = v
+            k += 1
+        end
+        sort!(view(rowval, off:(off+deg[2, i]-1)))
+    end
+
+    backend = DAGBackend(node_names, index, colptr, deg, rowval)
+    # validate=false is safe here: Chickering's recursion checks
+    # `_has_dir_path_enum(ch, b, a)` before every orientation, so no cycle
+    # can be introduced, and node pairs (hence self-loop freedom) never
+    # change from the source PDAG's skeleton.
+    return DAG(new_edges, backend)
+end
+
+function _list_dags_enum!(pa, ch, und, input_pa, skeleton, node_names, index, out)
     edge = _smallest_und_edge_enum(und)
     if edge === nothing
         if !_has_new_v_structure_enum(pa, input_pa, skeleton)
-            n = length(pa)
-            new_edges = CausalEdge[]
-            for i = 1:n, p in pa[i]
-                push!(new_edges, directed(node_names[p], node_names[i]))
-            end
-            # validate=false is safe here: Chickering's recursion checks
-            # `_has_dir_path_enum(ch, b, a)` before every orientation, so no
-            # cycle can be introduced, and node pairs (hence self-loop
-            # freedom) never change from the source PDAG's skeleton.
-            push!(out, DAG(Set(node_names), new_edges; validate = false))
+            push!(out, _dag_from_index_adjacency(node_names, index, pa, ch))
         end
         return
     end
@@ -183,7 +234,7 @@ function _list_dags_enum!(pa, ch, und, input_pa, skeleton, node_names, out)
         _apply_meek_sets!(pa2, ch2, und2)
         _has_new_v_structure_enum(pa2, input_pa, skeleton) && continue
 
-        _list_dags_enum!(pa2, ch2, und2, input_pa, skeleton, node_names, out)
+        _list_dags_enum!(pa2, ch2, und2, input_pa, skeleton, node_names, index, out)
     end
 end
 
@@ -255,7 +306,7 @@ function enumerate_dags(cg::AbstractPDAG)
     skeleton = _build_skeleton_enum(pa, ch, und)
 
     out = DAG[]
-    _list_dags_enum!(pa, ch, und, input_pa, skeleton, B.nodes, out)
+    _list_dags_enum!(pa, ch, und, input_pa, skeleton, B.nodes, B.index, out)
     return out
 end
 
