@@ -116,7 +116,7 @@ function build_backend(::Type{DAG}, nodes, edges::Vector{CausalEdge})
     return DAGBackend(ordered_nodes, index, colptr, deg, rowval)
 end
 
-_ug_pairs(edge, si, di) = ((si, 1, di), (di, 1, si))
+_ug_pairs(_edge, si, di) = ((si, 1, di), (di, 1, si))
 
 function build_backend(::Type{UG}, nodes, edges::Vector{CausalEdge})
     ordered_nodes = sort!(unique(collect(nodes)))
