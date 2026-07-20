@@ -217,36 +217,6 @@ function _reachable_ag(B::AGBackend, xs::Vector{Int}, a_mask::BitVector, z_mask:
     return reached
 end
 
-# ── Legacy moralization helper ────────────────────────────────────────────────
-#
-# Kept for `is_valid_backdoor` (src/identification/backdoor.jl), which builds
-# this adjacency once and reuses it across many BFS runs (one per parent of
-# `x`) — a genuine win over re-running Bayes-ball per parent.
-
-function _moral_adj_in_mask(B::DAGBackend, mask::BitVector)
-    n = length(B.nodes)
-    adj = [Int[] for _ = 1:n]
-    pa_buf = Int[]
-    for ch = 1:n
-        mask[ch] || continue
-        empty!(pa_buf)
-        for p in _parents_slice(B, ch)
-            mask[p] && push!(pa_buf, p)
-        end
-        for p in pa_buf
-            push!(adj[p], ch)
-            push!(adj[ch], p)
-        end
-        for i in eachindex(pa_buf)
-            for j = (i+1):lastindex(pa_buf)
-                push!(adj[pa_buf[i]], pa_buf[j])
-                push!(adj[pa_buf[j]], pa_buf[i])
-            end
-        end
-    end
-    return adj
-end
-
 # ── d_separated (DAG) ─────────────────────────────────────────────────────────
 
 """
