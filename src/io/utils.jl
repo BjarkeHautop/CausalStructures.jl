@@ -288,8 +288,7 @@ function _sample_distinct(rng, n::Int, k::Int)
 end
 
 """
-    generate_graph(n; m=nothing, p=nothing, class=DAG, seed=nothing, rng=GLOBAL_RNG)
-        -> CausalGraph
+    generate_graph([rng], n; m=nothing, p=nothing, class=DAG) -> CausalGraph
 
 Generate a random graph on `n` nodes named `V1, …, Vn`.
 
@@ -297,8 +296,8 @@ Exactly one of `m` (exact edge count) or `p` (edge probability) must be given.
 Edges are sampled uniformly at random over all `n(n-1)/2` possible pairs and
 oriented by a random topological ordering, guaranteeing acyclicity.
 
-Randomness is controlled by either `rng` or `seed`. If `seed` is provided,
-a new RNG is initialized from that seed and `rng` is ignored.
+`rng` defaults to `Random.default_rng()` when omitted; pass an explicit
+`AbstractRNG` (e.g. `Random.Xoshiro(seed)`) for reproducibility.
 
 `class` may be [`DAG`](@ref) (default) or [`CPDAG`](@ref); for CPDAG the
 sampled DAG is converted via [`dag_to_cpdag`](@ref).
@@ -306,7 +305,7 @@ sampled DAG is converted via [`dag_to_cpdag`](@ref).
 # Examples
 
 ```jldoctest
-julia> cg = generate_graph(4; m = 3, seed = 1);
+julia> cg = generate_graph(4; m = 3);
 
 julia> isa(cg, DAG)
 true
@@ -316,12 +315,11 @@ julia> length(nodes(cg))
 ```
 """
 function generate_graph(
+    rng::Random.AbstractRNG,
     n::Integer;
     m::Union{Nothing,Integer} = nothing,
     p::Union{Nothing,Real} = nothing,
     class::Union{Type{DAG},Type{CPDAG}} = DAG,
-    seed::Union{Nothing,Integer} = nothing,
-    rng = Random.GLOBAL_RNG,
 )
     n = Int(n)
     if n <= 0
@@ -332,7 +330,7 @@ function generate_graph(
         error("Supply exactly one of m or p")
     end
 
-    local_rng = seed === nothing ? rng : Random.Xoshiro(seed)
+    local_rng = rng
     node_names = [Symbol("V$(i)") for i = 1:n]
 
     total_edges = n * (n - 1) ÷ 2
@@ -371,6 +369,8 @@ function generate_graph(
     return _finalize_generate_graph(class, Set(node_names), edges)
 end
 
+generate_graph(n::Integer; kwargs...) = generate_graph(Random.default_rng(), n; kwargs...)
+
 # validate=false is safe here: edges are all `directed(...)` by construction
 # and oriented by a random topological ordering, so the result is acyclic by
 # construction.
@@ -383,8 +383,8 @@ function _finalize_generate_graph(::Type{CPDAG}, node_set, edges)
 end
 
 """
-    simulate_data(cg::DAG; samples, seed=nothing, standardize=true,
-                  coef_range=(-1.0, 1.0), error_sd=1.0, rng=GLOBAL_RNG)
+    simulate_data([rng], cg::DAG; samples, standardize=true,
+                  coef_range=(-1.0, 1.0), error_sd=1.0)
         -> Dict{Symbol, Vector{Float64}}
 
 Simulate observational data from a linear Gaussian structural causal model over
@@ -393,6 +393,9 @@ noise with standard deviation `error_sd`. Edge coefficients are drawn uniformly
 from `coef_range`. If `standardize = true` (default), each variable is
 standardized to zero mean and unit variance.
 
+`rng` defaults to `Random.default_rng()` when omitted; pass an explicit
+`AbstractRNG` (e.g. `Random.Xoshiro(seed)`) for reproducibility.
+
 Returns a `Dict` mapping each node name to a length-`samples` vector.
 
 # Examples
@@ -400,7 +403,7 @@ Returns a `Dict` mapping each node name to a length-`samples` vector.
 ```jldoctest
 julia> cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
 
-julia> data = simulate_data(cg; samples = 100, seed = 42);
+julia> data = simulate_data(cg; samples = 100);
 
 julia> haskey(data, :A)
 true
@@ -410,13 +413,12 @@ julia> length(data[:B])
 ```
 """
 function simulate_data(
+    rng::Random.AbstractRNG,
     cg::DAG;
     samples::Integer,
-    seed = nothing,
     standardize::Bool = true,
     coef_range::Tuple{Float64,Float64} = (-1.0, 1.0),
     error_sd::Float64 = 1.0,
-    rng = Random.GLOBAL_RNG,
 )
     if samples <= 0
         error("samples must be positive")
@@ -426,14 +428,7 @@ function simulate_data(
         error("Cannot simulate data from an empty graph")
     end
 
-    # resolve RNG from seed or provided rng
-    local_rng = if seed === nothing
-        rng
-    elseif isa(seed, Integer)
-        Random.MersenneTwister(seed)
-    else
-        seed
-    end
+    local_rng = rng
 
     ordering = topological_sort(cg)
 
@@ -477,6 +472,8 @@ function simulate_data(
 
     return data
 end
+
+simulate_data(cg::DAG; kwargs...) = simulate_data(Random.default_rng(), cg; kwargs...)
 
 """
     edges(cg::CausalGraph) -> Vector{CausalEdge}

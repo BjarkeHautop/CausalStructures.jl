@@ -5,8 +5,9 @@
 # ── Random-graph structural tests ─────────────────────────────────────────────
 
 @testitem "sim: adjustment_set :backdoor is always valid on random DAGs" tags = [:sim] begin
+    using Random
     for seed = 1:25
-        dag = generate_graph(6; p = 0.4, class = DAG, seed = seed)
+        dag = generate_graph(Random.Xoshiro(seed), 6; p = 0.4, class = DAG)
         ns = nodes(dag)
         x, y = ns[1], ns[2]
         z = adjustment_set(dag, x, y; type = :backdoor)
@@ -15,8 +16,9 @@
 end
 
 @testitem "sim: adjustment_set :parents is always valid on random DAGs" tags = [:sim] begin
+    using Random
     for seed = 1:25
-        dag = generate_graph(6; p = 0.4, class = DAG, seed = seed)
+        dag = generate_graph(Random.Xoshiro(seed), 6; p = 0.4, class = DAG)
         ns = nodes(dag)
         x, y = ns[1], ns[2]
         z = adjustment_set(dag, x, y; type = :parents)
@@ -25,8 +27,9 @@ end
 end
 
 @testitem "sim: all_backdoor_sets - every returned set is valid" tags = [:sim] begin
+    using Random
     for seed = 1:15
-        dag = generate_graph(5; p = 0.45, class = DAG, seed = seed)
+        dag = generate_graph(Random.Xoshiro(seed), 5; p = 0.45, class = DAG)
         ns = nodes(dag)
         x, y = ns[1], ns[2]
         sets = all_backdoor_sets(dag, x, y; minimal = false, max_size = 3)
@@ -38,8 +41,9 @@ end
 
 @testitem "sim: all_backdoor_sets minimal=true - no proper subset is also in the list" tags =
     [:sim] begin
+    using Random
     for seed = 1:15
-        dag = generate_graph(5; p = 0.45, class = DAG, seed = seed)
+        dag = generate_graph(Random.Xoshiro(seed), 5; p = 0.45, class = DAG)
         ns = nodes(dag)
         x, y = ns[1], ns[2]
         sets = all_backdoor_sets(dag, x, y; minimal = true)
@@ -53,8 +57,9 @@ end
 end
 
 @testitem "sim: topological sort - every parent precedes its child" tags = [:sim] begin
+    using Random
     for seed = 1:25
-        dag = generate_graph(8; p = 0.35, class = DAG, seed = seed)
+        dag = generate_graph(Random.Xoshiro(seed), 8; p = 0.35, class = DAG)
         order = topological_sort(dag)
         pos = Dict(v => i for (i, v) in enumerate(order))
         for e in dag.edges
@@ -64,8 +69,9 @@ end
 end
 
 @testitem "sim: ancestors/descendants are mutual in random DAGs" tags = [:sim] begin
+    using Random
     for seed = 1:15
-        dag = generate_graph(7; p = 0.35, class = DAG, seed = seed)
+        dag = generate_graph(Random.Xoshiro(seed), 7; p = 0.35, class = DAG)
         ns = nodes(dag)
         for x in ns[1:min(3, end)]
             for y in ns
@@ -77,8 +83,9 @@ end
 end
 
 @testitem "sim: Markov blanket separates node from non-blanket nodes" tags = [:sim] begin
+    using Random
     for seed = 1:15
-        dag = generate_graph(6; p = 0.4, class = DAG, seed = seed)
+        dag = generate_graph(Random.Xoshiro(seed), 6; p = 0.4, class = DAG)
         ns = nodes(dag)
         for v in ns[1:min(3, end)]
             mb = Set(markov_blanket(dag, v))
@@ -95,11 +102,12 @@ end
 
 @testitem "sim: fork - marginal dependence, conditional independence given common cause" tags =
     [:sim] begin
+    using Random
     using Statistics
     # B --> A, B --> C: A and C share a common cause.
     # d_sep(A, C) = false; d_sep(A, C, [B]) = true.
     dag = cgraph(directed(:B, :A), directed(:B, :C); class = DAG)
-    data = simulate_data(dag; samples = 50_000, standardize = false, seed = 1)
+    data = simulate_data(Random.Xoshiro(1), dag; samples = 50_000, standardize = false)
     n = 50_000
 
     @test !d_separated(dag, :A, :C)
@@ -115,10 +123,11 @@ end
 
 @testitem "sim: chain - marginal dependence, conditional independence given mediator" tags =
     [:sim] begin
+    using Random
     using Statistics
     # A --> B --> C: A and C are d-connected marginally but d-separated given B.
     dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
-    data = simulate_data(dag; samples = 50_000, standardize = false, seed = 2)
+    data = simulate_data(Random.Xoshiro(2), dag; samples = 50_000, standardize = false)
     n = 50_000
 
     @test !d_separated(dag, :A, :C)
@@ -134,10 +143,11 @@ end
 
 @testitem "sim: collider - marginal independence, activation by conditioning on collider" tags =
     [:sim] begin
+    using Random
     using Statistics
     # A --> C <-- B: A and B are d-separated marginally but d-connected given C.
     dag = cgraph(directed(:A, :C), directed(:B, :C); class = DAG)
-    data = simulate_data(dag; samples = 50_000, standardize = false, seed = 3)
+    data = simulate_data(Random.Xoshiro(3), dag; samples = 50_000, standardize = false)
     n = 50_000
 
     @test d_separated(dag, :A, :B)
@@ -152,6 +162,7 @@ end
 end
 
 @testitem "sim: adjustment set removes confounding in regression" tags = [:sim] begin
+    using Random
     using Statistics
     # A --> X, A --> Y, X --> Y (all coefficients fixed to 1.0).
     # True causal effect X --> Y = 1.0.
@@ -163,12 +174,12 @@ end
     @test :A in z
 
     data = simulate_data(
+        Random.Xoshiro(1405),
         dag;
         samples = 100_000,
         standardize = false,
         coef_range = (1.0, 1.0),
         error_sd = 1.0,
-        seed = 1405,
     )
     A, X, Y = data[:A], data[:X], data[:Y]
     n = length(X)

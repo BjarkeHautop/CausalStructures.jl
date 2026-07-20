@@ -741,8 +741,9 @@ end
 end
 
 @testitem "is_cpdag: generate_graph(CPDAG) produces valid CPDAGs" tags = [:unit] begin
+    using Random
     for seed = 1:10
-        cpdag = generate_graph(6; m = 5, class = CPDAG, seed = seed)
+        cpdag = generate_graph(Random.Xoshiro(seed), 6; m = 5, class = CPDAG)
         @test is_cpdag(cpdag)
     end
 end

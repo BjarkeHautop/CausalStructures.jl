@@ -19,8 +19,9 @@ First, let's generate a random DAG with 1000 nodes and an edge probability of
 
 ```@example performance
 using CausalStructures
+using Random
 node_name = :V45
-dag = generate_graph(1000; p = 0.25, seed = 1405)
+dag = generate_graph(Random.Xoshiro(1405), 1000; p = 0.25)
 ```
 
 Let's see how fast common queries such as finding parents, children, ancestors,
@@ -105,8 +106,8 @@ cg <- cgraph::build(cg)
 node_name = "V45"
 
 bench::mark(
-  cgraph = {
-    cgraph::parents(cg, node_name)
+  caugi = {
+    caugi::parents(cg, node_name)
   },
   igraph = {
     igraph::neighbors(ig, node_name, mode = "in")
@@ -133,7 +134,7 @@ Here we compare the speed of retrieving parent nodes across different packages:
 | **Median** | **Package** |
 | ---------- | --------------------- |
 | 0.17 µs | CausalStructures |
-| 2.8 µs | cgraph |
+| 2.8 µs | caugi |
 | 12µs | bnlearn |
 | 127 µs | igraph |
 | 5.1ms | ggm |
