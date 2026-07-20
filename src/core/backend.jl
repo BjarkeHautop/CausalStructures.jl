@@ -97,7 +97,7 @@ function _counting_csr(
     return colptr, deg, rowval
 end
 
-@inline function _dag_pairs(edge, si, di)
+function _dag_pairs(edge, si, di)
     if edge.src_end == Tail && edge.dst_end == Arrow
         return ((di, 1, si), (si, 2, di))
     elseif edge.src_end == Arrow && edge.dst_end == Tail
@@ -116,7 +116,7 @@ function build_backend(::Type{DAG}, nodes, edges::Vector{CausalEdge})
     return DAGBackend(ordered_nodes, index, colptr, deg, rowval)
 end
 
-@inline _ug_pairs(edge, si, di) = ((si, 1, di), (di, 1, si))
+_ug_pairs(edge, si, di) = ((si, 1, di), (di, 1, si))
 
 function build_backend(::Type{UG}, nodes, edges::Vector{CausalEdge})
     ordered_nodes = sort!(unique(collect(nodes)))
@@ -127,7 +127,7 @@ function build_backend(::Type{UG}, nodes, edges::Vector{CausalEdge})
     return UGBackend(ordered_nodes, index, colptr, rowval)
 end
 
-@inline function _pdag_pairs(edge, si, di)
+function _pdag_pairs(edge, si, di)
     if edge.src_end == Tail && edge.dst_end == Arrow
         return ((di, 1, si), (si, 3, di))
     elseif edge.src_end == Arrow && edge.dst_end == Tail
@@ -149,7 +149,7 @@ function build_backend(::Type{<:AbstractPDAG}, nodes, edges::Vector{CausalEdge})
     return PDAGBackend(ordered_nodes, index, colptr, deg, rowval)
 end
 
-@inline function _admg_pairs(edge, si, di)
+function _admg_pairs(edge, si, di)
     if edge.src_end == Tail && edge.dst_end == Arrow
         return ((di, 1, si), (si, 3, di))
     elseif edge.src_end == Arrow && edge.dst_end == Tail
@@ -171,7 +171,7 @@ function build_backend(::Type{ADMG}, nodes, edges::Vector{CausalEdge})
     return ADMGBackend(ordered_nodes, index, colptr, deg, rowval)
 end
 
-@inline function _ag_pairs(edge, si, di)
+function _ag_pairs(edge, si, di)
     if edge.src_end == Tail && edge.dst_end == Arrow
         return ((di, 1, si), (si, 4, di))
     elseif edge.src_end == Arrow && edge.dst_end == Tail
@@ -195,7 +195,7 @@ function build_backend(::Type{<:AbstractAG}, nodes, edges::Vector{CausalEdge})
     return AGBackend(ordered_nodes, index, colptr, deg, rowval)
 end
 
-@inline function _unknown_pairs(edge, si, di)
+function _unknown_pairs(edge, si, di)
     if edge.src_end == Tail && edge.dst_end == Arrow
         return ((di, 1, si), (si, 4, di))
     elseif edge.src_end == Arrow && edge.dst_end == Tail
@@ -230,7 +230,7 @@ function _pag_bucket(near::Endpoint, far::Endpoint)
     return 9                                     # X o-o Y
 end
 
-@inline function _pag_pairs(edge, si, di)
+function _pag_pairs(edge, si, di)
     # At src the near mark is src_end; at dst the near mark is dst_end.
     return (
         (si, _pag_bucket(edge.src_end, edge.dst_end), di),
