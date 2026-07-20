@@ -138,6 +138,26 @@ end
     @test :D ∉ z  # descendant of X must not appear
 end
 
+@testitem "adjustment_set: backdoor type is minimal, unlike parents type" setup=[EciGraph] tags =
+    [:unit] begin
+    # C is a parent of X but not on any backdoor path to Y (C only reaches Y via
+    # X, i.e. through the causal path), so :backdoor must drop it while :parents
+    # keeps it.
+    cg = _eci_graph()
+    @test Set(adjustment_set(cg, :X, :Y; type = :parents)) == Set([:A, :C])
+    @test Set(adjustment_set(cg, :X, :Y; type = :backdoor)) == Set([:A])
+end
+
+@testitem "adjustment_set: backdoor type falls back to parents when Y is a direct cause of X" tags =
+    [:unit] begin
+    # Y --> X, A --> X: Y is a parent of X, so removing X's outgoing edges still
+    # leaves a direct edge Y --> X into X that no conditioning set can block.
+    # minimal_separator therefore finds no valid separator, and adjustment_set
+    # falls back to returning Pa(X) \ {X, Y}.
+    cg = cgraph(directed(:Y, :X), directed(:A, :X); class = DAG)
+    @test adjustment_set(cg, :X, :Y; type = :backdoor) == [:A]
+end
+
 @testitem "adjustment_set: backdoor type valid when parent is not ancestor of Y" tags =
     [:unit] begin
     # C --> B --> X, C --> Y

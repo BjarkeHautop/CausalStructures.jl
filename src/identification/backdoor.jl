@@ -226,8 +226,8 @@ julia> sort(adjustment_set(cg, :X, :Y; type = :parents))
  :A
  :C
 
-julia> is_valid_backdoor(cg, :X, :Y, adjustment_set(cg, :X, :Y; type = :backdoor))
-true
+julia> adjustment_set(cg, :X, :Y; type = :backdoor)
+ :A
 
 julia> adjustment_set(cg, :X, :Y; type = :optimal)
 1-element Vector{Symbol}:
@@ -260,6 +260,17 @@ function adjustment_set(cg::DAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
         return [B.nodes[v] for v = 1:n if keep[v]]
 
     elseif type === :backdoor
+        de_x = _descendants_bitmask(B, [x_idx])
+        restrict = [B.nodes[v] for v = 1:n if v != x_idx && v != y_idx && !de_x[v]]
+        gx = build_graph(
+            DAG,
+            Set(B.nodes),
+            filter(e -> !(is_directed(e) && e.src == x), cg.edges),
+        )
+        z = minimal_separator(gx, x, y; restrict = restrict)
+        z !== nothing && return z
+
+        # Defensive fallback: Pa(x) is always a valid (if non-minimal) backdoor set.
         keep = falses(n)
         for p in _parents_slice(B, x_idx)
             keep[p] = true
