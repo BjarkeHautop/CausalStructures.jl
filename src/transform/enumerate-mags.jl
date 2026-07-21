@@ -79,7 +79,7 @@ function enumerate_mags(cg::PAG)
             continue   # not a valid MAG
         end
 
-        _pag_signature(mag_to_pag(candidate).edges) == target || continue
+        _pag_signature(_mag_to_pag_edges(candidate)) == target || continue
         push!(out, candidate)
     end
     return out

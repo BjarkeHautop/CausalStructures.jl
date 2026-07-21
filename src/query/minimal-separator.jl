@@ -345,6 +345,11 @@ function minimal_separator(
     return result === nothing ? nothing : B.nodes[result]
 end
 
+# TODO(perf): enumerate_mags calls this O(n^2) times per candidate MAG (its
+# maximality check).
+# A buffer-reusing version for that hot loop would probably help a lot, same
+# idea as the is_valid_backdoor/m_separated fixes elsewhere.
+# A fix needs thorough testing
 function minimal_separator(
     cg::AbstractAG,
     x::Symbol,
