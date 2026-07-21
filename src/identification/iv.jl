@@ -28,6 +28,14 @@ function _check_iv(cg, x, y, z, g_do_x)
     return true
 end
 
+# Dispatch to the right single-seed REACHABLE routine so the buffer-reusing
+# candidate loop in `all_iv_sets` below can stay backend-agnostic (it runs
+# for both DAG and ADMG).
+_reachable_single!(visited, q, reached, B::DAGBackend, seed, a_mask, z_mask) =
+    _reachable_dag_single!(visited, q, reached, B, seed, a_mask, z_mask)
+_reachable_single!(visited, q, reached, B::ADMGBackend, seed, a_mask, z_mask) =
+    _reachable_admg_single!(visited, q, reached, B, seed, a_mask, z_mask)
+
 """
     is_valid_iv(cg::Union{DAG,ADMG}, x::Symbol, y::Symbol, z::AbstractVector{Symbol}) -> Bool
 
@@ -124,14 +132,65 @@ function all_iv_sets(
 
     universe = [v for v = 1:n if v != x_idx && v != y_idx]
     g_do_x = _build_g_do_x(cg, x)  # built once; x/y already excluded from universe
+    Bd = g_do_x.backend
 
     valid_sets = Vector{Vector{Symbol}}()
     cur = Int[]
 
+    # Scratch buffers reused across every candidate and every element of z
+    # instead of allocated fresh inside `m_separated` on every call: `_check_iv`
+    # calls it up to 2*|z| times per candidate (once per element for relevance,
+    # once per element for exclusion), so its allocations otherwise dominate.
+    empty_zmask = falses(n)
+    excl_zmask = falses(n)
+    excl_zmask[x_idx] = true
+
+    anc_mask = falses(n)
+    anc_stack = Int[]
+    visited = falses(n, 2)
+    q = Tuple{Int,Int}[]
+    reached = falses(n)
+    seeds_buf = Int[]
+
+    # a ⊥ b | ∅ in backend Bk
+    function separated_empty(Bk, a, b)
+        empty!(seeds_buf)
+        push!(seeds_buf, a, b)
+        _ancestors_bitmask!(anc_mask, anc_stack, Bk, seeds_buf)
+        _reachable_single!(visited, q, reached, Bk, a, anc_mask, empty_zmask)
+        return !reached[b]
+    end
+
+    # a ⊥ b | {x} in backend Bk
+    function separated_given_x(Bk, a, b)
+        empty!(seeds_buf)
+        push!(seeds_buf, a, b, x_idx)
+        _ancestors_bitmask!(anc_mask, anc_stack, Bk, seeds_buf)
+        _reachable_single!(visited, q, reached, Bk, a, anc_mask, excl_zmask)
+        return !reached[b]
+    end
+
+    function valid_candidate(z_idxs::Vector{Int})
+        relevant = false
+        for zi in z_idxs
+            if !separated_empty(B, zi, x_idx)
+                relevant = true
+                break
+            end
+        end
+        relevant || return false
+
+        for zi in z_idxs
+            separated_given_x(Bd, zi, y_idx) || return false
+        end
+        return true
+    end
+
     function enumerate!(start, k_rem)
         if k_rem == 0
-            z = [B.nodes[v] for v in cur]
-            _check_iv(cg, x, y, z, g_do_x) && push!(valid_sets, sort(z))
+            if valid_candidate(cur)
+                push!(valid_sets, sort([B.nodes[v] for v in cur]))
+            end
             return
         end
         for i = start:length(universe)
