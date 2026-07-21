@@ -109,14 +109,54 @@ function all_backdoor_sets(
 
     de_x = _descendants_bitmask(B, [x_idx])
     universe = [v for v = 1:n if v != x_idx && v != y_idx && !de_x[v]]
+    parents_x = _parents_slice(B, x_idx)
 
     valid_sets = Vector{Vector{Symbol}}()
     cur = Int[]
 
+    # Scratch buffers reused across every candidate (and every parent of x
+    # checked within a candidate) instead of allocated fresh each time, as in
+    # `is_valid_backdoor`: this loop calls the equivalent of that check once
+    # per candidate subset, so its per-call allocations otherwise dominate
+    # runtime via GC pressure. `universe` already excludes descendants of x,
+    # so unlike `is_valid_backdoor` this doesn't need to re-check that.
+    blocked = falses(n)
+    seeds_buf = Int[]
+    anc_mask = falses(n)
+    anc_stack = Int[]
+    visited = falses(n, 2)
+    q = Tuple{Int,Int}[]
+    reached = falses(n)
+
+    function valid_candidate(z_idxs::Vector{Int})
+        isempty(parents_x) && return true
+
+        fill!(blocked, false)
+        blocked[x_idx] = true
+        for v in z_idxs
+            blocked[v] = true
+        end
+
+        empty!(seeds_buf)
+        push!(seeds_buf, y_idx, x_idx)
+        append!(seeds_buf, z_idxs)
+        _ancestors_bitmask!(anc_mask, anc_stack, B, seeds_buf)
+
+        for p_idx in parents_x
+            blocked[p_idx] && continue
+            p_idx == y_idx && continue
+            _reachable_dag_single!(visited, q, reached, B, p_idx, anc_mask, blocked)
+            reached[y_idx] && return false
+        end
+        return true
+    end
+
     function enumerate!(start, k_rem)
         if k_rem == 0
-            z = [B.nodes[v] for v in cur]
-            is_valid_backdoor(cg, x, y, z) && push!(valid_sets, sort(z))
+            if valid_candidate(cur)
+                z = [B.nodes[v] for v in cur]
+                push!(valid_sets, sort(z))
+            end
             return
         end
         for i = start:length(universe)
@@ -174,14 +214,45 @@ function all_backdoor_sets(
         Set(B.nodes),
         filter(e -> !(is_directed(e) && e.src == x), cg.edges),
     )
+    # gx's backend always assigns node indices by sorting the (identical) node
+    # set (see `build_backend`), so cg's indices are valid for gx's backend
+    # too -- no Symbol round-trip needed to bridge between them.
+    Bx = gx.backend
 
     valid_sets = Vector{Vector{Symbol}}()
     cur = Int[]
 
+    # Scratch buffers reused across every candidate instead of allocated
+    # fresh per candidate inside `m_separated`/`_reachable_admg`.
+    z_mask = falses(n)
+    seeds_buf = Int[]
+    anc_mask = falses(n)
+    anc_stack = Int[]
+    visited = falses(n, 2)
+    q = Tuple{Int,Int}[]
+    reached = falses(n)
+
+    function valid_candidate(z_idxs::Vector{Int})
+        fill!(z_mask, false)
+        for v in z_idxs
+            z_mask[v] = true
+        end
+        z_mask[x_idx] && return true
+
+        empty!(seeds_buf)
+        push!(seeds_buf, x_idx, y_idx)
+        append!(seeds_buf, z_idxs)
+        _ancestors_bitmask!(anc_mask, anc_stack, Bx, seeds_buf)
+
+        _reachable_admg_single!(visited, q, reached, Bx, x_idx, anc_mask, z_mask)
+        return !reached[y_idx]
+    end
+
     function enumerate!(start, k_rem)
         if k_rem == 0
-            z = [B.nodes[v] for v in cur]
-            m_separated(gx, x, y, z) && push!(valid_sets, sort(z))
+            if valid_candidate(cur)
+                push!(valid_sets, sort([B.nodes[v] for v in cur]))
+            end
             return
         end
         for i = start:length(universe)

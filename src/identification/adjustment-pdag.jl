@@ -99,6 +99,50 @@ function _pdag_moral_adj_filtered(
     return adj
 end
 
+# In-place variant of `_pdag_moral_adj_filtered`: reuses the `adj`
+# array-of-arrays (clearing each bucket with `empty!` instead of reallocating
+# `n` fresh vectors) and the `pa_buf`/`ne_buf` scratch buffers, for hot loops
+# that rebuild the moralized PBG once per candidate adjustment set.
+function _pdag_moral_adj_filtered!(
+    adj::Vector{Vector{Int}},
+    B::PDAGBackend,
+    mask::BitVector,
+    removed::Set{Tuple{Int,Int}},
+    pa_buf::Vector{Int},
+    ne_buf::Vector{Int},
+)
+    n = length(mask)
+    for v = 1:n
+        empty!(adj[v])
+    end
+    for v = 1:n
+        mask[v] || continue
+        empty!(pa_buf)
+        empty!(ne_buf)
+        for p in _parents_slice(B, v)
+            (mask[p] && !((p, v) in removed)) && push!(pa_buf, p)
+        end
+        for w in _undirected_slice(B, v)
+            mask[w] && push!(ne_buf, w)
+        end
+        for p in pa_buf
+            push!(adj[v], p)
+            push!(adj[p], v)
+        end
+        for w in ne_buf
+            push!(adj[v], w)
+        end
+        for i in eachindex(pa_buf), j = (i+1):lastindex(pa_buf)
+            push!(adj[pa_buf[i]], pa_buf[j])
+            push!(adj[pa_buf[j]], pa_buf[i])
+        end
+    end
+    for v = 1:n
+        sort!(unique!(adj[v]))
+    end
+    return adj
+end
+
 # BFS d-sep check in PDAG PBG (moralization-based).
 function _d_separated_pbg_pdag(
     B::PDAGBackend,
@@ -250,9 +294,58 @@ function all_adjustment_sets(
     valid_sets = Vector{Vector{Symbol}}()
     cur = Int[]
 
+    # Scratch buffers reused across every candidate instead of allocated fresh
+    # per candidate inside `_d_separated_pbg_pdag`/`_pdag_moral_adj_filtered`:
+    # this loop rebuilds the moralized PBG once per candidate, so its
+    # allocations (including `n` fresh Vector{Int} buckets per call)
+    # otherwise dominate runtime via GC pressure.
+    seeds_buf = Int[]
+    anc_mask = falses(n)
+    anc_stack = Int[]
+    adj = [Int[] for _ = 1:n]
+    pa_buf = Int[]
+    ne_buf = Int[]
+    blocked = falses(n)
+    visited = falses(n)
+    queue = Int[]
+
+    function valid_candidate(z_idxs::Vector{Int})
+        empty!(seeds_buf)
+        append!(seeds_buf, xs)
+        append!(seeds_buf, ys)
+        append!(seeds_buf, z_idxs)
+        _anterior_bitmask_filtered!(anc_mask, anc_stack, B, seeds_buf, removed)
+        _pdag_moral_adj_filtered!(adj, B, anc_mask, removed, pa_buf, ne_buf)
+
+        fill!(blocked, false)
+        for v in z_idxs
+            blocked[v] = true
+        end
+        fill!(visited, false)
+        empty!(queue)
+        for xi in xs
+            (anc_mask[xi] && !blocked[xi] && !visited[xi]) || continue
+            visited[xi] = true
+            push!(queue, xi)
+        end
+
+        head = 1
+        while head <= length(queue)
+            u = queue[head]
+            head += 1
+            for w in adj[u]
+                (visited[w] || blocked[w]) && continue
+                y_mask[w] && return false
+                visited[w] = true
+                push!(queue, w)
+            end
+        end
+        return true
+    end
+
     function enumerate!(start, k_rem)
         if k_rem == 0
-            if _d_separated_pbg_pdag(B, xs, ys, cur, removed)
+            if valid_candidate(cur)
                 push!(valid_sets, sort([B.nodes[v] for v in cur]))
             end
             return

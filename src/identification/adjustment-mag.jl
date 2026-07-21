@@ -32,6 +32,43 @@ function _anterior_bitmask_filtered(
     return mask
 end
 
+# In-place variant of `_anterior_bitmask_filtered` for hot loops (enumerating
+# adjustment sets) that call it once per candidate: reuses caller-provided
+# `mask`/`stack` buffers instead of allocating fresh ones on every call.
+function _anterior_bitmask_filtered!(
+    mask::BitVector,
+    stack::Vector{Int},
+    B::Union{AGBackend,PDAGBackend},
+    seeds::Vector{Int},
+    removed::Set{Tuple{Int,Int}},
+)
+    fill!(mask, false)
+    empty!(stack)
+    for s in seeds
+        if !mask[s]
+            mask[s] = true
+            push!(stack, s)
+        end
+    end
+    while !isempty(stack)
+        u = pop!(stack)
+        for p in _parents_slice(B, u)
+            (p, u) in removed && continue
+            if !mask[p]
+                mask[p] = true
+                push!(stack, p)
+            end
+        end
+        for w in _undirected_slice(B, u)
+            if !mask[w]
+                mask[w] = true
+                push!(stack, w)
+            end
+        end
+    end
+    return mask
+end
+
 # True if 'from' has an arrowhead pointing into 'at' in the PBG.
 # Directed edges in removed are treated as absent.
 function _arrowhead_at_filtered(
@@ -69,6 +106,79 @@ function _ag_augmented_adj_filtered(
         end
 
         q = Tuple{Int,Int}[]
+
+        for v in _all_nbrs_slice(B, s)
+            mask[v] || continue
+            ((s, v) in removed || (v, s) in removed) && continue
+            push!(adj[s], v)
+            push!(adj[v], s)
+            key = (s - 1) * n + v
+            if visited[key] != stamp
+                visited[key] = stamp
+                push!(q, (s, v))
+            end
+        end
+
+        head = 1
+        while head <= length(q)
+            prev, curr = q[head]
+            head += 1
+            for nxt in _all_nbrs_slice(B, curr)
+                nxt == prev && continue
+                mask[nxt] || continue
+                _arrowhead_at_filtered(B, curr, prev, removed) || continue
+                _arrowhead_at_filtered(B, curr, nxt, removed) || continue
+
+                key = (curr - 1) * n + nxt
+                visited[key] == stamp && continue
+                visited[key] = stamp
+                push!(q, (curr, nxt))
+
+                if nxt != s
+                    push!(adj[s], nxt)
+                    push!(adj[nxt], s)
+                end
+            end
+        end
+    end
+
+    for v = 1:n
+        sort!(unique!(adj[v]))
+    end
+    return adj
+end
+
+# In-place variant of `_ag_augmented_adj_filtered`: reuses the `adj`
+# array-of-arrays (clearing each bucket with `empty!` instead of reallocating
+# `n` fresh vectors), the O(n^2) `visited` stamp array (via `stamp_ref`, only
+# reset on overflow, exactly like the original stamp trick but now persisted
+# across calls instead of allocated fresh per call), and a `q` scratch queue.
+# For hot loops that rebuild the augmented PBG adjacency once per candidate
+# adjustment set -- the O(n^2) `visited` allocation otherwise dominates.
+function _ag_augmented_adj_filtered!(
+    adj::Vector{Vector{Int}},
+    visited::Vector{Int},
+    stamp_ref::Base.RefValue{Int},
+    q::Vector{Tuple{Int,Int}},
+    B::AGBackend,
+    mask::BitVector,
+    removed::Set{Tuple{Int,Int}},
+)
+    n = length(mask)
+    for v = 1:n
+        empty!(adj[v])
+    end
+
+    for s = 1:n
+        mask[s] || continue
+        stamp_ref[] += 1
+        if stamp_ref[] == typemax(Int)
+            fill!(visited, 0)
+            stamp_ref[] = 1
+        end
+        stamp = stamp_ref[]
+
+        empty!(q)
 
         for v in _all_nbrs_slice(B, s)
             mask[v] || continue
@@ -202,9 +312,67 @@ function all_adjustment_sets(
     valid_sets = Vector{Vector{Symbol}}()
     cur = Int[]
 
+    # Scratch buffers reused across every candidate instead of allocated fresh
+    # per candidate inside `_m_separated_pbg_ag`/`_ag_augmented_adj_filtered`:
+    # this loop rebuilds the augmented PBG adjacency once per candidate, and
+    # that rebuild otherwise allocates an O(n^2) `visited` array (among
+    # others) on every single call.
+    seeds_buf = Int[]
+    anc_mask = falses(n)
+    anc_stack = Int[]
+    adj = [Int[] for _ = 1:n]
+    visited_stamp = zeros(Int, n * n)
+    stamp_ref = Ref(0)
+    q_buf = Tuple{Int,Int}[]
+    blocked = falses(n)
+    visited = falses(n)
+    queue = Int[]
+
+    function valid_candidate(z_idxs::Vector{Int})
+        empty!(seeds_buf)
+        append!(seeds_buf, xs)
+        append!(seeds_buf, ys)
+        append!(seeds_buf, z_idxs)
+        _anterior_bitmask_filtered!(anc_mask, anc_stack, B, seeds_buf, removed)
+        _ag_augmented_adj_filtered!(
+            adj,
+            visited_stamp,
+            stamp_ref,
+            q_buf,
+            B,
+            anc_mask,
+            removed,
+        )
+
+        fill!(blocked, false)
+        for v in z_idxs
+            blocked[v] = true
+        end
+        fill!(visited, false)
+        empty!(queue)
+        for xi in xs
+            (anc_mask[xi] && !blocked[xi] && !visited[xi]) || continue
+            visited[xi] = true
+            push!(queue, xi)
+        end
+
+        head = 1
+        while head <= length(queue)
+            u = queue[head]
+            head += 1
+            for w in adj[u]
+                (visited[w] || blocked[w]) && continue
+                y_mask[w] && return false
+                visited[w] = true
+                push!(queue, w)
+            end
+        end
+        return true
+    end
+
     function enumerate!(start, k_rem)
         if k_rem == 0
-            if _m_separated_pbg_ag(B, xs, ys, cur, removed)
+            if valid_candidate(cur)
                 push!(valid_sets, sort([B.nodes[v] for v in cur]))
             end
             return
