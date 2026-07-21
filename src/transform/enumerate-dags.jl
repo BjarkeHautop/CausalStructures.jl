@@ -6,11 +6,25 @@ function _adj_sets(a::Int, b::Int, pa, ch, und)
     return b in pa[a] || b in ch[a] || b in und[a]
 end
 
-function _orient_sets!(a::Int, b::Int, und, pa, ch)
+# `trail` logs every (a, b) orientation made, in order, so `_undo_orient!`
+# can reverse them later instead of the recursion copying pa/ch/und per branch.
+function _orient_sets!(a::Int, b::Int, und, pa, ch, trail::Vector{Tuple{Int,Int}})
     delete!(und[a], b)
     delete!(und[b], a)
     push!(ch[a], b)
     push!(pa[b], a)
+    push!(trail, (a, b))
+end
+
+# Undo every orientation logged on `trail` since `mark`, in reverse order.
+function _undo_orient!(pa, ch, und, trail::Vector{Tuple{Int,Int}}, mark::Int)
+    while length(trail) > mark
+        a, b = pop!(trail)
+        delete!(ch[a], b)
+        delete!(pa[b], a)
+        push!(und[a], b)
+        push!(und[b], a)
+    end
 end
 
 function _has_dir_path_enum(ch, src::Int, tgt::Int)
@@ -30,14 +44,14 @@ function _has_dir_path_enum(ch, src::Int, tgt::Int)
     return false
 end
 
-function _try_orient_sets!(a::Int, b::Int, und, pa, ch)
+function _try_orient_sets!(a::Int, b::Int, und, pa, ch, trail::Vector{Tuple{Int,Int}})
     b in und[a] || return false
     _has_dir_path_enum(ch, b, a) && return false
-    _orient_sets!(a, b, und, pa, ch)
+    _orient_sets!(a, b, und, pa, ch, trail)
     return true
 end
 
-function _apply_meek_sets!(pa, ch, und)
+function _apply_meek_sets!(pa, ch, und, trail::Vector{Tuple{Int,Int}})
     n = length(pa)
     adjacent(a, b) = _adj_sets(a, b, pa, ch, und)
     creates_collider(b, c) = any(p -> p != b && !adjacent(p, b), pa[c])
@@ -53,7 +67,7 @@ function _apply_meek_sets!(pa, ch, und)
             for c in collect(und[b])
                 any(a -> !adjacent(a, c), pb) || continue
                 creates_collider(b, c) && continue
-                _try_orient_sets!(b, c, und, pa, ch) && (changed = true)
+                _try_orient_sets!(b, c, und, pa, ch, trail) && (changed = true)
             end
         end
 
@@ -61,9 +75,9 @@ function _apply_meek_sets!(pa, ch, und)
         for a = 1:n
             for b in collect(und[a])
                 if any(w -> b in ch[w], ch[a])
-                    _try_orient_sets!(a, b, und, pa, ch) && (changed = true)
+                    _try_orient_sets!(a, b, und, pa, ch, trail) && (changed = true)
                 elseif any(w -> a in ch[w], ch[b])
-                    _try_orient_sets!(b, a, und, pa, ch) && (changed = true)
+                    _try_orient_sets!(b, a, und, pa, ch, trail) && (changed = true)
                 end
             end
         end
@@ -78,7 +92,7 @@ function _apply_meek_sets!(pa, ch, und)
                     for j = (i+1):length(pb)
                         c, d = pb[i], pb[j]
                         if !adjacent(c, d) && c in und[a] && d in und[a]
-                            if _try_orient_sets!(a, b, und, pa, ch)
+                            if _try_orient_sets!(a, b, und, pa, ch, trail)
                                 changed = true
                             end
                             oriented_b = true
@@ -93,9 +107,9 @@ function _apply_meek_sets!(pa, ch, und)
         for a = 1:n
             for b in collect(und[a])
                 if _has_dir_path_enum(ch, a, b)
-                    _try_orient_sets!(a, b, und, pa, ch) && (changed = true)
+                    _try_orient_sets!(a, b, und, pa, ch, trail) && (changed = true)
                 elseif _has_dir_path_enum(ch, b, a)
-                    _try_orient_sets!(b, a, und, pa, ch) && (changed = true)
+                    _try_orient_sets!(b, a, und, pa, ch, trail) && (changed = true)
                 end
             end
         end
@@ -213,7 +227,7 @@ function _dag_from_index_adjacency(
     return DAG(new_edges, backend)
 end
 
-function _list_dags_enum!(pa, ch, und, input_pa, skeleton, node_names, index, out)
+function _list_dags_enum!(pa, ch, und, input_pa, skeleton, node_names, index, out, trail)
     edge = _smallest_und_edge_enum(und)
     if edge === nothing
         if !_has_new_v_structure_enum(pa, input_pa, skeleton)
@@ -227,18 +241,21 @@ function _list_dags_enum!(pa, ch, und, input_pa, skeleton, node_names, index, ou
         _would_create_v_structure_enum(a, b, pa, ch, und) && continue
         _has_dir_path_enum(ch, b, a) && continue
 
-        pa2 = [copy(s) for s in pa]
-        ch2 = [copy(s) for s in ch]
-        und2 = [copy(s) for s in und]
-        _orient_sets!(a, b, und2, pa2, ch2)
-        _apply_meek_sets!(pa2, ch2, und2)
-        _has_new_v_structure_enum(pa2, input_pa, skeleton) && continue
-
-        _list_dags_enum!(pa2, ch2, und2, input_pa, skeleton, node_names, index, out)
+        # Orient (a, b) and its Meek closure in place, recurse, then undo back
+        # to `mark` -- rather than copying all n parent/child/undirected sets
+        # per branch -- so both orientations of this edge can still be
+        # explored independently from the same shared state.
+        mark = length(trail)
+        _orient_sets!(a, b, und, pa, ch, trail)
+        _apply_meek_sets!(pa, ch, und, trail)
+        if !_has_new_v_structure_enum(pa, input_pa, skeleton)
+            _list_dags_enum!(pa, ch, und, input_pa, skeleton, node_names, index, out, trail)
+        end
+        _undo_orient!(pa, ch, und, trail, mark)
     end
 end
 
-function _count_dags_enum!(pa, ch, und, input_pa, skeleton, count)
+function _count_dags_enum!(pa, ch, und, input_pa, skeleton, count, trail)
     edge = _smallest_und_edge_enum(und)
     if edge === nothing
         if !_has_new_v_structure_enum(pa, input_pa, skeleton)
@@ -252,14 +269,13 @@ function _count_dags_enum!(pa, ch, und, input_pa, skeleton, count)
         _would_create_v_structure_enum(a, b, pa, ch, und) && continue
         _has_dir_path_enum(ch, b, a) && continue
 
-        pa2 = [copy(s) for s in pa]
-        ch2 = [copy(s) for s in ch]
-        und2 = [copy(s) for s in und]
-        _orient_sets!(a, b, und2, pa2, ch2)
-        _apply_meek_sets!(pa2, ch2, und2)
-        _has_new_v_structure_enum(pa2, input_pa, skeleton) && continue
-
-        _count_dags_enum!(pa2, ch2, und2, input_pa, skeleton, count)
+        mark = length(trail)
+        _orient_sets!(a, b, und, pa, ch, trail)
+        _apply_meek_sets!(pa, ch, und, trail)
+        if !_has_new_v_structure_enum(pa, input_pa, skeleton)
+            _count_dags_enum!(pa, ch, und, input_pa, skeleton, count, trail)
+        end
+        _undo_orient!(pa, ch, und, trail, mark)
     end
 end
 
@@ -305,7 +321,8 @@ function enumerate_dags(cg::AbstractPDAG)
     skeleton = _build_skeleton_enum(pa, ch, und)
 
     out = DAG[]
-    _list_dags_enum!(pa, ch, und, input_pa, skeleton, B.nodes, B.index, out)
+    trail = Tuple{Int,Int}[]
+    _list_dags_enum!(pa, ch, und, input_pa, skeleton, B.nodes, B.index, out, trail)
     return out
 end
 
@@ -342,6 +359,7 @@ function count_dags(cg::AbstractPDAG)
     skeleton = _build_skeleton_enum(pa, ch, und)
 
     count = Ref(0)
-    _count_dags_enum!(pa, ch, und, input_pa, skeleton, count)
+    trail = Tuple{Int,Int}[]
+    _count_dags_enum!(pa, ch, und, input_pa, skeleton, count, trail)
     return count[]
 end
