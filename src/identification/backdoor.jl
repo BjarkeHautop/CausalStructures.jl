@@ -22,8 +22,7 @@ true
 
 # References
 
-Pearl, J. (2009). *Causality: Models, Reasoning and Inference* (2nd ed.).
-Cambridge University Press.
+- [pearl2009causality](@cite)
 """
 function is_valid_backdoor(
     cg::DAG,
@@ -227,6 +226,7 @@ julia> sort(adjustment_set(cg, :X, :Y; type = :parents))
  :C
 
 julia> adjustment_set(cg, :X, :Y; type = :backdoor)
+1-element Vector{Symbol}:
  :A
 
 julia> adjustment_set(cg, :X, :Y; type = :optimal)
@@ -236,13 +236,8 @@ julia> adjustment_set(cg, :X, :Y; type = :optimal)
 
 # References
 
-Henckel, Y., Perković, E., & Maathuis, M. H. (2022). Graphical Criteria for Efficient Total
-Effect Estimation Via Adjustment in Causal Linear Models.
-*Journal of the Royal Statistical Society: Series B*, 84:579-599.
-(`:optimal`)
-
-Pearl, J. (2009). *Causality: Models, Reasoning and Inference* (2nd ed.).
-Cambridge University Press. (`:parents` and `:backdoor`)
+- [henckel2022graphical](@cite) (`:optimal`)
+- [pearl2009causality](@cite) (`:parents` and `:backdoor`)
 """
 function adjustment_set(cg::DAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
     B = cg.backend
@@ -343,9 +338,7 @@ true
 
 # References
 
-Henckel, Y., Perković, E., & Maathuis, M. H. (2022). Graphical Criteria for Efficient Total
-Effect Estimation Via Adjustment in Causal Linear Models.
-*Journal of the Royal Statistical Society: Series B*, 84:579-599.
+- [henckel2022graphical](@cite)
 """
 function adjustment_set(cg::AbstractPDAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
     B = cg.backend

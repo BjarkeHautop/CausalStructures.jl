@@ -32,11 +32,8 @@ false
 
 # References
 
-Pearl, J. (2009). *Causality: Models, Reasoning and Inference* (2nd ed.).
-Cambridge University Press.
-
-Jeong, S., Tian, J., & Bareinboim, E. (2022). Finding and Listing Front-Door
-Adjustment Sets. *Advances in Neural Information Processing Systems*, 35.
+- [pearl2009causality](@cite)
+- [jeong2022finding](@cite)
 """
 function is_valid_frontdoor(
     cg::DAG,
@@ -427,7 +424,7 @@ no such set exists.
 - `restrict`: candidate pool from which the set is drawn. Defaults to all nodes
   in `cg` except `x` and `y`.
 
-Implements Algorithm 1 of Jeong, Tian & Bareinboim (2022):
+Implements Algorithm 1 of [jeong2022finding](@cite):
 - Step 1 (GETCAND2NDFDC): drop candidates that have a backdoor path from X.
 - Step 2 (GETCAND3RDFDC): drop candidates for which condition 3 cannot be met.
 - Step 3: check that the remaining set blocks all directed paths X --> Y.
@@ -469,8 +466,7 @@ true
 
 # References
 
-Jeong, S., Tian, J., & Bareinboim, E. (2022). Finding and Listing Front-Door
-Adjustment Sets. *Advances in Neural Information Processing Systems*, 35.
+- [jeong2022finding](@cite)
 """
 function frontdoor_set(
     cg::DAG,
@@ -633,7 +629,7 @@ to (`x`, `y`) in `cg`.
 - `restrict`: candidate pool from which sets are drawn. Defaults to all nodes
   in `cg` except `x` and `y`.
 
-Implements Algorithm 2 (LISTFDSETS) of Jeong, Tian & Bareinboim (2022). The
+Implements Algorithm 2 (LISTFDSETS) of [jeong2022finding](@cite). The
 algorithm has polynomial-delay guarantees: it outputs the first result in
 polynomial time and takes polynomial time between consecutive results.
 
@@ -664,8 +660,7 @@ julia> sort(all_frontdoor_sets(cg, :X, :Y; restrict = [:A, :B, :C, :D]))
 
 # References
 
-Jeong, S., Tian, J., & Bareinboim, E. (2022). Finding and Listing Front-Door
-Adjustment Sets. *Advances in Neural Information Processing Systems*, 35.
+- [jeong2022finding](@cite)
 """
 function all_frontdoor_sets(
     cg::DAG,

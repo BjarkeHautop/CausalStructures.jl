@@ -27,8 +27,7 @@ DAG with 3 nodes and 2 edges:
 
 # References
 
-Dor, D. & Tarsi, M. (1992). A simple algorithm to construct a consistent
-extension of a partially oriented graph.
+- [dortarsi1992simple](@cite)
 """
 function dag_from_pdag(cg::AbstractPDAG)
     B = cg.backend
@@ -128,8 +127,7 @@ MPDAG with 3 nodes and 2 edges:
 
 # References
 
-Meek, C. (1995). Causal inference and causal explanation with background knowledge.
-*Proceedings of UAI-95*, pp. 403-410.
+- [meek1995causal](@cite)
 """
 function meek_closure(cg::AbstractPDAG)
     B = cg.backend
@@ -362,8 +360,7 @@ false
 
 # References
 
-- Verma, T. & Pearl, J. (1990). Equivalence and synthesis of causal models.
-  *Proceedings of UAI 1990*.
+- [vermapearl1990equivalence](@cite)
 """
 function markov_equivalent(g1::DAG, g2::DAG)
     B1, B2 = g1.backend, g2.backend
@@ -445,8 +442,7 @@ MAG with 3 nodes and 2 edges:
 
 # References
 
-Richardson, T. & Spirtes, P. (2002). Ancestral graph Markov models.
-*Annals of Statistics*, 30(4):962-1030.
+- [richardsonspirtes2002ancestral](@cite)
 """
 function ag_to_mag(cg::AG)
     all_nodes = Set(nodes(cg))

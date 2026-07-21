@@ -266,12 +266,8 @@ false
 
 # References
 
-Lauritzen, S. L., Dawid, A. P., Larsen, B. N., & Leimer, H.-G. (1990).
-Independence properties of directed Markov fields. *Networks*, 20(5):491-505.
-
-Hauser, A. & Bühlmann, P. (2012). Characterization and greedy learning of interventional
-Markov equivalence classes of directed acyclic graphs.
-*Journal of Machine Learning Research*, 13:2409-2464.
+- [lauritzen1990independence](@cite)
+- [hauser2012characterization](@cite)
 """
 function d_separated(cg::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
     B = cg.backend
@@ -357,8 +353,7 @@ true
 
 # References
 
-Richardson, T. & Spirtes, P. (2002). Ancestral graph Markov models.
-*Annals of Statistics*, 30(4):962-1030.
+- [richardsonspirtes2002ancestral](@cite)
 """
 m_separated(cg::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[]) =
     d_separated(cg, x, y, z)

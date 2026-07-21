@@ -58,11 +58,8 @@ PAG with 3 nodes and 2 edges:
 
 # References
 
-- Zhang, J. (2008). On the completeness of orientation rules for causal
-  discovery in the presence of latent confounders and selection bias.
-  *Artificial Intelligence*, 172(16-17):1873-1896.
-- Ali, R. A., Richardson, T. S. & Spirtes, P. (2009). Markov equivalence for
-  ancestral graphs. *Annals of Statistics*, 37(5B):2808-2837.
+- [zhang2008completeness](@cite)
+- [ali2009markov](@cite)
 """
 mag_to_pag(cg::MAG) = _pag_unchecked(cg.backend.nodes, _mag_to_pag_edges(cg))
 
@@ -507,11 +504,8 @@ MAG with 4 nodes and 4 edges:
 
 # References
 
-- Zhang, J. (2008). On the completeness of orientation rules for causal discovery
-  in the presence of latent confounders and selection bias.
-  *Artificial Intelligence*, 172(16-17):1873-1896.
-- Dor, D. & Tarsi, M. (1992). A simple algorithm to construct a consistent
-  extension of a partially oriented graph.
+- [zhang2008completeness](@cite)
+- [dortarsi1992simple](@cite)
 """
 mag_from_pag(cg::PAG) = _mag_from_pag(cg.backend.nodes, cg.edges)
 
@@ -629,8 +623,7 @@ false
 
 # References
 
-- Ali, R. A., Richardson, T. S. & Spirtes, P. (2009). Markov equivalence for
-  ancestral graphs. *Annals of Statistics*, 37(5B):2808-2837.
+- [ali2009markov](@cite)
 """
 function markov_equivalent(g1::MAG, g2::MAG)
     Set(g1.backend.nodes) != Set(g2.backend.nodes) && return false

@@ -26,8 +26,7 @@ julia> topological_sort(cg)
 
 # References
 
-Kahn, A. B. (1962). Topological sorting of large networks. *Communications of
-the ACM*, 5(11):558-562.
+- [kahn1962topological](@cite)
 """
 function topological_sort(cg::DAG)
     B = cg.backend
@@ -279,10 +278,7 @@ julia> possible_ancestors(cpdag, :C)
 
 # References
 
-Perkovic, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete
-Graphical Characterization and Construction of Adjustment Sets in
-Markov Equivalence Classes of Ancestral Graphs.
-*Journal of Machine Learning Research 18*, 1-62.
+- [perkovic2018complete](@cite)
 """
 function possible_ancestors(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend
@@ -358,10 +354,7 @@ julia> possible_descendants(cpdag, :A)
 
 # References
 
-Perkovic, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete
-Graphical Characterization and Construction of Adjustment Sets in
-Markov Equivalence Classes of Ancestral Graphs.
-*Journal of Machine Learning Research 18*, 1-62.
+- [perkovic2018complete](@cite)
 """
 function possible_descendants(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend
@@ -445,10 +438,7 @@ Symbol[]
 
 # References
 
-Perkovic, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete
-Graphical Characterization and Construction of Adjustment Sets in
-Markov Equivalence Classes of Ancestral Graphs.
-*Journal of Machine Learning Research 18*, 1-62.
+- [perkovic2018complete](@cite)
 """
 function possible_ancestors(cg::PAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend
@@ -523,10 +513,7 @@ Symbol[]
 
 # References
 
-Perkovic, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete
-Graphical Characterization and Construction of Adjustment Sets in
-Markov Equivalence Classes of Ancestral Graphs.
-*Journal of Machine Learning Research 18*, 1-62.
+- [perkovic2018complete](@cite)
 """
 function possible_descendants(cg::PAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend

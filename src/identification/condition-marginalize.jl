@@ -35,7 +35,7 @@ end
 
 Return the [`AG`](@ref) over the remaining nodes after conditioning on
 `cond_vars` and marginalizing out `marg_vars`, following Definition 4.2.1 of
-Richardson & Spirtes (2002).
+[richardsonspirtes2002ancestral](@cite).
 
 Two remaining nodes are adjacent if and only if they cannot be m-separated by
 any subset of the other remaining nodes given `cond_vars`. The edge type is
@@ -60,8 +60,7 @@ AG with 2 nodes and 1 edge:
 
 # References
 
-Richardson, T. & Spirtes, P. (2002). Ancestral graph Markov models.
-*Annals of Statistics*, 30(4):962-1030.
+- [richardsonspirtes2002ancestral](@cite)
 """
 function condition_marginalize(
     cg::Union{DAG,AbstractAG};

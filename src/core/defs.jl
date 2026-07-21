@@ -165,8 +165,7 @@ invariant within the MEC.
 
 # References
 
-Chickering, D. M. (2002). Learning equivalence classes of Bayesian-network
-structures. *Journal of Machine Learning Research*, 2:445-498.
+- [chickering2002learning](@cite)
 """
 struct CPDAG <: AbstractPDAG
     edges::Vector{CausalEdge}
@@ -182,8 +181,7 @@ when background knowledge (forced edge orientations) is present.
 
 # References
 
-Meek, C. (1995). Causal inference and causal explanation with background knowledge.
-*Proceedings of UAI-95*, pp. 403-410.
+- [meek1995causal](@cite)
 """
 struct MPDAG <: AbstractPDAG
     edges::Vector{CausalEdge}
@@ -198,8 +196,7 @@ and no directed cycles allowed.
 
 # References
 
-Richardson, T. S. (2003). Markov properties for acyclic directed mixed graphs.
-*Scandinavian Journal of Statistics*, 30(1):145-157.
+- [richardson2003markov](@cite)
 """
 struct ADMG <: CausalGraph
     edges::Vector{CausalEdge}
@@ -216,8 +213,7 @@ arrowheads pointing at them on any adjacent edge (i.e., no parents or spouses).
 
 # References
 
-Richardson, T. & Spirtes, P. (2002). Ancestral graph Markov models.
-*Annals of Statistics*, 30(4):962-1030.
+- [richardsonspirtes2002ancestral](@cite)
 """
 struct AG <: AbstractAG
     edges::Vector{CausalEdge}
@@ -233,8 +229,7 @@ representatives of equivalence classes of DAGs with hidden variables.
 
 # References
 
-Richardson, T. & Spirtes, P. (2002). Ancestral graph Markov models.
-*Annals of Statistics*, 30(4):962-1030.
+- [richardsonspirtes2002ancestral](@cite)
 """
 struct MAG <: AbstractAG
     edges::Vector{CausalEdge}
@@ -271,9 +266,7 @@ and confirming the round-trip recovers the same graph.
 
 # References
 
-Zhang, J. (2008). On the completeness of orientation rules for causal discovery in
-the presence of latent confounders and selection bias.
-*Artificial Intelligence*, 172(16-17):1873-1896.
+- [zhang2008completeness](@cite)
 """
 struct PAG <: CausalGraph
     edges::Vector{CausalEdge}

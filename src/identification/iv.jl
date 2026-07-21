@@ -70,11 +70,8 @@ true
 
 # References
 
-Brito, C. & Pearl, J. (2002). Generalized Instrumental Variables.
-*Uncertainty in Artificial Intelligence*, 18:85-93.
-
-Pearl, J. (2009). *Causality: Models, Reasoning and Inference* (2nd ed.).
-Cambridge University Press. Definition 7.4.1.
+- [brito2002generalized](@cite)
+- [pearl2009causality](@cite), Definition 7.4.1.
 """
 function is_valid_iv(cg::Union{DAG,ADMG}, x::Symbol, y::Symbol, z::AbstractVector{Symbol})
     isempty(z) && return false
@@ -111,8 +108,7 @@ julia> all_iv_sets(cg, :X, :Y)
 
 # References
 
-Brito, C. & Pearl, J. (2002). Generalized Instrumental Variables.
-*Uncertainty in Artificial Intelligence*, 18:85-93.
+- [brito2002generalized](@cite)
 """
 function all_iv_sets(
     cg::Union{DAG,ADMG},

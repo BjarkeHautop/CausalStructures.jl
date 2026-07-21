@@ -216,8 +216,7 @@ DAG with 4 nodes and 4 edges:
 
 # References
 
-Evans, R. J. (2016). Graphs for margins of Bayesian networks. *Scandinavian
-Journal of Statistics*, 43(3):625-648.
+- [evans2016graphs](@cite)
 """
 function normalize_latent_structure(cg::DAG, latents::AbstractVector{Symbol})
     B = cg.backend

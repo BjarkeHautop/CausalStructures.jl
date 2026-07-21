@@ -170,10 +170,7 @@ julia> minimal_separator(admg, :A, :C)
 
 # References
 
-van der Zander, B. & Liśkiewicz, M. (2020). Finding Minimal d-separators in
-Linear Time and Applications.
-*Proceedings of the 35th Conference on Uncertainty in Artificial
-Intelligence (UAI 2020)*, PMLR 115:637-647.
+- [vanderzander2020finding](@cite)
 """
 function minimal_separator(
     cg::DAG,

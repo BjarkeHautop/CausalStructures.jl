@@ -29,9 +29,7 @@ julia> length(enumerate_mags(pag))
 
 # References
 
-- Zhang, J. (2008). On the completeness of orientation rules for causal discovery
-  in the presence of latent confounders and selection bias.
-  *Artificial Intelligence*, 172(16-17):1873-1896.
+- [zhang2008completeness](@cite)
 """
 function enumerate_mags(cg::PAG)
     out = MAG[]

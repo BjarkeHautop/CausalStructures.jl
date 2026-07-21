@@ -35,8 +35,7 @@ BackgroundKnowledge with 1 required and 1 forbidden:
 
 # References
 
-Meek, C. (1995). Causal inference and causal explanation with background knowledge.
-*Proceedings of UAI-95*, pp. 403-410.
+- [meek1995causal](@cite)
 """
 struct BackgroundKnowledge
     required::Vector{RequiredEdge}
@@ -147,8 +146,7 @@ MPDAG with 3 nodes and 2 edges:
 
 # References
 
-Meek, C. (1995). Causal inference and causal explanation with background knowledge.
-*Proceedings of UAI-95*, pp. 403-410.
+- [meek1995causal](@cite)
 """
 function apply_background_knowledge(cg::AbstractPDAG, bk::BackgroundKnowledge)
     node_set = Set(cg.backend.nodes)
@@ -241,8 +239,7 @@ MPDAG with 3 nodes and 2 edges:
 
 # References
 
-Meek, C. (1995). Causal inference and causal explanation with background knowledge.
-*Proceedings of UAI-95*, pp. 403-410.
+- [meek1995causal](@cite)
 """
 function dag_to_mpdag(cg::DAG, bk::BackgroundKnowledge = BackgroundKnowledge())
     dir = Set{Tuple{Symbol,Symbol}}((e.src, e.dst) for e in cg.edges)

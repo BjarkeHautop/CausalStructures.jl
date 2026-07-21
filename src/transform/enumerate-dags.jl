@@ -290,8 +290,7 @@ julia> length(dags)
 
 # References
 
-Chickering, D. M. (2002). Learning equivalence classes of Bayesian-network
-structures. *Journal of Machine Learning Research*, 2:445-498.
+- [chickering2002learning](@cite)
 """
 function enumerate_dags(cg::AbstractPDAG)
     closed = meek_closure(cg)

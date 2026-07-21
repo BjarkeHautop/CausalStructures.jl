@@ -247,9 +247,7 @@ true
 
 # References
 
-Perković, E., Textor, J., Kalisch, M., & Maathuis, M. H. (2018). Complete Graphical
-Characterization and Construction of Adjustment Sets in Markov Equivalence Classes
-of Ancestral Graphs *Journal of Machine Learning Research*, 18:1-62.
+- [perkovic2018complete](@cite)
 """
 function is_valid_adjustment(
     cg::ADMG,
