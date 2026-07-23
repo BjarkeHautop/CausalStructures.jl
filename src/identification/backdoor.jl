@@ -1,22 +1,34 @@
 """
-    is_valid_backdoor(cg::DAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    is_valid_backdoor(cg::Union{DAG,ADMG}, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
 
 Return `true` if `z` satisfies the backdoor criterion for the causal effect of
 `x` on `y` in `cg`.
 
 `z` is a valid backdoor set if (1) no node in `z` is a descendant of `x`, and
-(2) `z` blocks every backdoor path from `x` to `y`. Equivalently, every parent
-of `x` is d-separated from `y` given `z ∪ {x}`.
+(2) `z` blocks every backdoor path from `x` to `y`.
+
+- [`DAG`](@ref): equivalently, every parent of `x` is d-separated from `y`
+  given `z ∪ {x}`.
+- [`ADMG`](@ref): equivalently, `z` m-separates `x` from `y` in the graph
+  obtained by removing every directed edge out of `x`.
 
 # Examples
 
 ```jldoctest
-julia> cg = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG);
+julia> cg = cgraph("A --> X --> Y, A --> Y"; class = DAG);
 
 julia> is_valid_backdoor(cg, :X, :Y)       # empty Z leaves the backdoor path A --> Y open
 false
 
 julia> is_valid_backdoor(cg, :X, :Y, [:A]) # conditioning on A blocks the backdoor path
+true
+
+julia> admg = cgraph("A --> X --> Y, A <-> Y"; class = ADMG);
+
+julia> is_valid_backdoor(admg, :X, :Y)       # A <-> Y is an unobserved confounder of the path
+false
+
+julia> is_valid_backdoor(admg, :X, :Y, [:A]) # conditioning on A still blocks it
 true
 ```
 
@@ -73,7 +85,7 @@ function is_valid_backdoor(
 end
 
 """
-    all_backdoor_sets(cg::DAG, x::Symbol, y::Symbol;
+    all_backdoor_sets(cg::Union{DAG,ADMG}, x::Symbol, y::Symbol;
                       minimal::Bool = true, max_size::Int = 3)
         -> Vector{Vector{Symbol}}
 
@@ -83,14 +95,22 @@ on `y` in `cg`, up to size `max_size`.
 Bruteforces over subsets of the allowed universe of nodes (nodes that are not
 descendants of `x` and not `y`), checking each for validity using
 [`is_valid_backdoor`](@ref). When `minimal = true` (default), only
-inclusion-minimal sets are returned.
+inclusion-minimal sets are returned. For [`ADMG`](@ref), the universe is drawn
+from the graph's observed nodes; latent confounders are already summarized by
+bidirected edges and are never candidates.
 
 # Examples
 
 ```jldoctest
-julia> cg = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG);
+julia> cg = cgraph("A --> X --> Y, A --> Y"; class = DAG);
 
 julia> all_backdoor_sets(cg, :X, :Y)
+1-element Vector{Vector{Symbol}}:
+ [:A]
+
+julia> admg = cgraph("A --> X --> Y, A <-> Y"; class = ADMG);
+
+julia> all_backdoor_sets(admg, :X, :Y)
 1-element Vector{Vector{Symbol}}:
  [:A]
 ```
@@ -286,10 +306,10 @@ Three types are supported:
 
 ```jldoctest
 julia> cg = cgraph(
-           directed(:C, :X), directed(:X, :F), directed(:X, :D),
-           directed(:A, :X), directed(:A, :K), directed(:K, :Y),
-           directed(:D, :Y), directed(:D, :G), directed(:Y, :H);
-           class = DAG);
+           "C --> X, X --> F, X --> D --> Y, A --> X,
+           A --> K --> Y, D --> G, Y --> H";
+           class = DAG,
+       );
 
 julia> sort(adjustment_set(cg, :X, :Y; type = :parents))
 2-element Vector{Symbol}:
@@ -397,7 +417,7 @@ Returns an empty vector if `x` has no causal path to `y`.
 # Examples
 
 ```jldoctest
-julia> pdag = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = PDAG);
+julia> pdag = cgraph("A --> X --> Y, A --> Y"; class = PDAG);
 
 julia> adjustment_set(pdag, :X, :Y)
 1-element Vector{Symbol}:
