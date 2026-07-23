@@ -16,49 +16,33 @@ Status](https://github.com/BjarkeHautop/CausalStructures.jl/actions/workflows/Do
 
 CausalStructures.jl provides a type-driven interface for representing,
 validating, and manipulating causal graphs. Rather than treating every graph as
-an arbitrary collection of nodes and edges, graph classes explicitly encode
-their structural assumptions and invariants.
+an arbitrary collection of nodes and edges, graph classes explicitly encode their structural assumptions and invariants.
 
 The package is inspired by the design principles of the R package
 [caugi](https://caugi.org/) and aims to provide a similarly expressive and
 extensible foundation for causal graphs in Julia.
 
-## Design Philosophy
+## Graph types
 
-Different causal graph classes represent different assumptions, both on the
-allowed edge types and on the graph structure itself. For example, a DAG must be
-acyclic, while a CPDAG must satisfy additional equivalence-class constraints.
-Graphs are validated during construction, ensuring that every graph instance
-satisfies the invariants of its class.
+The following graph types are supported:
 
-## Supported Graph Classes
+    CausalGraph
+    ├─ DAG            Directed Acyclic Graph
+    ├─ UG             Undirected Graph
+    ├─ AbstractPDAG   All Partially Directed Acyclic Graphs
+    │  ├─ PDAG        Partially Directed Acyclic Graph
+    │  ├─ CPDAG       Completed Partially Directed Acyclic Graph
+    │  └─ MPDAG       Maximally Oriented Partially Directed Acyclic Graph
+    ├─ ADMG           Acyclic Directed Mixed Graph
+    ├─ AbstractAG     All Ancestral Graphs
+    │  ├─ AG          Ancestral Graph
+    │  └─ MAG         Maximal Ancestral Graph
+    ├─ PAG            Partial Ancestral Graph
+    └─ UNKNOWN        No structural constraints
 
-Currently implemented:
-
-- Directed Acyclic Graphs (`DAG`)
-- Undirected Graphs (`UG`)
-- Partially Directed Acyclic Graphs (`PDAG`)
-- Completed Partially Directed Acyclic Graphs (`CPDAG`)
-- Maximally Oriented Partially Directed Acyclic Graphs (`MPDAG`)
-- Acyclic Directed Mixed Graphs (`ADMG`)
-- Ancestral Graphs (`AG`)
-- Maximal Ancestral Graphs (`MAG`)
-- Partial Ancestral Graphs (`PAG`)
-- Arbitrary graphs (`UNKNOWN`)
-
-`UNKNOWN` can be used for currently unsupported graph classes.
-
-The following edge types exists:
-
-- `directed(:A, :B)` for `A --> B`
-- `undirected(:A, :B)` for `A --- B`
-- `bidirected(:A, :B)` for `A <-> B`
-- `partially_directed(:A, :B)` for `A o-> B`
-- `partially_undirected(:A, :B)` for `A o-- B`
-- `partial(:A, :B)` for `A o-o B`
-
-These same markers can alternatively be used as a string in `cgraph`, see
-below.
+Each graph class encodes structural constraints, such as no cycles,
+closed under Meek’s rules, etc., and these constraints are verified on
+construction.
 
 ## Quick Start
 
@@ -83,9 +67,12 @@ dag = cgraph("U --> X + Y, X --> Y"; class = DAG)
 ```
 
 You can then run a variety of causal graph queries, transformations,
-adjustment-set computations, and separation criteria. For example, if `U` is
-unobserved, we can project it out to obtain an `ADMG`.
+adjustment-set computations, and separation criteria. For example, if `U` is unobserved, we can project it out to obtain an `ADMG`.
 
 ```julia
 admg = latent_project(dag, [:U])
 ```
+
+## Contributing
+
+Contributions of all kinds are very welcome!
