@@ -61,6 +61,41 @@ function _ancestors_bitmask!(
     return mask
 end
 
+# In-place variant of `_anterior_bitmask` for hot loops (e.g. MAG maximality
+# checking) that call it once per candidate pair: reuses caller-provided
+# `mask`/`stack` buffers instead of allocating fresh ones on every call.
+function _anterior_bitmask!(
+    mask::BitVector,
+    stack::Vector{Int},
+    B::Union{AGBackend,PDAGBackend},
+    seeds::Vector{Int},
+)
+    fill!(mask, false)
+    empty!(stack)
+    for s in seeds
+        if !mask[s]
+            mask[s] = true
+            push!(stack, s)
+        end
+    end
+    while !isempty(stack)
+        u = pop!(stack)
+        for p in _parents_slice(B, u)
+            if !mask[p]
+                mask[p] = true
+                push!(stack, p)
+            end
+        end
+        for w in _undirected_slice(B, u)
+            if !mask[w]
+                mask[w] = true
+                push!(stack, w)
+            end
+        end
+    end
+    return mask
+end
+
 # Anterior bitmask (AG): nodes reachable from seeds via directed parents OR undirected edges.
 function _anterior_bitmask(B::Union{AGBackend,PDAGBackend}, seeds::Vector{Int})
     n = length(B.nodes)
@@ -293,6 +328,57 @@ function _reachable_admg_single!(
     n = size(visited, 1)
     for v = 1:n
         reached[v] = visited[v, 1] || visited[v, 2]
+    end
+    return reached
+end
+
+# In-place, single-seed variant of `_reachable_ag`: reuses `visited`/`q`/
+# `reached` buffers and takes a scalar seed instead of a `Vector{Int}`, for hot
+# loops (e.g. MAG maximality checking) that call this once per candidate pair.
+function _reachable_ag_single!(
+    visited::BitMatrix,
+    q::Vector{Tuple{Int,Int}},
+    reached::BitVector,
+    B::AGBackend,
+    seed::Int,
+    a_mask::BitVector,
+    z_mask::BitVector,
+)
+    fill!(visited, false)
+    empty!(q)
+
+    if a_mask[seed]
+        for m = 1:3
+            if !visited[seed, m]
+                visited[seed, m] = true
+                push!(q, (seed, m))
+            end
+        end
+    end
+
+    head = 1
+    while head <= length(q)
+        v, in_m = q[head]
+        head += 1
+        v_in_z = z_mask[v]
+        for p in _parents_slice(B, v)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, p, 1)
+        end
+        for c in _children_slice(B, v)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 1, c, 2)
+        end
+        for s in _spouses_slice(B, v)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, s, 2)
+        end
+        for w in _undirected_slice(B, v)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 3, w, 3)
+        end
+    end
+
+    fill!(reached, false)
+    n = size(visited, 1)
+    for v = 1:n
+        reached[v] = visited[v, 1] || visited[v, 2] || visited[v, 3]
     end
     return reached
 end

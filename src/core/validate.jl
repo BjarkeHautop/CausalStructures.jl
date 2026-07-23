@@ -261,11 +261,34 @@ function validation_errors(::MAGConstraints, cg::CausalGraph)
     n = length(B.nodes)
     n <= 2 && return errors
 
+    # Scratch buffers reused across every pair instead of allocated fresh per
+    # pair inside `minimal_separator`/`_reachable_ag` (this loop is O(n^2)
+    # per candidate MAG in `enumerate_mags`).
+    all_idxs = collect(1:n)
+    a_mask = falses(n)
+    a_stack = Int[]
+    seeds_buf = Int[]
+    z_mask = falses(n)
+    visited = falses(n, 3)
+    q = Tuple{Int,Int}[]
+    reached = falses(n)
+
     for u = 1:n, v = (u+1):n
         # skip adjacent pairs
         v ∈ _all_nbrs_slice(B, u) && continue
-        candidates = [B.nodes[w] for w = 1:n if w != u && w != v]
-        if minimal_separator(ag, B.nodes[u], B.nodes[v]; restrict = candidates) === nothing
+        if !_ag_msep_exists!(
+            B,
+            u,
+            v,
+            all_idxs,
+            a_mask,
+            a_stack,
+            seeds_buf,
+            z_mask,
+            visited,
+            q,
+            reached,
+        )
             push!(
                 errors,
                 "MAG maximality violated: no m-separating set exists for " *

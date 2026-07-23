@@ -345,11 +345,41 @@ function minimal_separator(
     return result === nothing ? nothing : B.nodes[result]
 end
 
-# TODO(perf): enumerate_mags calls this O(n^2) times per candidate MAG (its
-# maximality check).
-# A buffer-reusing version for that hot loop would probably help a lot, same
-# idea as the is_valid_backdoor/m_separated fixes elsewhere.
-# A fix needs thorough testing
+# Buffer-reusing existence check for MAG maximality (core/validate.jl), which
+# calls this O(n^2) times per candidate MAG in enumerate_mags. Existence of
+# *any* m-separator doesn't need the full FINDMINSEP (two passes + intersect,
+# for minimality); a single FINDNEARESTSEP pass from `u` already answers it:
+# if the largest possible candidate set (ancestors ∩ restrict) still leaves
+# `u`/`v` m-connected, no separator exists at all, and if it doesn't, the
+# returned set is itself already a valid (if not minimal) separator.
+function _ag_msep_exists!(
+    B::AGBackend,
+    u::Int,
+    v::Int,
+    res_idxs::Vector{Int},
+    a_mask::BitVector,
+    a_stack::Vector{Int},
+    seeds_buf::Vector{Int},
+    z_mask::BitVector,
+    visited::BitMatrix,
+    q::Vector{Tuple{Int,Int}},
+    reached::BitVector,
+)
+    empty!(seeds_buf)
+    push!(seeds_buf, u, v)
+    _anterior_bitmask!(a_mask, a_stack, B, seeds_buf)
+
+    fill!(z_mask, false)
+    for r in res_idxs
+        if a_mask[r] && r != u && r != v
+            z_mask[r] = true
+        end
+    end
+
+    _reachable_ag_single!(visited, q, reached, B, u, a_mask, z_mask)
+    return !reached[v]
+end
+
 function minimal_separator(
     cg::AbstractAG,
     x::Symbol,

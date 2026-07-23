@@ -192,3 +192,99 @@ end
     # All non-adjacent pairs have m-sep sets in a chain, so no edges added
     @test Set(mag.edges) == Set(ag.edges)
 end
+
+@testitem "MAG maximality check agrees with direct minimal_separator on random graphs" tags =
+    [:unit] begin
+    # `validation_errors(MAGConstraints(), cg)` runs a buffer-reusing existence
+    # check (`_ag_msep_exists!`) instead of calling the public `minimal_separator`
+    # once per non-adjacent pair. Cross-check the two independently on many
+    # random AG graphs to confirm the buffer-reusing shortcut (a single
+    # FINDNEARESTSEP pass, rather than full FINDMINSEP) never disagrees with the
+    # unchanged public API it was derived from.
+
+    function random_edges(nodes, p_dir, p_bidir, p_undir)
+        n = length(nodes)
+        edges = CausalStructures.CausalEdge[]
+        for i = 1:n, j = (i+1):n
+            r = rand()
+            if r < p_dir
+                rand(Bool) ? push!(edges, directed(nodes[i], nodes[j])) :
+                push!(edges, directed(nodes[j], nodes[i]))
+            elseif r < p_dir + p_bidir
+                push!(edges, bidirected(nodes[i], nodes[j]))
+            elseif r < p_dir + p_bidir + p_undir
+                push!(edges, undirected(nodes[i], nodes[j]))
+            end
+        end
+        return edges
+    end
+
+    densities = [
+        (0.5, 0.2, 0.05),
+        (0.3, 0.3, 0.1),
+        (0.15, 0.1, 0.05),
+        (0.6, 0.05, 0.05),
+        (0.1, 0.4, 0.1),
+    ]
+
+    function check_random_graphs()
+        n_checked = 0
+        for _ = 1:400
+            n = rand(3:10)
+            nodes = Symbol.("V", 1:n)
+            p_dir, p_bidir, p_undir = densities[rand(1:length(densities))]
+            edges = random_edges(nodes, p_dir, p_bidir, p_undir)
+
+            cg = try
+                CausalStructures.UNKNOWN(Set(nodes), edges)
+            catch
+                continue
+            end
+
+            isempty(
+                CausalStructures.validation_errors(CausalStructures.AGConstraints(), cg),
+            ) || continue
+
+            ag = CausalStructures._as_ag(cg)
+            B = ag.backend
+
+            a_mask = falses(n)
+            a_stack = Int[]
+            seeds_buf = Int[]
+            z_mask = falses(n)
+            visited = falses(n, 3)
+            q = Tuple{Int,Int}[]
+            reached = falses(n)
+            all_idxs = collect(1:n)
+
+            for u = 1:n, v = (u+1):n
+                v ∈ CausalStructures._all_nbrs_slice(B, u) && continue
+                n_checked += 1
+
+                candidates = [B.nodes[w] for w = 1:n if w != u && w != v]
+                reference_exists =
+                    minimal_separator(ag, B.nodes[u], B.nodes[v]; restrict = candidates) !==
+                    nothing
+
+                fast_exists = CausalStructures._ag_msep_exists!(
+                    B,
+                    u,
+                    v,
+                    all_idxs,
+                    a_mask,
+                    a_stack,
+                    seeds_buf,
+                    z_mask,
+                    visited,
+                    q,
+                    reached,
+                )
+
+                @test fast_exists == reference_exists
+            end
+        end
+        return n_checked
+    end
+
+    @test check_random_graphs() > 0
+end
