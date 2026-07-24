@@ -100,22 +100,17 @@ function _search_subsets_threaded(
     return reduce(vcat, per_thread)
 end
 
-"""
-    _search_subsets(universe, min_size, max_size, make_checker, to_symbols)
-        -> Vector{Vector{Symbol}}
+# Brute-force every subset of `universe` (node indices) of size
+# min_size:max_size`, keeping those for which `checker(cur)` returns `true`,
+# where `checker = make_checker()`.
 
-Brute-force every subset of `universe` (node indices) of size
-`min_size:max_size`, keeping those for which `checker(cur)` returns `true`,
-where `checker = make_checker()`.
-
-`make_checker` must be side-effect-free and return a *fresh* closure each
-time it is called: on the sequential path it is called once, on the
-threaded path once per task, so that each task gets its own scratch buffers
-instead of racing on shared ones. `to_symbols(cur)` converts an accepted
-candidate to the sorted `Vector{Symbol}` that gets returned; it may be
-called concurrently from different tasks and must not share mutable state
-with `checker`.
-"""
+# `make_checker` must be side-effect-free and return a *fresh* closure each
+# time it is called: on the sequential path it is called once, on the
+#threaded path once per task, so that each task gets its own scratch buffers
+# instead of racing on shared ones. `to_symbols(cur)` converts an accepted
+# candidate to the sorted `Vector{Symbol}` that gets returned; it may be
+# called concurrently from different tasks and must not share mutable state
+# with `checker`.
 function _search_subsets(
     universe::Vector{Int},
     min_size::Int,

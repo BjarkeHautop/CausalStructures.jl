@@ -1,0 +1,54 @@
+This project is licensed under the MIT License (see LICENSE).
+
+Portions of this software — several core algorithms and test suites — are
+adapted from caugi (https://github.com/frederikfabriciusbjerre/caugi),
+also MIT licensed:
+
+    Copyright (c) 2025 caugi authors
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
+Files adapted (in whole or in part) from caugi's Rust/R source:
+
+    src/core/backend.jl               - PackedBuckets layout pattern
+    src/core/validate.jl              - graph/pdag/cpdag.rs, graph/alg/acyclic.rs, graph/alg/moral.rs
+    src/io/utils.jl                   - generate_graph / simulate_data design
+    src/query/traversal.jl            - graph/alg/traversal.rs
+    src/query/separation.jl           - graph/dag/separation.rs, graph/alg/min_msep.rs
+    src/query/minimal-separator.jl    - graph/alg/min_msep.rs
+    src/transform/skeleton-subgraph.jl - graph/dag/transforms.rs, graph/alg/moral.rs
+    src/transform/latent.jl           - graph/dag/transforms.rs
+    src/transform/pdag.jl             - graph/pdag/transforms.rs, graph/alg/meek.rs
+    src/transform/enumerate-dags.jl   - graph/pdag/enumerate.rs
+    src/identification/condition-marginalize.jl - R/operations.R
+    src/identification/adjustment-admg.jl        - graph/dag/adjustment.rs, graph/admg/adjustment.rs
+
+Test files adapted (in whole or in part) from caugi's testthat suite:
+
+    test/test-admg.jl
+    test/test-backdoor.jl
+    test/test-enumerate-dags.jl
+    test/test-mpdag.jl
+    test/test-operations.jl
+    test/test-queries.jl
+    test/test-separation.jl
+    test/test-simulation.jl
+    test/test-topological-sort.jl
+
+See individual file headers for the specific upstream path each was adapted from.

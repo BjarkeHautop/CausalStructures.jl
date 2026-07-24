@@ -7,33 +7,28 @@ validating, and manipulating causal graphs. Rather than treating every graph as
 an arbitrary collection of nodes and edges, graph classes explicitly encode
 their structural assumptions and invariants.
 
-The package is inspired by the R package [caugi](https://caugi.org/) and aims to
-provide a similarly expressive and extensible foundation for causal graphs in
-Julia.
-
-## Design Philosophy
-
-Different causal graph classes represent different assumptions, both on the
-allowed edge types and on the graph structure itself. For example, a DAG must be
-acyclic, while a CPDAG must satisfy additional equivalence-class constraints.
-Graphs are validated during construction, ensuring that every graph instance satisfies the invariants required by its class.
-
 ## Supported Graph Classes
 
-Currently implemented:
+Currently implemented classes form the following type hierarchy:
 
-- Directed Acyclic Graphs (`DAG`)
-- Undirected Graphs (`UG`)
-- Partially Directed Acyclic Graphs (`PDAG`)
-- Completed Partially Directed Acyclic Graphs (`CPDAG`)
-- Maximally Partially Directed Acyclic Graphs (`MPDAG`)
-- Acyclic Directed Mixed Graphs (`ADMG`)
-- Ancestral Graphs (`AG`)
-- Maximal Ancestral Graphs (`MAG`)
-- Partial Ancestral Graphs (`PAG`)
-- Arbitrary graphs (`UNKNOWN`)
+```text
+CausalGraph
+    ├─ DAG            Directed Acyclic Graph
+    ├─ UG             Undirected Graph
+    ├─ AbstractPDAG   All Partially Directed Acyclic Graphs
+    │  ├─ PDAG        Partially Directed Acyclic Graph
+    │  ├─ CPDAG       Completed Partially Directed Acyclic Graph
+    │  └─ MPDAG       Maximally Oriented Partially Directed Acyclic Graph
+    ├─ ADMG           Acyclic Directed Mixed Graph
+    ├─ AbstractAG     All Ancestral Graphs
+    │  ├─ AG          Ancestral Graph
+    │  └─ MAG         Maximal Ancestral Graph
+    ├─ PAG            Partial Ancestral Graph
+    └─ UNKNOWN        No structural constraints
+```
 
-`UNKNOWN` can be used for currently unsupported graph classes.
+`UNKNOWN` can be used for currently unsupported graph classes. The graph constrains each class imposes are validated on construction, and errors
+if invalid.
 
 The following edge types exists:
 
