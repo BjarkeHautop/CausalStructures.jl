@@ -134,75 +134,58 @@ function all_iv_sets(
     g_do_x = _build_g_do_x(cg, x)  # built once; x/y already excluded from universe
     Bd = g_do_x.backend
 
-    valid_sets = Vector{Vector{Symbol}}()
-    cur = Int[]
+    # Scratch buffers allocated once per `make_checker` call, reused across
+    # all its candidates and every element of z checked within each.
+    function make_checker()
+        empty_zmask = falses(n)
+        excl_zmask = falses(n)
+        excl_zmask[x_idx] = true
 
-    # Scratch buffers reused across every candidate and every element of z
-    # instead of allocated fresh inside `m_separated` on every call: `_check_iv`
-    # calls it up to 2*|z| times per candidate (once per element for relevance,
-    # once per element for exclusion), so its allocations otherwise dominate.
-    empty_zmask = falses(n)
-    excl_zmask = falses(n)
-    excl_zmask[x_idx] = true
+        anc_mask = falses(n)
+        anc_stack = Int[]
+        visited = falses(n, 2)
+        q = Tuple{Int,Int}[]
+        reached = falses(n)
+        seeds_buf = Int[]
 
-    anc_mask = falses(n)
-    anc_stack = Int[]
-    visited = falses(n, 2)
-    q = Tuple{Int,Int}[]
-    reached = falses(n)
-    seeds_buf = Int[]
+        # a ⊥ b | ∅ in backend Bk
+        function separated_empty(Bk, a, b)
+            empty!(seeds_buf)
+            push!(seeds_buf, a, b)
+            _ancestors_bitmask!(anc_mask, anc_stack, Bk, seeds_buf)
+            _reachable_single!(visited, q, reached, Bk, a, anc_mask, empty_zmask)
+            return !reached[b]
+        end
 
-    # a ⊥ b | ∅ in backend Bk
-    function separated_empty(Bk, a, b)
-        empty!(seeds_buf)
-        push!(seeds_buf, a, b)
-        _ancestors_bitmask!(anc_mask, anc_stack, Bk, seeds_buf)
-        _reachable_single!(visited, q, reached, Bk, a, anc_mask, empty_zmask)
-        return !reached[b]
-    end
+        # a ⊥ b | {x} in backend Bk
+        function separated_given_x(Bk, a, b)
+            empty!(seeds_buf)
+            push!(seeds_buf, a, b, x_idx)
+            _ancestors_bitmask!(anc_mask, anc_stack, Bk, seeds_buf)
+            _reachable_single!(visited, q, reached, Bk, a, anc_mask, excl_zmask)
+            return !reached[b]
+        end
 
-    # a ⊥ b | {x} in backend Bk
-    function separated_given_x(Bk, a, b)
-        empty!(seeds_buf)
-        push!(seeds_buf, a, b, x_idx)
-        _ancestors_bitmask!(anc_mask, anc_stack, Bk, seeds_buf)
-        _reachable_single!(visited, q, reached, Bk, a, anc_mask, excl_zmask)
-        return !reached[b]
-    end
-
-    function valid_candidate(z_idxs::Vector{Int})
-        relevant = false
-        for zi in z_idxs
-            if !separated_empty(B, zi, x_idx)
-                relevant = true
-                break
+        return function valid_candidate(z_idxs::Vector{Int})
+            relevant = false
+            for zi in z_idxs
+                if !separated_empty(B, zi, x_idx)
+                    relevant = true
+                    break
+                end
             end
-        end
-        relevant || return false
+            relevant || return false
 
-        for zi in z_idxs
-            separated_given_x(Bd, zi, y_idx) || return false
-        end
-        return true
-    end
-
-    function enumerate!(start, k_rem)
-        if k_rem == 0
-            if valid_candidate(cur)
-                push!(valid_sets, sort([B.nodes[v] for v in cur]))
+            for zi in z_idxs
+                separated_given_x(Bd, zi, y_idx) || return false
             end
-            return
-        end
-        for i = start:length(universe)
-            push!(cur, universe[i])
-            enumerate!(i + 1, k_rem - 1)
-            pop!(cur)
+            return true
         end
     end
 
-    for k = 1:min(max_size, length(universe))
-        enumerate!(1, k)
-    end
+    to_symbols(cur) = sort([B.nodes[v] for v in cur])
+
+    valid_sets = _search_subsets(universe, 1, max_size, make_checker, to_symbols)
 
     minimal && _prune_minimal!(valid_sets)
     return valid_sets

@@ -291,75 +291,57 @@ function all_adjustment_sets(
     universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
     removed = _pbg_removed_pdag(B, xs, ys)
 
-    valid_sets = Vector{Vector{Symbol}}()
-    cur = Int[]
+    # Scratch buffers allocated once per `make_checker` call, reused across
+    # all its candidates (this rebuilds the moralized PBG once per candidate).
+    function make_checker()
+        seeds_buf = Int[]
+        anc_mask = falses(n)
+        anc_stack = Int[]
+        adj = [Int[] for _ = 1:n]
+        pa_buf = Int[]
+        ne_buf = Int[]
+        blocked = falses(n)
+        visited = falses(n)
+        queue = Int[]
 
-    # Scratch buffers reused across every candidate instead of allocated fresh
-    # per candidate inside `_d_separated_pbg_pdag`/`_pdag_moral_adj_filtered`:
-    # this loop rebuilds the moralized PBG once per candidate, so its
-    # allocations (including `n` fresh Vector{Int} buckets per call)
-    # otherwise dominate runtime via GC pressure.
-    seeds_buf = Int[]
-    anc_mask = falses(n)
-    anc_stack = Int[]
-    adj = [Int[] for _ = 1:n]
-    pa_buf = Int[]
-    ne_buf = Int[]
-    blocked = falses(n)
-    visited = falses(n)
-    queue = Int[]
+        return function valid_candidate(z_idxs::Vector{Int})
+            empty!(seeds_buf)
+            append!(seeds_buf, xs)
+            append!(seeds_buf, ys)
+            append!(seeds_buf, z_idxs)
+            _anterior_bitmask_filtered!(anc_mask, anc_stack, B, seeds_buf, removed)
+            _pdag_moral_adj_filtered!(adj, B, anc_mask, removed, pa_buf, ne_buf)
 
-    function valid_candidate(z_idxs::Vector{Int})
-        empty!(seeds_buf)
-        append!(seeds_buf, xs)
-        append!(seeds_buf, ys)
-        append!(seeds_buf, z_idxs)
-        _anterior_bitmask_filtered!(anc_mask, anc_stack, B, seeds_buf, removed)
-        _pdag_moral_adj_filtered!(adj, B, anc_mask, removed, pa_buf, ne_buf)
-
-        fill!(blocked, false)
-        for v in z_idxs
-            blocked[v] = true
-        end
-        fill!(visited, false)
-        empty!(queue)
-        for xi in xs
-            (anc_mask[xi] && !blocked[xi] && !visited[xi]) || continue
-            visited[xi] = true
-            push!(queue, xi)
-        end
-
-        head = 1
-        while head <= length(queue)
-            u = queue[head]
-            head += 1
-            for w in adj[u]
-                (visited[w] || blocked[w]) && continue
-                y_mask[w] && return false
-                visited[w] = true
-                push!(queue, w)
+            fill!(blocked, false)
+            for v in z_idxs
+                blocked[v] = true
             end
-        end
-        return true
-    end
-
-    function enumerate!(start, k_rem)
-        if k_rem == 0
-            if valid_candidate(cur)
-                push!(valid_sets, sort([B.nodes[v] for v in cur]))
+            fill!(visited, false)
+            empty!(queue)
+            for xi in xs
+                (anc_mask[xi] && !blocked[xi] && !visited[xi]) || continue
+                visited[xi] = true
+                push!(queue, xi)
             end
-            return
-        end
-        for i = start:length(universe)
-            push!(cur, universe[i])
-            enumerate!(i + 1, k_rem - 1)
-            pop!(cur)
+
+            head = 1
+            while head <= length(queue)
+                u = queue[head]
+                head += 1
+                for w in adj[u]
+                    (visited[w] || blocked[w]) && continue
+                    y_mask[w] && return false
+                    visited[w] = true
+                    push!(queue, w)
+                end
+            end
+            return true
         end
     end
 
-    for k = 0:min(max_size, length(universe))
-        enumerate!(1, k)
-    end
+    to_symbols(cur) = sort([B.nodes[v] for v in cur])
+
+    valid_sets = _search_subsets(universe, 0, max_size, make_checker, to_symbols)
 
     minimal && _prune_minimal!(valid_sets)
     return valid_sets

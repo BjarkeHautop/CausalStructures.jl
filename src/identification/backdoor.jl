@@ -131,64 +131,46 @@ function all_backdoor_sets(
     universe = [v for v = 1:n if v != x_idx && v != y_idx && !de_x[v]]
     parents_x = _parents_slice(B, x_idx)
 
-    valid_sets = Vector{Vector{Symbol}}()
-    cur = Int[]
+    # Scratch buffers allocated once per `make_checker` call (once per thread
+    # under `_search_subsets`), reused across all its candidates. `universe`
+    # already excludes descendants of x, so unlike `is_valid_backdoor` this
+    # doesn't need to re-check that.
+    function make_checker()
+        blocked = falses(n)
+        seeds_buf = Int[]
+        anc_mask = falses(n)
+        anc_stack = Int[]
+        visited = falses(n, 2)
+        q = Tuple{Int,Int}[]
+        reached = falses(n)
 
-    # Scratch buffers reused across every candidate (and every parent of x
-    # checked within a candidate) instead of allocated fresh each time, as in
-    # `is_valid_backdoor`: this loop calls the equivalent of that check once
-    # per candidate subset, so its per-call allocations otherwise dominate
-    # runtime via GC pressure. `universe` already excludes descendants of x,
-    # so unlike `is_valid_backdoor` this doesn't need to re-check that.
-    blocked = falses(n)
-    seeds_buf = Int[]
-    anc_mask = falses(n)
-    anc_stack = Int[]
-    visited = falses(n, 2)
-    q = Tuple{Int,Int}[]
-    reached = falses(n)
+        return function valid_candidate(z_idxs::Vector{Int})
+            isempty(parents_x) && return true
 
-    function valid_candidate(z_idxs::Vector{Int})
-        isempty(parents_x) && return true
-
-        fill!(blocked, false)
-        blocked[x_idx] = true
-        for v in z_idxs
-            blocked[v] = true
-        end
-
-        empty!(seeds_buf)
-        push!(seeds_buf, y_idx, x_idx)
-        append!(seeds_buf, z_idxs)
-        _ancestors_bitmask!(anc_mask, anc_stack, B, seeds_buf)
-
-        for p_idx in parents_x
-            blocked[p_idx] && continue
-            p_idx == y_idx && continue
-            _reachable_dag_single!(visited, q, reached, B, p_idx, anc_mask, blocked)
-            reached[y_idx] && return false
-        end
-        return true
-    end
-
-    function enumerate!(start, k_rem)
-        if k_rem == 0
-            if valid_candidate(cur)
-                z = [B.nodes[v] for v in cur]
-                push!(valid_sets, sort(z))
+            fill!(blocked, false)
+            blocked[x_idx] = true
+            for v in z_idxs
+                blocked[v] = true
             end
-            return
-        end
-        for i = start:length(universe)
-            push!(cur, universe[i])
-            enumerate!(i + 1, k_rem - 1)
-            pop!(cur)
+
+            empty!(seeds_buf)
+            push!(seeds_buf, y_idx, x_idx)
+            append!(seeds_buf, z_idxs)
+            _ancestors_bitmask!(anc_mask, anc_stack, B, seeds_buf)
+
+            for p_idx in parents_x
+                blocked[p_idx] && continue
+                p_idx == y_idx && continue
+                _reachable_dag_single!(visited, q, reached, B, p_idx, anc_mask, blocked)
+                reached[y_idx] && return false
+            end
+            return true
         end
     end
 
-    for k = 0:min(max_size, length(universe))
-        enumerate!(1, k)
-    end
+    to_symbols(cur) = sort([B.nodes[v] for v in cur])
+
+    valid_sets = _search_subsets(universe, 0, max_size, make_checker, to_symbols)
 
     minimal && _prune_minimal!(valid_sets)
     return valid_sets
@@ -239,52 +221,37 @@ function all_backdoor_sets(
     # too -- no Symbol round-trip needed to bridge between them.
     Bx = gx.backend
 
-    valid_sets = Vector{Vector{Symbol}}()
-    cur = Int[]
+    # Scratch buffers allocated once per `make_checker` call, reused across
+    # all its candidates.
+    function make_checker()
+        z_mask = falses(n)
+        seeds_buf = Int[]
+        anc_mask = falses(n)
+        anc_stack = Int[]
+        visited = falses(n, 2)
+        q = Tuple{Int,Int}[]
+        reached = falses(n)
 
-    # Scratch buffers reused across every candidate instead of allocated
-    # fresh per candidate inside `m_separated`/`_reachable_admg`.
-    z_mask = falses(n)
-    seeds_buf = Int[]
-    anc_mask = falses(n)
-    anc_stack = Int[]
-    visited = falses(n, 2)
-    q = Tuple{Int,Int}[]
-    reached = falses(n)
-
-    function valid_candidate(z_idxs::Vector{Int})
-        fill!(z_mask, false)
-        for v in z_idxs
-            z_mask[v] = true
-        end
-        z_mask[x_idx] && return true
-
-        empty!(seeds_buf)
-        push!(seeds_buf, x_idx, y_idx)
-        append!(seeds_buf, z_idxs)
-        _ancestors_bitmask!(anc_mask, anc_stack, Bx, seeds_buf)
-
-        _reachable_admg_single!(visited, q, reached, Bx, x_idx, anc_mask, z_mask)
-        return !reached[y_idx]
-    end
-
-    function enumerate!(start, k_rem)
-        if k_rem == 0
-            if valid_candidate(cur)
-                push!(valid_sets, sort([B.nodes[v] for v in cur]))
+        return function valid_candidate(z_idxs::Vector{Int})
+            fill!(z_mask, false)
+            for v in z_idxs
+                z_mask[v] = true
             end
-            return
-        end
-        for i = start:length(universe)
-            push!(cur, universe[i])
-            enumerate!(i + 1, k_rem - 1)
-            pop!(cur)
+            z_mask[x_idx] && return true
+
+            empty!(seeds_buf)
+            push!(seeds_buf, x_idx, y_idx)
+            append!(seeds_buf, z_idxs)
+            _ancestors_bitmask!(anc_mask, anc_stack, Bx, seeds_buf)
+
+            _reachable_admg_single!(visited, q, reached, Bx, x_idx, anc_mask, z_mask)
+            return !reached[y_idx]
         end
     end
 
-    for k = 0:min(max_size, length(universe))
-        enumerate!(1, k)
-    end
+    to_symbols(cur) = sort([B.nodes[v] for v in cur])
+
+    valid_sets = _search_subsets(universe, 0, max_size, make_checker, to_symbols)
 
     minimal && _prune_minimal!(valid_sets)
     return valid_sets
