@@ -279,6 +279,120 @@ function _count_dags_enum!(pa, ch, und, input_pa, skeleton, count, trail)
     end
 end
 
+# Threaded MEC listing: fork the Chickering recursion into independent
+# branches up front, each with its own (pa, ch, und) copy, and hand each to
+# `_list_dags_enum!`/`_count_dags_enum!` unchanged. Kept as separate
+# functions, same reason as in `_search_subsets_sequential`
+
+# MEC subtrees can be wildly uneven in size.
+const _DAG_ENUM_FRONTIER_MULTIPLIER = 4
+
+# One step of the Chickering branching on copies of (pa, ch, und) rather than
+# the shared mutate + undo-trail `_list_dags_enum!` uses, so each resulting
+# child can be handed to a separate task.
+function _dag_enum_fork_children(pa, ch, und, input_pa, skeleton)
+    edge = _smallest_und_edge_enum(und)
+    edge === nothing && return nothing
+
+    u, v = edge
+    children = Vector{Tuple{Vector{Set{Int}},Vector{Set{Int}},Vector{Set{Int}}}}()
+    for (a, b) in ((u, v), (v, u))
+        _would_create_v_structure_enum(a, b, pa, ch, und) && continue
+        _has_dir_path_enum(ch, b, a) && continue
+
+        pa2 = [copy(s) for s in pa]
+        ch2 = [copy(s) for s in ch]
+        und2 = [copy(s) for s in und]
+        trail2 = Tuple{Int,Int}[]
+        _orient_sets!(a, b, und2, pa2, ch2, trail2)
+        _apply_meek_sets!(pa2, ch2, und2, trail2)
+        _has_new_v_structure_enum(pa2, input_pa, skeleton) && continue
+        push!(children, (pa2, ch2, und2))
+    end
+    return children
+end
+
+# Level-synchronized BFS over the fork tree: expands every state in the
+# current frontier by one level at a time (via `_dag_enum_fork_children`)
+# until it has at least `target` states or the whole MEC has been resolved,
+# whichever comes first. Level-synchronized rather than a DFS/stack-based
+# expansion (which would fully expand one lineage before touching its
+# siblings) because MEC subtrees can be wildly uneven in size: popping
+# depth-first can hit `target` having barely touched most of the tree,
+# leaving one huge unexpanded sibling to dominate a single task while
+# everyone else idles.
+function _dag_enum_frontier(pa, ch, und, input_pa, skeleton, target::Int)
+    frontier = [(pa, ch, und)]
+    while length(frontier) < target
+        next = similar(frontier, 0)
+        expanded_any = false
+        for state in frontier
+            children = _dag_enum_fork_children(state..., input_pa, skeleton)
+            if children === nothing
+                push!(next, state)
+            elseif !isempty(children)
+                append!(next, children)
+                expanded_any = true
+            else
+                expanded_any = true
+            end
+        end
+        frontier = next
+        expanded_any || break
+    end
+    return frontier
+end
+
+function _enumerate_dags_threaded(pa, ch, und, input_pa, skeleton, node_names, index)
+    frontier = _dag_enum_frontier(
+        pa,
+        ch,
+        und,
+        input_pa,
+        skeleton,
+        _DAG_ENUM_FRONTIER_MULTIPLIER * Threads.nthreads(),
+    )
+    nt = length(frontier)
+    per_task = [DAG[] for _ = 1:nt]
+    Threads.@threads for i = 1:nt
+        pa_i, ch_i, und_i = frontier[i]
+        trail_i = Tuple{Int,Int}[]
+        _list_dags_enum!(
+            pa_i,
+            ch_i,
+            und_i,
+            input_pa,
+            skeleton,
+            node_names,
+            index,
+            per_task[i],
+            trail_i,
+        )
+    end
+    return reduce(vcat, per_task)
+end
+
+function _count_dags_threaded(pa, ch, und, input_pa, skeleton)
+    frontier = _dag_enum_frontier(
+        pa,
+        ch,
+        und,
+        input_pa,
+        skeleton,
+        _DAG_ENUM_FRONTIER_MULTIPLIER * Threads.nthreads(),
+    )
+    nt = length(frontier)
+    counts = zeros(Int, nt)
+    Threads.@threads for i = 1:nt
+        pa_i, ch_i, und_i = frontier[i]
+        trail_i = Tuple{Int,Int}[]
+        count_i = Ref(0)
+        _count_dags_enum!(pa_i, ch_i, und_i, input_pa, skeleton, count_i, trail_i)
+        counts[i] = count_i[]
+    end
+    return sum(counts)
+end
+
 """
     enumerate_dags(cg::AbstractPDAG) -> Vector{DAG}
 
@@ -320,10 +434,13 @@ function enumerate_dags(cg::AbstractPDAG)
     input_pa = [copy(s) for s in pa]
     skeleton = _build_skeleton_enum(pa, ch, und)
 
-    out = DAG[]
-    trail = Tuple{Int,Int}[]
-    _list_dags_enum!(pa, ch, und, input_pa, skeleton, B.nodes, B.index, out, trail)
-    return out
+    if Threads.nthreads() == 1
+        out = DAG[]
+        trail = Tuple{Int,Int}[]
+        _list_dags_enum!(pa, ch, und, input_pa, skeleton, B.nodes, B.index, out, trail)
+        return out
+    end
+    return _enumerate_dags_threaded(pa, ch, und, input_pa, skeleton, B.nodes, B.index)
 end
 
 """
@@ -358,8 +475,11 @@ function count_dags(cg::AbstractPDAG)
     input_pa = [copy(s) for s in pa]
     skeleton = _build_skeleton_enum(pa, ch, und)
 
-    count = Ref(0)
-    trail = Tuple{Int,Int}[]
-    _count_dags_enum!(pa, ch, und, input_pa, skeleton, count, trail)
-    return count[]
+    if Threads.nthreads() == 1
+        count = Ref(0)
+        trail = Tuple{Int,Int}[]
+        _count_dags_enum!(pa, ch, und, input_pa, skeleton, count, trail)
+        return count[]
+    end
+    return _count_dags_threaded(pa, ch, und, input_pa, skeleton)
 end
