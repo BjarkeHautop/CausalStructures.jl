@@ -183,6 +183,46 @@ function _moral_adj_gx(B::DAGBackend, mask::BitVector, removed_mask::BitVector)
     return adj
 end
 
+# Moral adjacency for ADMGBackend: like the DAGBackend version above, but
+# marries every pair of nodes with an arrowhead into `ch` -- directed parents
+# AND bidirected spouses, since both represent potential colliders at `ch`.
+# Bidirected edges have no "outgoing" endpoint, so unlike parents they are
+# never filtered by removed_mask: cutting a node's outgoing directed edges
+# does not affect an edge into it from a latent common cause.
+function _moral_adj_gx(B::ADMGBackend, mask::BitVector, removed_mask::BitVector)
+    n = length(B.nodes)
+    adj = [Int[] for _ = 1:n]
+    pa_buf = Int[]
+    for ch = 1:n
+        mask[ch] || continue
+        empty!(pa_buf)
+        for p in _parents_slice(B, ch)
+            (mask[p] && !removed_mask[p]) && push!(pa_buf, p)
+        end
+        for s in _spouses_slice(B, ch)
+            mask[s] && push!(pa_buf, s)
+        end
+        for p in pa_buf
+            push!(adj[p], ch)
+            push!(adj[ch], p)
+        end
+        for i in eachindex(pa_buf)
+            for j = (i+1):lastindex(pa_buf)
+                push!(adj[pa_buf[i]], pa_buf[j])
+                push!(adj[pa_buf[j]], pa_buf[i])
+            end
+        end
+    end
+    return adj
+end
+
+# Whether `v` has any arrowhead pointing into it (a directed parent, or for
+# ADMGs a bidirected spouse) -- used by `_get_dep` to decide whether a newly
+# removed node must keep propagating the BFS.
+_has_incoming_arrowhead(B::DAGBackend, v::Int) = !isempty(_parents_slice(B, v))
+_has_incoming_arrowhead(B::ADMGBackend, v::Int) =
+    !isempty(_parents_slice(B, v)) || !isempty(_spouses_slice(B, v))
+
 # GETDEP from Jeong, Tian & Bareinboim (2022), helper for Step 2 of FindFDSet.
 #
 # Given T (a candidate set), R' (the filtered candidate pool from Step 1), X, and Y,
@@ -197,7 +237,7 @@ end
 # Reference: Jeong, Tian & Bareinboim (2022). Finding and Listing Front-Door
 #   Adjustment Sets. NeurIPS 2022. Algorithm 4.
 function _get_dep(
-    B::DAGBackend,
+    B::Union{DAGBackend,ADMGBackend},
     x_set::BitVector,
     y_mask::BitVector,
     t_mask::BitVector,
@@ -262,7 +302,7 @@ function _get_dep(
 
         # NR' = {w ∈ NR | w has an incoming arrow in G}; must also be BFS-ed
         for v = 1:n
-            (nr_mask[v] && !isempty(_parents_slice(B, v))) && (n_set[v] = true)
+            (nr_mask[v] && _has_incoming_arrowhead(B, v)) && (n_set[v] = true)
         end
 
         # Insert N = N' ∪ NR' into queue
@@ -289,7 +329,11 @@ end
 #
 # Returns (cpg_mask, cpg_children) where cpg_mask marks the CPG node set and
 # cpg_children[v] lists the directed children of v in G'.
-function _get_causal_path_graph(B::DAGBackend, x_set::BitVector, y_mask::BitVector)
+function _get_causal_path_graph(
+    B::Union{DAGBackend,ADMGBackend},
+    x_set::BitVector,
+    y_mask::BitVector,
+)
     n = length(B.nodes)
 
     # De(X) in G: BFS forward along directed edges from X
@@ -363,7 +407,7 @@ end
 # FD condition. If GETDEP returns nothing for some v ∈ I, returns nothing
 # (infeasible: I must be included but cannot satisfy condition 3).
 function _getcand3rdfdc(
-    B::DAGBackend,
+    B::Union{DAGBackend,ADMGBackend},
     x_set::BitVector,
     y_mask::BitVector,
     i_mask::BitVector,
@@ -386,6 +430,11 @@ function _getcand3rdfdc(
     return r_dbl_prime
 end
 
+# TESTSEP(G_X, X, v, ∅): X ⊥ v | ∅ in G_X, dispatched per graph class (d- vs
+# m-separation).
+_testsep(gx::DAG, x::Symbol, v::Symbol) = d_separated(gx, x, v, Symbol[])
+_testsep(gx::ADMG, x::Symbol, v::Symbol) = m_separated(gx, x, v, Symbol[])
+
 # GETCAND2NDFDC from Jeong, Tian & Bareinboim (2022), Step 1 of FindFDSet.
 #
 # Returns R' ⊆ R: all v ∈ R for which TESTSEP(G_X, X, v, ∅) = true (no unblocked
@@ -393,7 +442,7 @@ end
 # some v ∈ Z, every Z with I ⊆ Z ⊆ R' is guaranteed to satisfy the 2nd front-door
 # condition. Returns nothing if any v ∈ I has a BD path from X (I ⊆ Z ⊆ R infeasible).
 function _getcand2ndfdc(
-    gx::DAG,
+    gx::Union{DAG,ADMG},
     x::Symbol,
     nodes::Vector{Symbol},
     i_mask::BitVector,
@@ -403,7 +452,7 @@ function _getcand2ndfdc(
     r_prime = copy(r_mask)
     for v = 1:n
         r_mask[v] || continue
-        if !d_separated(gx, x, nodes[v], Symbol[])
+        if !_testsep(gx, x, nodes[v])
             if i_mask[v]
                 return nothing  # v ∈ I must be included but has a backdoor path
             end
@@ -414,7 +463,8 @@ function _getcand2ndfdc(
 end
 
 """
-    frontdoor_set(cg::DAG, x, y; include=[], restrict=nothing) -> Vector{Symbol} or nothing
+    frontdoor_set(cg::Union{DAG,ADMG}, x, y; include=[], restrict=nothing)
+        -> Vector{Symbol} or nothing
 
 Return a front-door adjustment set Z with `include ⊆ Z ⊆ restrict` satisfying
 all three front-door conditions relative to (`x`, `y`) in `cg`, or `nothing` if
@@ -429,7 +479,10 @@ Implements Algorithm 1 of [jeong2022finding](@cite):
 - Step 2 (GETCAND3RDFDC): drop candidates for which condition 3 cannot be met.
 - Step 3: check that the remaining set blocks all directed paths X --> Y.
 
-The returned set is the full R'' from Steps 1-2 (not necessarily minimal).
+The returned set is the full R'' from Steps 1-2 (not necessarily minimal). For
+[`ADMG`](@ref), backdoor and condition-3 checks are done via m-separation, with
+bidirected edges treated as latent-confounder edges (a spouse contributes an
+arrowhead into a node just like a directed parent does).
 
 # Examples
 
@@ -464,12 +517,27 @@ julia> frontdoor_set(cg, :X, :Y; include = [:D], restrict = [:A, :B, :C, :D]) ==
 true
 ```
 
+```jldoctest
+julia> # Fig. 1b latent-projected to an ADMG: U1 -> X <-> Y, U2 -> X <-> D
+       admg = cgraph(
+           bidirected(:X, :Y), bidirected(:X, :D),
+           directed(:X, :A), directed(:A, :B), directed(:A, :C), directed(:A, :D),
+           directed(:B, :Y), directed(:C, :Y), directed(:D, :Y);
+           class = ADMG);
+
+julia> frontdoor_set(admg, :X, :Y; restrict = [:A, :B, :C, :D])
+3-element Vector{Symbol}:
+ :A
+ :B
+ :C
+```
+
 # References
 
 - [jeong2022finding](@cite)
 """
 function frontdoor_set(
-    cg::DAG,
+    cg::Union{DAG,ADMG},
     x::Symbol,
     y::Symbol;
     include::AbstractVector{Symbol} = Symbol[],
@@ -532,9 +600,9 @@ end
 # Mutates i_mask and r_mask in place, restoring them before returning.
 function _listfdsets!(
     results::Vector{Vector{Symbol}},
-    gx::DAG,
+    gx::Union{DAG,ADMG},
     x::Symbol,
-    B::DAGBackend,
+    B::Union{DAGBackend,ADMGBackend},
     x_set::BitVector,
     y_mask::BitVector,
     x_idx::Int,
@@ -620,7 +688,8 @@ function _listfdsets!(
 end
 
 """
-    all_frontdoor_sets(cg::DAG, x, y; include=[], restrict=nothing) -> Vector{Vector{Symbol}}
+    all_frontdoor_sets(cg::Union{DAG,ADMG}, x, y; include=[], restrict=nothing)
+        -> Vector{Vector{Symbol}}
 
 Return all front-door adjustment sets Z with `include ⊆ Z ⊆ restrict` relative
 to (`x`, `y`) in `cg`.
@@ -631,7 +700,8 @@ to (`x`, `y`) in `cg`.
 
 Implements Algorithm 2 (LISTFDSETS) of [jeong2022finding](@cite). The
 algorithm has polynomial-delay guarantees: it outputs the first result in
-polynomial time and takes polynomial time between consecutive results.
+polynomial time and takes polynomial time between consecutive results. For
+[`ADMG`](@ref), see the note on m-separation in [`frontdoor_set`](@ref).
 
 # Examples
 
@@ -658,12 +728,28 @@ julia> sort(all_frontdoor_sets(cg, :X, :Y; restrict = [:A, :B, :C, :D]))
  [:A, :C]
 ```
 
+```jldoctest
+julia> # Fig. 1b latent-projected to an ADMG: U1 -> X <-> Y, U2 -> X <-> D
+       admg = cgraph(
+           bidirected(:X, :Y), bidirected(:X, :D),
+           directed(:X, :A), directed(:A, :B), directed(:A, :C), directed(:A, :D),
+           directed(:B, :Y), directed(:C, :Y), directed(:D, :Y);
+           class = ADMG);
+
+julia> sort(all_frontdoor_sets(admg, :X, :Y; restrict = [:A, :B, :C, :D]))
+4-element Vector{Vector{Symbol}}:
+ [:A]
+ [:A, :B]
+ [:A, :B, :C]
+ [:A, :C]
+```
+
 # References
 
 - [jeong2022finding](@cite)
 """
 function all_frontdoor_sets(
-    cg::DAG,
+    cg::Union{DAG,ADMG},
     x::Symbol,
     y::Symbol;
     include::AbstractVector{Symbol} = Symbol[],

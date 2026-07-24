@@ -591,3 +591,53 @@ end
     @test is_valid_frontdoor(dag, :X, :Y, Symbol[]) ==
           is_valid_frontdoor(admg, :X, :Y, Symbol[])
 end
+
+@testitem "frontdoor_set (ADMG): classic front-door with bidirected confounder" tags =
+    [:unit] begin
+    admg = cgraph(bidirected(:X, :Y), directed(:X, :M), directed(:M, :Y); class = ADMG)
+    @test frontdoor_set(admg, :X, :Y; restrict = [:M]) == [:M]
+end
+
+@testitem "frontdoor_set/all_frontdoor_sets (ADMG): consistent with DAG latent projection on Fig. 1b" setup=[
+    JeongGraphs,
+] tags = [:unit] begin
+    dag = _jeong2022_fig1b()
+    admg = latent_project(dag, [:U1, :U2])
+    restrict = [:A, :B, :C, :D]
+    @test frontdoor_set(dag, :X, :Y; restrict = restrict) ==
+          frontdoor_set(admg, :X, :Y; restrict = restrict)
+    @test Set(all_frontdoor_sets(dag, :X, :Y; restrict = restrict)) ==
+          Set(all_frontdoor_sets(admg, :X, :Y; restrict = restrict)) ==
+          Set([[:A], [:A, :B], [:A, :C], [:A, :B, :C]])
+end
+
+@testitem "frontdoor_set/all_frontdoor_sets (ADMG): consistent with DAG latent projection on Fig. 6a" setup=[
+    JeongGraphs,
+] tags = [:unit] begin
+    dag = _jeong2022_fig6a()
+    admg = latent_project(dag, [:U])
+    restrict = [:A1, :B1, :A2, :B2]
+    zs = all_frontdoor_sets(admg, :X, :Y; restrict = restrict)
+    @test length(zs) == 9
+    @test Set(zs) == Set(all_frontdoor_sets(dag, :X, :Y; restrict = restrict))
+end
+
+@testitem "all_frontdoor_sets (ADMG): condition 3 requires marrying a directed parent with a bidirected spouse" tags =
+    [:unit] begin
+    # X --> A --> Y, B --> Y, and a latent confounds A and B (A <-> B in the
+    # projection). Zi=A has a backdoor path A <-> B --> Y that condition 3
+    # requires blocking by also including B.
+    dag = cgraph(
+        directed(:U, :A),
+        directed(:U, :B),
+        directed(:X, :A),
+        directed(:A, :Y),
+        directed(:B, :Y);
+        class = DAG,
+    )
+    admg = latent_project(dag, [:U])
+    restrict = [:A, :B]
+    @test all_frontdoor_sets(dag, :X, :Y; restrict = restrict) ==
+          all_frontdoor_sets(admg, :X, :Y; restrict = restrict) ==
+          [[:A, :B]]
+end
