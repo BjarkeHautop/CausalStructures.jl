@@ -288,30 +288,43 @@ function _sample_distinct(rng, n::Int, k::Int)
 end
 
 """
-    generate_graph([rng], n; m=nothing, p=nothing, class=DAG) -> CausalGraph
+    generate_graph([rng], n; m=nothing, p=nothing, class=DAG, latents=0) -> CausalGraph
 
-Generate a random graph on `n` nodes named `V1, …, Vn`.
+Generate a random graph on `n` observed nodes named `V1, …, Vn`.
 
 Exactly one of `m` (exact edge count) or `p` (edge probability) must be given.
-Edges are sampled uniformly at random over all `n(n-1)/2` possible pairs and
-oriented by a random topological ordering, guaranteeing acyclicity.
+Edges are sampled uniformly at random over all possible pairs and oriented by
+a random topological ordering, guaranteeing acyclicity.
 
 `rng` defaults to `Random.default_rng()` when omitted; pass an explicit
 `AbstractRNG` (e.g. `Random.Xoshiro(seed)`) for reproducibility.
 
-`class` may be [`DAG`](@ref) (default) or [`CPDAG`](@ref); for CPDAG the
-sampled DAG is converted via [`dag_to_cpdag`](@ref).
+`class` may be [`DAG`](@ref) (default), [`CPDAG`](@ref), [`ADMG`](@ref), or
+[`MAG`](@ref). For CPDAG the sampled DAG is converted via
+[`dag_to_cpdag`](@ref). For ADMG/MAG, `latents` additional nodes `L1, …, Lk`
+are added to the underlying random DAG and then marginalized out via
+[`latent_project`](@ref); `m`/`p` are applied to the full `n + latents` node
+set before projection. `latents` must be `0` (the default) for
+`class = DAG` or `class = CPDAG`.
+
+Unlike ADMGs, MAGs additionally require the *ancestral* constraint (no
+bidirected edge between a node and its own ancestor), which a naive latent
+projection can violate whenever a marginalized common cause and a separate
+directed path connect the same pair of observed nodes. For `class = MAG`,
+each candidate is checked and, if invalid, resampled (up to an internal
+retry limit) until a valid MAG is found; an error is raised if none is found,
+which can happen for very dense graphs with many latents.
 
 # Examples
 
-```jldoctest
-julia> cg = generate_graph(4; m = 3);
+```@repl
+dag = generate_graph(7; m = 5)
 
-julia> isa(cg, DAG)
-true
+cpdag = generate_graph(7; m = 5, class = CPDAG)
 
-julia> length(nodes(cg))
-4
+admg = generate_graph(15; p = 0.25, class = ADMG, latents = 3)
+
+mag = generate_graph(15; p = 0.25, class = MAG, latents = 3)
 ```
 """
 function generate_graph(
@@ -319,11 +332,20 @@ function generate_graph(
     n::Integer;
     m::Union{Nothing,Integer} = nothing,
     p::Union{Nothing,Real} = nothing,
-    class::Union{Type{DAG},Type{CPDAG}} = DAG,
+    class::Union{Type{DAG},Type{CPDAG},Type{ADMG},Type{MAG}} = DAG,
+    latents::Integer = 0,
 )
     n = Int(n)
     if n <= 0
         error("n must be positive")
+    end
+
+    latents = Int(latents)
+    if latents < 0
+        error("latents must be non-negative")
+    end
+    if latents > 0 && !(class <: Union{ADMG,MAG})
+        error("latents is only supported for class = ADMG or class = MAG")
     end
 
     if xor(m === nothing, p === nothing) == false
@@ -331,28 +353,60 @@ function generate_graph(
     end
 
     local_rng = rng
-    node_names = [Symbol("V$(i)") for i = 1:n]
+    observed_names = [Symbol("V$(i)") for i = 1:n]
+    latent_names = [Symbol("L$(i)") for i = 1:latents]
+    node_names = vcat(observed_names, latent_names)
+    n_total = n + latents
+    node_set = Set(node_names)
 
-    total_edges = n * (n - 1) ÷ 2
+    total_edges = n_total * (n_total - 1) ÷ 2
     if p !== nothing
         p = Float64(p)
         if !isfinite(p) || p < 0 || p > 1
             error("p must be in [0,1]")
         end
-        edge_count = count(_ -> rand(local_rng) < p, 1:total_edges)
     else
-        edge_count = Int(m)
-        if edge_count < 0 || edge_count > total_edges
+        m = Int(m)
+        if m < 0 || m > total_edges
             error("m must be in 0..$(total_edges)")
         end
     end
 
+    if class === MAG
+        max_attempts = 200
+        for _ = 1:max_attempts
+            edges = _sample_random_dag_edges(local_rng, node_names, n_total, m, p)
+            dag = DAG(node_set, edges; validate = false)
+            admg = latent_project(dag, latent_names)
+            if isempty(validation_errors(MAGConstraints(), admg))
+                return MAG(admg.backend.nodes, admg.edges; validate = false)
+            end
+        end
+        error(
+            "generate_graph: failed to sample a valid MAG after $(max_attempts) attempts; " *
+            "try fewer latents or a lower edge density",
+        )
+    end
+
+    edges = _sample_random_dag_edges(local_rng, node_names, n_total, m, p)
+    return _finalize_generate_graph(class, node_set, edges, latent_names)
+end
+
+generate_graph(n::Integer; kwargs...) = generate_graph(Random.default_rng(), n; kwargs...)
+
+# Samples directed edges uniformly at random over all `n_total(n_total-1)/2`
+# possible pairs among `node_names`, oriented by a random topological
+# ordering to guarantee acyclicity. Exactly one of `m`/`p` must be non-nothing.
+function _sample_random_dag_edges(local_rng, node_names, n_total, m, p)
+    total_edges = n_total * (n_total - 1) ÷ 2
+    edge_count = p !== nothing ? count(_ -> rand(local_rng) < p, 1:total_edges) : m
+
     edges = CausalEdge[]
     if edge_count > 0
         ranks = _sample_distinct(local_rng, total_edges, edge_count)
-        row_lengths = (n-1):-1:1
+        row_lengths = (n_total-1):-1:1
         cum_lengths = cumsum(row_lengths)
-        ordering = randperm(local_rng, n)
+        ordering = randperm(local_rng, n_total)
 
         sizehint!(edges, edge_count)
         for rank in ranks
@@ -365,21 +419,23 @@ function generate_graph(
             push!(edges, directed(src, dst))
         end
     end
-
-    return _finalize_generate_graph(class, Set(node_names), edges)
+    return edges
 end
-
-generate_graph(n::Integer; kwargs...) = generate_graph(Random.default_rng(), n; kwargs...)
 
 # validate=false is safe here: edges are all `directed(...)` by construction
 # and oriented by a random topological ordering, so the result is acyclic by
 # construction.
-_finalize_generate_graph(::Type{DAG}, node_set, edges) =
+_finalize_generate_graph(::Type{DAG}, node_set, edges, latent_names) =
     DAG(node_set, edges; validate = false)
 
-function _finalize_generate_graph(::Type{CPDAG}, node_set, edges)
+function _finalize_generate_graph(::Type{CPDAG}, node_set, edges, latent_names)
     dag = DAG(node_set, edges; validate = false)
     return dag_to_cpdag(dag)
+end
+
+function _finalize_generate_graph(::Type{ADMG}, node_set, edges, latent_names)
+    dag = DAG(node_set, edges; validate = false)
+    return latent_project(dag, latent_names)
 end
 
 """

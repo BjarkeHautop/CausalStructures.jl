@@ -70,6 +70,40 @@ end
     @test_throws TypeError generate_graph(4; m = 2, class = UG)
 end
 
+@testitem "generate_graph: ADMG class returns ADMG over exactly n observed nodes" tags =
+    [:unit] begin
+    n = 6
+    admg = generate_graph(n; m = 8, class = ADMG, latents = 3)
+    @test admg isa ADMG
+    @test Set(nodes(admg)) == Set([Symbol("V$i") for i = 1:n])
+end
+
+@testitem "generate_graph: MAG class returns a valid MAG over exactly n observed nodes" tags =
+    [:unit] begin
+    using Random
+    n = 5
+    for seed = 1:20
+        mag = generate_graph(Random.Xoshiro(seed), n; p = 0.6, class = MAG, latents = 3)
+        @test mag isa MAG
+        @test is_mag(mag)
+        @test Set(nodes(mag)) == Set([Symbol("V$i") for i = 1:n])
+    end
+end
+
+@testitem "generate_graph: ADMG/MAG with latents=0 has no bidirected edges" tags = [:unit] begin
+    admg = generate_graph(5; m = 4, class = ADMG)
+    @test all(e -> e.src_end == CausalStructures.Tail, admg.edges)
+end
+
+@testitem "generate_graph: latents keyword rejected for DAG/CPDAG classes" tags = [:unit] begin
+    @test_throws ErrorException generate_graph(4; m = 2, class = DAG, latents = 1)
+    @test_throws ErrorException generate_graph(4; m = 2, class = CPDAG, latents = 1)
+end
+
+@testitem "generate_graph: latents must be non-negative" tags = [:unit] begin
+    @test_throws ErrorException generate_graph(4; m = 2, class = ADMG, latents = -1)
+end
+
 # ── simulate_data ─────────────────────────────────────────────────────────────
 
 @testitem "simulate_data: errors on non-DAG graph class" tags = [:unit] begin
