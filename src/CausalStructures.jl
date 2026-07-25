@@ -96,5 +96,6 @@ export ADMG,
     spouses,
     subgraph,
     topological_sort,
-    undirected
+    undirected,
+    uniform_dag
 end

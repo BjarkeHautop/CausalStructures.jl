@@ -1,10 +1,5 @@
 # TODO
 
-## Simulation
-
-- Implement uniform DAG generation alg. Jack Kuipers & Giusi Moffa
-Uniform Random Generation of Large Acyclic Digraphs (Statistics and Computing, 2015).
-
 ## Algs
 
 - Instrumental variables — is_valid_iv, all_iv_sets (Brito & Pearl 2002).

@@ -48,4 +48,5 @@ include("transform/enumerate-mags.jl")
 
 # I/O, generation, simulation, display, layout
 include("io/utils.jl")
+include("io/uniform-dag.jl")
 include("io/layout.jl")

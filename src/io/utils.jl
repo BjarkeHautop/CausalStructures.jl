@@ -293,11 +293,13 @@ end
 Generate a random graph on `n` observed nodes named `V1, …, Vn`.
 
 Exactly one of `m` (exact edge count) or `p` (edge probability) must be given.
-Edges are sampled uniformly at random over all possible pairs and oriented by
-a random topological ordering, guaranteeing acyclicity.
-
-`rng` defaults to `Random.default_rng()` when omitted; pass an explicit
-`AbstractRNG` (e.g. `Random.Xoshiro(seed)`) for reproducibility.
+Edges are sampled uniformly at random over all possible pairs using
+Erdős–Rényi and oriented by a random topological
+ordering, guaranteeing acyclicity. This samples uniformly
+over graphs of a given size/density, but *not* uniformly over the space of
+DAGs (some DAGs correspond to more topological orderings than others). For an
+exact uniform draw from all labelled DAGs on `n` nodes regardless of edge
+count, use [`uniform_dag`](@ref) instead.
 
 `class` may be [`DAG`](@ref) (default), [`CPDAG`](@ref), [`ADMG`](@ref), or
 [`MAG`](@ref). For CPDAG the sampled DAG is converted via
@@ -307,13 +309,13 @@ are added to the underlying random DAG and then marginalized out via
 set before projection. `latents` must be `0` (the default) for
 `class = DAG` or `class = CPDAG`.
 
-Unlike ADMGs, MAGs additionally require the *ancestral* constraint (no
-bidirected edge between a node and its own ancestor), which a naive latent
-projection can violate whenever a marginalized common cause and a separate
-directed path connect the same pair of observed nodes. For `class = MAG`,
+For `class = MAG`,
 each candidate is checked and, if invalid, resampled (up to an internal
 retry limit) until a valid MAG is found; an error is raised if none is found,
 which can happen for very dense graphs with many latents.
+
+`rng` defaults to `Random.default_rng()` when omitted; pass an explicit
+`AbstractRNG` (e.g. `Random.Xoshiro(seed)`) for reproducibility.
 
 # Examples
 
