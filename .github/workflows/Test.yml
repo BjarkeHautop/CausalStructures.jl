@@ -3,7 +3,7 @@ name: Test
 on:
   push:
     branches:
-      - disabled-temporarily
+      - main
     tags: ["*"]
   workflow_dispatch:
 
