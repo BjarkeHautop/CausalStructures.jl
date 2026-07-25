@@ -2,6 +2,8 @@
 CurrentModule = CausalStructures
 ```
 
+# CausalStructures.jl
+
 CausalStructures.jl provides a type-driven interface for representing,
 validating, and manipulating causal graphs. Rather than treating every graph as
 an arbitrary collection of nodes and edges, graph classes explicitly encode
