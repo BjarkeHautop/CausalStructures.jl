@@ -1,7 +1,7 @@
 # Preferences
 
 Several defaults can be changed project-wide using
-[Preferences.jl](https://github.com/JuliaPackageOrganizations/Preferences.jl).
+[Preferences.jl](https://github.com/JuliaPackaging/Preferences.jl).
 
 These preferences are stored per-project. After setting a value, restart Julia for changes to take effect globally within the project.
 
