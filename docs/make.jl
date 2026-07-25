@@ -18,7 +18,6 @@ const titles = Dict(
     "15-equivalence-classes.md" => "Equivalence Classes",
     "20-causal-identification.md" => "Causal Identification",
     "40-plotting.md" => "Plotting",
-    "50-benchmark.md" => "Performance",
     "80-preferences.md" => "Preferences",
     "91-developer.md" => "Developer docs",
 )
