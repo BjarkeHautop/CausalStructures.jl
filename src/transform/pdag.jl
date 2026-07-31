@@ -69,12 +69,10 @@ function dag_from_pdag(cg::AbstractPDAG)
 
             # Remove x from working graph
             for p in pa[x]
-                ;
-                delete!(ch[p], x);
+                delete!(ch[p], x)
             end
             for u in nbrs
-                ;
-                delete!(und[u], x);
+                delete!(und[u], x)
             end
             pa[x] = Set{Int}()
             ch[x] = Set{Int}()
@@ -146,23 +144,22 @@ function meek_closure(cg::AbstractPDAG)
         queue = Int[src]
         head = 1
         while head <= length(queue)
-            u = queue[head];
+            u = queue[head]
             head += 1
             u == tgt && return true
             seen[u] && continue
             seen[u] = true
             for v in ch[u]
-                ;
-                !seen[v] && push!(queue, v);
+                !seen[v] && push!(queue, v)
             end
         end
         return false
     end
 
     function orient!(a, b)
-        delete!(und[a], b);
+        delete!(und[a], b)
         delete!(und[b], a)
-        push!(ch[a], b);
+        push!(ch[a], b)
         push!(pa[b], a)
     end
 

@@ -238,13 +238,11 @@ function _m_separated_pbg_ag(
 
     y_mask = falses(n)
     for y in ys
-        ;
-        y_mask[y] = true;
+        y_mask[y] = true
     end
     blocked = falses(n)
     for v in z
-        ;
-        blocked[v] = true;
+        blocked[v] = true
     end
 
     visited = falses(n)
@@ -257,7 +255,7 @@ function _m_separated_pbg_ag(
 
     head = 1
     while head <= length(queue)
-        u = queue[head];
+        u = queue[head]
         head += 1
         for w in adj[u]
             (visited[w] || blocked[w]) && continue
@@ -302,8 +300,7 @@ function all_adjustment_sets(
     forbidden = _forbidden_set(B, xs, ys)
     y_mask = falses(n)
     for yi in ys
-        ;
-        y_mask[yi] = true;
+        y_mask[yi] = true
     end
 
     universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]

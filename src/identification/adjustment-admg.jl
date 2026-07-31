@@ -39,14 +39,14 @@ function _forbidden_set(B::Union{ADMGBackend,AGBackend}, xs::Vector{Int}, ys::Ve
     an_y = _ancestors_bitmask(B, ys)
     y_mask = falses(n)
     for y in ys
-        ;
-        y_mask[y] = true;
+
+        y_mask[y] = true
     end
     causal_minus_y = [v for v = 1:n if de_x[v] && an_y[v] && !y_mask[v]]
     forbidden = _descendants_bitmask(B, causal_minus_y)
     for x in xs
-        ;
-        forbidden[x] = true;
+
+        forbidden[x] = true
     end
     return forbidden
 end
@@ -123,13 +123,11 @@ function _admg_moral_adj_filtered(
         pa = [p for p in _parents_slice(B, v) if mask[p] && !((p, v) in removed)]
         sp = [s for s in _spouses_slice(B, v) if mask[s]]
         for p in pa
-            ;
-            push!(adj[v], p);
-            push!(adj[p], v);
+            push!(adj[v], p)
+            push!(adj[p], v)
         end
         for s in sp
-            ;
-            push!(adj[v], s);
+            push!(adj[v], s)
         end  # reverse added when s is processed
         heads = sort!(unique!(vcat(pa, sp)))
         for i in eachindex(heads), j = (i+1):lastindex(heads)
@@ -138,8 +136,8 @@ function _admg_moral_adj_filtered(
         end
     end
     for v = 1:n
-        ;
-        sort!(unique!(adj[v]));
+
+        sort!(unique!(adj[v]))
     end
     return adj
 end
@@ -199,8 +197,7 @@ function _pbg_removed(B::Union{ADMGBackend,AGBackend}, xs::Vector{Int}, ys::Vect
     an_y = _ancestors_bitmask(B, ys)
     x_mask = falses(n)
     for x in xs
-        ;
-        x_mask[x] = true;
+        x_mask[x] = true
     end
     removed = Set{Tuple{Int,Int}}()
     for x in xs
@@ -228,13 +225,12 @@ function _m_separated_pbg(
 
     y_mask = falses(n)
     for y in ys
-        ;
-        y_mask[y] = true;
+        y_mask[y] = true
     end
     blocked = falses(n)
     for v in z
-        ;
-        blocked[v] = true;
+
+        blocked[v] = true
     end
 
     visited = falses(n)
@@ -247,7 +243,7 @@ function _m_separated_pbg(
 
     head = 1
     while head <= length(queue)
-        u = queue[head];
+        u = queue[head]
         head += 1
         for w in adj[u]
             (visited[w] || blocked[w]) && continue
@@ -266,8 +262,7 @@ function _is_subset_of(a::Vector{Symbol}, b::Vector{Symbol})
     j = 1
     for v in a
         while j <= length(b) && b[j] < v
-            ;
-            j += 1;
+            j += 1
         end
         (j > length(b) || b[j] != v) && return false
         j += 1
@@ -277,8 +272,7 @@ end
 
 function _prune_minimal!(sets::Vector{Vector{Symbol}})
     for s in sets
-        ;
-        sort!(s);
+        sort!(s)
     end
     sort!(sets)
     out = Vector{Vector{Symbol}}()
@@ -413,8 +407,7 @@ function all_adjustment_sets(
     forbidden = _forbidden_set(B, xs, ys)
     y_mask = falses(n)
     for yi in ys
-        ;
-        y_mask[yi] = true;
+        y_mask[yi] = true
     end
 
     universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]

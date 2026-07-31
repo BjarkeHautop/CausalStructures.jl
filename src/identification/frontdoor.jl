@@ -58,7 +58,7 @@ function is_valid_frontdoor(
         push!(queue, x_idx)
         head = 1
         while head <= length(queue)
-            u = queue[head];
+            u = queue[head]
             head += 1
             for c in _children_slice(B, u)
                 z_mask[c] && continue
@@ -109,7 +109,7 @@ function is_valid_frontdoor(
         push!(queue, x_idx)
         head = 1
         while head <= length(queue)
-            u = queue[head];
+            u = queue[head]
             head += 1
             for c in _children_slice(B, u)
                 z_mask[c] && continue
@@ -347,7 +347,7 @@ function _get_causal_path_graph(
     end
     head = 1
     while head <= length(queue)
-        u = queue[head];
+        u = queue[head]
         head += 1
         for c in _children_slice(B, u)
             de_x[c] && continue
@@ -368,7 +368,7 @@ function _get_causal_path_graph(
     end
     head = 1
     while head <= length(queue2)
-        u = queue2[head];
+        u = queue2[head]
         head += 1
         x_set[u] && continue  # incoming to X removed: don't traverse X's parents
         for p in _parents_slice(B, u)
@@ -582,7 +582,7 @@ function frontdoor_set(
     queue = Int[x_idx]
     head = 1
     while head <= length(queue)
-        u = queue[head];
+        u = queue[head]
         head += 1
         for c in cpg_children[u]
             r_dbl_prime[c] && continue   # wall: R'' intercepts here
@@ -627,7 +627,7 @@ function _listfdsets!(
     queue = Int[x_idx]
     head = 1
     while head <= length(queue)
-        u = queue[head];
+        u = queue[head]
         head += 1
         for c in cpg_children[u]
             r_dbl_prime[c] && continue
@@ -642,7 +642,7 @@ function _listfdsets!(
     v = 0
     for j = 1:n
         if r_mask[j] && !i_mask[j]
-            v = j;
+            v = j
             break
         end
     end

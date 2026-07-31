@@ -447,8 +447,7 @@ function _cpdag_components_chordal(B::PDAGBackend, n::Int, comp::Vector{Int}, c:
             end
             if pick == 0
                 for v in nodes
-                    ;
-                    in_c[v] = false;
+                    in_c[v] = false
                 end
                 return false
             end
@@ -474,8 +473,7 @@ function _cpdag_components_chordal(B::PDAGBackend, n::Int, comp::Vector{Int}, c:
                 for w in @view higher[1:(end-1)]
                     if !_cpdag_in_sorted(pvt, _undirected_slice(B, w))
                         for x in nodes
-                            ;
-                            in_c[x] = false;
+                            in_c[x] = false
                         end
                         return false
                     end
@@ -484,8 +482,8 @@ function _cpdag_components_chordal(B::PDAGBackend, n::Int, comp::Vector{Int}, c:
         end
 
         for v in nodes
-            ;
-            in_c[v] = false;
+
+            in_c[v] = false
         end
     end
     return true
