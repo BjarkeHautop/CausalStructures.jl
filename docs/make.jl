@@ -19,11 +19,22 @@ const titles = Dict(
     "20-causal-identification.md" => "Causal Identification",
     "40-plotting.md" => "Plotting",
     "80-preferences.md" => "Preferences",
+    "90-bibliography.md" => "Bibliography",
     "91-developer.md" => "Developer docs",
+    "95-reference" => "Reference",
 )
 
 function recursively_list_pages(folder; path_prefix = "")
     pages_list = Any[]
+
+    # A subfolder's own index.md (if any) becomes its overview page, listed
+    # first within that subfolder. The root index.md is handled separately by
+    # `list_pages`, so skip this for the top-level call (empty path_prefix).
+    if path_prefix != "" && isfile(joinpath(folder, "index.md"))
+        folder_title = get(titles, path_prefix, path_prefix)
+        push!(pages_list, "$folder_title overview" => joinpath(path_prefix, "index.md"))
+    end
+
     for file in readdir(folder)
         if file == "index.md"
             # We add index.md separately to make sure it is the first in the list
@@ -84,7 +95,6 @@ makedocs(;
             "15-equivalence-classes.md",
             "20-causal-identification.md",
             "40-plotting.md",
-            "95-reference.md",
         ],
     ),
     pages = list_pages(),
