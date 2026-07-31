@@ -118,3 +118,41 @@ Default edge line width.
 ```julia
 set_preferences!(CausalStructures, "plot_linewidth" => 2.0)
 ```
+
+### `"plot_label_color"`
+
+Default node label text color.
+
+| Default | Type |
+| ------- | ---- |
+| `"black"` | `String` |
+
+```julia
+set_preferences!(CausalStructures, "plot_label_color" => "gray10")
+```
+
+### `"plot_label_fontsize"`
+
+Default node label font size.
+
+| Default | Type |
+| ------- | ---- |
+| `14.0` | `Number` |
+
+```julia
+set_preferences!(CausalStructures, "plot_label_fontsize" => 16.0)
+```
+
+### `"plot_label_font"`
+
+Default node label font.
+
+| Default | Type |
+| ------- | ---- |
+| `"regular"` | `String` |
+
+Any [Makie-compatible font](https://docs.makie.org/stable/explanations/fonts_and_topbar) name or theme key (e.g. `"regular"`, `"bold"`).
+
+```julia
+set_preferences!(CausalStructures, "plot_label_font" => "bold")
+```

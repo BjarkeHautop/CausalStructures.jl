@@ -131,6 +131,7 @@ function _draw_edge!(
             path[1] + r_circle * tan_src,
             r_circle;
             strokecolor = color,
+            strokewidth = linewidth,
         )
     end
     if has_circle_dst
@@ -139,6 +140,7 @@ function _draw_edge!(
             path[m] - r_circle * tan_dst,
             r_circle;
             strokecolor = color,
+            strokewidth = linewidth,
         )
     end
 end
@@ -253,6 +255,24 @@ Each style argument accepts either a **scalar** (applied to all elements) or a
 | `edge_color`  | `"black"`  | `Symbol` (edge type) or `(Symbol, Symbol)` (src, dst) |
 | `linewidth`   | `1.5`      | `Symbol` (edge type) or `(Symbol, Symbol)` (src, dst) |
 
+### Label styles
+
+| Keyword          | Default †  | Dict key type |
+|------------------|------------|---------------|
+| `label_color`    | `"black"`  | `Symbol` (node name) |
+| `label_fontsize` | `14.0`     | `Symbol` (node name) |
+| `label_font`     | `:regular` | `Symbol` (node name) |
+
+## Title
+
+Pass `title` to add a plot title (`nothing` by default, i.e. no title).
+`title_fontsize` and `title_color` style it; when left as `nothing` they fall
+back to the current Makie theme's axis-title defaults.
+
+```julia
+Makie.plot(dag; title = "My DAG", title_fontsize = 20, title_color = :navy)
+```
+
 Edges are routed automatically: a straight `src --> dst` line that would pass
 too close to a non-incident node bends around it as a Bezier curve instead;
 edges with nothing in their way are always drawn straight. Multiple edges
@@ -309,6 +329,13 @@ Makie.plot(admg; edge_color = Dict(:directed => :steelblue, :bidirected => :crim
 # Highlight a specific edge
 Makie.plot(dag; edge_color = Dict((:A, :X) => :red, :default => :black))
 
+# Label styling, global and per-node
+Makie.plot(dag; label_fontsize = 18, label_color = :navy)
+Makie.plot(dag; label_color = Dict(:A => :crimson, :default => :black))
+
+# Title
+Makie.plot(dag; title = "My DAG", title_fontsize = 20, title_color = :navy)
+
 # A, X, Y placed in a line: A --> Y automatically bends around X, since the
 # straight line between A and Y would otherwise cross it.
 Makie.plot(dag; layout = [(0, 0), (1, 0), (2, 0)])
@@ -335,6 +362,12 @@ function Makie.plot(
     node_strokewidth = CausalStructures._PLOT_NODE_STROKEWIDTH_DEFAULT,
     edge_color = CausalStructures._PLOT_EDGE_COLOR_DEFAULT,
     linewidth = CausalStructures._PLOT_LINEWIDTH_DEFAULT,
+    label_color = CausalStructures._PLOT_LABEL_COLOR_DEFAULT,
+    label_fontsize = CausalStructures._PLOT_LABEL_FONTSIZE_DEFAULT,
+    label_font = CausalStructures._PLOT_LABEL_FONT_DEFAULT,
+    title::Union{AbstractString,Nothing} = nothing,
+    title_fontsize::Union{Real,Nothing} = nothing,
+    title_color = nothing,
     layout_kwargs...,
 )
     n = length(cg.backend.nodes)
@@ -354,7 +387,15 @@ function Makie.plot(
     fan_slots = _edge_fan_slots(cg.edges)
 
     fig = Makie.Figure()
-    ax = Makie.Axis(fig[1, 1]; aspect = Makie.DataAspect())
+    ax = if title === nothing
+        Makie.Axis(fig[1, 1]; aspect = Makie.DataAspect())
+    else
+        title_kwargs = Dict{Symbol,Any}()
+        title_fontsize !== nothing &&
+            (title_kwargs[:titlesize] = Float32(title_fontsize))
+        title_color !== nothing && (title_kwargs[:titlecolor] = title_color)
+        Makie.Axis(fig[1, 1]; aspect = Makie.DataAspect(), title = title, title_kwargs...)
+    end
     Makie.hidedecorations!(ax)
     Makie.hidespines!(ax)
 
@@ -401,7 +442,9 @@ function Makie.plot(
             positions[i][2];
             text = string(node),
             align = (:center, :center),
-            fontsize = 14,
+            color = _resolve_node(label_color, node, :black),
+            fontsize = Float32(_resolve_node(label_fontsize, node, 14.0f0)),
+            font = _resolve_node(label_font, node, :regular),
         )
     end
 

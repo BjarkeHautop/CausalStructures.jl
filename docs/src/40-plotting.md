@@ -115,6 +115,34 @@ plot(dag;
 )
 ```
 
+## Label styling
+
+Each label style argument accepts either a scalar or a `Dict{Symbol, <value>}` keyed by node name, with `:default` as a fallback (same resolution rules as node styling).
+
+| Keyword          | Default    | Controls                |
+| ---------------- | ---------- | ------------------------ |
+| `label_color`    | `:black`   | node label text color     |
+| `label_fontsize` | `14.0`     | node label font size      |
+| `label_font`     | `:regular` | node label font           |
+
+```@example plot
+plot(dag; label_fontsize = 18, label_color = :navy)
+```
+
+```@example plot
+plot(dag; label_color = Dict(:A => :crimson, :default => :black))
+```
+
+## Title
+
+Pass `title` to add a plot title (`nothing` by default, i.e. no title).
+`title_fontsize` and `title_color` style it; left as `nothing`, they fall back
+to the current Makie theme's axis-title defaults.
+
+```@example plot
+plot(dag; title = "My DAG", title_fontsize = 20, title_color = :navy)
+```
+
 ### Automatic edge routing
 
 An edge whose straight `src --> dst` line would pass too close to a
@@ -132,7 +160,7 @@ plot(detour; layout = [(0, 0), (1, 0), (2, 0)])
 ## Combining options
 
 ```@example plot
-admg2 = cgraph("U --> X + Y, X --> Y, X <-> Z"; class = ADMG)
+admg2 = cgraph("U --> X + Y, X --> Y, X <-> Z, Z --> Y"; class = ADMG)
 
 plot(
     admg2;
@@ -141,5 +169,10 @@ plot(
     edge_color       = Dict(:directed => :gray20, :bidirected => :crimson),
     linewidth        = Dict(:bidirected => 2.0, :default => 1.5),
     node_radius      = 0.14,
+    label_color      = Dict(:U => :gray30, :default => :black),
+    label_fontsize   = 16,
+    title            = "Confounded ADMG",
+    title_fontsize   = 18,
+    title_color      = :gray20,
 )
 ```
