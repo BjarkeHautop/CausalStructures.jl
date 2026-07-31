@@ -11,11 +11,11 @@ using CairoMakie
 
 ## Basic usage
 
-Pass any `CausalGraph` to `Makie.plot`:
+Pass any `CausalGraph` to `plot`:
 
 ```@example plot
 dag = cgraph("A --> X + Y, X --> Y"; class = DAG)
-Makie.plot(dag)
+plot(dag)
 ```
 
 ## [Layouts](@id plot-layouts)
@@ -27,7 +27,7 @@ available. All other layouts require
 ```@example plot
 using NetworkLayout
 
-Makie.plot(dag; layout = :spring)
+plot(dag; layout = :spring)
 ```
 
 We provide these short-hand names for convenience:
@@ -45,7 +45,7 @@ We provide these short-hand names for convenience:
 Extra keyword arguments are forwarded to the underlying NetworkLayout algorithm:
 
 ```@example plot
-Makie.plot(dag; layout = :spring, seed = 42, iterations = 500)
+plot(dag; layout = :spring, seed = 42, iterations = 500)
 ```
 
 ## Node styling
@@ -64,13 +64,13 @@ Each node style argument accepts either a scalar (applied to all nodes) or a `Di
 Global styling:
 
 ```@example plot
-Makie.plot(dag; node_color = :lightblue, node_strokecolor = :navy)
+plot(dag; node_color = :lightblue, node_strokecolor = :navy)
 ```
 
 Highlight individual nodes:
 
 ```@example plot
-Makie.plot(dag;
+plot(dag;
     node_color = Dict(:A => :salmon, :default => :white),
     node_strokecolor = Dict(:A => :crimson, :default => :black),
 )
@@ -79,7 +79,7 @@ Makie.plot(dag;
 Adjust node size and arrowhead proportions:
 
 ```@example plot
-Makie.plot(dag; node_radius = 0.18, arrow_size = 0.07)
+plot(dag; node_radius = 0.18, arrow_size = 0.07)
 ```
 
 ## Edge styling
@@ -91,18 +91,17 @@ Each edge style argument accepts either a scalar or a `Dict` keyed by (and follo
 - a `(src, dst)` tuple for a specific edge
 - `:default` as a fallback
 
-| Keyword      | Default  | Controls               |
-| ------------ | -------- | ---------------------- |
-| `edge_color` | `:black` | line / marker color    |
-| `linewidth`  | `1.5`    | line width             |
-| `curvature`  | `0.0`    | how much the edge bows |
+| Keyword      | Default  | Controls             |
+| ------------ | -------- | --------------------- |
+| `edge_color` | `:black` | line / marker color   |
+| `linewidth`  | `1.5`    | line width            |
 
 Color edges by type:
 
 ```@example plot
 admg = cgraph("X --> Y, X <-> Z, Z --> Y"; class = ADMG)
 
-Makie.plot(admg;
+plot(admg;
     edge_color = Dict(:directed => :steelblue, :bidirected => :crimson),
     linewidth  = Dict(:bidirected => 2.5, :default => 1.5),
 )
@@ -111,37 +110,36 @@ Makie.plot(admg;
 Highlight a specific edge:
 
 ```@example plot
-Makie.plot(dag;
+plot(dag;
     edge_color = Dict((:A, :X) => :red, :default => :black),
 )
 ```
 
-### Curved edges
+### Automatic edge routing
 
-`curvature` bows an edge perpendicular to the straight `src --> dst` chord.
-`0.0` (the default) draws a straight line; positive values bend to the left of
-the `src --> dst` direction and negative values to the right.
+An edge whose straight `src --> dst` line would pass too close to a
+non-incident node automatically bends around it as a Bezier curve, rather
+than being drawn straight through it. Edges with nothing in their way are
+always drawn straight.
 
 ```@example plot
-admg_pair = cgraph("X --> Y, X <-> Y"; class = ADMG)
+detour = cgraph("A --> X + Y, X --> Y"; class = DAG)
 
-Makie.plot(admg_pair;
-    curvature = Dict(:directed => 0.2, :bidirected => -0.2),
-)
+# A, X, Y placed in a line, so the straight A --> Y edge would cross X.
+plot(detour; layout = [(0, 0), (1, 0), (2, 0)])
 ```
 
 ## Combining options
 
 ```@example plot
-admg2 = cgraph("U --> X + Y, X --> Y, X <-> Y"; class = ADMG)
+admg2 = cgraph("U --> X + Y, X --> Y, X <-> Z"; class = ADMG)
 
-Makie.plot(
+plot(
     admg2;
     node_color       = Dict(:U => :lightyellow, :default => :white),
     node_strokecolor = :gray30,
     edge_color       = Dict(:directed => :gray20, :bidirected => :crimson),
     linewidth        = Dict(:bidirected => 2.0, :default => 1.5),
-    curvature        = Dict((:X, :Y) => 0.2, :bidirected => -0.2),
     node_radius      = 0.14,
 )
 ```

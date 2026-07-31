@@ -41,8 +41,8 @@ end
     @test_throws Exception add_edges(g, undirected(:B, :C))
 end
 
-@testitem "add_edges on UNKNOWN preserves simple flag" tags = [:unit] begin
-    g = cgraph(directed(:A, :B); simple = false, class = UNKNOWN)
+@testitem "add_edges on UNKNOWN allows duplicates" tags = [:unit] begin
+    g = cgraph(directed(:A, :B); class = UNKNOWN)
     g2 = add_edges(g, directed(:A, :B))  # duplicate allowed
     @test g2 isa UNKNOWN
     @test length(g2.edges) == 2
@@ -155,9 +155,9 @@ end
     @test_throws Exception reclass(g, DAG)
 end
 
-@testitem "reclass to UNKNOWN with simple=false allows duplicates afterward" tags = [:unit] begin
+@testitem "reclass to UNKNOWN allows duplicates afterward" tags = [:unit] begin
     g = cgraph(directed(:A, :B); class = DAG)
-    u = reclass(g, UNKNOWN; simple = false)
+    u = reclass(g, UNKNOWN)
     @test u isa UNKNOWN
     u2 = add_edges(u, directed(:A, :B))
     @test length(u2.edges) == 2

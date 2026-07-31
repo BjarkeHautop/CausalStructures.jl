@@ -239,15 +239,13 @@ end
 """
     UNKNOWN <: CausalGraph
 
-A graph with no structural constraints enforced. Accepts all edge types. Intended as a
-fallback for graph classes not yet natively supported.
-
-Set `simple = false` to allow multiple edges between the same pair of nodes.
+A graph with no structural constraints enforced. Accepts all edge types, including
+self-loops and multiple edges between the same pair of nodes. Intended as a fallback
+for graph classes not yet natively supported.
 """
 struct UNKNOWN <: CausalGraph
     edges::Vector{CausalEdge}
     backend::UNKNOWNBackend
-    simple::Bool
 end
 
 """
@@ -276,12 +274,11 @@ end
 function _build_graph(
     ::Type{T},
     nodes,
-    edges::Vector{CausalEdge},
-    backend_kwargs...;
+    edges::Vector{CausalEdge};
     validate::Bool = true,
 ) where {T<:CausalGraph}
     backend = build_backend(T, nodes, edges)
-    cg = T(edges, backend, backend_kwargs...)
+    cg = T(edges, backend)
     validate && CausalStructures.validate(cg, T)
     return cg
 end
@@ -318,13 +315,8 @@ function MAG(nodes, edges::Vector{CausalEdge}; validate::Bool = true)
     return _build_graph(MAG, nodes, edges; validate)
 end
 
-function UNKNOWN(
-    nodes,
-    edges::Vector{CausalEdge};
-    simple::Bool = true,
-    validate::Bool = true,
-)
-    return _build_graph(UNKNOWN, nodes, edges, simple; validate)
+function UNKNOWN(nodes, edges::Vector{CausalEdge}; validate::Bool = true)
+    return _build_graph(UNKNOWN, nodes, edges; validate)
 end
 
 function PAG(nodes, edges::Vector{CausalEdge}; validate::Bool = true)

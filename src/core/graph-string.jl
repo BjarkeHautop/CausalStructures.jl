@@ -156,7 +156,7 @@ function _parse_graph_string(s::AbstractString)
 end
 
 """
-    cgraph(s::AbstractString; class::Type{<:CausalGraph}=DAG, simple::Bool=true) -> CausalGraph
+    cgraph(s::AbstractString; class::Type{<:CausalGraph}=DAG) -> CausalGraph
 
 Construct a causal graph from a compact string description, instead of composing
 [`CausalEdge`](@ref) values by hand.
@@ -191,7 +191,7 @@ UNKNOWN with 5 nodes and 3 edges:
     A --> B, A --> C, D o-> E
 ```
 """
-function cgraph(s::AbstractString; class::Type{<:CausalGraph} = DAG, simple::Bool = true)
+function cgraph(s::AbstractString; class::Type{<:CausalGraph} = DAG)
     items = _parse_graph_string(s)
-    return cgraph(items...; class = class, simple = simple)
+    return cgraph(items...; class = class)
 end

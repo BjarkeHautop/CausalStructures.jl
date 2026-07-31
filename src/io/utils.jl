@@ -208,7 +208,7 @@ julia> cg = cgraph(directed(:A, :B); class = DAG);
 julia> is_simple(cg)
 true
 
-julia> unk = cgraph(directed(:A, :B), directed(:A, :B); simple = false, class = UNKNOWN);
+julia> unk = cgraph(directed(:A, :B), directed(:A, :B); class = UNKNOWN);
 
 julia> is_simple(unk)
 false
@@ -254,7 +254,7 @@ julia> cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
 julia> is_acyclic(cg)
 true
 
-julia> unk = cgraph(directed(:A, :B), directed(:B, :A); simple = false, class = UNKNOWN);
+julia> unk = cgraph(directed(:A, :B), directed(:B, :A); class = UNKNOWN);
 
 julia> is_acyclic(unk)
 false

@@ -13,12 +13,11 @@ end
     @test !is_acyclic(unknown)
 end
 
-@testitem "is_simple reflects declared state" tags = [:unit] begin
+@testitem "is_simple reflects graph content" tags = [:unit] begin
     g_simple = cgraph(directed(:A, :B); class = DAG)
     @test is_simple(g_simple)
 
-    g_nonsimple =
-        cgraph(directed(:A, :B), bidirected(:A, :B); class = UNKNOWN, simple = false)
+    g_nonsimple = cgraph(directed(:A, :B), bidirected(:A, :B); class = UNKNOWN)
     @test !is_simple(g_nonsimple)
 end
 

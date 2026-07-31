@@ -52,25 +52,15 @@ function _draw_arrowhead!(ax, tip::Point2f, dir::Point2f, size::Float32; color =
     Makie.poly!(ax, pts; color = color, strokecolor = color, strokewidth = 0.0f0)
 end
 
-# Sample a quadratic Bezier B(t) = (1-t)^2 p0 + 2(1-t)t c + t^2 p1.
-function _bezier(p0::Point2f, c::Point2f, p1::Point2f, t::Float32)
-    u = 1.0f0 - t
-    return u * u * p0 + 2.0f0 * u * t * c + t * t * p1
-end
-
-# Unit tangent of the quadratic Bezier at t (derivative 2(1-t)(c-p0) + 2t(p1-c)).
-function _bezier_tangent(p0::Point2f, c::Point2f, p1::Point2f, t::Float32)
-    u = 1.0f0 - t
-    d = 2.0f0 * u * (c - p0) + 2.0f0 * t * (p1 - c)
-    n = _norm2(d)
-    return n < 1.0f-6 ? Point2f(0, 0) : Point2f(d[1] / n, d[2] / n)
-end
-
 # Draw one edge with the correct endpoint decorations.
 #
-# `curvature` bows the edge perpendicular to the chord: 0 is a straight line,
-# positive curves to the left of the src->dst direction, negative to the right.
-# The control point is offset from the chord midpoint by `curvature * len`.
+# An edge whose straight center-to-center chord would pass too close to a
+# non-incident node (any entry in `obstacles`) is bent around it into a
+# Bezier curve (see routing.jl). Otherwise, if this edge shares its pair of
+# nodes with `sibling_count - 1` other edges (e.g. an ADMG's X --> Y and
+# X <-> Y), it is fanned out by `fan_slot` so the group doesn't draw as
+# overlapping lines. An edge with nothing in its way and no siblings is drawn
+# as a straight line, matching the previous behavior.
 function _draw_edge!(
     ax,
     e::CausalEdge,
@@ -78,63 +68,67 @@ function _draw_edge!(
     p_dst::Point2f,
     r_node::Float32,
     r_arrow::Float32,
-    r_circle::Float32;
+    r_circle::Float32,
+    obstacles::AbstractVector{Tuple{Point2f,Float32}},
+    fan_slot::Float32;
     color = :black,
     linewidth = 1.5f0,
-    curvature = 0.0f0,
 )
     diff = p_dst - p_src
     len = _norm2(diff)
     len < 1.0f-6 && return
-    dir = Point2f(diff[1] / len, diff[2] / len)
 
-    # Points on the node boundaries along the (straight) edge direction.
-    src_bnd = p_src + r_node * dir
-    dst_bnd = p_dst - r_node * dir
+    # Minimum gap (beyond an obstacle's own radius) an edge must keep from a
+    # non-incident node before it is left alone.
+    clearance = 0.1f0 * r_node
+
+    routed = _route_edge_path(p_src, p_dst, r_node, r_node, obstacles, clearance)
+    # Real obstacles take priority: only fan siblings apart when nothing
+    # actually forces this edge to route around a node.
+    fanned =
+        routed === nothing && fan_slot != 0.0f0 ?
+        _fanned_edge_path(p_src, p_dst, r_node, r_node, fan_slot * 0.3f0 * len) : nothing
+
+    path = if routed !== nothing
+        routed
+    elseif fanned !== nothing
+        fanned
+    else
+        dir = Point2f(diff[1] / len, diff[2] / len)
+        [p_src + r_node * dir, p_dst - r_node * dir]
+    end
 
     has_arrow_src = e.src_end === _Arrow
     has_arrow_dst = e.dst_end === _Arrow
     has_circle_src = e.src_end === _Circle
     has_circle_dst = e.dst_end === _Circle
 
-    # Control point: chord midpoint offset perpendicular to the chord.
-    perp = Point2f(-dir[2], dir[1])
-    mid = 0.5f0 * (src_bnd + dst_bnd)
-    ctrl = mid + curvature * len * perp
+    m = length(path)
+    tan_src = _unit(path[2] - path[1])
+    tan_dst = _unit(path[m] - path[m-1])
 
-    # Endpoint tangents follow the curve, not the chord, so decorations line up.
-    tan_src = _bezier_tangent(src_bnd, ctrl, dst_bnd, 0.0f0)
-    tan_dst = _bezier_tangent(src_bnd, ctrl, dst_bnd, 1.0f0)
+    # Pull the shaft ends back along the path (by arc length) to leave room
+    # for arrowheads.
+    trim_start = has_arrow_src ? r_arrow : 0.0f0
+    trim_end = has_arrow_dst ? r_arrow : 0.0f0
+    shaft = _trim_polyline(path, trim_start, trim_end)
+    length(shaft) >= 2 && Makie.lines!(ax, shaft; color = color, linewidth = linewidth)
 
-    # Pull the shaft ends back along the local tangent to leave room for heads.
-    line_start = has_arrow_src ? src_bnd + r_arrow * tan_src : src_bnd
-    line_end = has_arrow_dst ? dst_bnd - r_arrow * tan_dst : dst_bnd
-
-    if _norm2(line_end - line_start) > 1.0f-6
-        if abs(curvature) < 1.0f-6
-            Makie.lines!(ax, [line_start, line_end]; color = color, linewidth = linewidth)
-        else
-            nseg = 32
-            pts = [_bezier(line_start, ctrl, line_end, Float32(i) / nseg) for i = 0:nseg]
-            Makie.lines!(ax, pts; color = color, linewidth = linewidth)
-        end
-    end
-
-    has_arrow_dst && _draw_arrowhead!(ax, dst_bnd, tan_dst, r_arrow; color = color)
+    has_arrow_dst && _draw_arrowhead!(ax, path[m], tan_dst, r_arrow; color = color)
     has_arrow_src && _draw_arrowhead!(
         ax,
-        src_bnd,
+        path[1],
         Point2f(-tan_src[1], -tan_src[2]),
         r_arrow;
         color = color,
     )
 
-    # Open circles: centered one radius out from the node boundary so the
-    # inner edge of the circle sits flush against the node.
+    # Open circles: centered one radius out from the node boundary (tangent
+    # to the path) so the inner edge of the circle sits flush against the node.
     if has_circle_src
         _draw_filled_circle!(
             ax,
-            src_bnd + r_circle * tan_src,
+            path[1] + r_circle * tan_src,
             r_circle;
             strokecolor = color,
         )
@@ -142,11 +136,44 @@ function _draw_edge!(
     if has_circle_dst
         _draw_filled_circle!(
             ax,
-            dst_bnd - r_circle * tan_dst,
+            path[m] - r_circle * tan_dst,
             r_circle;
             strokecolor = color,
         )
     end
+end
+
+# Assigns each edge a signed fan-out slot: 0 for edges that are the only one
+# connecting their (unordered) pair of nodes, and evenly spaced values
+# centered on 0 for edges sharing a pair with others (regardless of edge
+# type or direction) - e.g. an ADMG's X --> Y and X <-> Y, or a graph with
+# two antiparallel edges A --> B and B --> A. Grouping ignores direction so
+# that antiparallel edges fan out too, since they'd otherwise draw as
+# perfectly overlapping lines just like same-direction duplicates.
+#
+# `_fanned_edge_path` derives its bow direction from each edge's own
+# src->dst vector, so an edge stored in the reverse direction of its
+# group's canonical order (`key[1] --> key[2]`) would otherwise cancel out
+# a same-signed slot instead of landing on the opposite side; flipping its
+# slot's sign corrects for that.
+function _edge_fan_slots(edges::AbstractVector{CausalEdge})
+    groups = Dict{Tuple{Symbol,Symbol},Vector{Int}}()
+    for (i, e) in enumerate(edges)
+        key = e.src < e.dst ? (e.src, e.dst) : (e.dst, e.src)
+        push!(get!(() -> Int[], groups, key), i)
+    end
+
+    slots = zeros(Float32, length(edges))
+    for (key, idxs) in groups
+        k = length(idxs)
+        k == 1 && continue
+        for (rank, i) in enumerate(idxs)
+            raw = Float32(rank - 1) - Float32(k - 1) / 2.0f0
+            flip = edges[i].src == key[1] ? 1.0f0 : -1.0f0
+            slots[i] = raw * flip
+        end
+    end
+    return slots
 end
 
 function _edge_type(e::CausalEdge)
@@ -225,11 +252,12 @@ Each style argument accepts either a **scalar** (applied to all elements) or a
 |---------------|------------|------------------------------------------------|
 | `edge_color`  | `"black"`  | `Symbol` (edge type) or `(Symbol, Symbol)` (src, dst) |
 | `linewidth`   | `1.5`      | `Symbol` (edge type) or `(Symbol, Symbol)` (src, dst) |
-| `curvature`   | `0.0`      | `Symbol` (edge type) or `(Symbol, Symbol)` (src, dst) |
 
-`curvature` bows each edge perpendicular to the straight `src --> dst` chord:
-`0.0` draws a straight line, positive values bend to the left of that direction
-and negative to the right.
+Edges are routed automatically: a straight `src --> dst` line that would pass
+too close to a non-incident node bends around it as a Bezier curve instead;
+edges with nothing in their way are always drawn straight. Multiple edges
+sharing a pair of nodes (e.g. an ADMG's `X --> Y` and `X <-> Y`) are fanned
+out into distinct arcs instead of drawing on top of each other.
 
 **Edge-type symbols:** `:directed`, `:undirected`, `:bidirected`,
 `:partially_directed`, `:partially_undirected`, `:partial`.
@@ -281,9 +309,9 @@ Makie.plot(admg; edge_color = Dict(:directed => :steelblue, :bidirected => :crim
 # Highlight a specific edge
 Makie.plot(dag; edge_color = Dict((:A, :X) => :red, :default => :black))
 
-# Curve all edges; bow parallel edges apart in an ADMG
-Makie.plot(dag; curvature = 0.2)
-Makie.plot(admg; curvature = Dict(:directed => 0.2, :bidirected => -0.2))
+# A, X, Y placed in a line: A --> Y automatically bends around X, since the
+# straight line between A and Y would otherwise cross it.
+Makie.plot(dag; layout = [(0, 0), (1, 0), (2, 0)])
 
 # Force-directed layout (requires NetworkLayout)
 using NetworkLayout
@@ -307,7 +335,6 @@ function Makie.plot(
     node_strokewidth = CausalStructures._PLOT_NODE_STROKEWIDTH_DEFAULT,
     edge_color = CausalStructures._PLOT_EDGE_COLOR_DEFAULT,
     linewidth = CausalStructures._PLOT_LINEWIDTH_DEFAULT,
-    curvature = CausalStructures._PLOT_CURVATURE_DEFAULT,
     layout_kwargs...,
 )
     n = length(cg.backend.nodes)
@@ -322,6 +349,9 @@ function Makie.plot(
     node_pos = Dict{Symbol,Point2f}(
         cg.backend.nodes[i] => positions[i] for i in eachindex(cg.backend.nodes)
     )
+    node_idx =
+        Dict{Symbol,Int}(cg.backend.nodes[i] => i for i in eachindex(cg.backend.nodes))
+    fan_slots = _edge_fan_slots(cg.edges)
 
     fig = Makie.Figure()
     ax = Makie.Axis(fig[1, 1]; aspect = Makie.DataAspect())
@@ -329,7 +359,16 @@ function Makie.plot(
     Makie.hidespines!(ax)
 
     # Edges drawn first so nodes appear on top.
-    for e in cg.edges
+    for (i, e) in enumerate(cg.edges)
+        # Every other node is a candidate obstacle for routing (all nodes
+        # share the same radius r_node).
+        src_idx = node_idx[e.src]
+        dst_idx = node_idx[e.dst]
+        obstacles = Tuple{Point2f,Float32}[
+            (positions[j], r_node) for
+            j in eachindex(positions) if j != src_idx && j != dst_idx
+        ]
+
         _draw_edge!(
             ax,
             e,
@@ -337,10 +376,11 @@ function Makie.plot(
             node_pos[e.dst],
             r_node,
             r_arrow,
-            r_circle;
+            r_circle,
+            obstacles,
+            fan_slots[i];
             color = _resolve_edge(edge_color, e, :black),
             linewidth = Float32(_resolve_edge(linewidth, e, 1.5f0)),
-            curvature = Float32(_resolve_edge(curvature, e, 0.0f0)),
         )
     end
 

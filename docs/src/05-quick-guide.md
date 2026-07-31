@@ -18,7 +18,7 @@ dag = cgraph("A --> X + Y, X --> M --> Y"; class = DAG)
 and visualize it:
 
 ```@example quick
-Makie.plot(dag)
+plot(dag)
 ```
 
 For more plotting details and customization options, see the [Plotting](@ref

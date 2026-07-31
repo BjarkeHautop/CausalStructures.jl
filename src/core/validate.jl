@@ -114,14 +114,8 @@ function validation_errors(::ADMGConstraints, cg::CausalGraph)
     return errors
 end
 
-function validation_errors(::UNKNOWNConstraints, cg::UNKNOWN)
-    errors = String[]
-
-    if cg.simple && !is_simple(cg)
-        push!(errors, "graph marked simple=true but contains self-loops or parallel edges")
-    end
-
-    return errors
+function validation_errors(::UNKNOWNConstraints, ::UNKNOWN)
+    return String[]
 end
 
 function validation_errors(::PAGConstraints, cg::CausalGraph)
@@ -155,14 +149,6 @@ end
 
 _satisfies_constraints(c::GraphConstraints, cg::CausalGraph) =
     isempty(validation_errors(c, cg))
-
-function _satisfies_constraints(::UNKNOWNConstraints, cg::UNKNOWN)
-    if cg.simple
-        return is_simple(cg)
-    end
-
-    return true
-end
 
 _fast_skip(cg::CausalGraph, ::DAGConstraints) = cg isa DAG
 _fast_skip(cg::CausalGraph, ::PDAGConstraints) =

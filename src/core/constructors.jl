@@ -3,22 +3,13 @@
 function build_graph(
     ::Type{T},
     nodes::Set{Symbol},
-    edges::Vector{CausalEdge};
-    simple::Bool = true,
+    edges::Vector{CausalEdge},
 ) where {T<:CausalGraph}
-    simple || throw(ArgumentError("simple=false is only supported for UNKNOWN"))
     return T(nodes, edges)
 end
 
-build_graph(
-    ::Type{UNKNOWN},
-    nodes::Set{Symbol},
-    edges::Vector{CausalEdge};
-    simple::Bool = true,
-) = UNKNOWN(nodes, edges; simple = simple)
-
 """
-    cgraph(items...; class::Type{<:CausalGraph}=DAG, simple::Bool=true) -> CausalGraph
+    cgraph(items...; class::Type{<:CausalGraph}=DAG) -> CausalGraph
 
 Construct a causal graph from edges and optionally isolated nodes.
 
@@ -31,8 +22,8 @@ Construct a causal graph from edges and optionally isolated nodes.
 The `class` keyword selects the graph type, which determines which edge types are
 valid and what structural invariants are enforced on construction. Defaults to `DAG`.
 
-`simple` only applies to [`UNKNOWN`](@ref) graphs; set `simple = false` to allow
-multiple edges between the same pair of nodes.
+[`UNKNOWN`](@ref) graphs additionally allow multiple edges between the same pair
+of nodes.
 
 # Examples
 
@@ -69,9 +60,9 @@ julia> nodes(ug)
  :C
 ```
 """
-function cgraph(items...; class::Type{<:CausalGraph} = DAG, simple::Bool = true)
+function cgraph(items...; class::Type{<:CausalGraph} = DAG)
     nodes, edges = _cgraph_collect(items...)
-    return build_graph(class, nodes, edges; simple = simple)
+    return build_graph(class, nodes, edges)
 end
 
 function _cgraph_collect(items...)

@@ -18,7 +18,7 @@ dag = cgraph(
     "C --> X, A --> X + K, X --> F + D, K --> Y, D --> Y + G, Y --> H";
     class = DAG,
 )
-Makie.plot(dag; layout = :stress)
+plot(dag; layout = :stress)
 ```
 
 **Parents strategy**: Adjusts for all parents of `X`. Simple but often includes
@@ -76,7 +76,7 @@ outcome `Y`:
 
 ```@example id
 dag2 = cgraph("U --> X + Y, X --> M --> Y"; class = DAG)
-Makie.plot(dag2; layout = :stress)
+plot(dag2; layout = :stress)
 ```
 
 The mediator `M` is a descendant of `X`, so adjusting for it violates the
@@ -107,7 +107,7 @@ Consider a graph where `U` is an unobserved confounder and `Z` is an available i
 
 ```@example id
 dag3 = cgraph("U --> X + Y, Z --> X --> Y"; class = DAG)
-Makie.plot(dag3; layout = :stress)
+plot(dag3; layout = :stress)
 ```
 
 Without a mediator, the frontdoor criterion cannot apply here:

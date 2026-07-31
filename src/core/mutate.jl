@@ -2,10 +2,6 @@ function _mutate_rebuild(cg::CausalGraph, nodes, edges)
     return build_graph(typeof(cg), nodes, edges)
 end
 
-function _mutate_rebuild(cg::UNKNOWN, nodes, edges)
-    return build_graph(UNKNOWN, nodes, edges; simple = cg.simple)
-end
-
 """
     add_edges(cg::CausalGraph, es::CausalEdge...) -> CausalGraph
 
@@ -141,11 +137,10 @@ function remove_nodes(cg::CausalGraph, ns::Symbol...)
 end
 
 """
-    reclass(cg::CausalGraph, T::Type{<:CausalGraph}; simple=true) -> T
+    reclass(cg::CausalGraph, T::Type{<:CausalGraph}) -> T
 
 Return a new graph of class `T` with the same nodes and edges as `cg`.
 Throws if the edges violate the structural constraints of `T`.
-`simple` only applies when `T` is [`UNKNOWN`](@ref).
 
 # Examples
 
@@ -161,8 +156,4 @@ PDAG with 3 nodes and 2 edges:
 """
 function reclass(cg::CausalGraph, ::Type{T}) where {T<:CausalGraph}
     return build_graph(T, Set(cg.backend.nodes), copy(cg.edges))
-end
-
-function reclass(cg::CausalGraph, ::Type{UNKNOWN}; simple::Bool = true)
-    return build_graph(UNKNOWN, Set(cg.backend.nodes), copy(cg.edges); simple = simple)
 end

@@ -22,7 +22,7 @@ Given a DAG, [`dag_to_cpdag`](@ref) computes its CPDAG:
 ```@example ec
 dag = cgraph("C --> X, A --> X + Y, Y --> Z"; class = DAG)
 cpdag = dag_to_cpdag(dag)
-Makie.plot(cpdag; layout = :stress)
+plot(cpdag; layout = :stress)
 ```
 
 The v-structure `C --> X <-- A` appears in every DAG in the equivalence class and therefore remains directed. The edges `A --- Y` and `Y --- Z` are undirected because no v-structure or Meek rule forces their orientation.
