@@ -151,7 +151,7 @@ Default node label font.
 | ------- | ---- |
 | `"regular"` | `String` |
 
-Any [Makie-compatible font](https://docs.makie.org/stable/explanations/fonts_and_topbar) name or theme key (e.g. `"regular"`, `"bold"`).
+Any [Makie-compatible font](https://docs.makie.org/stable/explanations/fonts) name or theme key (e.g. `"regular"`, `"bold"`).
 
 ```julia
 set_preferences!(CausalStructures, "plot_label_font" => "bold")
