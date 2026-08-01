@@ -212,8 +212,8 @@ apply_background_knowledge(cg::AbstractPDAG, s::AbstractString) =
     dag_to_mpdag(cg::DAG, bk = BackgroundKnowledge()) -> MPDAG
 
 Return the [`MPDAG`](@ref) representing the DAGs that are Markov equivalent to `cg`
-and consistent with the background knowledge `bk`: the CPDAG of `cg` with the `bk`
-orientations applied and closed under Meek's rules R1-R4.
+and consistent with the background knowledge `bk`. This is the CPDAG of `cg` with
+the `bk` orientations applied and closed under Meek's rules R1-R4.
 
 `bk` may be a [`BackgroundKnowledge`](@ref) or a string accepted by its constructor.
 Raises an error if `cg` itself violates `bk`; this guarantees the restricted

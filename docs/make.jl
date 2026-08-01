@@ -2,6 +2,7 @@ using CausalStructures
 using CairoMakie
 using Documenter
 using DocumenterCitations
+using DocumenterCodeBlocks
 
 bib = CitationBibliography(joinpath(@__DIR__, "src", "references.bib"); style = :authoryear)
 
@@ -98,7 +99,7 @@ makedocs(;
         ],
     ),
     pages = list_pages(),
-    plugins = [bib],
+    plugins = [bib, CodeBlocks()],
 )
 
 deploydocs(; repo = "github.com/BjarkeHautop/CausalStructures.jl")

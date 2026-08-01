@@ -47,9 +47,9 @@ end
 """
     moralize(cg::Union{DAG,AbstractPDAG}) -> UG
 
-Return the moral graph of `cg`: the undirected graph obtained by connecting all
-pairs of directed parents that share a common child (adding a "marriage" edge),
-then replacing every edge with an undirected edge.
+Return the moral graph of `cg`. Connects every pair of directed parents that
+share a common child (adding a "marriage" edge), then replaces every edge with
+an undirected edge.
 
 For [`AbstractPDAG`](@ref), only directed parents participate in marriage edges;
 undirected neighbors are included in the skeleton but do not form a clique.
