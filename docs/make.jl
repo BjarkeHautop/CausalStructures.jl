@@ -99,7 +99,7 @@ makedocs(;
         ],
     ),
     pages = list_pages(),
-    plugins = [bib, CodeBlocks()],
+    plugins = [bib, CodeBlocks(line_numbers = false)],
 )
 
 deploydocs(; repo = "github.com/BjarkeHautop/CausalStructures.jl")
