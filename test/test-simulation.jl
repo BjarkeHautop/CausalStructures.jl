@@ -90,6 +90,26 @@ end
     end
 end
 
+@testitem "generate_graph: PAG class returns a valid PAG over exactly n observed nodes" tags =
+    [:unit] begin
+    using Random
+    n = 5
+    for seed = 1:20
+        pag = generate_graph(Random.Xoshiro(seed), n; p = 0.6, class = PAG, latents = 3)
+        @test pag isa PAG
+        @test is_pag(pag)
+        @test Set(nodes(pag)) == Set([Symbol("V$i") for i = 1:n])
+    end
+end
+
+@testitem "generate_graph: PAG and MAG agree given the same seed" tags = [:unit] begin
+    using Random
+    n = 6
+    mag = generate_graph(Random.Xoshiro(7), n; p = 0.6, class = MAG, latents = 3)
+    pag = generate_graph(Random.Xoshiro(7), n; p = 0.6, class = PAG, latents = 3)
+    @test Set(mag_to_pag(mag).edges) == Set(pag.edges)
+end
+
 @testitem "generate_graph: ADMG/MAG with latents=0 has no bidirected edges" tags = [:unit] begin
     admg = generate_graph(5; m = 4, class = ADMG)
     @test all(e -> e.src_end == CausalStructures.Tail, admg.edges)

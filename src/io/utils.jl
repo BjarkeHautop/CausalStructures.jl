@@ -301,18 +301,20 @@ DAGs (some DAGs correspond to more topological orderings than others). For an
 exact uniform draw from all labelled DAGs on `n` nodes regardless of edge
 count, use [`uniform_dag`](@ref) instead.
 
-`class` may be [`DAG`](@ref) (default), [`CPDAG`](@ref), [`ADMG`](@ref), or
-[`MAG`](@ref). For CPDAG the sampled DAG is converted via
-[`dag_to_cpdag`](@ref). For ADMG/MAG, `latents` additional nodes `L1, …, Lk`
-are added to the underlying random DAG and then marginalized out via
+`class` may be [`DAG`](@ref) (default), [`CPDAG`](@ref), [`ADMG`](@ref),
+[`MAG`](@ref), or [`PAG`](@ref). For CPDAG the sampled DAG is converted via
+[`dag_to_cpdag`](@ref). For ADMG/MAG/PAG, `latents` additional nodes `L1, …,
+Lk` are added to the underlying random DAG and then marginalized out via
 [`latent_project`](@ref); `m`/`p` are applied to the full `n + latents` node
 set before projection. `latents` must be `0` (the default) for
 `class = DAG` or `class = CPDAG`.
 
-For `class = MAG`,
+For `class = MAG` or `class = PAG`,
 each candidate is checked and, if invalid, resampled (up to an internal
 retry limit) until a valid MAG is found; an error is raised if none is found,
-which can happen for very dense graphs with many latents.
+which can happen for very dense graphs with many latents. For `class = PAG`,
+the resulting MAG is then converted to its equivalence class via
+[`mag_to_pag`](@ref).
 
 `rng` defaults to `Random.default_rng()` when omitted; pass an explicit
 `AbstractRNG` (e.g. `Random.Xoshiro(seed)`) for reproducibility.
@@ -327,6 +329,8 @@ cpdag = generate_graph(7; m = 5, class = CPDAG)
 admg = generate_graph(15; p = 0.25, class = ADMG, latents = 3)
 
 mag = generate_graph(15; p = 0.25, class = MAG, latents = 3)
+
+pag = generate_graph(15; p = 0.25, class = PAG, latents = 3)
 ```
 """
 function generate_graph(
@@ -334,7 +338,7 @@ function generate_graph(
     n::Integer;
     m::Union{Nothing,Integer} = nothing,
     p::Union{Nothing,Real} = nothing,
-    class::Union{Type{DAG},Type{CPDAG},Type{ADMG},Type{MAG}} = DAG,
+    class::Union{Type{DAG},Type{CPDAG},Type{ADMG},Type{MAG},Type{PAG}} = DAG,
     latents::Integer = 0,
 )
     n = Int(n)
@@ -346,8 +350,8 @@ function generate_graph(
     if latents < 0
         error("latents must be non-negative")
     end
-    if latents > 0 && !(class <: Union{ADMG,MAG})
-        error("latents is only supported for class = ADMG or class = MAG")
+    if latents > 0 && !(class <: Union{ADMG,MAG,PAG})
+        error("latents is only supported for class = ADMG, class = MAG, or class = PAG")
     end
 
     if xor(m === nothing, p === nothing) == false
@@ -374,18 +378,19 @@ function generate_graph(
         end
     end
 
-    if class === MAG
+    if class === MAG || class === PAG
         max_attempts = 200
         for _ = 1:max_attempts
             edges = _sample_random_dag_edges(local_rng, node_names, n_total, m, p)
             dag = DAG(node_set, edges; validate = false)
             admg = latent_project(dag, latent_names)
             if isempty(validation_errors(MAGConstraints(), admg))
-                return MAG(admg.backend.nodes, admg.edges; validate = false)
+                mag = MAG(admg.backend.nodes, admg.edges; validate = false)
+                return class === PAG ? mag_to_pag(mag) : mag
             end
         end
         error(
-            "generate_graph: failed to sample a valid MAG after $(max_attempts) attempts; " *
+            "generate_graph: failed to sample a valid $(class) after $(max_attempts) attempts; " *
             "try fewer latents or a lower edge density",
         )
     end
