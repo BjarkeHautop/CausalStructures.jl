@@ -92,10 +92,10 @@ function _d_connected_restricted_mask(
 end
 
 """
-    minimal_separator(cg::Union{DAG,ADMG,AbstractAG,AbstractPDAG}, x, y; include=Symbol[], restrict=nothing)
+    minimal_separator(cg::Union{DAG,ADMG,AbstractAG,PAG,AbstractPDAG}, x, y; include=Symbol[], restrict=nothing)
 
 Find a minimal d-separator ([`DAG`](@ref), [`AbstractPDAG`](@ref)) or m-separator
-([`ADMG`](@ref), [`AbstractAG`](@ref)) between nodes `x` and `y`.
+([`ADMG`](@ref), [`AbstractAG`](@ref), [`PAG`](@ref)) between nodes `x` and `y`.
 
 A set ``Z`` separates ``x`` from ``y`` if conditioning on ``Z`` renders them
 d/m-independent. The returned set is *minimal*: no proper subset (excluding forced
@@ -106,7 +106,8 @@ exists within the allowed candidate set.
 
 # Arguments
 
-- `cg`: A [`DAG`](@ref), [`ADMG`](@ref), [`AbstractAG`](@ref), or [`AbstractPDAG`](@ref).
+- `cg`: A [`DAG`](@ref), [`ADMG`](@ref), [`AbstractAG`](@ref), [`PAG`](@ref), or
+  [`AbstractPDAG`](@ref).
 - `x`, `y`: The two nodes to separate.
 - `include`: Nodes forced into the separator. Must be a subset of `restrict` (or
   the default candidate set).
@@ -124,6 +125,8 @@ restricted to the first result, and the outputs are intersected.
   restricted to ancestors.
 - [`AbstractAG`](@ref): same as ADMG but uses anteriors (ancestors reachable via directed
   or undirected edges) and handles undirected edge marks.
+- [`PAG`](@ref): same as `AbstractAG`, with circle marks collapsing to tails (as
+  for [`possible_ancestors`](@ref)/[`possible_descendants`](@ref)).
 - [`AbstractPDAG`](@ref): mark-based Bayes-ball over directed and undirected edges,
   restricted to anteriors.
 
@@ -166,6 +169,12 @@ julia> admg = cgraph(directed(:A, :B), directed(:B, :C); class = ADMG);
 julia> minimal_separator(admg, :A, :C)
 1-element Vector{Symbol}:
  :B
+
+julia> pag = mag_to_pag(cgraph(directed(:A, :X), directed(:X, :M), directed(:M, :Y), directed(:A, :Y); class = MAG));
+
+julia> minimal_separator(pag, :A, :M)
+1-element Vector{Symbol}:
+ :X
 ```
 
 # References
@@ -382,6 +391,67 @@ end
 
 function minimal_separator(
     cg::AbstractAG,
+    x::Symbol,
+    y::Symbol;
+    include::AbstractVector{Symbol} = Symbol[],
+    restrict::Union{Nothing,AbstractVector{Symbol}} = nothing,
+)
+    B = cg.backend
+    n = length(B.nodes)
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+    inc_idxs = [node_index(cg, v) for v in include]
+    res_idxs = if restrict === nothing
+        [i for i = 1:n if i != x_idx && i != y_idx]
+    else
+        [node_index(cg, v) for v in restrict]
+    end
+    result = _findminsep(B, x_idx, y_idx, inc_idxs, res_idxs)
+    return result === nothing ? nothing : B.nodes[result]
+end
+
+# ── PAG ───────────────────────────────────────────────────────────────────────
+
+function _find_nearest_sep(
+    B::PAGBackend,
+    xs::Vector{Int},
+    ys::Vector{Int},
+    inc_idxs::Vector{Int},
+    res_idxs::Vector{Int},
+)
+    n = length(B.nodes)
+    if !isempty(inc_idxs)
+        res_set = Set(res_idxs)
+        for i in inc_idxs
+            i ∈ res_set || return nothing
+        end
+    end
+
+    seeds = unique([xs; ys; inc_idxs])
+    a_mask = _pag_anterior_bitmask(B, seeds)   # anteriors, circle marks collapsed to tails
+
+    z0_mask = falses(n)
+    for r in res_idxs
+        if a_mask[r] && r ∉ xs && r ∉ ys
+            z0_mask[r] = true
+        end
+    end
+
+    x_star = _reachable_pag(B, xs, a_mask, z0_mask)
+    any(y -> x_star[y], ys) && return nothing
+
+    z_mask = falses(n)
+    for v = 1:n
+        z0_mask[v] && x_star[v] && (z_mask[v] = true)
+    end
+    for i in inc_idxs
+        z_mask[i] = true
+    end
+    return [v for v = 1:n if z_mask[v]]
+end
+
+function minimal_separator(
+    cg::PAG,
     x::Symbol,
     y::Symbol;
     include::AbstractVector{Symbol} = Symbol[],

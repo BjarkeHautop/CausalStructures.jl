@@ -199,30 +199,128 @@ end
     @test_throws ArgumentError adjustment_set(cg, :X, :Y; type = :unknown)
 end
 
+# ── DAG adjustment (is_valid_adjustment / all_adjustment_sets, GAC) ────────
+
+@testitem "is_valid_adjustment DAG: simple confounder" tags = [:unit] begin
+    dag = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG)
+    @test !is_valid_adjustment(dag, :X, :Y)       # open path X <-- A --> Y
+    @test is_valid_adjustment(dag, :X, :Y, [:A])
+end
+
+@testitem "is_valid_adjustment DAG: chain has valid empty set" tags = [:unit] begin
+    dag = cgraph(directed(:X, :Y); class = DAG)
+    @test is_valid_adjustment(dag, :X, :Y)
+end
+
+@testitem "is_valid_adjustment DAG: descendant of X is forbidden" tags = [:unit] begin
+    # A --> X --> M --> Y: M is a descendant of X, invalid adjustment
+    dag = cgraph(
+        directed(:A, :X),
+        directed(:X, :M),
+        directed(:M, :Y),
+        directed(:A, :Y);
+        class = DAG,
+    )
+    @test !is_valid_adjustment(dag, :X, :Y, [:M])  # M is forbidden (descendant of X)
+    @test is_valid_adjustment(dag, :X, :Y, [:A])
+end
+
+@testitem "is_valid_adjustment DAG: agrees with is_valid_backdoor on ECI graph" setup =
+    [EciGraph] tags = [:unit] begin
+    cg = _eci_graph()
+    @test is_valid_adjustment(cg, :X, :Y, [:A]) == is_valid_backdoor(cg, :X, :Y, [:A])
+    @test is_valid_adjustment(cg, :X, :Y, [:K]) == is_valid_backdoor(cg, :X, :Y, [:K])
+    @test is_valid_adjustment(cg, :X, :Y, [:D]) == is_valid_backdoor(cg, :X, :Y, [:D])
+    @test is_valid_adjustment(cg, :X, :Y) == is_valid_backdoor(cg, :X, :Y)
+end
+
+@testitem "all_adjustment_sets DAG: finds {A} for simple confounder" tags = [:unit] begin
+    dag = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG)
+    @test all_adjustment_sets(dag, :X, :Y) == [[:A]]
+end
+
+@testitem "all_adjustment_sets DAG: chain returns empty set" tags = [:unit] begin
+    dag = cgraph(directed(:X, :Y); class = DAG)
+    sets = all_adjustment_sets(dag, :X, :Y)
+    @test length(sets) == 1
+    @test sets[1] == Symbol[]
+end
+
+@testitem "all_adjustment_sets DAG: consistent with is_valid_adjustment" tags = [:unit] begin
+    dag = cgraph(
+        directed(:A, :X),
+        directed(:B, :X),
+        directed(:X, :Y),
+        directed(:A, :Y);
+        class = DAG,
+    )
+    sets = all_adjustment_sets(dag, :X, :Y; minimal = false, max_size = 2)
+    for z in sets
+        @test is_valid_adjustment(dag, :X, :Y, z)
+    end
+end
+
 # ── MAG adjustment (is_valid_adjustment / all_adjustment_sets) ────────
 
 @testitem "is_valid_adjustment: simple confounder (DAG-as-MAG)" tags = [:unit] begin
-    # A --> X --> Y, A --> Y: A is a common cause (pure directed MAG = DAG)
+    # A --> X --> Y, A --> Y.
+    # X --> Y is nonetheless invisible: A is X's only parent and A is itself
+    # adjacent to Y, so there is no witness ruling out an additional hidden
+    # confounder riding the X --> Y edge (Perković et al. 2018, Example 3 --
+    # the same shape as their MAG M1, which they note is not amenable, unlike
+    # its DAG interpretation). The graph is therefore not amenable relative to
+    # (X, Y): no adjustment set exists, not even the empty set.
     mag = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = MAG)
+    @test !is_valid_adjustment(mag, :X, :Y, [:A])
+    @test !is_valid_adjustment(mag, :X, :Y)
+end
+
+@testitem "is_valid_adjustment: confounder visible via extra witness parent" tags = [:unit] begin
+    # Same shape as above, but X has a second parent B that is not adjacent to
+    # Y. B witnesses that X --> Y is visible (Perković et al. 2018, Example 3,
+    # MAG M2), so the graph is amenable and conditioning on A blocks the
+    # backdoor path X <-- A --> Y.
+    mag = cgraph(
+        directed(:A, :X),
+        directed(:B, :X),
+        directed(:X, :Y),
+        directed(:A, :Y);
+        class = MAG,
+    )
     @test is_valid_adjustment(mag, :X, :Y, [:A])
-    @test !is_valid_adjustment(mag, :X, :Y)       # open path X <-- A --> Y
+    @test !is_valid_adjustment(mag, :X, :Y)
 end
 
 @testitem "is_valid_adjustment: bidirected confounder" tags = [:unit] begin
-    # A <-> X, A --> Y, X --> Y: hidden common cause of A and X; A also causes Y.
-    # A is not ancestor of X (no directed path A --> X), so A <-> X is a valid MAG edge.
-    # The open non-causal path X <-- (A <-> X) --> Y is blocked by conditioning on A.
-    mag = cgraph(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG)
+    # A <-> X (hidden common cause of A and X), A --> M --> Y, X --> Y.
+    # X --> Y is visible: A is a spouse of X and A is not adjacent to Y
+    # (witness case of Perković et al. 2018, Definition/Figure 2). The open
+    # non-causal path X <-> A --> M --> Y is blocked by conditioning on A.
+    mag = cgraph(
+        bidirected(:A, :X),
+        directed(:A, :M),
+        directed(:M, :Y),
+        directed(:X, :Y);
+        class = MAG,
+    )
     @test is_valid_adjustment(mag, :X, :Y, [:A])
     @test !is_valid_adjustment(mag, :X, :Y)
 end
 
 @testitem "is_valid_adjustment: collider structure blocks without conditioning" tags =
     [:unit] begin
-    # A <-> X, A <-> Y, X --> Y: A is an unobserved collider between the two hidden
-    # common-cause paths. The empty set is valid because A naturally blocks the
-    # non-causal path. Conditioning on A would OPEN the collider path.
-    mag = cgraph(bidirected(:A, :X), bidirected(:A, :Y), directed(:X, :Y); class = MAG)
+    # A <-> X, A <-> Y, B <-> X, X --> Y: A is an unobserved collider between
+    # the two hidden common-cause paths. B is an extra spouse of X, unconnected
+    # to A and Y, witnessing that X --> Y is visible. The empty set is valid
+    # because A naturally blocks the non-causal path. Conditioning on A would
+    # OPEN the collider path.
+    mag = cgraph(
+        bidirected(:A, :X),
+        bidirected(:A, :Y),
+        bidirected(:B, :X),
+        directed(:X, :Y);
+        class = MAG,
+    )
     @test is_valid_adjustment(mag, :X, :Y)         # empty set valid
     @test !is_valid_adjustment(mag, :X, :Y, [:A])  # conditioning on A opens path
 end
@@ -240,31 +338,46 @@ end
     @test is_valid_adjustment(mag, :X, :Y, [:A])
 end
 
-@testitem "is_valid_adjustment: chain has valid empty set" tags = [:unit] begin
+@testitem "is_valid_adjustment: bare edge has no witness, no valid set" tags = [:unit] begin
+    # X --> Y alone: X has no other neighbor at all, so no witness can ever
+    # show the edge is confounding-free. The graph is not amenable relative to
+    # (X, Y), so not even the empty set is a valid adjustment set.
     mag = cgraph(directed(:X, :Y); class = MAG)
-    @test is_valid_adjustment(mag, :X, :Y)
+    @test !is_valid_adjustment(mag, :X, :Y)
 end
 
-@testitem "all_adjustment_sets: bidirected confounder returns {A}" tags = [:unit] begin
-    mag = cgraph(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG)
+@testitem "all_adjustment_sets: bidirected confounder returns {A} and {M}" tags = [:unit] begin
+    mag = cgraph(
+        bidirected(:A, :X),
+        directed(:A, :M),
+        directed(:M, :Y),
+        directed(:X, :Y);
+        class = MAG,
+    )
     sets = all_adjustment_sets(mag, :X, :Y)
-    @test length(sets) == 1
-    @test sets[1] == [:A]
+    @test sort(sets) == [[:A], [:M]]
 end
 
 @testitem "all_adjustment_sets: collider structure returns only empty set" tags = [:unit] begin
     # Collider A blocks non-causal paths; only the empty adjustment set is valid.
-    mag = cgraph(bidirected(:A, :X), bidirected(:A, :Y), directed(:X, :Y); class = MAG)
+    # B <-> X witnesses that X --> Y is visible (see the analogous
+    # is_valid_adjustment test above).
+    mag = cgraph(
+        bidirected(:A, :X),
+        bidirected(:A, :Y),
+        bidirected(:B, :X),
+        directed(:X, :Y);
+        class = MAG,
+    )
     sets = all_adjustment_sets(mag, :X, :Y)
     @test length(sets) == 1
     @test sets[1] == Symbol[]
 end
 
-@testitem "all_adjustment_sets: chain returns empty set" tags = [:unit] begin
+@testitem "all_adjustment_sets: bare edge has no valid set" tags = [:unit] begin
     mag = cgraph(directed(:X, :Y); class = MAG)
     sets = all_adjustment_sets(mag, :X, :Y)
-    @test length(sets) == 1
-    @test sets[1] == Symbol[]
+    @test isempty(sets)
 end
 
 @testitem "all_adjustment_sets: consistent with is_valid_adjustment" tags = [:unit] begin
@@ -297,14 +410,26 @@ end
 end
 
 @testitem "adjustment_set AbstractAG: returns valid set, prefers smaller" tags = [:unit] begin
-    mag = cgraph(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG)
+    mag = cgraph(
+        bidirected(:A, :X),
+        directed(:A, :M),
+        directed(:M, :Y),
+        directed(:X, :Y);
+        class = MAG,
+    )
     z = adjustment_set(mag, :X, :Y)
     @test is_valid_adjustment(mag, :X, :Y, z)
     @test z == [:A]
 end
 
 @testitem "adjustment_set AbstractAG: empty set valid" tags = [:unit] begin
-    mag = cgraph(bidirected(:A, :X), bidirected(:A, :Y), directed(:X, :Y); class = MAG)
+    mag = cgraph(
+        bidirected(:A, :X),
+        bidirected(:A, :Y),
+        bidirected(:B, :X),
+        directed(:X, :Y);
+        class = MAG,
+    )
     z = adjustment_set(mag, :X, :Y)
     @test is_valid_adjustment(mag, :X, :Y, z)
     @test z == Symbol[]

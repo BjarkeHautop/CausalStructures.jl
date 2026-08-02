@@ -125,6 +125,57 @@ function _anterior_bitmask(B::Union{AGBackend,PDAGBackend}, seeds::Vector{Int})
     return mask
 end
 
+# Anterior bitmask (PAG): nodes reachable from seeds via collapsed parents
+# (parents, circle_parents) or collapsed-undirected edges (undirected,
+# circle_undirected_out, circle_undirected_in, circle_circle) -- circle marks
+# collapse to tails, as for `possible_ancestors`/`possible_descendants`
+# (query/traversal.jl).
+function _pag_anterior_bitmask(B::PAGBackend, seeds::Vector{Int})
+    n = length(B.nodes)
+    mask = falses(n)
+    stack = Int[]
+    for s in seeds
+        if !mask[s]
+            mask[s] = true
+            push!(stack, s)
+        end
+    end
+    while !isempty(stack)
+        u = pop!(stack)
+        for p in _parents_slice(B, u)
+            if !mask[p]
+                mask[p] = true
+                push!(stack, p)
+            end
+        end
+        for p in _circle_parents_slice(B, u)
+            if !mask[p]
+                mask[p] = true
+                push!(stack, p)
+            end
+        end
+        for w in _undirected_slice(B, u)
+            if !mask[w]
+                mask[w] = true
+                push!(stack, w)
+            end
+        end
+        for w in _circle_undirected_out_slice(B, u)
+            if !mask[w]
+                mask[w] = true
+                push!(stack, w)
+            end
+        end
+        for w in _circle_circle_slice(B, u)
+            if !mask[w]
+                mask[w] = true
+                push!(stack, w)
+            end
+        end
+    end
+    return mask
+end
+
 # ── Shared Bayes-ball primitive ────────────────────────────────────────────────
 #
 # Marks: 1=Tail, 2=Head, 3=Undir.
@@ -425,6 +476,74 @@ function _reachable_ag(B::AGBackend, xs::Vector{Int}, a_mask::BitVector, z_mask:
     return reached
 end
 
+# REACHABLE for PAG (3 marks: Tail, Head, Undir). Circle marks collapse to
+# tails, so each pair of buckets that differ only by a circle-vs-definite mark
+# on one side feeds the same relax call: parents/circle_parents both give
+# (out=Head, nbr_in=Tail) at v, children/circle_children both give (out=Tail,
+# nbr_in=Head), and undirected/circle_undirected_out/circle_undirected_in/
+# circle_circle all give (out=Undir, nbr_in=Undir). Spouses (only definite
+# arrowhead-arrowhead marks exist) are unchanged.
+function _reachable_pag(
+    B::PAGBackend,
+    xs::Vector{Int},
+    a_mask::BitVector,
+    z_mask::BitVector,
+)
+    n = length(B.nodes)
+    visited = falses(n, 3)
+    q = Tuple{Int,Int}[]
+
+    for x in xs
+        a_mask[x] || continue
+        for m = 1:3
+            if !visited[x, m]
+                visited[x, m] = true
+                push!(q, (x, m))
+            end
+        end
+    end
+
+    head = 1
+    while head <= length(q)
+        v, in_m = q[head]
+        head += 1
+        v_in_z = z_mask[v]
+        for p in _parents_slice(B, v)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, p, 1)
+        end
+        for p in _circle_parents_slice(B, v)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, p, 1)
+        end
+        for c in _children_slice(B, v)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 1, c, 2)
+        end
+        for c in _circle_children_slice(B, v)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 1, c, 2)
+        end
+        for s in _spouses_slice(B, v)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, s, 2)
+        end
+        for w in _undirected_slice(B, v)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 3, w, 3)
+        end
+        for w in _circle_undirected_out_slice(B, v)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 3, w, 3)
+        end
+        for w in _circle_undirected_in_slice(B, v)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 3, w, 3)
+        end
+        for w in _circle_circle_slice(B, v)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 3, w, 3)
+        end
+    end
+
+    reached = falses(n)
+    for v = 1:n
+        reached[v] = visited[v, 1] || visited[v, 2] || visited[v, 3]
+    end
+    return reached
+end
+
 # ── d_separated (DAG) ─────────────────────────────────────────────────────────
 
 """
@@ -525,7 +644,7 @@ function d_separated(
 end
 
 """
-    m_separated(cg::Union{DAG,ADMG,AbstractAG}, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    m_separated(cg::Union{DAG,ADMG,AbstractAG,PAG}, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
 
 Return `true` if `x` and `y` are m-separated given `z` in `cg`.
 
@@ -538,6 +657,9 @@ arrowhead endpoints, and checks whether `y` is reached.
 
 [`AbstractAG`](@ref): same traversal extended with undirected edges, restricted
 to the anterior set of `x`, `y`, and `z` (Richardson & Spirtes, 2002).
+
+[`PAG`](@ref): same traversal as `AbstractAG`, with circle marks collapsing to
+tails (as for [`possible_ancestors`](@ref)/[`possible_descendants`](@ref)).
 
 # Examples
 
@@ -614,5 +736,28 @@ function m_separated(
     mask = _anterior_bitmask(B, seeds)
 
     reached = _reachable_ag(B, [x_idx], mask, z_mask)
+    return !reached[y_idx]
+end
+
+# ── m_separated (PAG) ─────────────────────────────────────────────────────────
+
+# Returns true iff x ⊥_m y | z in PAG cg.
+function m_separated(cg::PAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
+    B = cg.backend
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+    z_idxs = [node_index(cg, v) for v in z]
+
+    n = length(B.nodes)
+    z_mask = falses(n)
+    for v in z_idxs
+        z_mask[v] = true
+    end
+    z_mask[x_idx] && return true
+
+    seeds = unique([x_idx; y_idx; z_idxs])
+    mask = _pag_anterior_bitmask(B, seeds)
+
+    reached = _reachable_pag(B, [x_idx], mask, z_mask)
     return !reached[y_idx]
 end

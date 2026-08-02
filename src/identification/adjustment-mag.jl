@@ -1,3 +1,80 @@
+# ── Edge visibility (Zhang 2006) ─────────────────────────────────────────────
+#
+# A directed edge x --> y in a MAG or PAG is *visible* if there is graphical
+# evidence ruling out a latent confounder riding along that same edge: either a
+# witness node with an arrowhead into x that is not adjacent to y, or a
+# collider path into x, through nodes that are all parents of y, ending at such
+# a witness. Perković et al. (2018) Definition 6 (proper back-door graph) only
+# removes *visible* edges out of X -- an invisible edge might still hide
+# confounding, so it must stay in the proper back-door graph. `_collapsed_parents`
+# lets the same check serve both AGBackend (no circles) and PAGBackend, where
+# circle marks collapse to tails.
+_collapsed_parents(B::AGBackend, v::Int) = _parents_slice(B, v)
+
+function _is_visible_edge(B::Union{AGBackend,PAGBackend}, x::Int, y::Int)
+    adjacent(w) = w in _all_nbrs_slice(B, y)
+
+    for w in _collapsed_parents(B, x)
+        (w != y && !adjacent(w)) && return true
+    end
+    for w in _spouses_slice(B, x)
+        (w != y && !adjacent(w)) && return true
+    end
+
+    n = length(B.nodes)
+    restrict = falses(n)
+    restrict[y] = true
+    for p in _collapsed_parents(B, y)
+        restrict[p] = true
+    end
+    restrict[x] || return false
+
+    district = [x]
+    in_district = falses(n)
+    in_district[x] = true
+    stack = [x]
+    while !isempty(stack)
+        u = pop!(stack)
+        for s in _spouses_slice(B, u)
+            if restrict[s] && !in_district[s]
+                in_district[s] = true
+                push!(district, s)
+                push!(stack, s)
+            end
+        end
+    end
+
+    for d in district
+        for w in _collapsed_parents(B, d)
+            (w != y && !adjacent(w)) && return true
+        end
+        for w in _spouses_slice(B, d)
+            (w != y && !adjacent(w)) && return true
+        end
+    end
+    return false
+end
+
+# Compute PBG removed edges: x --> v with x ∈ X, v ∉ X, v ∈ An(Y), and the edge
+# x --> v visible. Unlike ADMG (see `_pbg_removed` in adjustment-admg.jl), a MAG
+# directed edge is not guaranteed confounding-free, so only visible edges can be
+# safely dropped from the proper back-door graph.
+function _pbg_removed_ag(B::AGBackend, xs::Vector{Int}, ys::Vector{Int})
+    n = length(B.nodes)
+    an_y = _ancestors_bitmask(B, ys)
+    x_mask = falses(n)
+    for x in xs
+        x_mask[x] = true
+    end
+    removed = Set{Tuple{Int,Int}}()
+    for x in xs
+        for c in _children_slice(B, x)
+            (!x_mask[c] && an_y[c] && _is_visible_edge(B, x, c)) && push!(removed, (x, c))
+        end
+    end
+    return removed
+end
+
 # ── MAG proper-backdoor graph helpers ────────────────────────────────────────
 
 # Anterior bitmask in the PBG: reachable via directed parents (excluding removed)
@@ -281,7 +358,7 @@ function is_valid_adjustment(
     forbidden = _forbidden_set(B, xs, ys)
     any(v -> forbidden[v], z_idxs) && return false
 
-    removed = _pbg_removed(B, xs, ys)
+    removed = _pbg_removed_ag(B, xs, ys)
     return _m_separated_pbg_ag(B, xs, ys, z_idxs, removed)
 end
 
@@ -304,7 +381,7 @@ function all_adjustment_sets(
     end
 
     universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
-    removed = _pbg_removed(B, xs, ys)
+    removed = _pbg_removed_ag(B, xs, ys)
 
     # Scratch buffers allocated once per `make_checker` call, reused across
     # all its candidates -- rebuilding the augmented PBG adjacency otherwise
@@ -382,7 +459,10 @@ sizes 0, 1, 2, ... in order and stopping at the first valid set.
 # Examples
 
 ```jldoctest
-julia> mag = cgraph(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG);
+julia> mag = cgraph(
+           bidirected(:A, :X), directed(:A, :M), directed(:M, :Y), directed(:X, :Y);
+           class = MAG,
+       );
 
 julia> adjustment_set(mag, :X, :Y)
 1-element Vector{Symbol}:
@@ -406,29 +486,32 @@ function adjustment_set(cg::AbstractAG, x::Symbol, y::Symbol)
     end
 
     universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
-    removed = _pbg_removed(B, xs, ys)
+    removed = _pbg_removed_ag(B, xs, ys)
 
     cur = Int[]
 
+    # `nothing` marks "no valid set at this size", distinct from a valid but
+    # empty adjustment set -- using `Symbol[]` for both would make the k = 0
+    # case (empty set) indistinguishable from failure and never get returned.
     function enumerate!(start, k_rem)
         if k_rem == 0
             if _m_separated_pbg_ag(B, xs, ys, cur, removed)
                 return [B.nodes[v] for v in cur]
             end
-            return Symbol[]
+            return nothing
         end
         for i = start:length(universe)
             push!(cur, universe[i])
             result = enumerate!(i + 1, k_rem - 1)
             pop!(cur)
-            !isempty(result) && return result
+            result !== nothing && return result
         end
-        return Symbol[]
+        return nothing
     end
 
     for k = 0:length(universe)
         result = enumerate!(1, k)
-        !isempty(result) && return result
+        result !== nothing && return result
     end
 
     return Symbol[]

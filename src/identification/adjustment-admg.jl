@@ -33,7 +33,11 @@ end
 # ── forbidden set ─────────────────────────────────────────────────────────────
 
 # forb(X,Y) = De(cn(X,Y) \ Y) ∪ X,  where cn(X,Y) = De(X) ∩ An(Y)
-function _forbidden_set(B::Union{ADMGBackend,AGBackend}, xs::Vector{Int}, ys::Vector{Int})
+function _forbidden_set(
+    B::Union{DAGBackend,ADMGBackend,AGBackend},
+    xs::Vector{Int},
+    ys::Vector{Int},
+)
     n = length(B.nodes)
     de_x = _descendants_bitmask(B, xs)
     an_y = _ancestors_bitmask(B, ys)
@@ -192,7 +196,12 @@ function _admg_moral_adj_filtered!(
 end
 
 # Compute PBG removed edges: x --> v with x ∈ X, v ∉ X, v ∈ An(Y).
-function _pbg_removed(B::Union{ADMGBackend,AGBackend}, xs::Vector{Int}, ys::Vector{Int})
+#
+# DAG/ADMG only: a DAG's directed edges are always confounding-free by
+# definition, and ADMG's bidirected edges represent confounding directly, so
+# every causal edge out of X can be removed unconditionally in both. AG/MAG use
+# `_pbg_removed_ag` instead, which additionally requires the edge to be visible.
+function _pbg_removed(B::Union{DAGBackend,ADMGBackend}, xs::Vector{Int}, ys::Vector{Int})
     n = length(B.nodes)
     an_y = _ancestors_bitmask(B, ys)
     x_mask = falses(n)
@@ -284,7 +293,153 @@ function _prune_minimal!(sets::Vector{Vector{Symbol}})
     copy!(sets, out)
 end
 
-# ── public API ────────────────────────────────────────────────────────────────
+# ── DAG ───────────────────────────────────────────────────────────────────────
+
+# Build the proper backdoor graph as an actual DAG by dropping the edges
+# `_pbg_removed` identifies. `build_backend` always sorts the same node set
+# into the same index order, so `cg`'s node indices are valid for the result's
+# backend directly -- no Symbol round-trip needed (see the analogous comment
+# on `all_backdoor_sets(cg::ADMG, ...)` in backdoor.jl).
+function _pbg_dag(cg::DAG, xs::Vector{Int}, ys::Vector{Int})
+    B = cg.backend
+    removed = _pbg_removed(B, xs, ys)
+    isempty(removed) && return cg
+    removed_syms = Set((B.nodes[s], B.nodes[t]) for (s, t) in removed)
+    kept = filter(e -> !(is_directed(e) && (e.src, e.dst) in removed_syms), cg.edges)
+    return build_graph(DAG, Set(B.nodes), kept)
+end
+
+"""
+    is_valid_adjustment(cg::DAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+
+Return `true` if `z` is a valid adjustment set for estimating the total causal
+effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
+
+For a DAG this reduces to the adjustment criterion of Shpitser (2012), which is
+sound *and complete* for adjustment -- unlike [`is_valid_backdoor`](@ref)
+(Pearl's backdoor criterion, sound but not complete), `z` may include
+descendants of `x` as long as they are not on a causal path from `x` to `y`, so
+this criterion accepts some valid sets the backdoor criterion rejects.
+
+# Examples
+
+```jldoctest
+julia> dag = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG);
+
+julia> is_valid_adjustment(dag, :X, :Y)
+false
+
+julia> is_valid_adjustment(dag, :X, :Y, [:A])
+true
+```
+
+# References
+
+- [perkovic2018complete](@cite)
+"""
+function is_valid_adjustment(
+    cg::DAG,
+    x::Symbol,
+    y::Symbol,
+    z::AbstractVector{Symbol} = Symbol[],
+)
+    B = cg.backend
+    xs = [node_index(cg, x)]
+    ys = [node_index(cg, y)]
+    z_idxs = [node_index(cg, v) for v in z]
+
+    forbidden = _forbidden_set(B, xs, ys)
+    any(v -> forbidden[v], z_idxs) && return false
+
+    return d_separated(_pbg_dag(cg, xs, ys), x, y, z)
+end
+
+"""
+    all_adjustment_sets(cg::DAG, x::Symbol, y::Symbol;
+                        minimal::Bool = true, max_size::Int = 3)
+        -> Vector{Vector{Symbol}}
+
+Return all valid adjustment sets for the total causal effect of `x` on `y` in
+`cg`, up to size `max_size`.
+
+Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
+(default), only inclusion-minimal sets are returned.
+
+# Examples
+
+```jldoctest
+julia> dag = cgraph(
+           directed(:A, :X), directed(:B, :X), directed(:X, :Y), directed(:A, :Y);
+           class = DAG,
+       );
+
+julia> all_adjustment_sets(dag, :X, :Y)
+1-element Vector{Vector{Symbol}}:
+ [:A]
+```
+
+# References
+
+- [perkovic2018complete](@cite)
+"""
+function all_adjustment_sets(
+    cg::DAG,
+    x::Symbol,
+    y::Symbol;
+    minimal::Bool = true,
+    max_size::Int = 3,
+)
+    B = cg.backend
+    n = length(B.nodes)
+    x_idx = node_index(cg, x)
+    y_idx = node_index(cg, y)
+    xs = [x_idx]
+    ys = [y_idx]
+
+    forbidden = _forbidden_set(B, xs, ys)
+    universe = [v for v = 1:n if !forbidden[v] && v != y_idx]
+
+    # `_pbg_dag`'s backend shares `cg`'s node indices (see its docstring
+    # comment), so the hot loop below can index into it with `x_idx`/`y_idx`
+    # directly without any Symbol round-trip.
+    Bx = _pbg_dag(cg, xs, ys).backend
+
+    # Scratch buffers allocated once per `make_checker` call, reused across
+    # all its candidates.
+    function make_checker()
+        seeds_buf = Int[]
+        anc_mask = falses(n)
+        anc_stack = Int[]
+        blocked = falses(n)
+        visited = falses(n, 2)
+        q = Tuple{Int,Int}[]
+        reached = falses(n)
+
+        return function valid_candidate(z_idxs::Vector{Int})
+            fill!(blocked, false)
+            for v in z_idxs
+                blocked[v] = true
+            end
+
+            empty!(seeds_buf)
+            push!(seeds_buf, x_idx, y_idx)
+            append!(seeds_buf, z_idxs)
+            _ancestors_bitmask!(anc_mask, anc_stack, Bx, seeds_buf)
+
+            _reachable_dag_single!(visited, q, reached, Bx, x_idx, anc_mask, blocked)
+            return !reached[y_idx]
+        end
+    end
+
+    to_symbols(cur) = sort([B.nodes[v] for v in cur])
+
+    valid_sets = _search_subsets(universe, 0, max_size, make_checker, to_symbols)
+
+    minimal && _prune_minimal!(valid_sets)
+    return valid_sets
+end
+
+# ── ADMG ──────────────────────────────────────────────────────────────────────
 
 """
     is_valid_adjustment(cg::Union{ADMG,AbstractAG}, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
@@ -310,7 +465,10 @@ true
 ```
 
 ```jldoctest
-julia> mag = cgraph(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG);
+julia> mag = cgraph(
+           bidirected(:A, :X), directed(:A, :M), directed(:M, :Y), directed(:X, :Y);
+           class = MAG,
+       );
 
 julia> is_valid_adjustment(mag, :X, :Y)
 false
@@ -365,11 +523,15 @@ julia> all_adjustment_sets(admg, :X, :Y)
 ```
 
 ```jldoctest
-julia> mag = cgraph(bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y); class = MAG);
+julia> mag = cgraph(
+           bidirected(:A, :X), directed(:A, :M), directed(:M, :Y), directed(:X, :Y);
+           class = MAG,
+       );
 
 julia> all_adjustment_sets(mag, :X, :Y)
-1-element Vector{Vector{Symbol}}:
+2-element Vector{Vector{Symbol}}:
  [:A]
+ [:M]
 ```
 
 ```jldoctest
