@@ -1,3 +1,13 @@
+# Below this many total tail/arrow candidates, the fixed cost of spawning tasks
+# outweighs any benefit. Chosen from benchmarking: at total=4 threading was
+# slower than sequential (0.68x), but by total=16 it was already a solid win
+# (3.2x), climbing to ~4.6-4.9x for anything larger -- so the crossover sits
+# somewhere in single digits, well below the 4096 used for subset search
+# (each candidate here is much more expensive: building a MAG, an
+# m-separation validation, and a PAG round-trip, vs. a cheap adjustment
+# check there).
+const _ENUMERATE_MAGS_PARALLEL_THRESHOLD = 8
+
 """
     enumerate_mags(cg::PAG) -> Vector{MAG}
 
@@ -16,7 +26,9 @@ validates it as a MAG (which itself runs an m-separation search for maximality),
 and keeps it only when [`mag_to_pag`](@ref) maps it back to `cg`. The cost is
 therefore `O(2^k)` candidates times the per-candidate MAG validation, so it is
 exponential in the number of circle endpoints. The number of MAGs in a class can
-likewise be very large.
+likewise be very large. The `2^k` candidates are independent of one another, so
+this parallelizes over `Threads.nthreads()` once there are enough of them to be
+worth splitting across tasks.
 
 # Examples
 
@@ -32,7 +44,6 @@ julia> length(enumerate_mags(pag))
 - [zhang2008completeness](@cite)
 """
 function enumerate_mags(cg::PAG)
-    out = MAG[]
     B = cg.backend
     n = length(B.nodes)
 
@@ -47,13 +58,45 @@ function enumerate_mags(cg::PAG)
 
     # Each circle endpoint (mark at j on edge i-j) is an independent tail/arrow choice.
     circle_pos = [(i, j) for i = 1:n for j = 1:n if adj[i, j] && mark[i, j] == Circle]
-    k = length(circle_pos)
+    total = 2^length(circle_pos)
 
     target = _pag_signature(cg.edges)
-    m = copy(mark)
     node_set = Set(B.nodes)  # loop-invariant: `collect`ed fresh by build_backend each call, safe to share
 
-    for bits = 0:(2^k-1)
+    if Threads.nthreads() == 1 || total <= _ENUMERATE_MAGS_PARALLEL_THRESHOLD
+        return _enumerate_mags_range(
+            circle_pos,
+            mark,
+            adj,
+            B.nodes,
+            node_set,
+            target,
+            0,
+            total - 1,
+        )
+    end
+    return _enumerate_mags_threaded(circle_pos, mark, adj, B.nodes, node_set, target, total)
+end
+
+# Checks every `bits` assignment in `lo:hi` against `target`, appending valid MAGs
+# to a freshly-allocated output vector. `mark` is copied once here (not shared)
+# since each `bits` iteration overwrites every circle position in it -- safe to
+# call concurrently across disjoint `lo:hi` ranges as long as each call gets its
+# own copy, which is why this isn't hoisted above `enumerate_mags` itself.
+function _enumerate_mags_range(
+    circle_pos::Vector{Tuple{Int,Int}},
+    mark::Matrix{Endpoint},
+    adj::BitMatrix,
+    nodes_vec::Vector{Symbol},
+    node_set::Set{Symbol},
+    target,
+    lo::Int,
+    hi::Int,
+)
+    n = length(nodes_vec)
+    m = copy(mark)
+    out = MAG[]
+    for bits = lo:hi
         for (idx, (i, j)) in enumerate(circle_pos)
             m[i, j] = ((bits >> (idx - 1)) & 1 == 1) ? Arrow : Tail
         end
@@ -63,13 +106,13 @@ function enumerate_mags(cg::PAG)
             adj[i, j] || continue
             mi, mj = m[j, i], m[i, j]   # mark at i, mark at j
             if mi == Tail && mj == Arrow
-                push!(new_edges, directed(B.nodes[i], B.nodes[j]))
+                push!(new_edges, directed(nodes_vec[i], nodes_vec[j]))
             elseif mi == Arrow && mj == Tail
-                push!(new_edges, directed(B.nodes[j], B.nodes[i]))
+                push!(new_edges, directed(nodes_vec[j], nodes_vec[i]))
             elseif mi == Arrow && mj == Arrow
-                push!(new_edges, bidirected(B.nodes[i], B.nodes[j]))
+                push!(new_edges, bidirected(nodes_vec[i], nodes_vec[j]))
             else
-                push!(new_edges, undirected(B.nodes[i], B.nodes[j]))
+                push!(new_edges, undirected(nodes_vec[i], nodes_vec[j]))
             end
         end
 
@@ -83,4 +126,39 @@ function enumerate_mags(cg::PAG)
         push!(out, candidate)
     end
     return out
+end
+
+# Splits `0:(total-1)` into `Threads.nthreads()` contiguous chunks (never more
+# chunks than there are candidates) and runs each chunk on its own task via
+# `_enumerate_mags_range`, which gives every task a private `mark` copy and
+# output vector -- nothing mutable is shared across threads.
+function _enumerate_mags_threaded(
+    circle_pos,
+    mark,
+    adj,
+    nodes_vec,
+    node_set,
+    target,
+    total::Int,
+)
+    nt = min(Threads.nthreads(), total)
+    chunk = cld(total, nt)
+    per_task = [MAG[] for _ = 1:nt]
+    Threads.@threads for t = 1:nt
+        lo = (t - 1) * chunk
+        hi = min(lo + chunk, total) - 1
+        if lo <= hi
+            per_task[t] = _enumerate_mags_range(
+                circle_pos,
+                mark,
+                adj,
+                nodes_vec,
+                node_set,
+                target,
+                lo,
+                hi,
+            )
+        end
+    end
+    return reduce(vcat, per_task)
 end
