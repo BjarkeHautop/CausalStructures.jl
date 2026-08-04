@@ -47,7 +47,7 @@ Default graph layout algorithm.
 
 | Default | Type | Valid values |
 | ------- | ---- | ------------ |
-| `:circle` | `String` | `:circle`, `:spring`, `:stress`, `:sfdp`, `:spectral`, `:shell`, `:squaregrid` |
+| `:circle` (`:stress` if NetworkLayout is loaded) | `String` | `:circle`, `:spring`, `:stress`, `:sfdp`, `:spectral`, `:shell`, `:squaregrid` |
 
 Note: all layouts except `:circle` require NetworkLayout, see the
 [Layouts](@ref plot-layouts) section for more details.

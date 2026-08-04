@@ -5,7 +5,7 @@ using Statistics
 
 const _OPEN_DEFAULT::Bool = @load_preference("open", true)
 
-const _PLOT_LAYOUT_DEFAULT::Symbol = Symbol(@load_preference("plot_layout", "circle"))
+const _PLOT_LAYOUT_PREFERENCE = @load_preference("plot_layout", nothing)
 const _PLOT_NODE_COLOR_DEFAULT = @load_preference("plot_node_color", "white")
 const _PLOT_NODE_STROKECOLOR_DEFAULT = @load_preference("plot_node_strokecolor", "black")
 const _PLOT_NODE_STROKEWIDTH_DEFAULT = @load_preference("plot_node_strokewidth", 2.0)

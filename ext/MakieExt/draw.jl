@@ -290,18 +290,18 @@ out into distinct arcs instead of drawing on top of each other.
 
 ## Layout
 
-The `layout` keyword controls node placement (default † `:circle`). `:circle`
-is always available; the remaining methods require `using NetworkLayout`:
+The `layout` keyword controls node placement. `:circle`
+is always available; the remaining methods require NetworkLayout:
 
-| `layout`      | Algorithm                           |
-|---------------|-------------------------------------|
-| `:circle`     | Evenly spaced on a circle (default) |
-| `:spring`     | Fruchterman-Reingold force-directed |
-| `:stress`     | Stress majorization                 |
-| `:sfdp`       | Scalable Force-Directed Placement   |
-| `:spectral`   | Spectral layout                     |
-| `:shell`      | Concentric shells                   |
-| `:squaregrid` | Square grid                         |
+| `layout`      | Algorithm                                                  |
+|---------------|-------------------------------------------------------------|
+| `:circle`     | Evenly spaced on a circle (default without NetworkLayout) |
+| `:spring`     | Fruchterman-Reingold force-directed                        |
+| `:stress`     | Stress majorization (default once NetworkLayout is loaded) |
+| `:sfdp`       | Scalable Force-Directed Placement                          |
+| `:spectral`   | Spectral layout                                            |
+| `:shell`      | Concentric shells                                          |
+| `:squaregrid` | Square grid                                                |
 
 Alternatively, `layout` may be set to a custom `AbstractVector` of 2D coordinates
 in the same order as `nodes(cg)`.
@@ -353,7 +353,7 @@ Makie.plot(dag; layout = positions)
 """
 function Makie.plot(
     cg::CausalGraph;
-    layout::Union{Symbol,AbstractVector} = CausalStructures._PLOT_LAYOUT_DEFAULT,
+    layout::Union{Symbol,AbstractVector} = CausalStructures._default_layout_method(),
     node_radius::Union{Real,Nothing} = nothing,
     arrow_size::Union{Real,Nothing} = nothing,
     circle_size::Union{Real,Nothing} = nothing,

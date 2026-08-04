@@ -21,26 +21,28 @@ plot(dag)
 ## [Layouts](@id plot-layouts)
 
 The `layout` keyword controls node placement. The `:circle` layout is always
-available. All other layouts require
-[NetworkLayout.jl](https://github.com/JuliaGraphs/NetworkLayout.jl):
+available and is the default. All other layouts require
+[NetworkLayout.jl](https://github.com/JuliaGraphs/NetworkLayout.jl); once
+loaded, the default switches to `:stress`:
 
 ```@example plot
 using NetworkLayout
 
+plot(dag)                 # now uses :stress instead of :circle
 plot(dag; layout = :spring)
 ```
 
 We provide these short-hand names for convenience:
 
-| `layout`      | Algorithm                           |
-| ------------- | ----------------------------------- |
-| `:circle`     | Evenly spaced on a circle (default) |
-| `:spring`     | Fruchterman-Reingold force-directed |
-| `:stress`     | Stress majorization                 |
-| `:sfdp`       | Scalable Force-Directed Placement   |
-| `:spectral`   | Spectral layout                     |
-| `:shell`      | Concentric shells                   |
-| `:squaregrid` | Square grid                         |
+| `layout`      | Algorithm                                                   |
+| ------------- | ------------------------------------------------------------ |
+| `:circle`     | Evenly spaced on a circle (default without NetworkLayout)   |
+| `:spring`     | Fruchterman-Reingold force-directed                          |
+| `:stress`     | Stress majorization (default once NetworkLayout is loaded)  |
+| `:sfdp`       | Scalable Force-Directed Placement                            |
+| `:spectral`   | Spectral layout                                               |
+| `:shell`      | Concentric shells                                             |
+| `:squaregrid` | Square grid                                                    |
 
 Extra keyword arguments are forwarded to the underlying NetworkLayout algorithm:
 

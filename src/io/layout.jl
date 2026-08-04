@@ -4,14 +4,22 @@
 # all other methods are provided by the NetworkLayoutExt extension and require
 # `using NetworkLayout` before calling.
 
+function _default_layout_method()
+    _PLOT_LAYOUT_PREFERENCE !== nothing && return Symbol(_PLOT_LAYOUT_PREFERENCE)
+    return Base.get_extension(@__MODULE__, :NetworkLayoutExt) === nothing ? :circle :
+           :stress
+end
+
 """
-    layout(cg::CausalGraph, method::Symbol = :circle; kwargs...)
+    layout(cg::CausalGraph, method::Symbol = <auto>; kwargs...)
 
 Compute 2-D node positions for `cg` and return them as a
 `Vector{NTuple{2,Float64}}` in the same order as `nodes(cg)`.
 
 The `:circle` method is always available. All other methods require the
-NetworkLayout package to be loaded:
+NetworkLayout package to be loaded. If `method` is not given, it defaults to
+`:circle`, unless NetworkLayout has been loaded, in
+which case it defaults to `:stress`:
 
 | `method`      | Algorithm                          |
 |---------------|------------------------------------|
@@ -34,17 +42,18 @@ using CausalStructures
 dag = cgraph(directed(:A, :X), directed(:X, :Y); class = DAG)
 
 # Always available:
-layout(dag)               # circle layout
+layout(dag)               # circle layout (no NetworkLayout loaded yet)
 layout(dag, :circle)      # explicit
 
 # Requires NetworkLayout extension:
 using NetworkLayout
 
+layout(dag)                # now defaults to :stress
 layout(dag, :spring)
 layout(dag, :spring; seed = 1405, iterations = 200)
 ```
 """
-function layout(cg::CausalGraph, method::Symbol = :circle; kwargs...)
+function layout(cg::CausalGraph, method::Symbol = _default_layout_method(); kwargs...)
     return _layout_impl(cg, Val(method); kwargs...)
 end
 
