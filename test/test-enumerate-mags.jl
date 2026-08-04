@@ -108,3 +108,50 @@ end
     sigs = Set(mag_sig(m) for m in mags)
     @test length(sigs) == length(mags)
 end
+
+# ── Threaded helper ────────
+
+@testitem "_enumerate_mags_threaded matches the sequential result" setup = [MagSig] tags =
+    [:unit] begin
+    pag = cgraph(partial(:A, :B), partial(:B, :C), partial(:C, :D); class = PAG)
+    B = pag.backend
+    n = length(B.nodes)
+
+    adj = falses(n, n)
+    mark = fill(CausalStructures.Circle, n, n)
+    for e in pag.edges
+        i, j = B.index[e.src], B.index[e.dst]
+        adj[i, j] = adj[j, i] = true
+        mark[j, i] = e.src_end
+        mark[i, j] = e.dst_end
+    end
+    circle_pos = [
+        (i, j) for i = 1:n for j = 1:n if adj[i, j] && mark[i, j] == CausalStructures.Circle
+    ]
+    total = 2^length(circle_pos)
+    target = CausalStructures._pag_signature(pag.edges)
+    node_set = Set(B.nodes)
+
+    threaded = CausalStructures._enumerate_mags_threaded(
+        circle_pos,
+        mark,
+        adj,
+        B.nodes,
+        node_set,
+        target,
+        total,
+    )
+    sequential = CausalStructures._enumerate_mags_range(
+        circle_pos,
+        mark,
+        adj,
+        B.nodes,
+        node_set,
+        target,
+        0,
+        total - 1,
+    )
+
+    @test Set(mag_sig(m) for m in threaded) == Set(mag_sig(m) for m in sequential)
+    @test length(threaded) == length(enumerate_mags(pag))
+end

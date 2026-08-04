@@ -90,3 +90,63 @@ end
     dags = enumerate_dags(cp)
     @test all(d -> d isa DAG, dags)
 end
+
+# ── Threaded helpers ───────
+
+@testsnippet DagEnumThreadedSetup begin
+    # Rebuilds the (pa, ch, und, input_pa, skeleton) state that `enumerate_dags`/
+    # `count_dags` compute internally, so the threaded helpers can be called
+    # directly instead of only via the `Threads.nthreads() == 1` branch.
+    function _dag_enum_state(pdag)
+        closed = meek_closure(pdag)
+        B = closed.backend
+        n = length(B.nodes)
+        pa = [Set{Int}(CausalStructures._parents_slice(B, i)) for i = 1:n]
+        ch = [Set{Int}(CausalStructures._children_slice(B, i)) for i = 1:n]
+        und = [Set{Int}(CausalStructures._undirected_slice(B, i)) for i = 1:n]
+        input_pa = [copy(s) for s in pa]
+        skeleton = CausalStructures._build_skeleton_enum(pa, ch, und)
+        return pa, ch, und, input_pa, skeleton, B.nodes, B.index
+    end
+end
+
+@testitem "_enumerate_dags_threaded matches enumerate_dags" setup =
+    [DagEnumThreadedSetup, DagHelpers] tags = [:unit] begin
+    pdag = cgraph(undirected(:A, :B), undirected(:A, :C), undirected(:B, :C); class = PDAG)
+    pa, ch, und, input_pa, skeleton, node_names, index = _dag_enum_state(pdag)
+
+    dags = CausalStructures._enumerate_dags_threaded(
+        pa,
+        ch,
+        und,
+        input_pa,
+        skeleton,
+        node_names,
+        index,
+    )
+
+    @test length(dags) == 6
+    sigs = Set(Set(directed_pairs(d)) for d in dags)
+    @test length(sigs) == 6
+    @test all(d -> d isa DAG, dags)
+end
+
+@testitem "_count_dags_threaded matches count_dags" setup = [DagEnumThreadedSetup] tags =
+    [:unit] begin
+    pdag = cgraph(undirected(:A, :B), undirected(:A, :C), undirected(:B, :C); class = PDAG)
+    pa, ch, und, input_pa, skeleton, _, _ = _dag_enum_state(pdag)
+
+    @test CausalStructures._count_dags_threaded(pa, ch, und, input_pa, skeleton) == 6
+end
+
+@testitem "_dag_enum_frontier resolves the whole MEC when smaller than target" setup =
+    [DagEnumThreadedSetup] tags = [:unit] begin
+    # Chain A--B--C has only 3 DAGs, fewer than a frontier target of 16, so
+    # expansion must stop once the tree is exhausted rather than looping forever.
+    pdag = cgraph(undirected(:A, :B), undirected(:B, :C); class = PDAG)
+    pa, ch, und, input_pa, skeleton, _, _ = _dag_enum_state(pdag)
+
+    frontier = CausalStructures._dag_enum_frontier(pa, ch, und, input_pa, skeleton, 16)
+    @test length(frontier) <= 3
+    @test !isempty(frontier)
+end

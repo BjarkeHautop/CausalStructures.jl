@@ -1,6 +1,8 @@
 [deps]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 CausalStructures = "b41ab49a-79bc-5eac-acbb-517b17bd5c16"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+NetworkLayout = "46757867-2c16-5918-afeb-47bfcb05e46a"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
@@ -13,6 +15,8 @@ CausalStructures = {path = ".."}
 
 [compat]
 Aqua = "0.8"
+Makie = "0.24.11"
+NetworkLayout = "0.4.10"
 Statistics = "1"
 TOML = "1"
 Test = "1"
