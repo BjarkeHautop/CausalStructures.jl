@@ -54,14 +54,15 @@ plot(dag; layout = :spring, seed = 42, iterations = 500)
 
 Each node style argument accepts either a scalar (applied to all nodes) or a `Dict{Symbol, <value>}` keyed by node name, with `:default` as a fallback.
 
-| Keyword             | Default                      | Controls                        |
-| ------------------- | ---------------------------- | ------------------------------- |
-| `node_color`        | `:white`                     | fill color                      |
-| `node_strokecolor`  | `:black`                     | border color                    |
-| `node_strokewidth`  | `2.0`                        | border line width               |
-| `node_radius`       | `max(0.12, 0.4 sin(π / n))` | radius of each node circle      |
-| `arrow_size`        | `0.4 × node_radius`          | length of arrowhead triangles   |
-| `circle_size`       | `0.28 × node_radius`         | radius of open-circle endpoints |
+| Keyword             | Default                             | Controls                        |
+| ------------------- | ------------------------------------ | -------------------------------- |
+| `node_color`        | `:white`                             | fill color                      |
+| `node_strokecolor`  | `:black`                             | border color                    |
+| `node_strokewidth`  | `2.0`                                | border line width               |
+| `node_radius`       | `nothing` (text-fit, per node)       | radius of each node circle      |
+| `node_padding`      | `10.0`                                | clearance kept around each node's label when `node_radius` is `nothing` |
+| `arrow_size`        | `0.4 ×` node-count-based reference   | length of arrowhead triangles   |
+| `circle_size`       | `0.28 ×` node-count-based reference  | radius of open-circle endpoints |
 
 Global styling:
 
@@ -78,7 +79,17 @@ plot(dag;
 )
 ```
 
-Adjust node size and arrowhead proportions:
+### Text-fit node sizing
+
+By default (`node_radius = nothing`), each node's circle is sized to fit its
+own label:
+
+```@example plot
+longlabels = cgraph("Exposure --> Y_outcome, Mediator --> Y_outcome"; class = DAG)
+plot(longlabels)
+```
+
+Pass `node_radius` explicitly to size every node uniformly instead:
 
 ```@example plot
 plot(dag; node_radius = 0.18, arrow_size = 0.07)
@@ -86,17 +97,18 @@ plot(dag; node_radius = 0.18, arrow_size = 0.07)
 
 ## Edge styling
 
-Each edge style argument accepts either a scalar or a `Dict` keyed by (and follows this precendence):
+Each edge style argument accepts either a scalar or a `Dict` keyed by (and follows this precedence):
 
-- a `(src, dst)` tuple for a specific edge
-- an edge-type symbol (`:directed`, `:undirected`, `:bidirected`, `:partially_directed`, `:partially_undirected`, `:partial`)
-- a `(src, dst)` tuple for a specific edge
-- `:default` as a fallback
+1. a `(src, dst)` tuple for a specific edge
+2. a node name (`Symbol`), applying to every edge touching that node
+3. an edge-type symbol (`:directed`, `:undirected`, `:bidirected`, `:partially_directed`, `:partially_undirected`, `:partial`)
+4. `:default` as a fallback
 
-| Keyword      | Default  | Controls             |
-| ------------ | -------- | --------------------- |
-| `edge_color` | `:black` | line / marker color   |
-| `linewidth`  | `1.5`    | line width            |
+| Keyword      | Default   | Controls             |
+| ------------ | --------- | --------------------- |
+| `edge_color` | `:black`  | line / marker color   |
+| `arrow_fill` | `nothing` | arrowhead fill color  |
+| `linewidth`  | `1.5`     | line width            |
 
 Color edges by type:
 
@@ -115,6 +127,22 @@ Highlight a specific edge:
 plot(dag;
     edge_color = Dict((:A, :X) => :red, :default => :black),
 )
+```
+
+Highlight every edge touching a node:
+
+```@example plot
+plot(dag;
+    edge_color = Dict(:A => :red, :default => :black),
+)
+```
+
+`arrow_fill` is the arrowhead's fill color; `nothing` (the default) matches
+the edge's own resolved `edge_color`, so arrowheads render solid. Pass a
+transparent color for a hollow, outline-only arrowhead:
+
+```@example plot
+plot(dag; arrow_fill = :transparent)
 ```
 
 ## Label styling
@@ -139,10 +167,26 @@ plot(dag; label_color = Dict(:A => :crimson, :default => :black))
 
 Pass `title` to add a plot title (`nothing` by default, i.e. no title).
 `title_fontsize` and `title_color` style it; left as `nothing`, they fall back
-to the current Makie theme's axis-title defaults.
+to the current Makie theme's axis-title defaults. `title_gap` (default `4.0`,
+points) controls the spacing between the title and the graph.
 
 ```@example plot
 plot(dag; title = "My DAG", title_fontsize = 20, title_color = :navy)
+```
+
+## Aspect ratio and margins
+
+| Keyword        | Default   | Controls                                                     |
+| -------------- | --------- | -------------------------------------------------------------- |
+| `asp`          | `nothing` | scales node y-coordinates by this factor before plotting       |
+| `outer_margin` | `16`      | padding (pixels) around the whole figure                       |
+| `title_gap`    | `4.0`     | gap (points) between `title` and the graph                     |
+
+`asp` stretches or compresses the layout vertically relative to its width
+(leaving the native y/x scale unchanged when `nothing`).
+
+```@example plot
+plot(dag; asp = 1.5)
 ```
 
 ### Automatic edge routing

@@ -19,6 +19,22 @@ function _norm2(p::Point2f)
     sqrt(p[1]^2 + p[2]^2)
 end
 
+_resolve_font(font) =
+    font isa Symbol ? Makie.to_font(Makie.current_default_theme()[:fonts], font) :
+    Makie.to_font(font)
+
+# Minimum node-circle radius, in pixels, for `label` to fit inside it at the
+# given fontsize/font, with `padding` (pixels) clear on every side. Pixels
+# rather than data units: text renders at a fixed pixel size regardless of
+# the axis's zoom, so a data-space radius only corresponds to a given pixel
+# size at one particular zoom level - see the note in `Makie.plot` on how
+# this is turned into a data-space radius once that zoom level is chosen.
+function _text_fit_pixel_radius(label::AbstractString, fontsize::Real, font, padding::Real)
+    bb = Makie.text_bb(label, _resolve_font(font), Float32(fontsize))
+    w, h = Float32(Makie.widths(bb)[1]), Float32(Makie.widths(bb)[2])
+    return 0.5f0 * sqrt(w^2 + h^2) + Float32(padding)
+end
+
 # Filled circle polygon in data coordinates (used for both node bodies and
 # open-circle endpoint markers).
 function _draw_filled_circle!(
@@ -41,37 +57,39 @@ function _draw_filled_circle!(
     )
 end
 
-# Solid filled triangle arrowhead.
+# Triangle arrowhead, outlined in `color` and filled with `fill` (which may
+# be a transparent/`:transparent` color for a hollow, outline-only arrowhead).
 #   tip : the point of the arrow (on the node boundary)
 #   dir : unit vector in the direction the arrow points (toward tip)
 #   size: length of the arrowhead
-function _draw_arrowhead!(ax, tip::Point2f, dir::Point2f, size::Float32; color = :black)
+function _draw_arrowhead!(
+    ax,
+    tip::Point2f,
+    dir::Point2f,
+    size::Float32;
+    color = :black,
+    fill = color,
+    linewidth = 1.5f0,
+)
     perp = Point2f(-dir[2], dir[1])
     base = tip - size * dir
     pts = [tip, base + 0.5f0 * size * perp, base - 0.5f0 * size * perp]
-    Makie.poly!(ax, pts; color = color, strokecolor = color, strokewidth = 0.0f0)
+    Makie.poly!(ax, pts; color = fill, strokecolor = color, strokewidth = linewidth)
 end
 
-# Draw one edge with the correct endpoint decorations.
-#
-# An edge whose straight center-to-center chord would pass too close to a
-# non-incident node (any entry in `obstacles`) is bent around it into a
-# Bezier curve (see routing.jl). Otherwise, if this edge shares its pair of
-# nodes with `sibling_count - 1` other edges (e.g. an ADMG's X --> Y and
-# X <-> Y), it is fanned out by `fan_slot` so the group doesn't draw as
-# overlapping lines. An edge with nothing in its way and no siblings is drawn
-# as a straight line, matching the previous behavior.
 function _draw_edge!(
     ax,
     e::CausalEdge,
     p_src::Point2f,
     p_dst::Point2f,
-    r_node::Float32,
+    r_from::Float32,
+    r_to::Float32,
     r_arrow::Float32,
     r_circle::Float32,
     obstacles::AbstractVector{Tuple{Point2f,Float32}},
     fan_slot::Float32;
     color = :black,
+    fill = color,
     linewidth = 1.5f0,
 )
     diff = p_dst - p_src
@@ -80,14 +98,14 @@ function _draw_edge!(
 
     # Minimum gap (beyond an obstacle's own radius) an edge must keep from a
     # non-incident node before it is left alone.
-    clearance = 0.1f0 * r_node
+    clearance = 0.05f0 * (r_from + r_to)
 
-    routed = _route_edge_path(p_src, p_dst, r_node, r_node, obstacles, clearance)
+    routed = _route_edge_path(p_src, p_dst, r_from, r_to, obstacles, clearance)
     # Real obstacles take priority: only fan siblings apart when nothing
     # actually forces this edge to route around a node.
     fanned =
         routed === nothing && fan_slot != 0.0f0 ?
-        _fanned_edge_path(p_src, p_dst, r_node, r_node, fan_slot * 0.3f0 * len) : nothing
+        _fanned_edge_path(p_src, p_dst, r_from, r_to, fan_slot * 0.3f0 * len) : nothing
 
     path = if routed !== nothing
         routed
@@ -95,7 +113,7 @@ function _draw_edge!(
         fanned
     else
         dir = Point2f(diff[1] / len, diff[2] / len)
-        [p_src + r_node * dir, p_dst - r_node * dir]
+        [p_src + r_from * dir, p_dst - r_to * dir]
     end
 
     has_arrow_src = e.src_end === _Arrow
@@ -114,13 +132,23 @@ function _draw_edge!(
     shaft = _trim_polyline(path, trim_start, trim_end)
     length(shaft) >= 2 && Makie.lines!(ax, shaft; color = color, linewidth = linewidth)
 
-    has_arrow_dst && _draw_arrowhead!(ax, path[m], tan_dst, r_arrow; color = color)
+    has_arrow_dst && _draw_arrowhead!(
+        ax,
+        path[m],
+        tan_dst,
+        r_arrow;
+        color = color,
+        fill = fill,
+        linewidth = linewidth,
+    )
     has_arrow_src && _draw_arrowhead!(
         ax,
         path[1],
         Point2f(-tan_src[1], -tan_src[2]),
         r_arrow;
         color = color,
+        fill = fill,
+        linewidth = linewidth,
     )
 
     # Open circles: centered one radius out from the node boundary (tangent
@@ -189,20 +217,40 @@ function _edge_type(e::CausalEdge)
     return :unknown
 end
 
+const _EDGE_TYPE_SYMBOLS = (
+    :directed,
+    :undirected,
+    :bidirected,
+    :partially_directed,
+    :partially_undirected,
+    :partial,
+)
+
 # Resolve a per-edge style attribute.
 #
 # `val` may be:
 #   - a scalar  --> applied to all edges
 #   - a Dict keyed by any mix of:
 #       (Symbol, Symbol)  specific edge, e.g. (:X, :Y) => :red
+#       Symbol            a node name, e.g. :X => :red, applied to every
+#                         edge touching that node - unless the symbol is one
+#                         of the reserved edge-type names below, in which
+#                         case it's treated as an edge-type key instead
 #       Symbol            edge type,     e.g. :directed => :blue
 #       :default          fallback inside the dict
 #
-# Lookup precedence: specific edge > edge type > :default > `fallback`.
+# Lookup precedence: specific edge > node-wide (dst, then src) > edge type >
+# :default > `fallback`.
 function _resolve_edge(val, e::CausalEdge, fallback)
     val isa AbstractDict || return val
     key = (e.src, e.dst)
     haskey(val, key) && return val[key]
+    if !(e.dst in _EDGE_TYPE_SYMBOLS) && haskey(val, e.dst)
+        return val[e.dst]
+    end
+    if !(e.src in _EDGE_TYPE_SYMBOLS) && haskey(val, e.src)
+        return val[e.src]
+    end
     key = _edge_type(e)
     haskey(val, key) && return val[key]
     haskey(val, :default) && return val[:default]
@@ -223,91 +271,18 @@ end
 """
     Makie.plot(cg; kwargs...) -> Figure
 
-Visualize a [`CausalGraph`](@ref) using Makie. Requires loading a Makie backend
-(e.g. `using CairoMakie`) before calling.
+Visualize a [`CausalGraph`](@ref) using Makie. Requires loading a Makie
+backend (e.g. `using CairoMakie`) before calling.
 
-## Geometry keyword arguments
+Keyword arguments: `layout`, `node_radius`, `node_padding`, `arrow_size`,
+`circle_size`, `node_color`, `node_strokecolor`, `node_strokewidth`,
+`edge_color`, `arrow_fill`, `linewidth`, `label_color`, `label_fontsize`,
+`label_font`, `title`, `title_fontsize`, `title_color`, `title_gap`, `asp`,
+`outer_margin`. Style keywords accept either a scalar (applied to everything)
+or a `Dict` for per-node/per-edge overrides.
 
-| Keyword        | Default                              | Description                        |
-|----------------|--------------------------------------|------------------------------------|
-| `node_radius`  | `max(0.12, 0.4 sin(π/n))`            | Radius of each node circle         |
-| `arrow_size`   | `0.4 x node_radius`                  | Length of arrowhead triangles      |
-| `circle_size`  | `0.28 x node_radius`                 | Radius of open-circle endpoints    |
-
-## Style keyword arguments
-
-Each style argument accepts either a **scalar** (applied to all elements) or a
-**`Dict`** for fine-grained control. Defaults marked † are configurable via
-`Preferences.jl`; see the [Preferences](@ref) page.
-
-### Node styles
-
-| Keyword             | Default †  | Dict key type |
-|---------------------|------------|---------------|
-| `node_color`        | `"white"`  | `Symbol` (node name) |
-| `node_strokecolor`  | `"black"`  | `Symbol` (node name) |
-| `node_strokewidth`  | `2.0`      | `Symbol` (node name) |
-
-### Edge styles
-
-| Keyword       | Default †  | Dict key type                                  |
-|---------------|------------|------------------------------------------------|
-| `edge_color`  | `"black"`  | `Symbol` (edge type) or `(Symbol, Symbol)` (src, dst) |
-| `linewidth`   | `1.5`      | `Symbol` (edge type) or `(Symbol, Symbol)` (src, dst) |
-
-### Label styles
-
-| Keyword          | Default †  | Dict key type |
-|------------------|------------|---------------|
-| `label_color`    | `"black"`  | `Symbol` (node name) |
-| `label_fontsize` | `14.0`     | `Symbol` (node name) |
-| `label_font`     | `:regular` | `Symbol` (node name) |
-
-## Title
-
-Pass `title` to add a plot title (`nothing` by default, i.e. no title).
-`title_fontsize` and `title_color` style it; when left as `nothing` they fall
-back to the current Makie theme's axis-title defaults.
-
-```julia
-Makie.plot(dag; title = "My DAG", title_fontsize = 20, title_color = :navy)
-```
-
-Edges are routed automatically: a straight `src --> dst` line that would pass
-too close to a non-incident node bends around it as a Bezier curve instead;
-edges with nothing in their way are always drawn straight. Multiple edges
-sharing a pair of nodes (e.g. an ADMG's `X --> Y` and `X <-> Y`) are fanned
-out into distinct arcs instead of drawing on top of each other.
-
-**Edge-type symbols:** `:directed`, `:undirected`, `:bidirected`,
-`:partially_directed`, `:partially_undirected`, `:partial`.
-
-**Dict lookup precedence (highest --> lowest):**
-1. Specific edge `(src, dst)` pair
-2. Edge-type symbol
-3. `:default` key inside the Dict
-4. Hard-coded fallback
-
-## Layout
-
-The `layout` keyword controls node placement. `:circle`
-is always available; the remaining methods require NetworkLayout:
-
-| `layout`      | Algorithm                                                  |
-|---------------|-------------------------------------------------------------|
-| `:circle`     | Evenly spaced on a circle (default without NetworkLayout) |
-| `:spring`     | Fruchterman-Reingold force-directed                        |
-| `:stress`     | Stress majorization (default once NetworkLayout is loaded) |
-| `:sfdp`       | Scalable Force-Directed Placement                          |
-| `:spectral`   | Spectral layout                                            |
-| `:shell`      | Concentric shells                                          |
-| `:squaregrid` | Square grid                                                |
-
-Alternatively, `layout` may be set to a custom `AbstractVector` of 2D coordinates
-in the same order as `nodes(cg)`.
-
-Extra keyword arguments are forwarded to the NetworkLayout algorithm
-(e.g. `seed`, `iterations`).
+See the [Plotting](@ref plotting-guide) page for the full keyword reference,
+styling precedence rules, and examples.
 
 ## Examples
 
@@ -316,51 +291,23 @@ using CausalStructures, CairoMakie
 
 dag = cgraph(directed(:A, :X), directed(:A, :Y), directed(:X, :Y); class = DAG)
 
-# Global styling
 Makie.plot(dag; node_color = :lightblue, edge_color = :gray40)
-
-# Per-node colors
-Makie.plot(dag; node_color = Dict(:A => :salmon, :default => :white))
-
-# Per-edge-type colors
-admg = cgraph(directed(:X, :Y), bidirected(:X, :Z); class = ADMG)
-Makie.plot(admg; edge_color = Dict(:directed => :steelblue, :bidirected => :crimson))
-
-# Highlight a specific edge
 Makie.plot(dag; edge_color = Dict((:A, :X) => :red, :default => :black))
-
-# Label styling, global and per-node
-Makie.plot(dag; label_fontsize = 18, label_color = :navy)
-Makie.plot(dag; label_color = Dict(:A => :crimson, :default => :black))
-
-# Title
-Makie.plot(dag; title = "My DAG", title_fontsize = 20, title_color = :navy)
-
-# A, X, Y placed in a line: A --> Y automatically bends around X, since the
-# straight line between A and Y would otherwise cross it.
-Makie.plot(dag; layout = [(0, 0), (1, 0), (2, 0)])
-
-# Force-directed layout (requires NetworkLayout)
-using NetworkLayout
-Makie.plot(dag; layout = :spring)
-Makie.plot(dag; layout = :spring, seed = 42, iterations = 200)
-
-# Custom layout (e.g. after manual tweaks)
-positions = layout(dag, :spring)
-positions[1] += (0.1, -0.05)
-Makie.plot(dag; layout = positions)
+Makie.plot(dag; title = "My DAG", layout = :spring)
 ```
 """
 function Makie.plot(
     cg::CausalGraph;
     layout::Union{Symbol,AbstractVector} = CausalStructures._default_layout_method(),
     node_radius::Union{Real,Nothing} = nothing,
+    node_padding::Real = CausalStructures._PLOT_NODE_PADDING_DEFAULT,
     arrow_size::Union{Real,Nothing} = nothing,
     circle_size::Union{Real,Nothing} = nothing,
     node_color = CausalStructures._PLOT_NODE_COLOR_DEFAULT,
     node_strokecolor = CausalStructures._PLOT_NODE_STROKECOLOR_DEFAULT,
     node_strokewidth = CausalStructures._PLOT_NODE_STROKEWIDTH_DEFAULT,
     edge_color = CausalStructures._PLOT_EDGE_COLOR_DEFAULT,
+    arrow_fill = CausalStructures._PLOT_EDGE_ARROW_FILL_DEFAULT,
     linewidth = CausalStructures._PLOT_LINEWIDTH_DEFAULT,
     label_color = CausalStructures._PLOT_LABEL_COLOR_DEFAULT,
     label_fontsize = CausalStructures._PLOT_LABEL_FONTSIZE_DEFAULT,
@@ -368,16 +315,76 @@ function Makie.plot(
     title::Union{AbstractString,Nothing} = nothing,
     title_fontsize::Union{Real,Nothing} = nothing,
     title_color = nothing,
+    asp::Union{Real,Nothing} = nothing,
+    outer_margin::Real = 16,
+    title_gap::Real = 4.0,
     layout_kwargs...,
 )
     n = length(cg.backend.nodes)
     n == 0 && error("Cannot plot an empty graph (0 nodes).")
 
     positions = _positions(cg, layout, layout_kwargs)
+    if asp !== nothing
+        positions = [Point2f(p[1], p[2] * Float32(asp)) for p in positions]
+    end
 
-    r_node = Float32(something(node_radius, max(0.12, 0.4 * sin(π / max(n, 2)))))
-    r_arrow = Float32(something(arrow_size, r_node * 0.4f0))
-    r_circle = Float32(something(circle_size, r_node * 0.28f0))
+    # Reference radius (node-count based, ignoring label length), used only
+    # when node_radius is given explicitly.
+    r_ref = Float32(something(node_radius, max(0.12, 0.4 * sin(π / max(n, 2)))))
+
+    # Node circle radii (data units), and the pixels-per-data-unit ratio the
+    # figure is rendered at to realize them: text is fixed-pixel-sized
+    # regardless of axis zoom, so a data-space radius only fits a label at
+    # one particular ratio, which depends on the layout's coordinate scale
+    # (:circle is a unit circle; NetworkLayout output is arbitrary, and can
+    # be skewed by far-flung isolated nodes) - so this goes pixels first
+    # (label size), then solves for the ratio needed to avoid overlap, then
+    # converts back to data-space radii, then renders the figure at that
+    # ratio (see fig_width/fig_height below) instead of an auto-fit window.
+    xs = [p[1] for p in positions]
+    ys = [p[2] for p in positions]
+    bbox_w = max(maximum(xs) - minimum(xs), 1.0f-3)
+    bbox_h = max(maximum(ys) - minimum(ys), 1.0f-3)
+
+    px_per_unit = 400.0f0
+    r_nodes = if node_radius !== nothing
+        fill(r_ref, n)
+    else
+        pixel_radii = Float32[
+            max(
+                6.0f0,
+                _text_fit_pixel_radius(
+                    string(cg.backend.nodes[i]),
+                    _resolve_node(label_fontsize, cg.backend.nodes[i], 14.0f0),
+                    _resolve_node(label_font, cg.backend.nodes[i], :regular),
+                    node_padding,
+                ),
+            ) for i = 1:n
+        ]
+        for i = 1:n, j = (i+1):n
+            d = _norm2(positions[i] - positions[j])
+            d < 1.0f-6 && continue
+            px_per_unit =
+                max(px_per_unit, 1.15f0 * (pixel_radii[i] + pixel_radii[j]) / d)
+        end
+        # Cap px_per_unit by the figure-size budget too (fig size = bbox
+        # extent * px_per_unit), not just an absolute max - otherwise a large
+        # bbox (e.g. a far-flung isolated node) could still blow the figure
+        # past the clamp below, silently shrinking it below what r_nodes
+        # assumes.
+        max_fig_px = 3000.0f0 - 2.0f0 * Float32(outer_margin)
+        px_per_unit =
+            min(px_per_unit, max_fig_px / bbox_w, max_fig_px / bbox_h, 4000.0f0)
+        pixel_radii ./ px_per_unit
+    end
+
+    # Arrowhead/open-circle-endpoint sizes stay consistent across the plot
+    # regardless of any single node's label length, so they're based on the
+    # typical (not per-node) node radius - r_ref when node_radius is given
+    # explicitly, otherwise the mean of the text-fit radii.
+    r_typical = node_radius !== nothing ? r_ref : Float32(sum(r_nodes) / n)
+    r_arrow = Float32(something(arrow_size, r_typical * 0.4f0))
+    r_circle = Float32(something(circle_size, r_typical * 0.28f0))
 
     node_pos = Dict{Symbol,Point2f}(
         cg.backend.nodes[i] => positions[i] for i in eachindex(cg.backend.nodes)
@@ -386,41 +393,67 @@ function Makie.plot(
         Dict{Symbol,Int}(cg.backend.nodes[i] => i for i in eachindex(cg.backend.nodes))
     fan_slots = _edge_fan_slots(cg.edges)
 
-    fig = Makie.Figure()
+    # Explicit axis data limits (rather than Makie's autolimits, which don't
+    # account for node circles' rendered extent at all) so nodes at the
+    # boundary aren't clipped, sized in pixels from px_per_unit above so the
+    # figure comes out at (close to) the resolution text-fit sizing assumed.
+    margin = 1.3f0 * maximum(r_nodes)
+    xlo, xhi = minimum(xs) - margin, maximum(xs) + margin
+    ylo, yhi = minimum(ys) - margin, maximum(ys) + margin
+    xlo == xhi && (xlo -= 1.0f0; xhi += 1.0f0)
+    ylo == yhi && (ylo -= 1.0f0; yhi += 1.0f0)
+
+    fig_width = clamp((xhi - xlo) * px_per_unit + 2 * outer_margin, 300.0, 3000.0)
+    fig_height = clamp((yhi - ylo) * px_per_unit + 2 * outer_margin, 300.0, 3000.0)
+    title !== nothing && (fig_height += 40.0)
+
+    fig = Makie.Figure(;
+        size = (round(Int, fig_width), round(Int, fig_height)),
+        figure_padding = outer_margin,
+    )
     ax = if title === nothing
-        Makie.Axis(fig[1, 1]; aspect = Makie.DataAspect())
+        Makie.Axis(fig[1, 1]; aspect = Makie.DataAspect(), limits = (xlo, xhi, ylo, yhi))
     else
-        title_kwargs = Dict{Symbol,Any}()
+        title_kwargs = Dict{Symbol,Any}(:titlegap => Float32(title_gap))
         title_fontsize !== nothing &&
             (title_kwargs[:titlesize] = Float32(title_fontsize))
         title_color !== nothing && (title_kwargs[:titlecolor] = title_color)
-        Makie.Axis(fig[1, 1]; aspect = Makie.DataAspect(), title = title, title_kwargs...)
+        Makie.Axis(
+            fig[1, 1];
+            aspect = Makie.DataAspect(),
+            limits = (xlo, xhi, ylo, yhi),
+            title = title,
+            title_kwargs...,
+        )
     end
     Makie.hidedecorations!(ax)
     Makie.hidespines!(ax)
 
     # Edges drawn first so nodes appear on top.
     for (i, e) in enumerate(cg.edges)
-        # Every other node is a candidate obstacle for routing (all nodes
-        # share the same radius r_node).
+        # Every other node is a candidate obstacle for routing, at its own
+        # (possibly text-fit) radius.
         src_idx = node_idx[e.src]
         dst_idx = node_idx[e.dst]
         obstacles = Tuple{Point2f,Float32}[
-            (positions[j], r_node) for
+            (positions[j], r_nodes[j]) for
             j in eachindex(positions) if j != src_idx && j != dst_idx
         ]
 
+        resolved_color = _resolve_edge(edge_color, e, :black)
         _draw_edge!(
             ax,
             e,
             node_pos[e.src],
             node_pos[e.dst],
-            r_node,
+            r_nodes[src_idx],
+            r_nodes[dst_idx],
             r_arrow,
             r_circle,
             obstacles,
             fan_slots[i];
-            color = _resolve_edge(edge_color, e, :black),
+            color = resolved_color,
+            fill = something(_resolve_edge(arrow_fill, e, nothing), resolved_color),
             linewidth = Float32(_resolve_edge(linewidth, e, 1.5f0)),
         )
     end
@@ -431,7 +464,7 @@ function Makie.plot(
         _draw_filled_circle!(
             ax,
             positions[i],
-            r_node;
+            r_nodes[i];
             color = _resolve_node(node_color, node, :white),
             strokecolor = _resolve_node(node_strokecolor, node, :black),
             strokewidth = Float32(_resolve_node(node_strokewidth, node, 2.0f0)),

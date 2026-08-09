@@ -156,3 +156,30 @@ Any [Makie-compatible font](https://docs.makie.org/stable/explanations/fonts) na
 ```julia
 set_preferences!(CausalStructures, "plot_label_font" => "bold")
 ```
+
+### `"plot_node_padding"`
+
+Padding amount between label and circle's edge. Ignored when `node_radius` is set
+explicitly.
+
+| Default | Type |
+| ------- | ---- |
+| `10.0` | `Number` |
+
+```julia
+set_preferences!(CausalStructures, "plot_node_padding" => 15.0)
+```
+
+### `"plot_edge_arrow_fill"`
+
+Default arrowhead fill color. `nothing` (the default) matches each edge's own
+resolved `edge_color`, so arrowheads render solid; set to a transparent color
+(e.g. `"transparent"`) for hollow, outline-only arrowheads.
+
+| Default | Type |
+| ------- | ---- |
+| `nothing` | `String` or `nothing` |
+
+```julia
+set_preferences!(CausalStructures, "plot_edge_arrow_fill" => "transparent")
+```

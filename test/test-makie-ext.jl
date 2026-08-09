@@ -105,3 +105,109 @@ end
     )
     @test fig isa Makie.Figure
 end
+
+@testitem "Makie.plot: text-fit node sizing grows for longer labels" tags = [:unit] begin
+    using Makie
+
+    ext = Base.get_extension(CausalStructures, :MakieExt)
+    r_short = ext._text_fit_pixel_radius("A", 14.0f0, :regular, 4.0f0)
+    r_long = ext._text_fit_pixel_radius("Exposure", 14.0f0, :regular, 4.0f0)
+    @test r_long > r_short
+
+    # Default (node_radius = nothing): a graph with long labels plots without
+    # error, with node circles sized per label instead of uniformly.
+    dag = cgraph(directed(:Exposure, :Y_outcome); class = DAG)
+    fig = Makie.plot(dag; layout = :circle)
+    @test fig isa Makie.Figure
+
+    # Explicit node_radius overrides text-fit sizing back to a uniform value.
+    fig2 = Makie.plot(dag; layout = :circle, node_radius = 0.1)
+    @test fig2 isa Makie.Figure
+end
+
+@testitem "Makie.plot: node-wide edge_color/arrow_fill Dict overrides every edge touching a node" tags =
+    [:unit] begin
+    using Makie
+
+    ext = Base.get_extension(CausalStructures, :MakieExt)
+    e_ax = CausalStructures.directed(:A, :X)
+    e_ay = CausalStructures.directed(:A, :Y)
+    e_xy = CausalStructures.directed(:X, :Y)
+
+    val = Dict(:A => :red, :default => :black)
+    # Both edges touching A resolve to the node-wide override...
+    @test ext._resolve_edge(val, e_ax, :fallback) == :red
+    @test ext._resolve_edge(val, e_ay, :fallback) == :red
+    # ...an edge not touching A falls through to :default.
+    @test ext._resolve_edge(val, e_xy, :fallback) == :black
+
+    # A specific (src, dst) pair still wins over a node-wide override.
+    val_pair = Dict((:A, :X) => :blue, :A => :red, :default => :black)
+    @test ext._resolve_edge(val_pair, e_ax, :fallback) == :blue
+    @test ext._resolve_edge(val_pair, e_ay, :fallback) == :red
+
+    # A reserved edge-type symbol is never treated as a node-wide key, even
+    # if a node happens to share its name.
+    val_type = Dict(:directed => :green, :default => :black)
+    @test ext._resolve_edge(val_type, e_ax, :fallback) == :green
+
+    dag = cgraph(e_ax, e_ay, e_xy; class = DAG)
+    fig = Makie.plot(dag; layout = :circle, edge_color = val)
+    @test fig isa Makie.Figure
+end
+
+@testitem "Makie.plot: arrow_fill defaults to edge color and accepts hollow arrowheads" tags =
+    [:unit] begin
+    using Makie
+
+    dag = cgraph(directed(:A, :B); class = DAG)
+    fig_default = Makie.plot(dag; layout = :circle)
+    @test fig_default isa Makie.Figure
+
+    fig_hollow = Makie.plot(dag; layout = :circle, arrow_fill = :transparent)
+    @test fig_hollow isa Makie.Figure
+
+    fig_dict = Makie.plot(
+        dag;
+        layout = :circle,
+        edge_color = :steelblue,
+        arrow_fill = Dict((:A, :B) => :transparent, :default => nothing),
+    )
+    @test fig_dict isa Makie.Figure
+end
+
+@testitem "Makie.plot: NetworkLayout output with far-flung isolated nodes doesn't blow up node sizing" tags =
+    [:unit] begin
+    using Makie
+    using NetworkLayout
+
+    # Isolated nodes are unconstrained under stress majorization and can end
+    # up placed far from the connected component, making the raw layout's
+    # coordinate scale (and thus a naive data-unit/pixel calibration) wildly
+    # inconsistent with the connected component's actual node spacing.
+    g = cgraph(
+        directed(:A, :B),
+        directed(:B, :C),
+        directed(:A, :C),
+        node(:ISO1),
+        node(:ISO2);
+        class = DAG,
+    )
+    fig = Makie.plot(g; layout = :stress, seed = 1)
+    @test fig isa Makie.Figure
+    w, h = Makie.widths(fig.scene.viewport[])
+    @test 300 <= w <= 3000
+    @test 300 <= h <= 3000
+end
+
+@testitem "Makie.plot: asp, outer_margin, and title_gap keywords" tags = [:unit] begin
+    using Makie
+
+    dag = cgraph(directed(:A, :B); class = DAG)
+    fig = Makie.plot(dag; layout = :circle, asp = 2.0, outer_margin = 30, title_gap = 10.0)
+    @test fig isa Makie.Figure
+
+    fig_title =
+        Makie.plot(dag; layout = :circle, asp = 0.5, title = "Stretched", title_gap = 12.0)
+    @test fig_title isa Makie.Figure
+end
