@@ -13,11 +13,11 @@ function _positions(cg::CausalGraph, positions::AbstractVector, ::Any)
     return [Point2f(p[1], p[2]) for p in positions]
 end
 
-# Layout methods (:circle, :spring, :stress, ...) each produce coordinates on
-# their own arbitrary scale, so rescale to a common bounding-box extent
-# (matching :circle's diameter of 2) before figure sizing is computed from it
-# in Makie.plot - otherwise the same graph renders at a different figure size
-# depending only on which layout algorithm was used.
+# Layout methods (:spring, :stress, ...) each produce coordinates on their own
+# arbitrary scale, so rescale to a common bounding-box extent (diameter 2)
+# before figure sizing is computed from it in Makie.plot - otherwise the same
+# graph renders at a different figure size depending only on which layout
+# algorithm was used.
 function _rescale_to_unit_extent(positions::Vector{Point2f})
     n = length(positions)
     n <= 1 && return positions

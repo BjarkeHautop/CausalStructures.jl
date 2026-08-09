@@ -43,7 +43,7 @@ the same way, e.g. `set_preferences!(CausalStructures, "plot_node_color" => "lig
 
 | Key | Default | Notes |
 | --- | ------- | ----- |
-| `"plot_layout"` | `:circle` (`:stress` if NetworkLayout is loaded) | One of `:circle`, `:spring`, `:stress`, `:sfdp`, `:spectral`, `:shell`, `:squaregrid`; all but `:circle` require NetworkLayout, see [Layouts](@ref plot-layouts) |
+| `"plot_layout"` | `:stress` | One of `:spring`, `:stress`, `:sfdp`, `:spectral`, `:shell`, `:squaregrid`; requires NetworkLayout, see [Layouts](@ref plot-layouts) |
 | `"plot_node_color"` | `"white"` | Any [Makie-compatible colour](https://docs.makie.org/stable/explanations/colors) |
 | `"plot_node_strokecolor"` | `"black"` | |
 | `"plot_node_strokewidth"` | `2.0` | |

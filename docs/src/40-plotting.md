@@ -1,12 +1,14 @@
 # [Plotting](@id plotting-guide)
 
 Plotting is provided by the `MakieExt` extension and requires loading a
-[Makie](https://docs.makie.org/stable/) backend before use. Below we use
-CairoMakie:
+[Makie](https://docs.makie.org/stable/) backend before use. Node placement
+requires [NetworkLayout.jl](https://github.com/JuliaGraphs/NetworkLayout.jl).
+Below we use CairoMakie:
 
 ```@example plot
 using CausalStructures
 using CairoMakie
+using NetworkLayout
 ```
 
 ## Basic usage
@@ -20,15 +22,9 @@ plot(dag)
 
 ## [Layouts](@id plot-layouts)
 
-The `layout` keyword controls node placement. The `:circle` layout is always
-available and is the default. All other layouts require
-[NetworkLayout.jl](https://github.com/JuliaGraphs/NetworkLayout.jl); once
-loaded, the default switches to `:stress`:
+The `layout` keyword controls node placement and defaults to `:stress`.
 
 ```@example plot
-using NetworkLayout
-
-plot(dag)                 # now uses :stress instead of :circle
 plot(dag; layout = :spring)
 ```
 
@@ -36,9 +32,8 @@ We provide these short-hand names for convenience:
 
 | `layout`      | Algorithm                                                   |
 | ------------- | ------------------------------------------------------------ |
-| `:circle`     | Evenly spaced on a circle (default without NetworkLayout)   |
 | `:spring`     | Fruchterman-Reingold force-directed                          |
-| `:stress`     | Stress majorization (default once NetworkLayout is loaded)  |
+| `:stress`     | Stress majorization (the default)                            |
 | `:sfdp`       | Scalable Force-Directed Placement                            |
 | `:spectral`   | Spectral layout                                               |
 | `:shell`      | Concentric shells                                             |
@@ -47,7 +42,7 @@ We provide these short-hand names for convenience:
 Extra keyword arguments are forwarded to the underlying NetworkLayout algorithm:
 
 ```@example plot
-plot(dag; layout = :spring, seed = 42, iterations = 500)
+plot(dag; layout = :spring, seed = 1405, iterations = 500)
 ```
 
 `layout` also accepts a `Vector` of `(x, y)` positions (one per node, in the
@@ -59,7 +54,7 @@ order returned by `nodes(cg)`) instead of a `Symbol`.
     modified vector back to `plot`:
 
     ```@example plot
-    positions = layout(dag, :spring; seed = 1405)
+    positions = layout(dag, :spring)
     positions[1] = (0.0, 2.0)
     plot(dag; layout = positions)
     ```

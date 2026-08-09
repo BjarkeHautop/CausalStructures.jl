@@ -11,6 +11,7 @@ mediator `M` between `X` and `Y`:
 ```@example quick
 using CausalStructures
 using CairoMakie
+using NetworkLayout
 
 dag = cgraph("A --> X + Y, X --> M --> Y"; class = DAG)
 ```

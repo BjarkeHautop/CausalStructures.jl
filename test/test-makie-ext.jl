@@ -2,6 +2,7 @@
 
 @testitem "Makie.plot: draws every edge type without error" tags = [:unit] begin
     using Makie
+    using NetworkLayout
 
     g = cgraph(
         directed(:A, :B),
@@ -12,12 +13,13 @@
         partial(:F, :A);
         class = UNKNOWN,
     )
-    fig = Makie.plot(g; layout = :circle)
+    fig = Makie.plot(g; layout = :stress)
     @test fig isa Makie.Figure
 end
 
 @testitem "Makie.plot: routes an edge around an obstacle node" tags = [:unit] begin
     using Makie
+    using NetworkLayout
 
     # B sits on the straight A--C chord, forcing _route_edge_path to bend it.
     g = cgraph(directed(:A, :C), node(:B); class = DAG)
@@ -27,20 +29,22 @@ end
 
 @testitem "Makie.plot: fans out multiple edges between the same pair" tags = [:unit] begin
     using Makie
+    using NetworkLayout
 
     admg = cgraph(directed(:X, :Y), bidirected(:X, :Y); class = ADMG)
-    fig = Makie.plot(admg; layout = :circle)
+    fig = Makie.plot(admg; layout = :stress)
     @test fig isa Makie.Figure
 end
 
 @testitem "Makie.plot: resolves per-edge and per-node style dicts" tags = [:unit] begin
     using Makie
+    using NetworkLayout
 
     admg = cgraph(directed(:X, :Y), bidirected(:X, :Y); class = ADMG)
 
     fig = Makie.plot(
         admg;
-        layout = :circle,
+        layout = :stress,
         edge_color = Dict((:X, :Y) => :red, :bidirected => :blue, :default => :green),
         linewidth = Dict(:directed => 2.0, :default => 1.0),
         node_color = Dict(:X => :pink, :default => :white),
@@ -53,20 +57,21 @@ end
     @test fig isa Makie.Figure
 
     # No :default and no matching key/type => falls back to the hard-coded color.
-    fig_fallback = Makie.plot(admg; layout = :circle, edge_color = Dict((:A, :Z) => :red))
+    fig_fallback = Makie.plot(admg; layout = :stress, edge_color = Dict((:A, :Z) => :red))
     @test fig_fallback isa Makie.Figure
 end
 
 @testitem "Makie.plot: title options" tags = [:unit] begin
     using Makie
+    using NetworkLayout
 
     dag = cgraph(directed(:A, :B); class = DAG)
-    fig_no_title = Makie.plot(dag; layout = :circle)
+    fig_no_title = Makie.plot(dag; layout = :stress)
     @test fig_no_title isa Makie.Figure
 
     fig_title = Makie.plot(
         dag;
-        layout = :circle,
+        layout = :stress,
         title = "My DAG",
         title_fontsize = 20,
         title_color = :navy,
@@ -77,6 +82,7 @@ end
 @testitem "Makie.plot: accepts a custom position vector, errors on length mismatch" tags =
     [:unit] begin
     using Makie
+    using NetworkLayout
 
     dag = cgraph(directed(:A, :B); class = DAG)
     fig = Makie.plot(dag; layout = [(0.0, 0.0), (1.0, 1.0)])
@@ -87,6 +93,7 @@ end
 
 @testitem "Makie.plot: errors on an empty graph" tags = [:unit] begin
     using Makie
+    using NetworkLayout
 
     empty_g = cgraph(class = DAG)
     @test_throws ErrorException Makie.plot(empty_g)
@@ -94,11 +101,12 @@ end
 
 @testitem "Makie.plot: explicit geometry keyword overrides" tags = [:unit] begin
     using Makie
+    using NetworkLayout
 
     dag = cgraph(directed(:A, :B); class = DAG)
     fig = Makie.plot(
         dag;
-        layout = :circle,
+        layout = :stress,
         node_radius = 0.3,
         arrow_size = 0.1,
         circle_size = 0.05,
@@ -108,6 +116,7 @@ end
 
 @testitem "Makie.plot: text-fit node sizing grows for longer labels" tags = [:unit] begin
     using Makie
+    using NetworkLayout
 
     ext = Base.get_extension(CausalStructures, :MakieExt)
     r_short = ext._text_fit_pixel_radius("A", 14.0f0, :regular, 4.0f0)
@@ -117,17 +126,18 @@ end
     # Default (node_radius = nothing): a graph with long labels plots without
     # error, with node circles sized per label instead of uniformly.
     dag = cgraph(directed(:Exposure, :Y_outcome); class = DAG)
-    fig = Makie.plot(dag; layout = :circle)
+    fig = Makie.plot(dag; layout = :stress)
     @test fig isa Makie.Figure
 
     # Explicit node_radius overrides text-fit sizing back to a uniform value.
-    fig2 = Makie.plot(dag; layout = :circle, node_radius = 0.1)
+    fig2 = Makie.plot(dag; layout = :stress, node_radius = 0.1)
     @test fig2 isa Makie.Figure
 end
 
 @testitem "Makie.plot: node-wide edge_color/arrow_fill Dict overrides every edge touching a node" tags =
     [:unit] begin
     using Makie
+    using NetworkLayout
 
     ext = Base.get_extension(CausalStructures, :MakieExt)
     e_ax = CausalStructures.directed(:A, :X)
@@ -152,24 +162,25 @@ end
     @test ext._resolve_edge(val_type, e_ax, :fallback) == :green
 
     dag = cgraph(e_ax, e_ay, e_xy; class = DAG)
-    fig = Makie.plot(dag; layout = :circle, edge_color = val)
+    fig = Makie.plot(dag; layout = :stress, edge_color = val)
     @test fig isa Makie.Figure
 end
 
 @testitem "Makie.plot: arrow_fill defaults to edge color and accepts hollow arrowheads" tags =
     [:unit] begin
     using Makie
+    using NetworkLayout
 
     dag = cgraph(directed(:A, :B); class = DAG)
-    fig_default = Makie.plot(dag; layout = :circle)
+    fig_default = Makie.plot(dag; layout = :stress)
     @test fig_default isa Makie.Figure
 
-    fig_hollow = Makie.plot(dag; layout = :circle, arrow_fill = :transparent)
+    fig_hollow = Makie.plot(dag; layout = :stress, arrow_fill = :transparent)
     @test fig_hollow isa Makie.Figure
 
     fig_dict = Makie.plot(
         dag;
-        layout = :circle,
+        layout = :stress,
         edge_color = :steelblue,
         arrow_fill = Dict((:A, :B) => :transparent, :default => nothing),
     )
@@ -201,11 +212,12 @@ end
 
 @testitem "Makie.plot: outer_margin and title_gap keywords" tags = [:unit] begin
     using Makie
+    using NetworkLayout
 
     dag = cgraph(directed(:A, :B); class = DAG)
-    fig = Makie.plot(dag; layout = :circle, outer_margin = 30, title_gap = 10.0)
+    fig = Makie.plot(dag; layout = :stress, outer_margin = 30, title_gap = 10.0)
     @test fig isa Makie.Figure
 
-    fig_title = Makie.plot(dag; layout = :circle, title = "Stretched", title_gap = 12.0)
+    fig_title = Makie.plot(dag; layout = :stress, title = "Stretched", title_gap = 12.0)
     @test fig_title isa Makie.Figure
 end
