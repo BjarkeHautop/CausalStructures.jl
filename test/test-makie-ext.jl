@@ -176,15 +176,15 @@ end
     @test fig_dict isa Makie.Figure
 end
 
-@testitem "Makie.plot: NetworkLayout output with far-flung isolated nodes doesn't blow up node sizing" tags =
+@testitem "Makie.plot: NetworkLayout output with far-flung isolated nodes doesn't blow up figure size" tags =
     [:unit] begin
     using Makie
     using NetworkLayout
 
     # Isolated nodes are unconstrained under stress majorization and can end
     # up placed far from the connected component, making the raw layout's
-    # coordinate scale (and thus a naive data-unit/pixel calibration) wildly
-    # inconsistent with the connected component's actual node spacing.
+    # coordinate scale wildly inconsistent with the connected component's
+    # actual node spacing.
     g = cgraph(
         directed(:A, :B),
         directed(:B, :C),
@@ -196,18 +196,16 @@ end
     fig = Makie.plot(g; layout = :stress, seed = 1)
     @test fig isa Makie.Figure
     w, h = Makie.widths(fig.scene.viewport[])
-    @test 300 <= w <= 3000
-    @test 300 <= h <= 3000
+    @test (w, h) == (600, 450)
 end
 
-@testitem "Makie.plot: asp, outer_margin, and title_gap keywords" tags = [:unit] begin
+@testitem "Makie.plot: outer_margin and title_gap keywords" tags = [:unit] begin
     using Makie
 
     dag = cgraph(directed(:A, :B); class = DAG)
-    fig = Makie.plot(dag; layout = :circle, asp = 2.0, outer_margin = 30, title_gap = 10.0)
+    fig = Makie.plot(dag; layout = :circle, outer_margin = 30, title_gap = 10.0)
     @test fig isa Makie.Figure
 
-    fig_title =
-        Makie.plot(dag; layout = :circle, asp = 0.5, title = "Stretched", title_gap = 12.0)
+    fig_title = Makie.plot(dag; layout = :circle, title = "Stretched", title_gap = 12.0)
     @test fig_title isa Makie.Figure
 end

@@ -50,6 +50,20 @@ Extra keyword arguments are forwarded to the underlying NetworkLayout algorithm:
 plot(dag; layout = :spring, seed = 42, iterations = 500)
 ```
 
+`layout` also accepts a `Vector` of `(x, y)` positions (one per node, in the
+order returned by `nodes(cg)`) instead of a `Symbol`.
+
+!!! tip "Tweaking a layout by hand"
+    [`layout`](@ref) itself returns this `Vector`, so you can compute a
+    starting layout, tweak individual node positions by hand, and pass the
+    modified vector back to `plot`:
+
+    ```@example plot
+    positions = layout(dag, :spring; seed = 1405)
+    positions[1] = (0.0, 2.0)
+    plot(dag; layout = positions)
+    ```
+
 ## Node styling
 
 Each node style argument accepts either a scalar (applied to all nodes) or a `Dict{Symbol, <value>}` keyed by node name, with `:default` as a fallback.
@@ -174,20 +188,23 @@ points) controls the spacing between the title and the graph.
 plot(dag; title = "My DAG", title_fontsize = 20, title_color = :navy)
 ```
 
-## Aspect ratio and margins
+## Figure size and margins
 
-| Keyword        | Default   | Controls                                                     |
-| -------------- | --------- | -------------------------------------------------------------- |
-| `asp`          | `nothing` | scales node y-coordinates by this factor before plotting       |
-| `outer_margin` | `16`      | padding (pixels) around the whole figure                       |
-| `title_gap`    | `4.0`     | gap (points) between `title` and the graph                     |
-
-`asp` stretches or compresses the layout vertically relative to its width
-(leaving the native y/x scale unchanged when `nothing`).
+| Keyword        | Default       | Controls                                                     |
+| -------------- | ------------- | -------------------------------------------------------------- |
+| `outer_margin` | `16`          | padding (pixels) around the whole figure                       |
+| `title_gap`    | `4.0`         | gap (points) between `title` and the graph                     |
+| `fig_size`     | `(600, 450)`  | figure size in pixels (width, height)                          |
 
 ```@example plot
-plot(dag; asp = 1.5)
+plot(dag; fig_size = (800, 600))
 ```
+
+!!! note "Large graphs need a bigger `fig_size`"
+    The default `(600, 450)` is sized for small examples. As the number of
+    nodes grows, labels and edges get cramped and can overlap; increase
+    `fig_size` (and `node_radius`/`label_fontsize` if needed) to keep larger
+    causal graphs readable.
 
 ### Automatic edge routing
 

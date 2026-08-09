@@ -38,148 +38,20 @@ set_preferences!(CausalStructures, "open" => false)
 
 ## Plotting
 
-Controls default visual configuration used by `plot(cg; ...)`.
-A Makie backend is required for plotting.
+Every visual default used by `plot(cg; ...)` (Makie backend required) can be overridden
+the same way, e.g. `set_preferences!(CausalStructures, "plot_node_color" => "lightblue")`.
 
-### `"plot_layout"`
-
-Default graph layout algorithm.
-
-| Default | Type | Valid values |
-| ------- | ---- | ------------ |
-| `:circle` (`:stress` if NetworkLayout is loaded) | `String` | `:circle`, `:spring`, `:stress`, `:sfdp`, `:spectral`, `:shell`, `:squaregrid` |
-
-Note: all layouts except `:circle` require NetworkLayout, see the
-[Layouts](@ref plot-layouts) section for more details.
-
-```julia
-set_preferences!(CausalStructures, "plot_layout" => "spring")
-```
-
-### `"plot_node_color"`
-
-Default node fill colour
-
-| Default | Type |
-| ------- | ---- |
-| `"white"` | `String` |
-
-Any [Makie-compatible colour name or hex
-string](https://docs.makie.org/stable/explanations/colors).
-
-```julia
-set_preferences!(CausalStructures, "plot_node_color" => "lightblue")
-```
-
-### `"plot_node_strokecolor"`
-
-Default node border colour.
-
-| Default | Type |
-| ------- | ---- |
-| `"black"` | `String` |
-
-```julia
-set_preferences!(CausalStructures, "plot_node_strokecolor" => "gray30")
-```
-
-### `"plot_node_strokewidth"`
-
-Default node border width.
-
-| Default | Type |
-| ------- | ---- |
-| `2.0` | `Number` |
-
-```julia
-set_preferences!(CausalStructures, "plot_node_strokewidth" => 1.5)
-```
-
-### `"plot_edge_color"`
-
-Default edge color.
-
-| Default | Type |
-| ------- | ---- |
-| `"black"` | `String` |
-
-```julia
-set_preferences!(CausalStructures, "plot_edge_color" => "steelblue")
-```
-
-### `"plot_linewidth"`
-
-Default edge line width.
-
-| Default | Type |
-| ------- | ---- |
-| `1.5` | `Number` |
-
-```julia
-set_preferences!(CausalStructures, "plot_linewidth" => 2.0)
-```
-
-### `"plot_label_color"`
-
-Default node label text color.
-
-| Default | Type |
-| ------- | ---- |
-| `"black"` | `String` |
-
-```julia
-set_preferences!(CausalStructures, "plot_label_color" => "gray10")
-```
-
-### `"plot_label_fontsize"`
-
-Default node label font size.
-
-| Default | Type |
-| ------- | ---- |
-| `14.0` | `Number` |
-
-```julia
-set_preferences!(CausalStructures, "plot_label_fontsize" => 16.0)
-```
-
-### `"plot_label_font"`
-
-Default node label font.
-
-| Default | Type |
-| ------- | ---- |
-| `"regular"` | `String` |
-
-Any [Makie-compatible font](https://docs.makie.org/stable/explanations/fonts) name or theme key (e.g. `"regular"`, `"bold"`).
-
-```julia
-set_preferences!(CausalStructures, "plot_label_font" => "bold")
-```
-
-### `"plot_node_padding"`
-
-Padding amount between label and circle's edge. Ignored when `node_radius` is set
-explicitly.
-
-| Default | Type |
-| ------- | ---- |
-| `10.0` | `Number` |
-
-```julia
-set_preferences!(CausalStructures, "plot_node_padding" => 15.0)
-```
-
-### `"plot_edge_arrow_fill"`
-
-Default arrowhead fill color. `nothing` (the default) matches each edge's own
-resolved `edge_color`, so arrowheads render solid; set to a transparent color
-(e.g. `"transparent"`) for hollow, outline-only arrowheads.
-
-| Default | Type |
-| ------- | ---- |
-| `nothing` | `String` or `nothing` |
-
-```julia
-set_preferences!(CausalStructures, "plot_edge_arrow_fill" => "transparent")
-```
+| Key | Default | Notes |
+| --- | ------- | ----- |
+| `"plot_layout"` | `:circle` (`:stress` if NetworkLayout is loaded) | One of `:circle`, `:spring`, `:stress`, `:sfdp`, `:spectral`, `:shell`, `:squaregrid`; all but `:circle` require NetworkLayout, see [Layouts](@ref plot-layouts) |
+| `"plot_node_color"` | `"white"` | Any [Makie-compatible colour](https://docs.makie.org/stable/explanations/colors) |
+| `"plot_node_strokecolor"` | `"black"` | |
+| `"plot_node_strokewidth"` | `2.0` | |
+| `"plot_edge_color"` | `"black"` | |
+| `"plot_linewidth"` | `1.5` | |
+| `"plot_label_color"` | `"black"` | |
+| `"plot_label_fontsize"` | `14.0` | |
+| `"plot_label_font"` | `"regular"` | Any [Makie-compatible font](https://docs.makie.org/stable/explanations/fonts) name or theme key |
+| `"plot_node_padding"` | `10.0` | Space between label and circle edge; ignored when `node_radius` is set explicitly |
+| `"plot_edge_arrow_fill"` | `nothing` | `nothing` matches the edge's own color (solid arrowhead); set e.g. `"transparent"` for a hollow one |
+| `"plot_fig_size"` | `[600.0, 450.0]` | Pixels, fixed regardless of graph/layout; see [Figure size and margins](@ref) |

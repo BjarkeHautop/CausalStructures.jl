@@ -277,8 +277,8 @@ backend (e.g. `using CairoMakie`) before calling.
 Keyword arguments: `layout`, `node_radius`, `node_padding`, `arrow_size`,
 `circle_size`, `node_color`, `node_strokecolor`, `node_strokewidth`,
 `edge_color`, `arrow_fill`, `linewidth`, `label_color`, `label_fontsize`,
-`label_font`, `title`, `title_fontsize`, `title_color`, `title_gap`, `asp`,
-`outer_margin`. Style keywords accept either a scalar (applied to everything)
+`label_font`, `title`, `title_fontsize`, `title_color`, `title_gap`,
+`outer_margin`, `fig_size`. Style keywords accept either a scalar (applied to everything)
 or a `Dict` for per-node/per-edge overrides.
 
 See the [Plotting](@ref plotting-guide) page for the full keyword reference,
@@ -315,38 +315,40 @@ function Makie.plot(
     title::Union{AbstractString,Nothing} = nothing,
     title_fontsize::Union{Real,Nothing} = nothing,
     title_color = nothing,
-    asp::Union{Real,Nothing} = nothing,
     outer_margin::Real = 16,
     title_gap::Real = 4.0,
+    fig_size::NTuple{2,Real} = CausalStructures._PLOT_FIG_SIZE_DEFAULT,
     layout_kwargs...,
 )
     n = length(cg.backend.nodes)
     n == 0 && error("Cannot plot an empty graph (0 nodes).")
 
-    positions = _positions(cg, layout, layout_kwargs)
-    if asp !== nothing
-        positions = [Point2f(p[1], p[2] * Float32(asp)) for p in positions]
-    end
+    positions = _rescale_to_unit_extent(_positions(cg, layout, layout_kwargs))
 
     # Reference radius (node-count based, ignoring label length), used only
     # when node_radius is given explicitly.
     r_ref = Float32(something(node_radius, max(0.12, 0.4 * sin(π / max(n, 2)))))
 
-    # Node circle radii (data units), and the pixels-per-data-unit ratio the
-    # figure is rendered at to realize them: text is fixed-pixel-sized
-    # regardless of axis zoom, so a data-space radius only fits a label at
-    # one particular ratio, which depends on the layout's coordinate scale
-    # (:circle is a unit circle; NetworkLayout output is arbitrary, and can
-    # be skewed by far-flung isolated nodes) - so this goes pixels first
-    # (label size), then solves for the ratio needed to avoid overlap, then
-    # converts back to data-space radii, then renders the figure at that
-    # ratio (see fig_width/fig_height below) instead of an auto-fit window.
+    # The figure is a fixed size (`fig_size`), independent of layout/graph -
+    # otherwise the same graph would render at a different size depending on
+    # which layout algorithm placed its nodes (each has its own arbitrary
+    # coordinate scale and relative spacing). Node circle radii (data units)
+    # are then solved for the pixels-per-data-unit ratio that this fixed
+    # canvas implies, rather than the other way around: text is
+    # fixed-pixel-sized regardless of axis zoom, so a data-space radius only
+    # fits a label at one particular ratio - see `_text_fit_pixel_radius`. A
+    # consequence of fixing the canvas is that very tightly-clustered nodes
+    # (relative to the rest of the layout) may get smaller circles/labels
+    # rather than blowing up the figure.
     xs = [p[1] for p in positions]
     ys = [p[2] for p in positions]
     bbox_w = max(maximum(xs) - minimum(xs), 1.0f-3)
     bbox_h = max(maximum(ys) - minimum(ys), 1.0f-3)
 
-    px_per_unit = 400.0f0
+    fig_height_budget = Float32(fig_size[2]) - (title !== nothing ? 40.0f0 : 0.0f0)
+    avail_w = Float32(fig_size[1]) - 2.0f0 * Float32(outer_margin)
+    avail_h = fig_height_budget - 2.0f0 * Float32(outer_margin)
+
     r_nodes = if node_radius !== nothing
         fill(r_ref, n)
     else
@@ -361,20 +363,21 @@ function Makie.plot(
                 ),
             ) for i = 1:n
         ]
+        # px_per_unit that keeps the closest label-fit pair from overlapping.
+        px_overlap = 400.0f0
         for i = 1:n, j = (i+1):n
             d = _norm2(positions[i] - positions[j])
             d < 1.0f-6 && continue
-            px_per_unit =
-                max(px_per_unit, 1.15f0 * (pixel_radii[i] + pixel_radii[j]) / d)
+            px_overlap = max(px_overlap, 1.15f0 * (pixel_radii[i] + pixel_radii[j]) / d)
         end
-        # Cap px_per_unit by the figure-size budget too (fig size = bbox
-        # extent * px_per_unit), not just an absolute max - otherwise a large
-        # bbox (e.g. a far-flung isolated node) could still blow the figure
-        # past the clamp below, silently shrinking it below what r_nodes
-        # assumes.
-        max_fig_px = 3000.0f0 - 2.0f0 * Float32(outer_margin)
-        px_per_unit =
-            min(px_per_unit, max_fig_px / bbox_w, max_fig_px / bbox_h, 4000.0f0)
+        # px_per_unit that fits the bbox (plus a margin sized to the largest
+        # label, in data units at that same ratio) inside the fixed canvas.
+        # Solved in closed form: margin = 1.3*maxpr/px, so
+        # px*bbox + 2*1.3*maxpr = avail  =>  px = (avail - 2.6*maxpr)/bbox.
+        maxpr = maximum(pixel_radii)
+        px_fit_w = (avail_w - 2.6f0 * maxpr) / bbox_w
+        px_fit_h = (avail_h - 2.6f0 * maxpr) / bbox_h
+        px_per_unit = max(10.0f0, min(px_overlap, px_fit_w, px_fit_h))
         pixel_radii ./ px_per_unit
     end
 
@@ -395,20 +398,16 @@ function Makie.plot(
 
     # Explicit axis data limits (rather than Makie's autolimits, which don't
     # account for node circles' rendered extent at all) so nodes at the
-    # boundary aren't clipped, sized in pixels from px_per_unit above so the
-    # figure comes out at (close to) the resolution text-fit sizing assumed.
+    # boundary aren't clipped. DataAspect keeps x/y scale equal, so whichever
+    # of xlim/ylim is narrower than the fixed canvas is centered with slack.
     margin = 1.3f0 * maximum(r_nodes)
     xlo, xhi = minimum(xs) - margin, maximum(xs) + margin
     ylo, yhi = minimum(ys) - margin, maximum(ys) + margin
     xlo == xhi && (xlo -= 1.0f0; xhi += 1.0f0)
     ylo == yhi && (ylo -= 1.0f0; yhi += 1.0f0)
 
-    fig_width = clamp((xhi - xlo) * px_per_unit + 2 * outer_margin, 300.0, 3000.0)
-    fig_height = clamp((yhi - ylo) * px_per_unit + 2 * outer_margin, 300.0, 3000.0)
-    title !== nothing && (fig_height += 40.0)
-
     fig = Makie.Figure(;
-        size = (round(Int, fig_width), round(Int, fig_height)),
+        size = (round(Int, fig_size[1]), round(Int, fig_size[2])),
         figure_padding = outer_margin,
     )
     ax = if title === nothing

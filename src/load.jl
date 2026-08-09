@@ -17,6 +17,8 @@ const _PLOT_LABEL_FONT_DEFAULT::Symbol =
     Symbol(@load_preference("plot_label_font", "regular"))
 const _PLOT_NODE_PADDING_DEFAULT = @load_preference("plot_node_padding", 10.0)
 const _PLOT_EDGE_ARROW_FILL_DEFAULT = @load_preference("plot_edge_arrow_fill", nothing)
+const _PLOT_FIG_SIZE_DEFAULT =
+    Tuple(Float64.(@load_preference("plot_fig_size", [600.0, 450.0])))
 
 # Foundation: types, edges, construction, mutation, validation, backend storage
 include("core/defs.jl")
