@@ -100,6 +100,9 @@ end
     @test result isa MPDAG
 end
 
+# TODO: Make test for unsafe meek_closure with check_cycles = false, which may return a cycle.
+# TODO: Make test for r4 = false for meek_closure on a PDAG with background knowledge.
+
 # ── MPDAG show ─────────────────────────────────────────────────────────────────
 
 @testitem "MPDAG show: typename is MPDAG" tags = [:unit] begin

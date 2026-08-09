@@ -99,7 +99,7 @@ function dag_from_pdag(cg::AbstractPDAG)
 end
 
 """
-    meek_closure(cg::AbstractPDAG) -> MPDAG
+    meek_closure(cg::AbstractPDAG; check_cycles::Bool = true, r4::Bool = true) -> MPDAG
 
 Apply Meek's orientation rules (R1-R4) to `cg` until no further orientations
 are implied, returning the resulting [`MPDAG`](@ref).
@@ -110,6 +110,18 @@ The four rules are:
 - **R3**: `a --- b`, two parents `c, d` of `b` with `c` not adjacent to `d`,
   and `a --- c`, `a --- d` --> orient `a --> b`
 - **R4**: `a --- b`, directed path `a -->+ b` exists --> orient `a --> b`
+
+# Keyword arguments
+
+- `check_cycles`: when `true` (default), every candidate orientation is
+  verified not to create a directed cycle before being applied. This check is
+  redundant *if* `cg` is a genuine Meek pattern -- every directed
+  edge already justified by an unshielded collider -- since
+  Meek's Theorem 3 then guarantees no cycle can arise. Potentially unsafe
+  downstream, since it always returns an MPDAG without verifying acyclicity.
+- `r4`: whether to apply R4 (default `true`). R4 is only needed when `cg`
+  carries directed edges beyond what its own v-structures imply (background
+  knowledge).
 
 # Examples
 
@@ -127,7 +139,7 @@ MPDAG with 3 nodes and 2 edges:
 
 - [meek1995causal](@cite)
 """
-function meek_closure(cg::AbstractPDAG)
+function meek_closure(cg::AbstractPDAG; check_cycles::Bool = true, r4::Bool = true)
     B = cg.backend
     n = length(B.nodes)
 
@@ -166,7 +178,7 @@ function meek_closure(cg::AbstractPDAG)
     # Orient a --> b only if edge is still undirected and doing so won't create a cycle
     function try_orient!(a, b)
         b in und[a] || return false
-        has_dir_path(b, a) && return false
+        check_cycles && has_dir_path(b, a) && return false
         orient!(a, b)
         return true
     end
@@ -217,12 +229,14 @@ function meek_closure(cg::AbstractPDAG)
         end
 
         # R4: a --- b and directed path a -->⁺ b exists --> orient a --> b  (or b --> a)
-        for a = 1:n
-            for b in collect(und[a])
-                if has_dir_path(a, b)
-                    try_orient!(a, b) && (changed = true)
-                elseif has_dir_path(b, a)
-                    try_orient!(b, a) && (changed = true)
+        if r4
+            for a = 1:n
+                for b in collect(und[a])
+                    if has_dir_path(a, b)
+                        try_orient!(a, b) && (changed = true)
+                    elseif has_dir_path(b, a)
+                        try_orient!(b, a) && (changed = true)
+                    end
                 end
             end
         end
@@ -242,11 +256,7 @@ function meek_closure(cg::AbstractPDAG)
         end
     end
 
-    # validate=false is safe here: orient! only reclassifies existing undirected
-    # edges to directed (node pairs and self-loop-freedom are unchanged from the
-    # valid input PDAG), try_orient! never orients if it would create a cycle,
-    # and the while loop runs to a fixpoint that is exactly what
-    # `_cpdag_meek_closed` checks for.
+    # Potentially unsafe if check_cycles = false, but done like this for perf:
     return MPDAG(Set(B.nodes), new_edges; validate = false)
 end
 
