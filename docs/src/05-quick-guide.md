@@ -73,24 +73,24 @@ Yes, now all paths are blocked.
 
 Now suppose we want to estimate the causal effect of `X` on `Y`. The backdoor
 path `X <-- A --> Y` introduces confounding bias, so we need to block it by
-conditioning on a valid backdoor adjustment set.
+conditioning on a valid adjustment set.
 
 Let's find one automatically:
 
 ```@example quick
-adjustment_set(dag, :X, :Y; type = :backdoor)
+adjustment_set(dag, :X, :Y)
 ```
 
 We can also verify that a specific set is valid:
 
 ```@example quick
-is_valid_backdoor(dag, :X, :Y, [:A])
+is_valid_adjustment(dag, :X, :Y, [:A])
 ```
 
 And enumerate all minimal valid adjustment sets:
 
 ```@example quick
-all_backdoor_sets(dag, :X, :Y)
+all_adjustment_sets(dag, :X, :Y)
 ```
 
-In this case, `{A}` is the only minimal set that blocks the backdoor.
+In this case, `{A}` is the only minimal set that blocks the confounding.
