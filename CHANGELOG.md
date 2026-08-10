@@ -5,14 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.3.0] - 2026-08-10
 
 ### Breaking changes
 
-- Removed the built-in `:circle` layout. `layout`/`plot` now require NetworkLayout to be loaded, and default to `:stress`.
+- Removed the built-in `:circle` layout. `layout`/`plot` now require NetworkLayout to be loaded (or bring your own layout to plot), and default to `:stress`.
 
 ### New features
 
+- Added `adjustment_set` for `ADMG` and `PAG`, returning the smallest valid adjustment set.
+- Added `anteriors`/`posteriors` methods for `ADMG`.
+- Extended `condition_marginalize` to accept `ADMG`.
 - Added `check_cycles` and `r4` as keyword arguments to `meek_closure`, which can be
 set to help speed it up.
 - Added `node_padding` (and `"plot_node_padding"` preference) to control the padding between a node's label and its circle edge.
