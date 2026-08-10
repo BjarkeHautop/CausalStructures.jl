@@ -59,7 +59,7 @@ end
 
 # Triangle arrowhead, outlined in `color` and filled with `fill` (which may
 # be a transparent/`:transparent` color for a hollow, outline-only arrowhead).
-#   tip : the point of the arrow (on the node boundary)
+#   tip : the point of the arrow (just clear of the node boundary)
 #   dir : unit vector in the direction the arrow points (toward tip)
 #   size: length of the arrowhead
 function _draw_arrowhead!(
@@ -87,7 +87,8 @@ function _draw_edge!(
     r_arrow::Float32,
     r_circle::Float32,
     obstacles::AbstractVector{Tuple{Point2f,Float32}},
-    fan_slot::Float32;
+    fan_slot::Float32,
+    px_per_data_unit::Float32;
     color = :black,
     fill = color,
     linewidth = 1.5f0,
@@ -96,16 +97,35 @@ function _draw_edge!(
     len = _norm2(diff)
     len < 1.0f-6 && return
 
+    has_arrow_src = e.src_end === _Arrow
+    has_arrow_dst = e.dst_end === _Arrow
+    has_circle_src = e.src_end === _Circle
+    has_circle_dst = e.dst_end === _Circle
+
+    # Arrowheads and circle marks are stroked outlines (poly with
+    # strokewidth = linewidth), not just fills: at a vertex/curve, that
+    # stroke paints roughly linewidth/2 (screen pixels) past the
+    # mathematical path coordinate. Left uncorrected, a tip/circle placed
+    # exactly on the node boundary therefore renders with its stroke
+    # overlapping the node - same root cause as the R port's
+    # "Fix plot edge overlapping on arrowhead on pkgdown".
+    half_lw_data = (Float32(linewidth) / 2.0f0) / px_per_data_unit
+    gap_from = (has_arrow_src || has_circle_src) ? half_lw_data : 0.0f0
+    gap_to = (has_arrow_dst || has_circle_dst) ? half_lw_data : 0.0f0
+    r_from_eff = r_from + gap_from
+    r_to_eff = r_to + gap_to
+
     # Minimum gap (beyond an obstacle's own radius) an edge must keep from a
     # non-incident node before it is left alone.
     clearance = 0.05f0 * (r_from + r_to)
 
-    routed = _route_edge_path(p_src, p_dst, r_from, r_to, obstacles, clearance)
+    routed = _route_edge_path(p_src, p_dst, r_from_eff, r_to_eff, obstacles, clearance)
     # Real obstacles take priority: only fan siblings apart when nothing
     # actually forces this edge to route around a node.
     fanned =
         routed === nothing && fan_slot != 0.0f0 ?
-        _fanned_edge_path(p_src, p_dst, r_from, r_to, fan_slot * 0.3f0 * len) : nothing
+        _fanned_edge_path(p_src, p_dst, r_from_eff, r_to_eff, fan_slot * 0.3f0 * len) :
+        nothing
 
     path = if routed !== nothing
         routed
@@ -113,13 +133,8 @@ function _draw_edge!(
         fanned
     else
         dir = Point2f(diff[1] / len, diff[2] / len)
-        [p_src + r_from * dir, p_dst - r_to * dir]
+        [p_src + r_from_eff * dir, p_dst - r_to_eff * dir]
     end
-
-    has_arrow_src = e.src_end === _Arrow
-    has_arrow_dst = e.dst_end === _Arrow
-    has_circle_src = e.src_end === _Circle
-    has_circle_dst = e.dst_end === _Circle
 
     m = length(path)
     tan_src = _unit(path[2] - path[1])
@@ -151,8 +166,9 @@ function _draw_edge!(
         linewidth = linewidth,
     )
 
-    # Open circles: centered one radius out from the node boundary (tangent
-    # to the path) so the inner edge of the circle sits flush against the node.
+    # Open circles: centered one radius out from `path`'s endpoint (which
+    # already sits gap_from/gap_to past the true node boundary - see above)
+    # so the inner edge of the circle sits just clear of the node.
     if has_circle_src
         _draw_filled_circle!(
             ax,
@@ -406,6 +422,11 @@ function Makie.plot(
     xlo == xhi && (xlo -= 1.0f0; xhi += 1.0f0)
     ylo == yhi && (ylo -= 1.0f0; yhi += 1.0f0)
 
+    # DataAspect renders both axes at the same scale, set by whichever of
+    # x/y is the tighter fit against the fixed canvas (the other axis gets
+    # centered with slack) - see gap_from/gap_to in _draw_edge!.
+    px_per_data_unit = min(avail_w / (xhi - xlo), avail_h / (yhi - ylo))
+
     fig = Makie.Figure(;
         size = (round(Int, fig_size[1]), round(Int, fig_size[2])),
         figure_padding = outer_margin,
@@ -450,7 +471,8 @@ function Makie.plot(
             r_arrow,
             r_circle,
             obstacles,
-            fan_slots[i];
+            fan_slots[i],
+            px_per_data_unit;
             color = resolved_color,
             fill = something(_resolve_edge(arrow_fill, e, nothing), resolved_color),
             linewidth = Float32(_resolve_edge(linewidth, e, 1.5f0)),
