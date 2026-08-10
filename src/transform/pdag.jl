@@ -9,9 +9,12 @@
 Extend `cg` to a consistent [`DAG`](@ref) by orienting all undirected
 edges, using the Dor-Tarsi algorithm.
 
-The algorithm repeatedly finds a sink node `x` (no directed children, and whose
-undirected neighbors form a clique), orients all undirected edges toward `x`,
-and removes it. Raises an error if no valid DAG extension exists.
+The algorithm repeatedly finds a sink node `x` (no directed children, whose
+undirected neighbors form a clique, and whose undirected neighbors are each
+adjacent to every existing parent of `x`), orients all undirected edges
+toward `x`, and removes it. Raises an error if no valid DAG extension exists.
+The last condition on `x`'s existing parents ensures the extension has
+exactly the same v-structures as `cg`.
 
 # Examples
 
@@ -28,6 +31,7 @@ DAG with 3 nodes and 2 edges:
 # References
 
 - [dortarsi1992simple](@cite)
+- [wienobst21a](@cite)
 """
 function dag_from_pdag(cg::AbstractPDAG)
     B = cg.backend
@@ -58,6 +62,19 @@ function dag_from_pdag(cg::AbstractPDAG)
                 if b ∉ pa[a] && b ∉ ch[a] && b ∉ und[a]
                     clique = false
                     break
+                end
+            end
+            clique || continue
+
+            # Condition (c): every undirected neighbor of x must also be
+            # adjacent to every existing parent of x. See
+            # Definition 4.2 in Wienöbst, Bannach & Liśkiewicz (UAI 2021).
+            if !isempty(nbrs) && !isempty(pa[x])
+                for u in nbrs, p in pa[x]
+                    if p ∉ pa[u] && p ∉ ch[u] && p ∉ und[u]
+                        clique = false
+                        break
+                    end
                 end
             end
             clique || continue

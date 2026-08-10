@@ -13,9 +13,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+- Added `check_cycles` and `r4` as keyword arguments to `meek_closure`, which can be
+set to help speed it up.
 - Added `node_padding` (and `"plot_node_padding"` preference) to control the padding between a node's label and its circle edge.
 - Added `arrow_fill` (and `"plot_edge_arrow_fill"` preference) to style arrowheads independently of `edge_color`, including hollow/outline-only arrowheads.
 - Added `fig_size` to set the plot's figure size.
+
+### Bug fixes
+
+- `dag_from_pdag` could pick a sink whose undirected neighbors were adjacent to each other but not to the sink's existing parents, which could make it introduce a
+v-structure absent from the input PDAG.
 
 ## [0.2.0] - 2026-08-04
 

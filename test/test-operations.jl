@@ -327,6 +327,19 @@ end
     @test length(dag.edges) == 3
 end
 
+@testitem "dag_from_pdag does not fabricate a v-structure" tags = [:unit] begin
+    # V1 --> V2 --- V3, with V1 and V3 not adjacent. The only consistent
+    # extension is V2 --> V3: orienting V3 --> V2 would give V2 two parents
+    # (V1 and V3) that are not adjacent to each other, i.e. a new unshielded
+    # collider V1 --> V2 <-- V3 not present in the input PDAG.
+    pdag = cgraph(directed(:V1, :V2), undirected(:V2, :V3); class = PDAG)
+    dag = dag_from_pdag(pdag)
+    has_dir(cg, u, v) = any(e -> e.src == u && e.dst == v, cg.edges)
+    @test has_dir(dag, :V1, :V2)
+    @test has_dir(dag, :V2, :V3)
+    @test !has_dir(dag, :V3, :V2)
+end
+
 # ── meek_closure ──────────────────────────────────────────────────────────────
 
 @testitem "meek_closure R1: orient compelled edge" tags = [:unit] begin
