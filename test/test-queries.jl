@@ -454,6 +454,13 @@ end
     @test Set(anteriors(dag, :C)) == Set([:A, :B])
 end
 
+@testitem "anteriors works for ADMG (equals ancestors)" tags = [:unit] begin
+    admg = cgraph(directed(:A, :B), directed(:B, :C), bidirected(:A, :C); class = ADMG)
+    @test isempty(anteriors(admg, :A))
+    @test anteriors(admg, :B) == [:A]
+    @test Set(anteriors(admg, :C)) == Set([:A, :B])
+end
+
 @testitem "anteriors works for PDAG with mixed edges" tags = [:unit] begin
     # A -> B --- C, B -> D
     pdag = cgraph(directed(:A, :B), undirected(:B, :C), directed(:B, :D); class = PDAG)
@@ -481,6 +488,13 @@ end
     @test Set(posteriors(dag, :A)) == Set([:B, :C])
     @test posteriors(dag, :B) == [:C]
     @test isempty(posteriors(dag, :C))
+end
+
+@testitem "posteriors works for ADMG (equals descendants)" tags = [:unit] begin
+    admg = cgraph(directed(:A, :B), directed(:B, :C), bidirected(:A, :C); class = ADMG)
+    @test Set(posteriors(admg, :A)) == Set([:B, :C])
+    @test posteriors(admg, :B) == [:C]
+    @test isempty(posteriors(admg, :C))
 end
 
 @testitem "posteriors works for PDAG with mixed edges" tags = [:unit] begin

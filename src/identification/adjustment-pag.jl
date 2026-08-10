@@ -588,3 +588,50 @@ function all_adjustment_sets(
     minimal && _prune_minimal!(valid_sets)
     return valid_sets
 end
+
+"""
+    adjustment_set(cg::PAG, x::Symbol, y::Symbol) -> Vector{Symbol}
+
+Return a single valid adjustment set for the causal effect of `x` on `y` in
+`cg`, preferring smaller sets. Returns the smallest valid adjustment set found
+by trying sizes 0, 1, 2, ... in order and stopping at the first valid set.
+
+# Examples
+
+```jldoctest
+julia> mag = cgraph(
+           directed(:B, :X), bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y);
+           class = MAG,
+       );
+
+julia> pag = mag_to_pag(mag);
+
+julia> adjustment_set(pag, :X, :Y)
+1-element Vector{Symbol}:
+ :A
+```
+
+# References
+
+- [perkovic2018complete](@cite)
+"""
+function adjustment_set(cg::PAG, x::Symbol, y::Symbol)
+    B = cg.backend
+    n = length(B.nodes)
+    xs = [node_index(cg, x)]
+    ys = [node_index(cg, y)]
+
+    forbidden = _forbidden_set_pag(B, xs, ys)
+    y_mask = falses(n)
+    for yi in ys
+        y_mask[yi] = true
+    end
+
+    universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
+    removed = _pbg_removed_pag(B, xs, ys)
+
+    result =
+        _smallest_valid_subset(universe, z -> _m_separated_pbg_pag(B, xs, ys, z, removed))
+    result === nothing && return Symbol[]
+    return [B.nodes[v] for v in result]
+end

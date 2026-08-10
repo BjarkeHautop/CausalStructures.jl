@@ -598,6 +598,15 @@ end
     @test :X ∈ nodes(result) && :Y ∈ nodes(result)
 end
 
+@testitem "condition_marginalize: accepts ADMG input" tags = [:unit] begin
+    admg = cgraph(directed(:U, :X), directed(:U, :Y), directed(:X, :Y); class = ADMG)
+    result = condition_marginalize(admg; marg_vars = [:U])
+    @test result isa AG
+    @test Set(nodes(result)) == Set([:X, :Y])
+    @test has_edge(result, :X, :Y)
+    @test CausalStructures.is_directed(only(result.edges)) && only(result.edges).src == :X
+end
+
 # ── markov_equivalent ─────────────────────────────────────────────────────
 
 @testitem "markov_equivalent: identical DAGs are equivalent" tags = [:unit] begin

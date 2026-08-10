@@ -376,6 +376,11 @@ julia> dag = cgraph(
 julia> all_adjustment_sets(dag, :X, :Y)
 1-element Vector{Vector{Symbol}}:
  [:A]
+
+julia> all_adjustment_sets(dag, :X, :Y; minimal=false)
+2-element Vector{Vector{Symbol}}:
+ [:A]
+ [:A, :B]
 ```
 
 # References
@@ -630,4 +635,45 @@ function all_adjustment_sets(
 
     minimal && _prune_minimal!(valid_sets)
     return valid_sets
+end
+
+"""
+    adjustment_set(cg::ADMG, x::Symbol, y::Symbol) -> Vector{Symbol}
+
+Return a single valid adjustment set for the causal effect of `x` on `y` in
+`cg`, preferring smaller sets. Returns the smallest valid adjustment set found
+by trying sizes 0, 1, 2, ... in order and stopping at the first valid set.
+
+# Examples
+
+```jldoctest
+julia> admg = cgraph(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG);
+
+julia> adjustment_set(admg, :X, :Y)
+1-element Vector{Symbol}:
+ :L
+```
+
+# References
+
+- [perkovic2018complete](@cite)
+"""
+function adjustment_set(cg::ADMG, x::Symbol, y::Symbol)
+    B = cg.backend
+    n = length(B.nodes)
+    xs = [node_index(cg, x)]
+    ys = [node_index(cg, y)]
+
+    forbidden = _forbidden_set(B, xs, ys)
+    y_mask = falses(n)
+    for yi in ys
+        y_mask[yi] = true
+    end
+
+    universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
+    removed = _pbg_removed(B, xs, ys)
+
+    result = _smallest_valid_subset(universe, z -> _m_separated_pbg(B, xs, ys, z, removed))
+    result === nothing && return Symbol[]
+    return [B.nodes[v] for v in result]
 end

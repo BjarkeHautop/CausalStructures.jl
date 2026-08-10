@@ -181,3 +181,23 @@ end
     sets = all_adjustment_sets(admg, :X, :Y; minimal = true, max_size = 3)
     @test isempty(sets)
 end
+
+@testitem "adjustment_set ADMG: returns valid set, prefers smaller" tags = [:unit] begin
+    admg = cgraph(
+        directed(:L, :X),
+        directed(:X, :Y),
+        directed(:L, :Y),
+        directed(:M, :Y);
+        class = ADMG,
+    )
+    z = adjustment_set(admg, :X, :Y)
+    @test is_valid_adjustment(admg, :X, :Y, z)
+    @test z == [:L]
+end
+
+@testitem "adjustment_set ADMG: empty set valid" tags = [:unit] begin
+    admg = cgraph(directed(:X, :Y); class = ADMG)
+    z = adjustment_set(admg, :X, :Y)
+    @test is_valid_adjustment(admg, :X, :Y, z)
+    @test z == Symbol[]
+end

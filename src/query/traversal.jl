@@ -550,14 +550,15 @@ function possible_descendants(cg::PAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
 end
 
 """
-    anteriors(cg::Union{DAG,AbstractPDAG,AbstractAG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
+    anteriors(cg::Union{DAG,ADMG,AbstractPDAG,AbstractAG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
 
 Return the anteriors of `node` in `cg`: all nodes from which `node` is reachable
 by following directed edges backward or traversing undirected edges.
 
-For a [`DAG`](@ref), anteriors are equivalent to [`ancestors`](@ref) (no
-undirected edges exist). For [`AbstractPDAG`](@ref) and [`AbstractAG`](@ref),
-undirected edges extend the reachable set beyond strict ancestors.
+For a [`DAG`](@ref) or [`ADMG`](@ref), anteriors are equivalent to
+[`ancestors`](@ref) (no undirected edges exist). For [`AbstractPDAG`](@ref) and
+[`AbstractAG`](@ref), undirected edges extend the reachable set beyond strict
+ancestors.
 
 When `open = true` (open definition, default), `node` itself is excluded from
 the result. When `open = false` (closed definition), `node` is included. The
@@ -586,6 +587,8 @@ julia> anteriors(pdag, :C)  # C reaches B via undirected edge, then A via direct
 ```
 """
 anteriors(cg::DAG, node::Symbol; open::Bool = _OPEN_DEFAULT) = ancestors(cg, node; open)
+
+anteriors(cg::ADMG, node::Symbol; open::Bool = _OPEN_DEFAULT) = ancestors(cg, node; open)
 
 function anteriors(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend
@@ -672,14 +675,15 @@ function anteriors(cg::AbstractAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
 end
 
 """
-    posteriors(cg::Union{DAG,AbstractPDAG,AbstractAG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
+    posteriors(cg::Union{DAG,ADMG,AbstractPDAG,AbstractAG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
 
 Return the posteriors of `node` in `cg`: all nodes reachable from `node` by
 following directed edges forward or traversing undirected edges.
 
-For a [`DAG`](@ref), posteriors are equivalent to [`descendants`](@ref) (no
-undirected edges exist). For [`AbstractPDAG`](@ref) and [`AbstractAG`](@ref),
-undirected edges extend the reachable set beyond strict descendants.
+For a [`DAG`](@ref) or [`ADMG`](@ref), posteriors are equivalent to
+[`descendants`](@ref) (no undirected edges exist). For [`AbstractPDAG`](@ref)
+and [`AbstractAG`](@ref), undirected edges extend the reachable set beyond
+strict descendants.
 
 When `open = true` (open definition, default), `node` itself is excluded from
 the result. When `open = false` (closed definition), `node` is included. The
@@ -709,6 +713,8 @@ julia> posteriors(pdag, :C)  # C reaches B via undirected edge only
 ```
 """
 posteriors(cg::DAG, node::Symbol; open::Bool = _OPEN_DEFAULT) = descendants(cg, node; open)
+
+posteriors(cg::ADMG, node::Symbol; open::Bool = _OPEN_DEFAULT) = descendants(cg, node; open)
 
 function posteriors(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend

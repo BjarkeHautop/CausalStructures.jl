@@ -137,3 +137,32 @@ function _search_subsets(
     end
     return _search_subsets_threaded(universe, min_size, max_size, make_checker, to_symbols)
 end
+
+# Shared brute-force search used by the `adjustment_set` methods for ADMG,
+# AG/MAG, and PAG: finds the smallest subset of `universe` (node indices) for
+# which `is_valid(z_idxs)` holds, trying sizes 0, 1, 2, ... in order and
+# stopping at the first valid set. Returns `nothing` if no subset up to
+# `length(universe)` is valid, distinct from a valid empty set (`Int[]`).
+function _smallest_valid_subset(universe::Vector{Int}, is_valid::F) where {F<:Function}
+    cur = Int[]
+
+    function enumerate!(start, k_rem)
+        if k_rem == 0
+            is_valid(cur) && return copy(cur)
+            return nothing
+        end
+        for i = start:length(universe)
+            push!(cur, universe[i])
+            result = enumerate!(i + 1, k_rem - 1)
+            pop!(cur)
+            result !== nothing && return result
+        end
+        return nothing
+    end
+
+    for k = 0:length(universe)
+        result = enumerate!(1, k)
+        result !== nothing && return result
+    end
+    return nothing
+end

@@ -27,10 +27,10 @@ function _edge_from_anteriors(a::Symbol, b::Symbol, full_ant::Dict{Symbol,Set{Sy
     end
 end
 
-# Marginalize and/or condition on variables in a DAG or AG (Definition 4.2.1,
-# Richardson & Spirtes 2002). Returns an AG over the remaining nodes.
+# Marginalize and/or condition on variables in a DAG, ADMG, or AG (Definition
+# 4.2.1, Richardson & Spirtes 2002). Returns an AG over the remaining nodes.
 """
-    condition_marginalize(cg::Union{DAG,AbstractAG};
+    condition_marginalize(cg::Union{DAG,ADMG,AbstractAG};
                           cond_vars = Symbol[], marg_vars = Symbol[]) -> AG
 
 Return the [`AG`](@ref) over the remaining nodes after conditioning on
@@ -58,12 +58,22 @@ AG with 2 nodes and 1 edge:
     X <-> Y
 ```
 
+```jldoctest
+julia> admg = cgraph(directed(:U, :X), directed(:U, :Y), directed(:X, :Y); class = ADMG);
+
+julia> condition_marginalize(admg; marg_vars = [:U])
+AG with 2 nodes and 1 edge:
+  nodes: X, Y
+  edges:
+    X --> Y
+```
+
 # References
 
 - [richardsonspirtes2002ancestral](@cite)
 """
 function condition_marginalize(
-    cg::Union{DAG,AbstractAG};
+    cg::Union{DAG,ADMG,AbstractAG};
     cond_vars::AbstractVector{Symbol} = Symbol[],
     marg_vars::AbstractVector{Symbol} = Symbol[],
 )

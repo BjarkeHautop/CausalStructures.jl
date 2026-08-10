@@ -116,3 +116,28 @@ end
         @test _valid_in_every_mag(pag, :X, :Y, z)
     end
 end
+
+# ── adjustment_set ─────────────────────────────────────────────────────────
+
+@testitem "adjustment_set PAG: returns valid set, prefers smaller" setup =
+    [PagAdjustmentHelpers] tags = [:unit] begin
+    mag = cgraph(
+        directed(:B, :X),
+        bidirected(:A, :X),
+        directed(:A, :Y),
+        directed(:X, :Y);
+        class = MAG,
+    )
+    pag = mag_to_pag(mag)
+    z = adjustment_set(pag, :X, :Y)
+    @test is_valid_adjustment(pag, :X, :Y, z)
+    @test z == [:A]
+end
+
+@testitem "adjustment_set PAG: no valid set for non-amenable graph" setup =
+    [PagAdjustmentHelpers] tags = [:unit] begin
+    mag = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = MAG)
+    pag = mag_to_pag(mag)
+    @test adjustment_set(pag, :X, :Y) == Symbol[]
+    @test !is_valid_adjustment(pag, :X, :Y)
+end

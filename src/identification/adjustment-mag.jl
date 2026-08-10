@@ -488,31 +488,8 @@ function adjustment_set(cg::AbstractAG, x::Symbol, y::Symbol)
     universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
     removed = _pbg_removed_ag(B, xs, ys)
 
-    cur = Int[]
-
-    # `nothing` marks "no valid set at this size", distinct from a valid but
-    # empty adjustment set -- using `Symbol[]` for both would make the k = 0
-    # case (empty set) indistinguishable from failure and never get returned.
-    function enumerate!(start, k_rem)
-        if k_rem == 0
-            if _m_separated_pbg_ag(B, xs, ys, cur, removed)
-                return [B.nodes[v] for v in cur]
-            end
-            return nothing
-        end
-        for i = start:length(universe)
-            push!(cur, universe[i])
-            result = enumerate!(i + 1, k_rem - 1)
-            pop!(cur)
-            result !== nothing && return result
-        end
-        return nothing
-    end
-
-    for k = 0:length(universe)
-        result = enumerate!(1, k)
-        result !== nothing && return result
-    end
-
-    return Symbol[]
+    result =
+        _smallest_valid_subset(universe, z -> _m_separated_pbg_ag(B, xs, ys, z, removed))
+    result === nothing && return Symbol[]
+    return [B.nodes[v] for v in result]
 end
