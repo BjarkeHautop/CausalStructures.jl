@@ -20,11 +20,11 @@ an arbitrary collection of nodes and edges, graph classes explicitly encode thei
 
 ## Installation
 
-Install from GitHub:
+CausalStructures can be installed directly from the Julia package manager.
+In the Julia REPL, press `]` to enter the Pkg mode, then run:
 
 ```julia
-using Pkg
-Pkg.add(url="https://github.com/BjarkeHautop/CausalStructures.jl")
+pkg> add CausalStructures
 ```
 
 ## Graph types
