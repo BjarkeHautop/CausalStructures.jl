@@ -94,7 +94,7 @@ By default (`node_radius = nothing`), each node's circle is sized to fit its
 own label:
 
 ```@example plot
-longlabels = cgraph("Exposure --> Y_outcome, Mediator --> Y_outcome"; class = DAG)
+longlabels = cgraph("Exposure --> Mediator --> Y_outcome"; class = DAG)
 plot(longlabels)
 ```
 
