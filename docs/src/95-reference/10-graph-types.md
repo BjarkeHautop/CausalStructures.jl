@@ -1,28 +1,140 @@
 # [Graph & Edge Types](@id graph-types-reference)
 
+Here we explain how to build a causal graph and briefly describe the meaning of
+each causal graph class. For a comprehensive introduction to these and the
+underlying theory, see, for instance, [pearl2009causality](@cite) or
+[peters2017elements](@cite); [richardsonspirtes2002ancestral](@cite) covers
+`AG`/`MAG` specifically, and [zhang2008completeness](@cite) covers `PAG`.
+
+## Constructing graphs
+
+[`cgraph`](@ref) is the entry point for building any graph. Give it some edges
+(and, if you have isolated vertices, some [`node`](@ref)s), tell it which
+`class` you want, and it builds and validates the graph for you.
+
+```@docs
+cgraph
+node
+```
+
+## Graph classes
+
+Every graph type is a subtype of [`CausalGraph`](@ref), and each graph class is
+verified on construction to be a valid graph.
+
 ```@docs
 CausalGraph
-AbstractPDAG
-AbstractAG
+```
+
+### Directed Acyclic Graphs
+
+A [`DAG`](@ref) (Directed Acyclic Graph) is the standard causal graph. All
+edges are directed (`-->`), and the graph contains no directed cycles.
+
+```@docs
 DAG
-UG
+```
+
+### Partially Directed Acyclic Graphs
+
+The subtypes of [`AbstractPDAG`](@ref) all have directed (`-->`) and
+undirected (`---`) edges, and the graph contains no directed cycles.
+Undirected edges represent edges whose orientation is not specified. A
+[`PDAG`](@ref) is the general case; a [`CPDAG`](@ref) is the special PDAG that
+represents an entire Markov equivalence class of DAGs (an edge stays
+undirected exactly when its orientation varies across the class); an
+[`MPDAG`](@ref) is a PDAG in which background knowledge may specify
+orientations that are not determined by the underlying equivalence class.
+
+See [Equivalence Classes](@ref equivalence-classes-guide) for worked
+examples of all three.
+
+```@docs
+AbstractPDAG
 PDAG
 CPDAG
 MPDAG
+```
+
+### Acyclic Directed Mixed Graphs
+
+An [`ADMG`](@ref) allows directed (`-->`) and bidirected (`<->`) edges.
+Directed edges represent causal relations, while bidirected edges represent
+unobserved confounding between their endpoints. For example, an ADMG is what
+you obtain when you use [`latent_project`](@ref) to project latent variables
+out of a DAG.
+
+```@docs
 ADMG
+```
+
+### Ancestral Graphs
+
+[`AbstractAG`](@ref) allows for directed (`-->`), bidirected (`<->`), and
+undirected edges (`---`). In an ancestral graph, an arrowhead at a vertex
+indicates that the vertex is not an ancestor of the other endpoint. Thus, a
+bidirected edge (`<->`) indicates that neither endpoint is an ancestor of the
+other. In causal applications, such edges commonly represent unobserved
+confounding. Undirected edges have a different meaning here than in a `PDAG`:
+rather than representing uncertain orientation, they represent **selection
+bias**, arising from conditioning on variables that induce associations
+through common effects.
+
+```@docs
+AbstractAG
 AG
 MAG
+```
+
+### Partial Ancestral Graphs
+
+A [`PAG`](@ref) plays a role for MAGs analogous to that of a CPDAG for DAGs:
+it represents a Markov equivalence class of MAGs
+([zhang2008completeness](@cite)). PAG edges can have three endpoint marks: a
+tail, an arrowhead, or a circle. A circle indicates that the corresponding
+endpoint mark is not determined by the Markov equivalence class.
+
+```@docs
 PAG
+```
+
+### Undirected Graphs
+
+Not commonly used in causal inference, but still present for users that want
+it. Only undirected (`---`) edges are allowed.
+
+```@docs
+UG
+```
+
+### The escape hatch
+
+[`UNKNOWN`](@ref) imposes no structural constraints on the graph. It accepts
+all supported edge types, including self-loops and parallel edges. Use it when
+you need to represent a graph that does not fit any of the other graph classes.
+
+```@docs
 UNKNOWN
+```
+
+## Edges
+
+```@docs
 CausalEdge
-cgraph
-node
 directed
 undirected
 bidirected
 partially_directed
 partially_undirected
 partial
+```
+
+## Background knowledge
+
+Sometimes you want to impose some knowledge into your graph, such as `A`
+must cause `B`, or that `C` definitely doesn't cause `D`.
+
+```@docs
 RequiredEdge
 ForbiddenEdge
 required_directed

@@ -73,7 +73,10 @@ for ms in (2, 3, 4)
 end
 ```
 
-## Advanced algorithms
+## Expensive algorithms
+
+Here we will show the performance of some of the most expensive
+algorithms.
 
 ### Exact uniform DAG sampling
 
@@ -109,9 +112,19 @@ for k in (5, 7, 9)
 end
 ```
 
-For `k = 9` (362,880 DAGs), [`enumerate_dags`](@ref) takes substantially longer
-than [`count_dags`](@ref), since it must materialize every DAG rather than
-simply count them.
+[`enumerate_dags`](@ref) is slower than [`count_dags`](@ref), since it must
+materialize every DAG rather than simply count them:
+
+```@example bench
+for k in (5, 6, 7)
+    names = [Symbol("V$i") for i = 1:k]
+    clique_edges = [undirected(names[i], names[j]) for i = 1:k for j = (i+1):k]
+    pdag = cgraph(clique_edges...; class = PDAG)
+    d = length(enumerate_dags(pdag))
+    t = @benchmark enumerate_dags($pdag) samples = 5 evals = 1
+    println("k=$k  DAGs=$d  ", median(t))
+end
+```
 
 ### MAG equivalence class enumeration
 
