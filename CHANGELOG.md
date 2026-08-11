@@ -11,7 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `d_separated`, `m_separated`, `minimal_separator` (`DAG`), and the backdoor/frontdoor/adjustment-set functions now accept a `Vector{Symbol}` (in addition to a single `Symbol`) for `x`/`y`, for querying sets of treatments/outcomes. `is_valid_iv`/`all_iv_sets` accept a `Vector{Symbol}` outcome `y` (the instrumental-set criterion still requires a single treatment `x`).
 
-
 ## [0.3.0] - 2026-08-10
 
 ### Breaking changes

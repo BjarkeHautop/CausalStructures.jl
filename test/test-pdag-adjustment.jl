@@ -203,11 +203,9 @@ end
     @test minimal_separator(pdag, :A, :B) === nothing
 end
 
-@testitem "minimal_separator AbstractPDAG: accepts Vector{Symbol} for x and y" tags = [:unit] begin
-    pdag = cgraph(
-        "A --> M1, M1 --> Y, B --> M2, M2 --> Y";
-        class = PDAG,
-    )
+@testitem "minimal_separator AbstractPDAG: accepts Vector{Symbol} for x and y" tags =
+    [:unit] begin
+    pdag = cgraph("A --> M1, M1 --> Y, B --> M2, M2 --> Y"; class = PDAG)
     sep = minimal_separator(pdag, [:A, :B], :Y)
     @test sep == [:M1, :M2]
     @test d_separated(pdag, [:A, :B], :Y, sep)
