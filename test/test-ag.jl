@@ -235,3 +235,18 @@ end
     ag = cgraph(bidirected(:X, :Y); class = AG)
     @test minimal_separator(ag, :X, :Y) === nothing
 end
+
+@testitem "minimal_separator AbstractAG: accepts Vector{Symbol} for x and y" tags = [:unit] begin
+    mag = cgraph(
+        bidirected(:A, :X1),
+        bidirected(:B, :X2),
+        directed(:A, :M1),
+        directed(:B, :M2),
+        directed(:M1, :Y),
+        directed(:M2, :Y);
+        class = MAG,
+    )
+    sep = minimal_separator(mag, [:X1, :X2], :Y)
+    @test Set(sep) == Set([:A, :B])
+    @test m_separated(mag, [:X1, :X2], :Y, sep)
+end

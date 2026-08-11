@@ -306,6 +306,12 @@ function node_index(cg::CausalGraph, node::Symbol)
     return idx
 end
 
+_node_indices(cg::CausalGraph, x::Symbol) = [node_index(cg, x)]
+_node_indices(cg::CausalGraph, x::AbstractVector{Symbol}) = [node_index(cg, v) for v in x]
+
+_as_symbol_set(x::Symbol) = Set{Symbol}((x,))
+_as_symbol_set(x::AbstractVector{Symbol}) = Set{Symbol}(x)
+
 """
     neighbors(cg::CausalGraph, node::Symbol; mode::Symbol = :all) -> Vector{Symbol}
 

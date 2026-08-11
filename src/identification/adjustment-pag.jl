@@ -427,10 +427,12 @@ end
 # ── public API ────────────────────────────────────────────────────────────────
 
 """
-    is_valid_adjustment(cg::PAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    is_valid_adjustment(cg::PAG, x, y, z = Symbol[]) -> Bool
 
 Return `true` if `z` is a valid adjustment set for estimating the total causal
 effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 Circle marks collapse to tails for reachability and moralization purposes, and
 edges out of `x` are only removed from the proper backdoor graph if they are
@@ -456,6 +458,17 @@ false
 
 julia> is_valid_adjustment(pag, :X, :Y, [:A])
 true
+
+julia> mag2 = cgraph(
+           directed(:B1, :X1), bidirected(:A1, :X1), directed(:A1, :Y), directed(:X1, :Y),
+           directed(:B2, :X2), bidirected(:A2, :X2), directed(:A2, :Y), directed(:X2, :Y);
+           class = MAG,
+       );
+
+julia> pag2 = mag_to_pag(mag2);
+
+julia> is_valid_adjustment(pag2, [:X1, :X2], [:Y], [:A1, :A2])
+true
 ```
 
 # References
@@ -464,13 +477,13 @@ true
 """
 function is_valid_adjustment(
     cg::PAG,
-    x::Symbol,
-    y::Symbol,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}},
     z::AbstractVector{Symbol} = Symbol[],
 )
     B = cg.backend
-    xs = [node_index(cg, x)]
-    ys = [node_index(cg, y)]
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
     z_idxs = [node_index(cg, v) for v in z]
 
     forbidden = _forbidden_set_pag(B, xs, ys)
@@ -481,12 +494,14 @@ function is_valid_adjustment(
 end
 
 """
-    all_adjustment_sets(cg::PAG, x::Symbol, y::Symbol;
+    all_adjustment_sets(cg::PAG, x, y;
                         minimal::Bool = true, max_size::Int = 3)
         -> Vector{Vector{Symbol}}
 
 Return all valid adjustment sets for the total causal effect of `x` on `y` in
 `cg`, up to size `max_size`.
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 (default), only inclusion-minimal sets are returned.
@@ -504,6 +519,18 @@ julia> pag = mag_to_pag(mag);
 julia> all_adjustment_sets(pag, :X, :Y)
 1-element Vector{Vector{Symbol}}:
  [:A]
+
+julia> mag2 = cgraph(
+           directed(:B1, :X1), bidirected(:A1, :X1), directed(:A1, :Y), directed(:X1, :Y),
+           directed(:B2, :X2), bidirected(:A2, :X2), directed(:A2, :Y), directed(:X2, :Y);
+           class = MAG,
+       );
+
+julia> pag2 = mag_to_pag(mag2);
+
+julia> all_adjustment_sets(pag2, [:X1, :X2], [:Y])
+1-element Vector{Vector{Symbol}}:
+ [:A1, :A2]
 ```
 
 # References
@@ -512,15 +539,15 @@ julia> all_adjustment_sets(pag, :X, :Y)
 """
 function all_adjustment_sets(
     cg::PAG,
-    x::Symbol,
-    y::Symbol;
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}};
     minimal::Bool = true,
     max_size::Int = 3,
 )
     B = cg.backend
     n = length(B.nodes)
-    xs = [node_index(cg, x)]
-    ys = [node_index(cg, y)]
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
 
     forbidden = _forbidden_set_pag(B, xs, ys)
     y_mask = falses(n)
@@ -590,11 +617,13 @@ function all_adjustment_sets(
 end
 
 """
-    adjustment_set(cg::PAG, x::Symbol, y::Symbol) -> Vector{Symbol}
+    adjustment_set(cg::PAG, x, y) -> Vector{Symbol}
 
 Return a single valid adjustment set for the causal effect of `x` on `y` in
 `cg`, preferring smaller sets. Returns the smallest valid adjustment set found
 by trying sizes 0, 1, 2, ... in order and stopping at the first valid set.
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 # Examples
 
@@ -609,17 +638,34 @@ julia> pag = mag_to_pag(mag);
 julia> adjustment_set(pag, :X, :Y)
 1-element Vector{Symbol}:
  :A
+
+julia> mag2 = cgraph(
+           directed(:B1, :X1), bidirected(:A1, :X1), directed(:A1, :Y), directed(:X1, :Y),
+           directed(:B2, :X2), bidirected(:A2, :X2), directed(:A2, :Y), directed(:X2, :Y);
+           class = MAG,
+       );
+
+julia> pag2 = mag_to_pag(mag2);
+
+julia> sort(adjustment_set(pag2, [:X1, :X2], [:Y]))
+2-element Vector{Symbol}:
+ :A1
+ :A2
 ```
 
 # References
 
 - [perkovic2018complete](@cite)
 """
-function adjustment_set(cg::PAG, x::Symbol, y::Symbol)
+function adjustment_set(
+    cg::PAG,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}},
+)
     B = cg.backend
     n = length(B.nodes)
-    xs = [node_index(cg, x)]
-    ys = [node_index(cg, y)]
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
 
     forbidden = _forbidden_set_pag(B, xs, ys)
     y_mask = falses(n)

@@ -201,3 +201,12 @@ end
     @test is_valid_adjustment(admg, :X, :Y, z)
     @test z == Symbol[]
 end
+
+@testitem "is_valid_adjustment ADMG: accepts Vector{Symbol} for x and y" tags = [:unit] begin
+    admg =
+        cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = ADMG)
+    @test !is_valid_adjustment(admg, [:X1, :X2], [:Y])
+    @test is_valid_adjustment(admg, [:X1, :X2], [:Y], [:L1, :L2])
+    @test all_adjustment_sets(admg, [:X1, :X2], [:Y]) == [[:L1, :L2]]
+    @test Set(adjustment_set(admg, [:X1, :X2], [:Y])) == Set([:L1, :L2])
+end

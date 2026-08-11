@@ -515,3 +515,83 @@ end
     admg = latent_project(dag, [:U])
     @test isempty(all_backdoor_sets(admg, :X, :Y))
 end
+
+# ── set-valued x/y ───────────────────────────────────────────────────────────
+
+@testsnippet TwoConfounderGraph begin
+    # Two independent confounded treatments: L1-->X1-->Y, L1-->Y, L2-->X2-->Y, L2-->Y
+    function _two_confounder_graph(class)
+        cgraph(
+            "L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y";
+            class = class,
+        )
+    end
+end
+
+@testitem "is_valid_backdoor DAG: accepts Vector{Symbol} for x and y" setup =
+    [TwoConfounderGraph] tags = [:unit] begin
+    cg = _two_confounder_graph(DAG)
+    @test !is_valid_backdoor(cg, [:X1, :X2], [:Y])
+    @test is_valid_backdoor(cg, [:X1, :X2], [:Y], [:L1, :L2])
+    @test !is_valid_backdoor(cg, [:X1, :X2], [:Y], [:L1])
+end
+
+@testitem "is_valid_backdoor ADMG: accepts Vector{Symbol} for x and y" setup =
+    [TwoConfounderGraph] tags = [:unit] begin
+    admg = _two_confounder_graph(ADMG)
+    @test !is_valid_backdoor(admg, [:X1, :X2], [:Y])
+    @test is_valid_backdoor(admg, [:X1, :X2], [:Y], [:L1, :L2])
+end
+
+@testitem "all_backdoor_sets: accepts Vector{Symbol} for x and y" setup =
+    [TwoConfounderGraph] tags = [:unit] begin
+    cg = _two_confounder_graph(DAG)
+    @test all_backdoor_sets(cg, [:X1, :X2], [:Y]) == [[:L1, :L2]]
+end
+
+@testitem "is_valid_adjustment DAG: accepts Vector{Symbol} for x and y" setup =
+    [TwoConfounderGraph] tags = [:unit] begin
+    cg = _two_confounder_graph(DAG)
+    @test is_valid_adjustment(cg, [:X1, :X2], [:Y], [:L1, :L2])
+    @test !is_valid_adjustment(cg, [:X1, :X2], [:Y])
+end
+
+@testitem "all_adjustment_sets DAG: accepts Vector{Symbol} for x and y" setup =
+    [TwoConfounderGraph] tags = [:unit] begin
+    cg = _two_confounder_graph(DAG)
+    @test all_adjustment_sets(cg, [:X1, :X2], [:Y]) == [[:L1, :L2]]
+end
+
+@testitem "adjustment_set DAG: accepts Vector{Symbol} for x and y" setup =
+    [TwoConfounderGraph] tags = [:unit] begin
+    cg = _two_confounder_graph(DAG)
+    for type in (:parents, :backdoor, :optimal)
+        z = adjustment_set(cg, [:X1, :X2], [:Y]; type = type)
+        @test Set(z) == Set([:L1, :L2])
+        @test is_valid_backdoor(cg, [:X1, :X2], [:Y], z)
+    end
+end
+
+@testitem "adjustment_set AbstractPDAG: accepts Vector{Symbol} for x and y" setup =
+    [TwoConfounderGraph] tags = [:unit] begin
+    pdag = _two_confounder_graph(PDAG)
+    z = adjustment_set(pdag, [:X1, :X2], [:Y])
+    @test Set(z) == Set([:L1, :L2])
+    @test is_valid_adjustment(pdag, [:X1, :X2], [:Y], z)
+end
+
+@testitem "is_valid_adjustment MAG: accepts Vector{Symbol} for x and y" tags = [:unit] begin
+    mag = cgraph(
+        bidirected(:A, :X1),
+        bidirected(:B, :X2),
+        directed(:A, :M1),
+        directed(:B, :M2),
+        directed(:M1, :Y),
+        directed(:M2, :Y),
+        directed(:X1, :Y),
+        directed(:X2, :Y);
+        class = MAG,
+    )
+    @test is_valid_adjustment(mag, [:X1, :X2], [:Y], [:A, :B])
+    @test !is_valid_adjustment(mag, [:X1, :X2], [:Y])
+end

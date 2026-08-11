@@ -346,13 +346,13 @@ end
 
 function is_valid_adjustment(
     cg::AbstractAG,
-    x::Symbol,
-    y::Symbol,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}},
     z::AbstractVector{Symbol} = Symbol[],
 )
     B = cg.backend
-    xs = [node_index(cg, x)]
-    ys = [node_index(cg, y)]
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
     z_idxs = [node_index(cg, v) for v in z]
 
     forbidden = _forbidden_set(B, xs, ys)
@@ -364,15 +364,15 @@ end
 
 function all_adjustment_sets(
     cg::AbstractAG,
-    x::Symbol,
-    y::Symbol;
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}};
     minimal::Bool = true,
     max_size::Int = 3,
 )
     B = cg.backend
     n = length(B.nodes)
-    xs = [node_index(cg, x)]
-    ys = [node_index(cg, y)]
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
 
     forbidden = _forbidden_set(B, xs, ys)
     y_mask = falses(n)
@@ -450,11 +450,13 @@ function all_adjustment_sets(
 end
 
 """
-    adjustment_set(cg::AbstractAG, x::Symbol, y::Symbol) -> Vector{Symbol}
+    adjustment_set(cg::AbstractAG, x, y) -> Vector{Symbol}
 
 Return a single valid adjustment set for the causal effect of `x` on `y` in `cg`,
 preferring smaller sets. Returns the smallest valid adjustment set found by trying
 sizes 0, 1, 2, ... in order and stopping at the first valid set.
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 # Examples
 
@@ -467,17 +469,34 @@ julia> mag = cgraph(
 julia> adjustment_set(mag, :X, :Y)
 1-element Vector{Symbol}:
  :A
+
+julia> mag2 = cgraph(
+           bidirected(:A, :X1), bidirected(:B, :X2),
+           directed(:A, :M1), directed(:B, :M2),
+           directed(:M1, :Y), directed(:M2, :Y),
+           directed(:X1, :Y), directed(:X2, :Y);
+           class = MAG,
+       );
+
+julia> sort(adjustment_set(mag2, [:X1, :X2], [:Y]))
+2-element Vector{Symbol}:
+ :A
+ :B
 ```
 
 # References
 
 - [perkovic2018complete](@cite)
 """
-function adjustment_set(cg::AbstractAG, x::Symbol, y::Symbol)
+function adjustment_set(
+    cg::AbstractAG,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}},
+)
     B = cg.backend
     n = length(B.nodes)
-    xs = [node_index(cg, x)]
-    ys = [node_index(cg, y)]
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
 
     forbidden = _forbidden_set(B, xs, ys)
     y_mask = falses(n)

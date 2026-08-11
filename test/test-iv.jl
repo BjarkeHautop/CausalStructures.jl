@@ -163,3 +163,21 @@ end
     admg = latent_project(dag, [:U])
     @test all_iv_sets(dag, :X, :Y) == all_iv_sets(admg, :X, :Y)
 end
+
+# ── set-valued y ─────────────────────────────────────────────────────────────
+
+@testitem "is_valid_iv/all_iv_sets: accepts Vector{Symbol} for y" tags = [:unit] begin
+    dag = cgraph(
+        directed(:Z1, :X),
+        directed(:Z2, :X),
+        directed(:X, :Y1),
+        directed(:X, :Y2),
+        directed(:U, :X),
+        directed(:U, :Y1),
+        directed(:U, :Y2);
+        class = DAG,
+    )
+    @test is_valid_iv(dag, :X, [:Y1, :Y2], [:Z1])
+    @test !is_valid_iv(dag, :X, [:Y1, :Y2], [:U])
+    @test Set(all_iv_sets(dag, :X, [:Y1, :Y2])) == Set([[:Z1], [:Z2]])
+end

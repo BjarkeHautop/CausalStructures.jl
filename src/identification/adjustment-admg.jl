@@ -310,10 +310,12 @@ function _pbg_dag(cg::DAG, xs::Vector{Int}, ys::Vector{Int})
 end
 
 """
-    is_valid_adjustment(cg::DAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    is_valid_adjustment(cg::DAG, x, y, z = Symbol[]) -> Bool
 
 Return `true` if `z` is a valid adjustment set for estimating the total causal
 effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 For a DAG this reduces to the adjustment criterion of Shpitser (2012), which is
 sound *and complete* for adjustment -- unlike [`is_valid_backdoor`](@ref)
@@ -331,6 +333,11 @@ false
 
 julia> is_valid_adjustment(dag, :X, :Y, [:A])
 true
+
+julia> dag2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = DAG);
+
+julia> is_valid_adjustment(dag2, [:X1, :X2], [:Y], [:L1, :L2])
+true
 ```
 
 # References
@@ -339,13 +346,13 @@ true
 """
 function is_valid_adjustment(
     cg::DAG,
-    x::Symbol,
-    y::Symbol,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}},
     z::AbstractVector{Symbol} = Symbol[],
 )
     B = cg.backend
-    xs = [node_index(cg, x)]
-    ys = [node_index(cg, y)]
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
     z_idxs = [node_index(cg, v) for v in z]
 
     forbidden = _forbidden_set(B, xs, ys)
@@ -355,12 +362,14 @@ function is_valid_adjustment(
 end
 
 """
-    all_adjustment_sets(cg::DAG, x::Symbol, y::Symbol;
+    all_adjustment_sets(cg::DAG, x, y;
                         minimal::Bool = true, max_size::Int = 3)
         -> Vector{Vector{Symbol}}
 
 Return all valid adjustment sets for the total causal effect of `x` on `y` in
 `cg`, up to size `max_size`.
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 (default), only inclusion-minimal sets are returned.
@@ -381,6 +390,12 @@ julia> all_adjustment_sets(dag, :X, :Y; minimal=false)
 2-element Vector{Vector{Symbol}}:
  [:A]
  [:A, :B]
+
+julia> dag2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = DAG);
+
+julia> all_adjustment_sets(dag2, [:X1, :X2], [:Y])
+1-element Vector{Vector{Symbol}}:
+ [:L1, :L2]
 ```
 
 # References
@@ -389,23 +404,25 @@ julia> all_adjustment_sets(dag, :X, :Y; minimal=false)
 """
 function all_adjustment_sets(
     cg::DAG,
-    x::Symbol,
-    y::Symbol;
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}};
     minimal::Bool = true,
     max_size::Int = 3,
 )
     B = cg.backend
     n = length(B.nodes)
-    x_idx = node_index(cg, x)
-    y_idx = node_index(cg, y)
-    xs = [x_idx]
-    ys = [y_idx]
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
 
     forbidden = _forbidden_set(B, xs, ys)
-    universe = [v for v = 1:n if !forbidden[v] && v != y_idx]
+    y_mask = falses(n)
+    for yi in ys
+        y_mask[yi] = true
+    end
+    universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
 
     # `_pbg_dag`'s backend shares `cg`'s node indices (see its docstring
-    # comment), so the hot loop below can index into it with `x_idx`/`y_idx`
+    # comment), so the hot loop below can index into it with `xs`/`ys`
     # directly without any Symbol round-trip.
     Bx = _pbg_dag(cg, xs, ys).backend
 
@@ -427,12 +444,17 @@ function all_adjustment_sets(
             end
 
             empty!(seeds_buf)
-            push!(seeds_buf, x_idx, y_idx)
+            append!(seeds_buf, xs)
+            append!(seeds_buf, ys)
             append!(seeds_buf, z_idxs)
             _ancestors_bitmask!(anc_mask, anc_stack, Bx, seeds_buf)
 
-            _reachable_dag_single!(visited, q, reached, Bx, x_idx, anc_mask, blocked)
-            return !reached[y_idx]
+            for xi in xs
+                blocked[xi] && continue
+                _reachable_dag_single!(visited, q, reached, Bx, xi, anc_mask, blocked)
+                any(reached[yi] for yi in ys) && return false
+            end
+            return true
         end
     end
 
@@ -447,10 +469,12 @@ end
 # ── ADMG ──────────────────────────────────────────────────────────────────────
 
 """
-    is_valid_adjustment(cg::Union{ADMG,AbstractAG}, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    is_valid_adjustment(cg::Union{ADMG,AbstractAG}, x, y, z = Symbol[]) -> Bool
 
 Return `true` if `z` is a valid adjustment set for estimating the total causal
 effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 A set `z` is valid if it contains no forbidden node (no node in
 `De(cn(x,y) \\ {y}) ∪ {x}`, where `cn(x,y)` are the proper causal nodes from
@@ -482,19 +506,26 @@ julia> is_valid_adjustment(mag, :X, :Y, [:A])
 true
 ```
 
+```jldoctest
+julia> admg2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = ADMG);
+
+julia> is_valid_adjustment(admg2, [:X1, :X2], [:Y], [:L1, :L2])
+true
+```
+
 # References
 
 - [perkovic2018complete](@cite)
 """
 function is_valid_adjustment(
     cg::ADMG,
-    x::Symbol,
-    y::Symbol,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}},
     z::AbstractVector{Symbol} = Symbol[],
 )
     B = cg.backend
-    xs = [node_index(cg, x)]
-    ys = [node_index(cg, y)]
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
     z_idxs = [node_index(cg, v) for v in z]
 
     forbidden = _forbidden_set(B, xs, ys)
@@ -505,12 +536,14 @@ function is_valid_adjustment(
 end
 
 """
-    all_adjustment_sets(cg::Union{ADMG,AbstractAG,AbstractPDAG}, x::Symbol, y::Symbol;
+    all_adjustment_sets(cg::Union{ADMG,AbstractAG,AbstractPDAG}, x, y;
                         minimal::Bool = true, max_size::Int = 3)
         -> Vector{Vector{Symbol}}
 
 Return all valid adjustment sets for the total causal effect of `x` on `y` in
 `cg`, up to size `max_size`.
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 Bruteforces over subsets of the allowed universe of nodes (nodes that are not
 forbidden and not `y`), checking each for validity using
@@ -558,18 +591,26 @@ julia> all_adjustment_sets(mpdag, :X, :Y, minimal = false)
  [:A, :K]
  [:A, :B, :K]
 ```
+
+```jldoctest
+julia> admg2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = ADMG);
+
+julia> all_adjustment_sets(admg2, [:X1, :X2], [:Y])
+1-element Vector{Vector{Symbol}}:
+ [:L1, :L2]
+```
 """
 function all_adjustment_sets(
     cg::ADMG,
-    x::Symbol,
-    y::Symbol;
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}};
     minimal::Bool = true,
     max_size::Int = 3,
 )
     B = cg.backend
     n = length(B.nodes)
-    xs = [node_index(cg, x)]
-    ys = [node_index(cg, y)]
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
 
     forbidden = _forbidden_set(B, xs, ys)
     y_mask = falses(n)
@@ -638,11 +679,13 @@ function all_adjustment_sets(
 end
 
 """
-    adjustment_set(cg::ADMG, x::Symbol, y::Symbol) -> Vector{Symbol}
+    adjustment_set(cg::ADMG, x, y) -> Vector{Symbol}
 
 Return a single valid adjustment set for the causal effect of `x` on `y` in
 `cg`, preferring smaller sets. Returns the smallest valid adjustment set found
 by trying sizes 0, 1, 2, ... in order and stopping at the first valid set.
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 # Examples
 
@@ -652,17 +695,28 @@ julia> admg = cgraph(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class
 julia> adjustment_set(admg, :X, :Y)
 1-element Vector{Symbol}:
  :L
+
+julia> admg2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = ADMG);
+
+julia> sort(adjustment_set(admg2, [:X1, :X2], [:Y]))
+2-element Vector{Symbol}:
+ :L1
+ :L2
 ```
 
 # References
 
 - [perkovic2018complete](@cite)
 """
-function adjustment_set(cg::ADMG, x::Symbol, y::Symbol)
+function adjustment_set(
+    cg::ADMG,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}},
+)
     B = cg.backend
     n = length(B.nodes)
-    xs = [node_index(cg, x)]
-    ys = [node_index(cg, y)]
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
 
     forbidden = _forbidden_set(B, xs, ys)
     y_mask = falses(n)

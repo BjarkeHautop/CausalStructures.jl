@@ -158,3 +158,63 @@ end
     admg = cgraph(bidirected(:X, :Y); class = ADMG)
     @test minimal_separator(admg, :X, :Y) === nothing
 end
+
+# ── set-valued x/y ───────────────────────────────────────────────────────────
+
+@testitem "d_separated: accepts Vector{Symbol} for x and y" tags = [:unit] begin
+    chain = cgraph(directed(:A, :C), directed(:B, :C), directed(:C, :D); class = DAG)
+    @test !d_separated(chain, [:A, :B], :D)
+    @test d_separated(chain, [:A, :B], :D, [:C])
+    @test d_separated(chain, :D, [:A, :B], [:C])  # y can be the vector side too
+end
+
+@testitem "d_separated: set result matches pairwise conjunction" tags = [:unit] begin
+    cg = cgraph(
+        directed(:A, :C),
+        directed(:B, :C),
+        directed(:C, :D),
+        directed(:E, :D);
+        class = DAG,
+    )
+    xs, ys, z = [:A, :B], [:D, :E], Symbol[]
+    expected = all(d_separated(cg, x, y, z) for x in xs, y in ys)
+    @test d_separated(cg, xs, ys, z) == expected
+end
+
+@testitem "d_separated: empty vector is trivially separated" tags = [:unit] begin
+    dag = cgraph(directed(:A, :B); class = DAG)
+    @test d_separated(dag, Symbol[], :B)
+    @test d_separated(dag, :A, Symbol[])
+end
+
+@testitem "m_separated: accepts Vector{Symbol} for x and y (ADMG)" tags = [:unit] begin
+    admg = cgraph(bidirected(:A, :C), bidirected(:B, :C); class = ADMG)
+    @test !m_separated(admg, [:A, :B], :C)
+    @test m_separated(admg, [:A, :B], :C, [:A, :B])
+end
+
+@testitem "minimal_separator: accepts Vector{Symbol} for x and y (DAG)" tags = [:unit] begin
+    dag = cgraph(
+        directed(:A, :M1),
+        directed(:M1, :Y),
+        directed(:B, :M2),
+        directed(:M2, :Y);
+        class = DAG,
+    )
+    sep = minimal_separator(dag, [:A, :B], :Y)
+    @test sep == [:M1, :M2]
+    @test d_separated(dag, [:A, :B], :Y, sep)
+end
+
+@testitem "minimal_separator: accepts Vector{Symbol} for x and y (ADMG)" tags = [:unit] begin
+    admg = cgraph(
+        directed(:A, :M1),
+        directed(:M1, :Y),
+        directed(:B, :M2),
+        directed(:M2, :Y);
+        class = ADMG,
+    )
+    sep = minimal_separator(admg, [:A, :B], :Y)
+    @test sep == [:M1, :M2]
+    @test m_separated(admg, [:A, :B], :Y, sep)
+end

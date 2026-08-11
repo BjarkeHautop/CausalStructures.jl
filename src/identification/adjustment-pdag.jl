@@ -190,10 +190,12 @@ function _d_separated_pbg_pdag(
 end
 
 """
-    is_valid_adjustment(cg::AbstractPDAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    is_valid_adjustment(cg::AbstractPDAG, x, y, z = Symbol[]) -> Bool
 
 Return `true` if `z` is a valid adjustment set for estimating the total causal
 effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 The forbidden set is computed using possible descendants (nodes reachable via
 directed or undirected edges) and the separation check uses the moralized
@@ -209,6 +211,11 @@ false
 
 julia> is_valid_adjustment(pdag, :X, :Y, [:A])
 true
+
+julia> pdag2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = PDAG);
+
+julia> is_valid_adjustment(pdag2, [:X1, :X2], [:Y], [:L1, :L2])
+true
 ```
 
 # References
@@ -217,13 +224,13 @@ true
 """
 function is_valid_adjustment(
     cg::AbstractPDAG,
-    x::Symbol,
-    y::Symbol,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}},
     z::AbstractVector{Symbol} = Symbol[],
 )
     B = cg.backend
-    xs = [node_index(cg, x)]
-    ys = [node_index(cg, y)]
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
     z_idxs = [node_index(cg, v) for v in z]
 
     forbidden = _forbidden_set_pdag(B, xs, ys)
@@ -234,12 +241,14 @@ function is_valid_adjustment(
 end
 
 """
-    all_adjustment_sets(cg::AbstractPDAG, x::Symbol, y::Symbol;
+    all_adjustment_sets(cg::AbstractPDAG, x, y;
                         minimal::Bool = true, max_size::Int = 3)
         -> Vector{Vector{Symbol}}
 
 Return all valid adjustment sets for the total causal effect of `x` on `y` in
 `cg`, up to size `max_size`.
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 (default), only inclusion-minimal sets are returned.
@@ -264,6 +273,12 @@ julia> all_adjustment_sets(mpdag, :X, :Y, minimal = false)
  [:A, :B]
  [:A, :K]
  [:A, :B, :K]
+
+julia> pdag2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = PDAG);
+
+julia> all_adjustment_sets(pdag2, [:X1, :X2], [:Y])
+1-element Vector{Vector{Symbol}}:
+ [:L1, :L2]
 ```
 
 # References
@@ -272,15 +287,15 @@ julia> all_adjustment_sets(mpdag, :X, :Y, minimal = false)
 """
 function all_adjustment_sets(
     cg::AbstractPDAG,
-    x::Symbol,
-    y::Symbol;
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}};
     minimal::Bool = true,
     max_size::Int = 3,
 )
     B = cg.backend
     n = length(B.nodes)
-    xs = [node_index(cg, x)]
-    ys = [node_index(cg, y)]
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
 
     forbidden = _forbidden_set_pdag(B, xs, ys)
     y_mask = falses(n)

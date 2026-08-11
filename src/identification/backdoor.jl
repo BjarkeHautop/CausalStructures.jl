@@ -1,14 +1,17 @@
 """
-    is_valid_backdoor(cg::Union{DAG,ADMG}, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    is_valid_backdoor(cg::Union{DAG,ADMG}, x, y, z = Symbol[]) -> Bool
 
 Return `true` if `z` satisfies the backdoor criterion for the causal effect of
 `x` on `y` in `cg`.
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`; for
+sets, `x`/`y` in the criterion below refer to the whole set.
 
 `z` is a valid backdoor set if (1) no node in `z` is a descendant of `x`, and
 (2) `z` blocks every backdoor path from `x` to `y`.
 
 - [`DAG`](@ref): equivalently, every parent of `x` is d-separated from `y`
-  given `z ∪ {x}`.
+  given `z ∪ x`.
 - [`ADMG`](@ref): equivalently, `z` m-separates `x` from `y` in the graph
   obtained by removing every directed edge out of `x`.
 
@@ -30,6 +33,14 @@ false
 
 julia> is_valid_backdoor(admg, :X, :Y, [:A]) # conditioning on A still blocks it
 true
+
+julia> cg2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = DAG);
+
+julia> is_valid_backdoor(cg2, [:X1, :X2], [:Y])              # both confounding paths are open
+false
+
+julia> is_valid_backdoor(cg2, [:X1, :X2], [:Y], [:L1, :L2])  # conditioning on both blocks them
+true
 ```
 
 # References
@@ -38,17 +49,26 @@ true
 """
 function is_valid_backdoor(
     cg::DAG,
-    x::Symbol,
-    y::Symbol,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}},
     z::AbstractVector{Symbol} = Symbol[],
 )
     B = cg.backend
     n = length(B.nodes)
-    x_idx = node_index(cg, x)
-    y_idx = node_index(cg, y)
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
+    (isempty(xs) || isempty(ys)) && return true
+    xs_mask = falses(n)
+    for xi in xs
+        xs_mask[xi] = true
+    end
+    ys_mask = falses(n)
+    for yi in ys
+        ys_mask[yi] = true
+    end
 
-    # Reject any z member that is a descendant of x.
-    de_x = _descendants_bitmask(B, [x_idx])
+    # Reject any z member that is a descendant of some x ∈ X.
+    de_x = _descendants_bitmask(B, xs)
     z_idxs = Vector{Int}(undef, length(z))
     for (i, v) in enumerate(z)
         vi = node_index(cg, v)
@@ -56,14 +76,23 @@ function is_valid_backdoor(
         z_idxs[i] = vi
     end
 
-    parents_x = _parents_slice(B, x_idx)
+    # Pa(X) \ X: parents of some x ∈ X that are not themselves in X.
+    parents_x = Int[]
+    seen_p = falses(n)
+    for xi in xs
+        for p in _parents_slice(B, xi)
+            (seen_p[p] || xs_mask[p]) && continue
+            seen_p[p] = true
+            push!(parents_x, p)
+        end
+    end
     isempty(parents_x) && return true
 
-    # obs = z ∪ {x}.  Every parent p of x is an ancestor of x ∈ obs, so
+    # obs = z ∪ X.  Every parent p of X is an ancestor of some x ∈ obs, so
     # ancestors(p ∪ y ∪ obs) = ancestors(y ∪ obs) for all parents p.
     # Precompute the shared ancestor mask and blocked set once.
-    obs_idxs = push!(copy(z_idxs), x_idx)
-    seeds = unique!([y_idx; obs_idxs])
+    obs_idxs = [z_idxs; xs]
+    seeds = unique!([ys; obs_idxs])
     mask = _ancestors_bitmask(B, seeds)
 
     blocked = falses(n)
@@ -72,25 +101,27 @@ function is_valid_backdoor(
     end
 
     # Each parent is checked with its own Bayes-ball traversal (rather than one
-    # traversal seeded from all parents at once) so that a collider at x
-    # correctly reopens only when x ∈ obs, without artificially connecting two
-    # parents that only share x as a common child.
+    # traversal seeded from all parents at once) so that a collider at some
+    # x ∈ X correctly reopens only when that x ∈ obs, without artificially
+    # connecting two parents that only share an x as a common child.
     for p_idx in parents_x
         blocked[p_idx] && continue  # p is in obs --> trivially d-separated
-        p_idx == y_idx && continue  # p is y itself, not a path to check
+        ys_mask[p_idx] && continue  # p is one of the outcomes itself, not a path to check
         reached = _reachable_dag(B, [p_idx], mask, blocked)
-        reached[y_idx] && return false
+        any(reached[yi] for yi in ys) && return false
     end
     return true
 end
 
 """
-    all_backdoor_sets(cg::Union{DAG,ADMG}, x::Symbol, y::Symbol;
+    all_backdoor_sets(cg::Union{DAG,ADMG}, x, y;
                       minimal::Bool = true, max_size::Int = 3)
         -> Vector{Vector{Symbol}}
 
 Return all sets satisfying the backdoor criterion for the causal effect of `x`
 on `y` in `cg`, up to size `max_size`.
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 Bruteforces over subsets of the allowed universe of nodes (nodes that are not
 descendants of `x` and not `y`), checking each for validity using
@@ -113,23 +144,47 @@ julia> admg = cgraph("A --> X --> Y, A <-> Y"; class = ADMG);
 julia> all_backdoor_sets(admg, :X, :Y)
 1-element Vector{Vector{Symbol}}:
  [:A]
+
+julia> cg2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = DAG);
+
+julia> all_backdoor_sets(cg2, [:X1, :X2], [:Y])
+1-element Vector{Vector{Symbol}}:
+ [:L1, :L2]
 ```
 """
 function all_backdoor_sets(
     cg::DAG,
-    x::Symbol,
-    y::Symbol;
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}};
     minimal::Bool = true,
     max_size::Int = 3,
 )
     B = cg.backend
     n = length(B.nodes)
-    x_idx = node_index(cg, x)
-    y_idx = node_index(cg, y)
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
+    xs_mask = falses(n)
+    for xi in xs
+        xs_mask[xi] = true
+    end
+    ys_mask = falses(n)
+    for yi in ys
+        ys_mask[yi] = true
+    end
 
-    de_x = _descendants_bitmask(B, [x_idx])
-    universe = [v for v = 1:n if v != x_idx && v != y_idx && !de_x[v]]
-    parents_x = _parents_slice(B, x_idx)
+    de_x = _descendants_bitmask(B, xs)
+    universe = [v for v = 1:n if !xs_mask[v] && !ys_mask[v] && !de_x[v]]
+
+    # Pa(X) \ X: parents of some x ∈ X that are not themselves in X.
+    parents_x = Int[]
+    seen_p = falses(n)
+    for xi in xs
+        for p in _parents_slice(B, xi)
+            (seen_p[p] || xs_mask[p]) && continue
+            seen_p[p] = true
+            push!(parents_x, p)
+        end
+    end
 
     # Scratch buffers allocated once per `make_checker` call (once per thread
     # under `_search_subsets`), reused across all its candidates. `universe`
@@ -148,21 +203,24 @@ function all_backdoor_sets(
             isempty(parents_x) && return true
 
             fill!(blocked, false)
-            blocked[x_idx] = true
+            for xi in xs
+                blocked[xi] = true
+            end
             for v in z_idxs
                 blocked[v] = true
             end
 
             empty!(seeds_buf)
-            push!(seeds_buf, y_idx, x_idx)
+            append!(seeds_buf, ys)
+            append!(seeds_buf, xs)
             append!(seeds_buf, z_idxs)
             _ancestors_bitmask!(anc_mask, anc_stack, B, seeds_buf)
 
             for p_idx in parents_x
                 blocked[p_idx] && continue
-                p_idx == y_idx && continue
+                ys_mask[p_idx] && continue
                 _reachable_dag_single!(visited, q, reached, B, p_idx, anc_mask, blocked)
-                reached[y_idx] && return false
+                any(reached[yi] for yi in ys) && return false
             end
             return true
         end
@@ -180,41 +238,51 @@ end
 
 function is_valid_backdoor(
     cg::ADMG,
-    x::Symbol,
-    y::Symbol,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}},
     z::AbstractVector{Symbol} = Symbol[],
 )
     B = cg.backend
-    x_idx = node_index(cg, x)
-    de_x = _descendants_bitmask(B, [x_idx])
+    xs = _node_indices(cg, x)
+    de_x = _descendants_bitmask(B, xs)
     for v in z
         de_x[node_index(cg, v)] && return false
     end
+    xs_syms = Set{Symbol}(x isa Symbol ? (x,) : x)
     gx = build_graph(
         ADMG,
         Set(B.nodes),
-        filter(e -> !(is_directed(e) && e.src == x), cg.edges),
+        filter(e -> !(is_directed(e) && e.src in xs_syms), cg.edges),
     )
     return m_separated(gx, x, y, z)
 end
 
 function all_backdoor_sets(
     cg::ADMG,
-    x::Symbol,
-    y::Symbol;
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}};
     minimal::Bool = true,
     max_size::Int = 3,
 )
     B = cg.backend
     n = length(B.nodes)
-    x_idx = node_index(cg, x)
-    y_idx = node_index(cg, y)
-    de_x = _descendants_bitmask(B, [x_idx])
-    universe = [v for v = 1:n if v != x_idx && v != y_idx && !de_x[v]]
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
+    xs_mask = falses(n)
+    for xi in xs
+        xs_mask[xi] = true
+    end
+    ys_mask = falses(n)
+    for yi in ys
+        ys_mask[yi] = true
+    end
+    de_x = _descendants_bitmask(B, xs)
+    universe = [v for v = 1:n if !xs_mask[v] && !ys_mask[v] && !de_x[v]]
+    xs_syms = Set{Symbol}(x isa Symbol ? (x,) : x)
     gx = build_graph(
         ADMG,
         Set(B.nodes),
-        filter(e -> !(is_directed(e) && e.src == x), cg.edges),
+        filter(e -> !(is_directed(e) && e.src in xs_syms), cg.edges),
     )
     # gx's backend always assigns node indices by sorting the (identical) node
     # set (see `build_backend`), so cg's indices are valid for gx's backend
@@ -237,15 +305,19 @@ function all_backdoor_sets(
             for v in z_idxs
                 z_mask[v] = true
             end
-            z_mask[x_idx] && return true
 
             empty!(seeds_buf)
-            push!(seeds_buf, x_idx, y_idx)
+            append!(seeds_buf, xs)
+            append!(seeds_buf, ys)
             append!(seeds_buf, z_idxs)
             _ancestors_bitmask!(anc_mask, anc_stack, Bx, seeds_buf)
 
-            _reachable_admg_single!(visited, q, reached, Bx, x_idx, anc_mask, z_mask)
-            return !reached[y_idx]
+            for xi in xs
+                z_mask[xi] && continue
+                _reachable_admg_single!(visited, q, reached, Bx, xi, anc_mask, z_mask)
+                any(reached[yi] for yi in ys) && return false
+            end
+            return true
         end
     end
 
@@ -258,9 +330,11 @@ function all_backdoor_sets(
 end
 
 """
-    adjustment_set(cg::DAG, x::Symbol, y::Symbol; type::Symbol = :optimal) -> Vector{Symbol}
+    adjustment_set(cg::DAG, x, y; type::Symbol = :optimal) -> Vector{Symbol}
 
 Compute an adjustment set for the causal effect of `x` on `y` in `cg`.
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 Three types are supported:
 
@@ -290,6 +364,13 @@ julia> adjustment_set(cg, :X, :Y; type = :backdoor)
 julia> adjustment_set(cg, :X, :Y; type = :optimal)
 1-element Vector{Symbol}:
  :K
+
+julia> cg2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = DAG);
+
+julia> sort(adjustment_set(cg2, [:X1, :X2], [:Y]; type = :optimal))
+2-element Vector{Symbol}:
+ :L1
+ :L2
 ```
 
 # References
@@ -297,52 +378,72 @@ julia> adjustment_set(cg, :X, :Y; type = :optimal)
 - [henckel2022graphical](@cite) (`:optimal`)
 - [pearl2009causality](@cite) (`:parents` and `:backdoor`)
 """
-function adjustment_set(cg::DAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
+function adjustment_set(
+    cg::DAG,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}};
+    type::Symbol = :optimal,
+)
     B = cg.backend
     n = length(B.nodes)
-    x_idx = node_index(cg, x)
-    y_idx = node_index(cg, y)
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
+    xs_mask = falses(n)
+    for xi in xs
+        xs_mask[xi] = true
+    end
+    ys_mask = falses(n)
+    for yi in ys
+        ys_mask[yi] = true
+    end
 
     if type === :parents
         keep = falses(n)
-        for p in _parents_slice(B, x_idx)
+        for xi in xs, p in _parents_slice(B, xi)
             keep[p] = true
         end
-        keep[x_idx] = false
-        keep[y_idx] = false
+        for v = 1:n
+            (xs_mask[v] || ys_mask[v]) && (keep[v] = false)
+        end
         return [B.nodes[v] for v = 1:n if keep[v]]
 
     elseif type === :backdoor
-        de_x = _descendants_bitmask(B, [x_idx])
-        restrict = [B.nodes[v] for v = 1:n if v != x_idx && v != y_idx && !de_x[v]]
+        de_x = _descendants_bitmask(B, xs)
+        restrict = [B.nodes[v] for v = 1:n if !xs_mask[v] && !ys_mask[v] && !de_x[v]]
+        xs_syms = Set{Symbol}(x isa Symbol ? (x,) : x)
         gx = build_graph(
             DAG,
             Set(B.nodes),
-            filter(e -> !(is_directed(e) && e.src == x), cg.edges),
+            filter(e -> !(is_directed(e) && e.src in xs_syms), cg.edges),
         )
         z = minimal_separator(gx, x, y; restrict = restrict)
         z !== nothing && return z
 
-        # Defensive fallback: Pa(x) is always a valid (if non-minimal) backdoor set.
+        # Defensive fallback: Pa(X) is always a valid (if non-minimal) backdoor set.
         keep = falses(n)
-        for p in _parents_slice(B, x_idx)
+        for xi in xs, p in _parents_slice(B, xi)
             keep[p] = true
         end
-        keep[x_idx] = false
-        keep[y_idx] = false
+        for v = 1:n
+            (xs_mask[v] || ys_mask[v]) && (keep[v] = false)
+        end
         return [B.nodes[v] for v = 1:n if keep[v]]
 
     elseif type === :optimal
-        de_x = _descendants_bitmask(B, [x_idx])
-        de_x[x_idx] = false  # exclude x itself
+        de_x = _descendants_bitmask(B, xs)
+        for xi in xs
+            de_x[xi] = false  # exclude X itself
+        end
 
-        an_y = _ancestors_bitmask(B, [y_idx])  # includes y_idx
+        an_y = _ancestors_bitmask(B, ys)  # includes ys
 
         cn_mask = falses(n)
         for v = 1:n
             de_x[v] && an_y[v] && (cn_mask[v] = true)
         end
-        de_x[y_idx] && (cn_mask[y_idx] = true)  # add y if y ∈ De(x)
+        for yi in ys
+            de_x[yi] && (cn_mask[yi] = true)  # add y if y ∈ De(X)
+        end
 
         pacn_mask = falses(n)
         for v = 1:n
@@ -351,7 +452,9 @@ function adjustment_set(cg::DAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
                 pacn_mask[p] = true
             end
         end
-        pacn_mask[x_idx] = false
+        for xi in xs
+            pacn_mask[xi] = false
+        end
         for v = 1:n
             cn_mask[v] && (pacn_mask[v] = false)
         end
@@ -367,10 +470,12 @@ function adjustment_set(cg::DAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
 end
 
 """
-    adjustment_set(cg::AbstractPDAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
+    adjustment_set(cg::AbstractPDAG, x, y; type::Symbol = :optimal)
         -> Vector{Symbol}
 
 Compute an adjustment set for the causal effect of `x` on `y` in `cg`.
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 Two types are supported:
 
@@ -392,38 +497,63 @@ julia> adjustment_set(pdag, :X, :Y)
 
 julia> is_valid_adjustment(pdag, :X, :Y, [:A])
 true
+
+julia> pdag2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = PDAG);
+
+julia> sort(adjustment_set(pdag2, [:X1, :X2], [:Y]))
+2-element Vector{Symbol}:
+ :L1
+ :L2
 ```
 
 # References
 
 - [henckel2022graphical](@cite)
 """
-function adjustment_set(cg::AbstractPDAG, x::Symbol, y::Symbol; type::Symbol = :optimal)
+function adjustment_set(
+    cg::AbstractPDAG,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}};
+    type::Symbol = :optimal,
+)
     B = cg.backend
     n = length(B.nodes)
-    x_idx = node_index(cg, x)
-    y_idx = node_index(cg, y)
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
+    xs_mask = falses(n)
+    for xi in xs
+        xs_mask[xi] = true
+    end
+    ys_mask = falses(n)
+    for yi in ys
+        ys_mask[yi] = true
+    end
 
     if type === :parents
         keep = falses(n)
-        for p in _parents_slice(B, x_idx)
+        for xi in xs, p in _parents_slice(B, xi)
             keep[p] = true
         end
-        keep[x_idx] = false
-        keep[y_idx] = false
+        for v = 1:n
+            (xs_mask[v] || ys_mask[v]) && (keep[v] = false)
+        end
         return [B.nodes[v] for v = 1:n if keep[v]]
 
     elseif type === :optimal
-        poss_de_x = _possible_descendants_bitmask(B, [x_idx])
-        poss_de_x[x_idx] = false
+        poss_de_x = _possible_descendants_bitmask(B, xs)
+        for xi in xs
+            poss_de_x[xi] = false
+        end
 
-        ant_y = _anterior_bitmask(B, [y_idx])
+        ant_y = _anterior_bitmask(B, ys)
 
         cn_mask = falses(n)
         for v = 1:n
             poss_de_x[v] && ant_y[v] && (cn_mask[v] = true)
         end
-        poss_de_x[y_idx] && (cn_mask[y_idx] = true)
+        for yi in ys
+            poss_de_x[yi] && (cn_mask[yi] = true)
+        end
 
         pacn_mask = falses(n)
         for v = 1:n
@@ -432,7 +562,9 @@ function adjustment_set(cg::AbstractPDAG, x::Symbol, y::Symbol; type::Symbol = :
                 pacn_mask[p] = true
             end
         end
-        pacn_mask[x_idx] = false
+        for xi in xs
+            pacn_mask[xi] = false
+        end
         for v = 1:n
             cn_mask[v] && (pacn_mask[v] = false)
         end

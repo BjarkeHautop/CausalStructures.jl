@@ -641,3 +641,36 @@ end
           all_frontdoor_sets(admg, :X, :Y; restrict = restrict) ==
           [[:A, :B]]
 end
+
+# ── set-valued x/y ───────────────────────────────────────────────────────────
+
+@testsnippet TwoTreatmentFrontdoorGraph begin
+    # Two confounded treatments X1, X2 sharing a mediator M that causes two outcomes Y1, Y2.
+    function _two_treatment_frontdoor_graph()
+        cgraph(
+            directed(:U1, :X1),
+            directed(:U1, :Y1),
+            directed(:U2, :X2),
+            directed(:U2, :Y2),
+            directed(:X1, :M),
+            directed(:X2, :M),
+            directed(:M, :Y1),
+            directed(:M, :Y2);
+            class = DAG,
+        )
+    end
+end
+
+@testitem "is_valid_frontdoor: accepts Vector{Symbol} for x and y" setup =
+    [TwoTreatmentFrontdoorGraph] tags = [:unit] begin
+    cg = _two_treatment_frontdoor_graph()
+    @test is_valid_frontdoor(cg, [:X1, :X2], [:Y1, :Y2], [:M])
+    @test !is_valid_frontdoor(cg, [:X1, :X2], [:Y1, :Y2])
+end
+
+@testitem "frontdoor_set/all_frontdoor_sets: accepts Vector{Symbol} for x and y" setup =
+    [TwoTreatmentFrontdoorGraph] tags = [:unit] begin
+    cg = _two_treatment_frontdoor_graph()
+    @test frontdoor_set(cg, [:X1, :X2], [:Y1, :Y2]; restrict = [:M]) == [:M]
+    @test all_frontdoor_sets(cg, [:X1, :X2], [:Y1, :Y2]; restrict = [:M]) == [[:M]]
+end

@@ -106,3 +106,19 @@ end
     @test m_separated(pag, :X, :Y, z)
     @test _msep_in_every_mag(pag, :X, :Y, z)
 end
+
+@testitem "minimal_separator PAG: accepts Vector{Symbol} for x and y" tags = [:unit] begin
+    mag = cgraph(
+        bidirected(:A, :X1),
+        bidirected(:B, :X2),
+        directed(:A, :M1),
+        directed(:B, :M2),
+        directed(:M1, :Y),
+        directed(:M2, :Y);
+        class = MAG,
+    )
+    pag = mag_to_pag(mag)
+    z = minimal_separator(pag, [:X1, :X2], :Y)
+    @test Set(z) == Set([:A, :B])
+    @test m_separated(pag, [:X1, :X2], :Y, z)
+end

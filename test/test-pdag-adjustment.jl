@@ -202,3 +202,22 @@ end
     pdag = cgraph(directed(:A, :B); class = PDAG)
     @test minimal_separator(pdag, :A, :B) === nothing
 end
+
+@testitem "minimal_separator AbstractPDAG: accepts Vector{Symbol} for x and y" tags = [:unit] begin
+    pdag = cgraph(
+        "A --> M1, M1 --> Y, B --> M2, M2 --> Y";
+        class = PDAG,
+    )
+    sep = minimal_separator(pdag, [:A, :B], :Y)
+    @test sep == [:M1, :M2]
+    @test d_separated(pdag, [:A, :B], :Y, sep)
+end
+
+@testitem "is_valid_adjustment/all_adjustment_sets AbstractPDAG: accepts Vector{Symbol} for x and y" tags =
+    [:unit] begin
+    pdag =
+        cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = PDAG)
+    @test !is_valid_adjustment(pdag, [:X1, :X2], [:Y])
+    @test is_valid_adjustment(pdag, [:X1, :X2], [:Y], [:L1, :L2])
+    @test all_adjustment_sets(pdag, [:X1, :X2], [:Y]) == [[:L1, :L2]]
+end

@@ -37,10 +37,14 @@ _reachable_single!(visited, q, reached, B::ADMGBackend, seed, a_mask, z_mask) =
     _reachable_admg_single!(visited, q, reached, B, seed, a_mask, z_mask)
 
 """
-    is_valid_iv(cg::Union{DAG,ADMG}, x::Symbol, y::Symbol, z::AbstractVector{Symbol}) -> Bool
+    is_valid_iv(cg::Union{DAG,ADMG}, x::Symbol, y, z::AbstractVector{Symbol}) -> Bool
 
 Return `true` if `z` is a valid instrumental set for the causal effect of `x` on `y`
 in `cg`.
+
+`y` may be a single `Symbol` or an `AbstractVector{Symbol}` (multiple outcomes
+of the same treatment `x`); `x` must be a single `Symbol`, since the
+instrumental-set criterion is defined for one structural coefficient `x -> y`.
 
 `z` is a valid instrumental set if:
 1. Every `zi ∈ z` is d-/m-separated from `y` given `{x}` in the interventional graph
@@ -76,24 +80,44 @@ julia> is_valid_iv(admg, :X, :Y, [:Z])
 true
 ```
 
+```jldoctest
+julia> # Z instruments X, which affects two outcomes Y1 and Y2
+       cg2 = cgraph(
+           directed(:Z, :X), directed(:X, :Y1), directed(:X, :Y2),
+           directed(:U, :X), directed(:U, :Y1), directed(:U, :Y2);
+           class = DAG);
+
+julia> is_valid_iv(cg2, :X, [:Y1, :Y2], [:Z])
+true
+```
+
 # References
 
 - [brito2002generalized](@cite)
 - [pearl2009causality](@cite), Definition 7.4.1.
 """
-function is_valid_iv(cg::Union{DAG,ADMG}, x::Symbol, y::Symbol, z::AbstractVector{Symbol})
+function is_valid_iv(
+    cg::Union{DAG,ADMG},
+    x::Symbol,
+    y::Union{Symbol,AbstractVector{Symbol}},
+    z::AbstractVector{Symbol},
+)
     isempty(z) && return false
-    any(zi -> zi === x || zi === y, z) && return false
+    ys_syms = _as_symbol_set(y)
+    any(zi -> zi === x || zi in ys_syms, z) && return false
     return _check_iv(cg, x, y, z, _build_g_do_x(cg, x))
 end
 
 """
-    all_iv_sets(cg::Union{DAG,ADMG}, x::Symbol, y::Symbol;
+    all_iv_sets(cg::Union{DAG,ADMG}, x::Symbol, y;
                 minimal::Bool = true, max_size::Int = 3)
         -> Vector{Vector{Symbol}}
 
 Return all valid instrumental sets for the causal effect of `x` on `y` in `cg`,
 up to size `max_size`.
+
+`y` may be a single `Symbol` or an `AbstractVector{Symbol}`; `x` must be a
+single `Symbol` (see [`is_valid_iv`](@ref)).
 
 Bruteforces over subsets of the allowed universe of nodes (nodes that are not `x` or `y`),
 checking each for validity using [`is_valid_iv`](@ref). When `minimal = true` (default),
@@ -112,6 +136,17 @@ julia> all_iv_sets(cg, :X, :Y)
 2-element Vector{Vector{Symbol}}:
  [:Z1]
  [:Z2]
+
+julia> cg2 = cgraph(
+           directed(:Z1, :X), directed(:Z2, :X),
+           directed(:X, :Y1), directed(:X, :Y2),
+           directed(:U, :X), directed(:U, :Y1), directed(:U, :Y2);
+           class = DAG);
+
+julia> all_iv_sets(cg2, :X, [:Y1, :Y2])
+2-element Vector{Vector{Symbol}}:
+ [:Z1]
+ [:Z2]
 ```
 
 # References
@@ -121,16 +156,20 @@ julia> all_iv_sets(cg, :X, :Y)
 function all_iv_sets(
     cg::Union{DAG,ADMG},
     x::Symbol,
-    y::Symbol;
+    y::Union{Symbol,AbstractVector{Symbol}};
     minimal::Bool = true,
     max_size::Int = 3,
 )
     B = cg.backend
     n = length(B.nodes)
     x_idx = node_index(cg, x)
-    y_idx = node_index(cg, y)
+    ys_idx = _node_indices(cg, y)
+    ys_mask = falses(n)
+    for yi in ys_idx
+        ys_mask[yi] = true
+    end
 
-    universe = [v for v = 1:n if v != x_idx && v != y_idx]
+    universe = [v for v = 1:n if v != x_idx && !ys_mask[v]]
     g_do_x = _build_g_do_x(cg, x)  # built once; x/y already excluded from universe
     Bd = g_do_x.backend
 
@@ -157,13 +196,14 @@ function all_iv_sets(
             return !reached[b]
         end
 
-        # a ⊥ b | {x} in backend Bk
-        function separated_given_x(Bk, a, b)
+        # a ⊥ Y | {x} in backend Bk, for the (possibly multi-node) target set `bs`
+        function separated_given_x(Bk, a, bs)
             empty!(seeds_buf)
-            push!(seeds_buf, a, b, x_idx)
+            push!(seeds_buf, a, x_idx)
+            append!(seeds_buf, bs)
             _ancestors_bitmask!(anc_mask, anc_stack, Bk, seeds_buf)
             _reachable_single!(visited, q, reached, Bk, a, anc_mask, excl_zmask)
-            return !reached[b]
+            return !any(reached[bi] for bi in bs)
         end
 
         return function valid_candidate(z_idxs::Vector{Int})
@@ -177,7 +217,7 @@ function all_iv_sets(
             relevant || return false
 
             for zi in z_idxs
-                separated_given_x(Bd, zi, y_idx) || return false
+                separated_given_x(Bd, zi, ys_idx) || return false
             end
             return true
         end

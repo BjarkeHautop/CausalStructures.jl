@@ -547,9 +547,13 @@ end
 # ── d_separated (DAG) ─────────────────────────────────────────────────────────
 
 """
-    d_separated(cg::Union{DAG,AbstractPDAG}, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    d_separated(cg::Union{DAG,AbstractPDAG}, x, y, z = Symbol[]) -> Bool
 
 Return `true` if `x` and `y` are d-separated given `z` in `cg`.
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`; for
+sets, the result is `true` iff every node in `x` is d-separated from every
+node in `y` given `z`.
 
 Two nodes are d-separated given a conditioning set `z` if every path between
 them is blocked. A path is blocked if it contains either a non-collider node
@@ -589,6 +593,14 @@ true
 
 julia> d_separated(mpdag, :A, :C)       # B is possibly a non-collider: open path exists
 false
+
+julia> chain = cgraph(directed(:A, :C), directed(:B, :C), directed(:C, :D); class = DAG);
+
+julia> d_separated(chain, [:A, :B], :D)         # C lies on both A-->C-->D and B-->C-->D: paths open
+false
+
+julia> d_separated(chain, [:A, :B], :D, [:C])  # conditioning on chain node C blocks both paths
+true
 ```
 
 # References
@@ -596,10 +608,16 @@ false
 - [lauritzen1990independence](@cite)
 - [hauser2012characterization](@cite)
 """
-function d_separated(cg::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
+function d_separated(
+    cg::DAG,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}},
+    z::AbstractVector{Symbol} = Symbol[],
+)
     B = cg.backend
-    x_idx = node_index(cg, x)
-    y_idx = node_index(cg, y)
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
+    (isempty(xs) || isempty(ys)) && return true
     z_idxs = [node_index(cg, v) for v in z]
 
     n = length(B.nodes)
@@ -607,26 +625,28 @@ function d_separated(cg::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = 
     for v in z_idxs
         z_mask[v] = true
     end
-    z_mask[x_idx] && return true
+    seeds_bfs = filter(xi -> !z_mask[xi], xs)
+    isempty(seeds_bfs) && return true
 
-    seeds = unique([x_idx; y_idx; z_idxs])
+    seeds = unique([xs; ys; z_idxs])
     mask = _ancestors_bitmask(B, seeds)
 
-    reached = _reachable_dag(B, [x_idx], mask, z_mask)
-    return !reached[y_idx]
+    reached = _reachable_dag(B, seeds_bfs, mask, z_mask)
+    return !any(reached[yi] for yi in ys)
 end
 
 # ── d_separated (AbstractPDAG) ────────────────────────────────────────────────
 
 function d_separated(
     cg::AbstractPDAG,
-    x::Symbol,
-    y::Symbol,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}},
     z::AbstractVector{Symbol} = Symbol[],
 )
     B = cg.backend
-    x_idx = node_index(cg, x)
-    y_idx = node_index(cg, y)
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
+    (isempty(xs) || isempty(ys)) && return true
     z_idxs = [node_index(cg, v) for v in z]
 
     n = length(B.nodes)
@@ -634,19 +654,24 @@ function d_separated(
     for v in z_idxs
         z_mask[v] = true
     end
-    z_mask[x_idx] && return true
+    seeds_bfs = filter(xi -> !z_mask[xi], xs)
+    isempty(seeds_bfs) && return true
 
-    seeds = unique([x_idx; y_idx; z_idxs])
+    seeds = unique([xs; ys; z_idxs])
     mask = _anterior_bitmask(B, seeds)
 
-    reached = _reachable_pdag(B, [x_idx], mask, z_mask)
-    return !reached[y_idx]
+    reached = _reachable_pdag(B, seeds_bfs, mask, z_mask)
+    return !any(reached[yi] for yi in ys)
 end
 
 """
-    m_separated(cg::Union{DAG,ADMG,AbstractAG,PAG}, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    m_separated(cg::Union{DAG,ADMG,AbstractAG,PAG}, x, y, z = Symbol[]) -> Bool
 
 Return `true` if `x` and `y` are m-separated given `z` in `cg`.
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`; for
+sets, the result is `true` iff every node in `x` is m-separated from every
+node in `y` given `z`.
 
 M-separation generalizes d-separation to graphs with bidirected and undirected
 edges. For a [`DAG`](@ref), m-separation is equivalent to [`d_separated`](@ref).
@@ -679,22 +704,37 @@ false
 
 julia> m_separated(admg, :B, :C, [:A]) # conditioning on A blocks the path
 true
+
+julia> admg2 = cgraph(bidirected(:A, :C), bidirected(:B, :C); class = ADMG);
+
+julia> m_separated(admg2, [:A, :B], :C)  # both A and B are m-connected to C
+false
 ```
 
 # References
 
 - [richardsonspirtes2002ancestral](@cite)
 """
-m_separated(cg::DAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[]) =
-    d_separated(cg, x, y, z)
+m_separated(
+    cg::DAG,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}},
+    z::AbstractVector{Symbol} = Symbol[],
+) = d_separated(cg, x, y, z)
 
 # ── m_separated (ADMG) ────────────────────────────────────────────────────────
 
 # Returns true iff x ⊥_m y | z in ADMG cg.
-function m_separated(cg::ADMG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
+function m_separated(
+    cg::ADMG,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}},
+    z::AbstractVector{Symbol} = Symbol[],
+)
     B = cg.backend
-    x_idx = node_index(cg, x)
-    y_idx = node_index(cg, y)
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
+    (isempty(xs) || isempty(ys)) && return true
     z_idxs = [node_index(cg, v) for v in z]
 
     n = length(B.nodes)
@@ -702,13 +742,14 @@ function m_separated(cg::ADMG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} =
     for v in z_idxs
         z_mask[v] = true
     end
-    z_mask[x_idx] && return true
+    seeds_bfs = filter(xi -> !z_mask[xi], xs)
+    isempty(seeds_bfs) && return true
 
-    seeds = unique([x_idx; y_idx; z_idxs])
+    seeds = unique([xs; ys; z_idxs])
     mask = _ancestors_bitmask(B, seeds)
 
-    reached = _reachable_admg(B, [x_idx], mask, z_mask)
-    return !reached[y_idx]
+    reached = _reachable_admg(B, seeds_bfs, mask, z_mask)
+    return !any(reached[yi] for yi in ys)
 end
 
 # ── m_separated (AG) ──────────────────────────────────────────────────────────
@@ -716,13 +757,14 @@ end
 # Returns true iff x ⊥_m y | z in AG cg.
 function m_separated(
     cg::AbstractAG,
-    x::Symbol,
-    y::Symbol,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}},
     z::AbstractVector{Symbol} = Symbol[],
 )
     B = cg.backend
-    x_idx = node_index(cg, x)
-    y_idx = node_index(cg, y)
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
+    (isempty(xs) || isempty(ys)) && return true
     z_idxs = [node_index(cg, v) for v in z]
 
     n = length(B.nodes)
@@ -730,22 +772,29 @@ function m_separated(
     for v in z_idxs
         z_mask[v] = true
     end
-    z_mask[x_idx] && return true
+    seeds_bfs = filter(xi -> !z_mask[xi], xs)
+    isempty(seeds_bfs) && return true
 
-    seeds = unique([x_idx; y_idx; z_idxs])
+    seeds = unique([xs; ys; z_idxs])
     mask = _anterior_bitmask(B, seeds)
 
-    reached = _reachable_ag(B, [x_idx], mask, z_mask)
-    return !reached[y_idx]
+    reached = _reachable_ag(B, seeds_bfs, mask, z_mask)
+    return !any(reached[yi] for yi in ys)
 end
 
 # ── m_separated (PAG) ─────────────────────────────────────────────────────────
 
 # Returns true iff x ⊥_m y | z in PAG cg.
-function m_separated(cg::PAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = Symbol[])
+function m_separated(
+    cg::PAG,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}},
+    z::AbstractVector{Symbol} = Symbol[],
+)
     B = cg.backend
-    x_idx = node_index(cg, x)
-    y_idx = node_index(cg, y)
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
+    (isempty(xs) || isempty(ys)) && return true
     z_idxs = [node_index(cg, v) for v in z]
 
     n = length(B.nodes)
@@ -753,11 +802,12 @@ function m_separated(cg::PAG, x::Symbol, y::Symbol, z::AbstractVector{Symbol} = 
     for v in z_idxs
         z_mask[v] = true
     end
-    z_mask[x_idx] && return true
+    seeds_bfs = filter(xi -> !z_mask[xi], xs)
+    isempty(seeds_bfs) && return true
 
-    seeds = unique([x_idx; y_idx; z_idxs])
+    seeds = unique([xs; ys; z_idxs])
     mask = _pag_anterior_bitmask(B, seeds)
 
-    reached = _reachable_pag(B, [x_idx], mask, z_mask)
-    return !reached[y_idx]
+    reached = _reachable_pag(B, seeds_bfs, mask, z_mask)
+    return !any(reached[yi] for yi in ys)
 end

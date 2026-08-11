@@ -141,3 +141,23 @@ end
     @test adjustment_set(pag, :X, :Y) == Symbol[]
     @test !is_valid_adjustment(pag, :X, :Y)
 end
+
+@testitem "is_valid_adjustment/all_adjustment_sets/adjustment_set PAG: accepts Vector{Symbol} for x and y" tags =
+    [:unit] begin
+    mag = cgraph(
+        directed(:B1, :X1),
+        bidirected(:A1, :X1),
+        directed(:A1, :Y),
+        directed(:X1, :Y),
+        directed(:B2, :X2),
+        bidirected(:A2, :X2),
+        directed(:A2, :Y),
+        directed(:X2, :Y);
+        class = MAG,
+    )
+    pag = mag_to_pag(mag)
+    @test !is_valid_adjustment(pag, [:X1, :X2], [:Y])
+    @test is_valid_adjustment(pag, [:X1, :X2], [:Y], [:A1, :A2])
+    @test all_adjustment_sets(pag, [:X1, :X2], [:Y]) == [[:A1, :A2]]
+    @test Set(adjustment_set(pag, [:X1, :X2], [:Y])) == Set([:A1, :A2])
+end

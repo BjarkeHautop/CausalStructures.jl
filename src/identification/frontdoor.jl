@@ -1,8 +1,11 @@
 """
-    is_valid_frontdoor(cg::DAG, x::Symbol, y::Symbol, z = Symbol[]) -> Bool
+    is_valid_frontdoor(cg::DAG, x, y, z = Symbol[]) -> Bool
 
 Return `true` if `z` satisfies the front-door criterion for the causal effect of
 `x` on `y` in `cg`.
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`; for
+sets, `x`/`y` in the criterion below refer to the whole set.
 
 `z` is a valid front-door set if:
 1. `z` intercepts all directed paths from `x` to `y`.
@@ -10,7 +13,7 @@ Return `true` if `z` satisfies the front-door criterion for the causal effect of
    empty set).
 3. For every node `zi` in `z`, all backdoor paths from `zi` to `y` are blocked
    by `x` together with the remaining nodes in `z` (i.e., conditioned on
-   `{x} ∪ (z \\ {zi})`).
+   `x ∪ (z \\ {zi})`).
 
 When these conditions hold, the causal effect is identified by the front-door
 formula, even in the presence of unmeasured confounders between `x` and `y`.
@@ -28,6 +31,14 @@ false
 
 julia> is_valid_frontdoor(cg, :X, :Y, [:U])   # U does not intercept X -> M -> Y
 false
+
+julia> cg2 = cgraph(
+           directed(:U1, :X1), directed(:U1, :Y1), directed(:U2, :X2), directed(:U2, :Y2),
+           directed(:X1, :M), directed(:X2, :M), directed(:M, :Y1), directed(:M, :Y2);
+           class = DAG);
+
+julia> is_valid_frontdoor(cg2, [:X1, :X2], [:Y1, :Y2], [:M])  # M mediates every X --> Y path
+true
 ```
 
 # References
@@ -37,36 +48,44 @@ false
 """
 function is_valid_frontdoor(
     cg::DAG,
-    x::Symbol,
-    y::Symbol,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}},
     z::AbstractVector{Symbol} = Symbol[],
 )
     B = cg.backend
     n = length(B.nodes)
-    x_idx = node_index(cg, x)
-    y_idx = node_index(cg, y)
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
+    (isempty(xs) || isempty(ys)) && return true
+    ys_mask = falses(n)
+    for yi in ys
+        ys_mask[yi] = true
+    end
 
     # Condition (i): Z intercepts all directed paths from X to Y.
     z_mask = falses(n)
     for v in z
         z_mask[node_index(cg, v)] = true
     end
-    if !z_mask[x_idx]
-        visited = falses(n)
-        visited[x_idx] = true
-        queue = Int[]
-        push!(queue, x_idx)
-        head = 1
-        while head <= length(queue)
-            u = queue[head]
-            head += 1
-            for c in _children_slice(B, u)
-                z_mask[c] && continue
-                c == y_idx && return false
-                visited[c] && continue
-                visited[c] = true
-                push!(queue, c)
-            end
+    seeds_bfs = [xi for xi in xs if !z_mask[xi]]
+    visited = falses(n)
+    queue = Int[]
+    for xi in seeds_bfs
+        if !visited[xi]
+            visited[xi] = true
+            push!(queue, xi)
+        end
+    end
+    head = 1
+    while head <= length(queue)
+        u = queue[head]
+        head += 1
+        for c in _children_slice(B, u)
+            z_mask[c] && continue
+            ys_mask[c] && return false
+            visited[c] && continue
+            visited[c] = true
+            push!(queue, c)
         end
     end
 
@@ -76,7 +95,7 @@ function is_valid_frontdoor(
         d_separated(gx, x, zi, Symbol[]) || return false
     end
 
-    # Condition (iii): Zi ⊥ Y | {X} ∪ (Z \ {Zi}) in G_Zi for every Zi ∈ Z.
+    # Condition (iii): Zi ⊥ Y | X ∪ (Z \ {Zi}) in G_Zi for every Zi ∈ Z.
     for (k, zi) in enumerate(z)
         gzi = _build_gx(cg, zi)
         cond = [x; [z[j] for j in eachindex(z) if j != k]]
@@ -88,36 +107,44 @@ end
 
 function is_valid_frontdoor(
     cg::ADMG,
-    x::Symbol,
-    y::Symbol,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}},
     z::AbstractVector{Symbol} = Symbol[],
 )
     B = cg.backend
     n = length(B.nodes)
-    x_idx = node_index(cg, x)
-    y_idx = node_index(cg, y)
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
+    (isempty(xs) || isempty(ys)) && return true
+    ys_mask = falses(n)
+    for yi in ys
+        ys_mask[yi] = true
+    end
 
     # Condition (i): Z intercepts all directed paths from X to Y.
     z_mask = falses(n)
     for v in z
         z_mask[node_index(cg, v)] = true
     end
-    if !z_mask[x_idx]
-        visited = falses(n)
-        visited[x_idx] = true
-        queue = Int[]
-        push!(queue, x_idx)
-        head = 1
-        while head <= length(queue)
-            u = queue[head]
-            head += 1
-            for c in _children_slice(B, u)
-                z_mask[c] && continue
-                c == y_idx && return false
-                visited[c] && continue
-                visited[c] = true
-                push!(queue, c)
-            end
+    seeds_bfs = [xi for xi in xs if !z_mask[xi]]
+    visited = falses(n)
+    queue = Int[]
+    for xi in seeds_bfs
+        if !visited[xi]
+            visited[xi] = true
+            push!(queue, xi)
+        end
+    end
+    head = 1
+    while head <= length(queue)
+        u = queue[head]
+        head += 1
+        for c in _children_slice(B, u)
+            z_mask[c] && continue
+            ys_mask[c] && return false
+            visited[c] && continue
+            visited[c] = true
+            push!(queue, c)
         end
     end
 
@@ -127,7 +154,7 @@ function is_valid_frontdoor(
         m_separated(gx, x, zi, Symbol[]) || return false
     end
 
-    # Condition (iii): Zi ⊥_m Y | {X} ∪ (Z \ {Zi}) in G_Zi for every Zi ∈ Z.
+    # Condition (iii): Zi ⊥_m Y | X ∪ (Z \ {Zi}) in G_Zi for every Zi ∈ Z.
     for (k, zi) in enumerate(z)
         gzi = _build_gx(cg, zi)
         cond = [x; [z[j] for j in eachindex(z) if j != k]]
@@ -144,16 +171,18 @@ end
 # G_X: graph with all outgoing directed edges from x removed.
 # In G_X every path from x starts with an arrow into x, so reachability from x
 # in G_X corresponds exactly to backdoor paths in G.
-function _build_gx(cg::DAG, x::Symbol)
-    gx_edges = filter(e -> !(e.src == x && e.dst_end == Arrow), cg.edges)
+function _build_gx(cg::DAG, x::Union{Symbol,AbstractVector{Symbol}})
+    xs_syms = _as_symbol_set(x)
+    gx_edges = filter(e -> !(e.src in xs_syms && e.dst_end == Arrow), cg.edges)
     return build_graph(DAG, Set(cg.backend.nodes), gx_edges)
 end
 
-function _build_gx(cg::ADMG, x::Symbol)
+function _build_gx(cg::ADMG, x::Union{Symbol,AbstractVector{Symbol}})
+    xs_syms = _as_symbol_set(x)
     return build_graph(
         ADMG,
         Set(cg.backend.nodes),
-        filter(e -> !(is_directed(e) && e.src == x), cg.edges),
+        filter(e -> !(is_directed(e) && e.src in xs_syms), cg.edges),
     )
 end
 
@@ -432,8 +461,10 @@ end
 
 # TESTSEP(G_X, X, v, ∅): X ⊥ v | ∅ in G_X, dispatched per graph class (d- vs
 # m-separation).
-_testsep(gx::DAG, x::Symbol, v::Symbol) = d_separated(gx, x, v, Symbol[])
-_testsep(gx::ADMG, x::Symbol, v::Symbol) = m_separated(gx, x, v, Symbol[])
+_testsep(gx::DAG, x::Union{Symbol,AbstractVector{Symbol}}, v::Symbol) =
+    d_separated(gx, x, v, Symbol[])
+_testsep(gx::ADMG, x::Union{Symbol,AbstractVector{Symbol}}, v::Symbol) =
+    m_separated(gx, x, v, Symbol[])
 
 # GETCAND2NDFDC from Jeong, Tian & Bareinboim (2022), Step 1 of FindFDSet.
 #
@@ -443,7 +474,7 @@ _testsep(gx::ADMG, x::Symbol, v::Symbol) = m_separated(gx, x, v, Symbol[])
 # condition. Returns nothing if any v ∈ I has a BD path from X (I ⊆ Z ⊆ R infeasible).
 function _getcand2ndfdc(
     gx::Union{DAG,ADMG},
-    x::Symbol,
+    x::Union{Symbol,AbstractVector{Symbol}},
     nodes::Vector{Symbol},
     i_mask::BitVector,
     r_mask::BitVector,
@@ -469,6 +500,8 @@ end
 Return a front-door adjustment set Z with `include ⊆ Z ⊆ restrict` satisfying
 all three front-door conditions relative to (`x`, `y`) in `cg`, or `nothing` if
 no such set exists.
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 - `include`: nodes forced into the set.
 - `restrict`: candidate pool from which the set is drawn. Defaults to all nodes
@@ -532,34 +565,53 @@ julia> frontdoor_set(admg, :X, :Y; restrict = [:A, :B, :C, :D])
  :C
 ```
 
+```jldoctest
+julia> cg2 = cgraph(
+           directed(:U1, :X1), directed(:U1, :Y1), directed(:U2, :X2), directed(:U2, :Y2),
+           directed(:X1, :M), directed(:X2, :M), directed(:M, :Y1), directed(:M, :Y2);
+           class = DAG);
+
+julia> frontdoor_set(cg2, [:X1, :X2], [:Y1, :Y2]; restrict = [:M])
+1-element Vector{Symbol}:
+ :M
+```
+
 # References
 
 - [jeong2022finding](@cite)
 """
 function frontdoor_set(
     cg::Union{DAG,ADMG},
-    x::Symbol,
-    y::Symbol;
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}};
     include::AbstractVector{Symbol} = Symbol[],
     restrict::Union{Nothing,AbstractVector{Symbol}} = nothing,
 )
     B = cg.backend
     n = length(B.nodes)
 
-    x_idx = node_index(cg, x)
-    y_idx = node_index(cg, y)
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
 
     x_set = falses(n)
-    x_set[x_idx] = true
+    for xi in xs
+        x_set[xi] = true
+    end
     y_mask = falses(n)
-    y_mask[y_idx] = true
+    for yi in ys
+        y_mask[yi] = true
+    end
 
     i_mask = falses(n)
     for s in include
         i_mask[node_index(cg, s)] = true
     end
     r_mask = falses(n)
-    _restrict = restrict === nothing ? filter(v -> v != x && v != y, nodes(cg)) : restrict
+    xs_syms = _as_symbol_set(x)
+    ys_syms = _as_symbol_set(y)
+    _restrict =
+        restrict === nothing ? filter(v -> !(v in xs_syms) && !(v in ys_syms), nodes(cg)) :
+        restrict
     for s in _restrict
         r_mask[node_index(cg, s)] = true
     end
@@ -578,15 +630,20 @@ function frontdoor_set(
     # after treating R'' nodes as walls.
     _, cpg_children = _get_causal_path_graph(B, x_set, y_mask)
     visited = falses(n)
-    visited[x_idx] = true
-    queue = Int[x_idx]
+    queue = Int[]
+    for xi in xs
+        if !visited[xi]
+            visited[xi] = true
+            push!(queue, xi)
+        end
+    end
     head = 1
     while head <= length(queue)
         u = queue[head]
         head += 1
         for c in cpg_children[u]
             r_dbl_prime[c] && continue   # wall: R'' intercepts here
-            c == y_idx && return nothing  # Y reachable => condition 1 fails
+            y_mask[c] && return nothing  # Y reachable => condition 1 fails
             visited[c] && continue
             visited[c] = true
             push!(queue, c)
@@ -601,12 +658,10 @@ end
 function _listfdsets!(
     results::Vector{Vector{Symbol}},
     gx::Union{DAG,ADMG},
-    x::Symbol,
+    x::Union{Symbol,AbstractVector{Symbol}},
     B::Union{DAGBackend,ADMGBackend},
     x_set::BitVector,
     y_mask::BitVector,
-    x_idx::Int,
-    y_idx::Int,
     i_mask::BitVector,
     r_mask::BitVector,
     cpg_children::Vector{Vector{Int}},
@@ -623,15 +678,20 @@ function _listfdsets!(
 
     # Step 3: condition 1 — R'' must block all directed X --> Y paths in CPG
     visited = falses(n)
-    visited[x_idx] = true
-    queue = Int[x_idx]
+    queue = Int[]
+    for v = 1:n
+        if x_set[v] && !visited[v]
+            visited[v] = true
+            push!(queue, v)
+        end
+    end
     head = 1
     while head <= length(queue)
         u = queue[head]
         head += 1
         for c in cpg_children[u]
             r_dbl_prime[c] && continue
-            c == y_idx && return   # infeasible: Y reachable
+            y_mask[c] && return   # infeasible: Y reachable
             visited[c] && continue
             visited[c] = true
             push!(queue, c)
@@ -654,36 +714,12 @@ function _listfdsets!(
 
     # Branch 1: include v (I ∪ {v}, R)
     i_mask[v] = true
-    _listfdsets!(
-        results,
-        gx,
-        x,
-        B,
-        x_set,
-        y_mask,
-        x_idx,
-        y_idx,
-        i_mask,
-        r_mask,
-        cpg_children,
-    )
+    _listfdsets!(results, gx, x, B, x_set, y_mask, i_mask, r_mask, cpg_children)
     i_mask[v] = false
 
     # Branch 2: exclude v (I, R \ {v})
     r_mask[v] = false
-    _listfdsets!(
-        results,
-        gx,
-        x,
-        B,
-        x_set,
-        y_mask,
-        x_idx,
-        y_idx,
-        i_mask,
-        r_mask,
-        cpg_children,
-    )
+    _listfdsets!(results, gx, x, B, x_set, y_mask, i_mask, r_mask, cpg_children)
     r_mask[v] = true
 end
 
@@ -693,6 +729,8 @@ end
 
 Return all front-door adjustment sets Z with `include ⊆ Z ⊆ restrict` relative
 to (`x`, `y`) in `cg`.
+
+`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 - `include`: nodes forced into every returned set.
 - `restrict`: candidate pool from which sets are drawn. Defaults to all nodes
@@ -744,34 +782,53 @@ julia> sort(all_frontdoor_sets(admg, :X, :Y; restrict = [:A, :B, :C, :D]))
  [:A, :C]
 ```
 
+```jldoctest
+julia> cg2 = cgraph(
+           directed(:U1, :X1), directed(:U1, :Y1), directed(:U2, :X2), directed(:U2, :Y2),
+           directed(:X1, :M), directed(:X2, :M), directed(:M, :Y1), directed(:M, :Y2);
+           class = DAG);
+
+julia> all_frontdoor_sets(cg2, [:X1, :X2], [:Y1, :Y2]; restrict = [:M])
+1-element Vector{Vector{Symbol}}:
+ [:M]
+```
+
 # References
 
 - [jeong2022finding](@cite)
 """
 function all_frontdoor_sets(
     cg::Union{DAG,ADMG},
-    x::Symbol,
-    y::Symbol;
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}};
     include::AbstractVector{Symbol} = Symbol[],
     restrict::Union{Nothing,AbstractVector{Symbol}} = nothing,
 )
     B = cg.backend
     n = length(B.nodes)
 
-    x_idx = node_index(cg, x)
-    y_idx = node_index(cg, y)
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
 
     x_set = falses(n)
-    x_set[x_idx] = true
+    for xi in xs
+        x_set[xi] = true
+    end
     y_mask = falses(n)
-    y_mask[y_idx] = true
+    for yi in ys
+        y_mask[yi] = true
+    end
 
     i_mask = falses(n)
     for s in include
         i_mask[node_index(cg, s)] = true
     end
     r_mask = falses(n)
-    _restrict = restrict === nothing ? filter(v -> v != x && v != y, nodes(cg)) : restrict
+    xs_syms = _as_symbol_set(x)
+    ys_syms = _as_symbol_set(y)
+    _restrict =
+        restrict === nothing ? filter(v -> !(v in xs_syms) && !(v in ys_syms), nodes(cg)) :
+        restrict
     for s in _restrict
         r_mask[node_index(cg, s)] = true
     end
@@ -780,18 +837,6 @@ function all_frontdoor_sets(
     _, cpg_children = _get_causal_path_graph(B, x_set, y_mask)
 
     results = Vector{Vector{Symbol}}()
-    _listfdsets!(
-        results,
-        gx,
-        x,
-        B,
-        x_set,
-        y_mask,
-        x_idx,
-        y_idx,
-        i_mask,
-        r_mask,
-        cpg_children,
-    )
+    _listfdsets!(results, gx, x, B, x_set, y_mask, i_mask, r_mask, cpg_children)
     return results
 end
