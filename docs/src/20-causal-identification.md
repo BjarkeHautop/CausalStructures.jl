@@ -11,14 +11,15 @@ using NetworkLayout
 ## Adjustment strategies
 
 The [`adjustment_set`](@ref) function supports three different strategies for
-finding adjustment sets. Let's build a DAG with multiple confounders and mediators:
+finding adjustment sets. Let's build a DAG with multiple confounders and
+mediators -- Figure 6.5 of [peters2017elements](@cite):
 
 ```@example id
 dag = cgraph(
     "C --> X, A --> X + K, X --> F + D, K --> Y, D --> Y + G, Y --> H";
     class = DAG,
 )
-plot(dag; layout = :stress)
+plot(dag)
 ```
 
 **Parents strategy**: Adjusts for all parents of `X`. Simple but often includes

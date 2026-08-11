@@ -1,7 +1,7 @@
 # Tests adapted in part from caugi/tests/testthat/test-adjustment.R
 
 @testsnippet EciGraph begin
-    # Figure 6.5 from Elements of Causal Inference (p. 115)
+    # Figure 6.5 from Elements of Causal Inference
     # C-->X, X-->F, X-->D, A-->X, A-->K, K-->Y, D-->Y, D-->G, Y-->H
     function _eci_graph()
         cgraph(

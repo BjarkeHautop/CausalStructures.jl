@@ -2,8 +2,8 @@
 
 Plotting is provided by the `MakieExt` extension and requires loading a
 [Makie](https://docs.makie.org/stable/) backend before use. Node placement
-requires [NetworkLayout.jl](https://github.com/JuliaGraphs/NetworkLayout.jl).
-Below we use CairoMakie:
+requires [NetworkLayout.jl](https://github.com/JuliaGraphs/NetworkLayout.jl)
+(or bring your own layout). Below we use CairoMakie:
 
 ```@example plot
 using CausalStructures
@@ -13,10 +13,14 @@ using NetworkLayout
 
 ## Basic usage
 
-Pass any `CausalGraph` to `plot`:
+Pass any `CausalGraph` to `plot`. Consider Figure 6.5 of
+[peters2017elements](@cite):
 
 ```@example plot
-dag = cgraph("A --> X + Y, X --> Y"; class = DAG)
+dag = cgraph(
+    "C --> X, A --> X + K, X --> F + D, K --> Y, D --> Y + G, Y --> H";
+    class = DAG,
+)
 plot(dag)
 ```
 
@@ -217,19 +221,25 @@ plot(detour; layout = [(0, 0), (1, 0), (2, 0)])
 
 ## Combining options
 
+Here we plot a PAG where we combine a bunch of different
+styling options:
+
 ```@example plot
-admg2 = cgraph("U --> X + Y, X --> Y, X <-> Z, Z --> Y"; class = ADMG)
+pag = cgraph(
+    "C o-> X, D --> G + Y, X --> D + F, Y --> H, K o-> X, K --> Y";
+    class = PAG,
+)
 
 plot(
-    admg2;
-    node_color       = Dict(:U => :lightyellow, :default => :white),
+    pag;
+    node_color       = Dict(:X => :lightyellow, :default => :white),
     node_strokecolor = :gray30,
-    edge_color       = Dict(:directed => :gray20, :bidirected => :crimson),
-    linewidth        = Dict(:bidirected => 2.0, :default => 1.5),
+    edge_color       = Dict(:partially_directed => :crimson, :default => :gray20),
+    circle_size      = 0.05,
     node_radius      = 0.14,
-    label_color      = Dict(:U => :gray30, :default => :black),
+    label_color      = Dict(:X => :gray30, :default => :black),
     label_fontsize   = 16,
-    title            = "Confounded ADMG",
+    title            = "A PAG",
     title_fontsize   = 18,
     title_color      = :gray20,
 )
