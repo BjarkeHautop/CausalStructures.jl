@@ -17,6 +17,14 @@ end
     @test string(prob(:Y)) == "P(Y)"
 end
 
+@testitem "prob with an empty head is one" tags = [:unit] begin
+    @test isone(prob(Symbol[]))
+    @test isone(prob(Symbol[]; given = [:X]))
+
+    # The head is emptied by the conditioning set here.
+    @test isone(prob([:X, :Y]; given = [:X, :Y]))
+end
+
 @testitem "marginal with an empty index is the identity" tags = [:unit] begin
     p = prob(:Y; given = [:X])
     @test marginal(Symbol[], p) == p
@@ -111,15 +119,68 @@ end
     @test string(product([prob(:X), inner])) == "P(X) (Σ_{W} P(Y | W, X))"
 
     # A quotient under a sum likewise, so the sum does not appear to range
-    # over the numerator alone. The conditioning sets differ here, which is what
+    # over the numerator alone. The denominator has to mention W, or the sum
+    # would move inside the ratio; the conditioning sets differ, which is what
     # keeps the ratio from collapsing into a plain conditional.
-    num = prob([:Y, :Z]; given = [:W])
-    den = prob(:Z)
-    @test string(marginal([:W], quotient(num, den))) == "Σ_{W} (P(Y, Z | W) / P(Z))"
+    num = prob([:Y, :Z]; given = [:X])
+    den = prob(:Z; given = [:W])
+    @test string(marginal([:W], quotient(num, den))) == "Σ_{W} (P(Y, Z | X) / P(Z | W))"
 
     # A product inside a sum needs no brackets.
     prod_term = product([prob(:W; given = [:X]), prob(:Y; given = [:W, :X])])
     @test string(marginal([:W], prod_term)) == "Σ_{W} P(W | X) P(Y | W, X)"
+end
+
+@testitem "marginal pulls constant factors out of the sum" tags = [:unit] begin
+    # P(Y | X) does not mention W, so it is a constant of the sum, and what is
+    # left of the sum stays where that factor's neighbour stood.
+    e = marginal([:W], product([prob(:Y; given = [:X]), prob(:V; given = [:X, :W])]))
+
+    @test string(e) == "P(Y | X) (Σ_{W} P(V | W, X))"
+end
+
+@testitem "marginal drops a factor that sums to one" tags = [:unit] begin
+    # Σ_W P(W | X, Z) == 1, leaving P(Z | X) behind.
+    e = marginal([:W], product([prob(:Z; given = [:X]), prob(:W; given = [:X, :Z])]))
+    @test e == prob(:Z; given = [:X])
+
+    # Dropping P(W | X, Z) frees Z, so P(Z | X) then sums to one as well and
+    # the whole summand collapses.
+    whole =
+        marginal([:W, :Z], product([prob(:Z; given = [:X]), prob(:W; given = [:X, :Z])]))
+    @test isone(whole)
+end
+
+@testitem "marginal keeps a factor another factor still depends on" tags = [:unit] begin
+    # Σ_W P(W | X) P(Y | W, X) is not P(Y | X) times anything: the second factor
+    # depends on W, so neither factor may leave and neither sums away.
+    e = marginal([:W], product([prob(:W; given = [:X]), prob(:Y; given = [:W, :X])]))
+
+    @test e isa Marginal
+    @test string(e) == "Σ_{W} P(W | X) P(Y | W, X)"
+end
+
+@testitem "marginal pulls a constant denominator out of the sum" tags = [:unit] begin
+    # Σ_W (P(Y, W | X) / P(Z)) == (Σ_W P(Y, W | X)) / P(Z), and the numerator
+    # then marginalizes directly.
+    e = marginal([:W], quotient(prob([:Y, :W]; given = [:X]), prob(:Z)))
+    @test e == quotient(prob(:Y; given = [:X]), prob(:Z))
+
+    # The denominator mentions W here, so the sum has to stay outside the ratio.
+    kept = marginal([:W], quotient(prob([:Y, :Z]; given = [:X]), prob(:Z; given = [:W])))
+    @test kept isa Marginal
+end
+
+@testitem "quotient cancels a factor shared by both sides" tags = [:unit] begin
+    # P(Z | X) P(Y | X, Z) / P(Z | X) == P(Y | X, Z)
+    num = product([prob(:Z; given = [:X]), prob(:Y; given = [:X, :Z])])
+    @test quotient(num, prob(:Z; given = [:X])) == prob(:Y; given = [:X, :Z])
+
+    # Cancelling everything leaves the multiplicative identity.
+    @test isone(quotient(num, num))
+
+    # A factor appearing only on one side is left alone.
+    @test quotient(num, prob(:Z; given = [:W])) isa Quotient
 end
 
 @testitem "estimands hash consistently with equality" tags = [:unit] begin

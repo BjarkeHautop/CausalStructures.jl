@@ -99,16 +99,31 @@ Base.hash(e::Marginal, h::UInt) = hash(e.term, hash(e.index, hash(:Marginal, h))
 Base.hash(e::Product, h::UInt) = hash(e.terms, hash(:Product, h))
 Base.hash(e::Quotient, h::UInt) = hash(e.den, hash(e.num, hash(:Quotient, h)))
 
+# --- free variables ---------------------------------------------------------
+
+# The variables an expression is a function of. A summation index is bound by
+# the sum that introduces it, so it is not free in that sum.
+_free_vars(e::Prob) = Set{Symbol}(vcat(e.vars, e.given))
+_free_vars(e::Marginal) = setdiff(_free_vars(e.term), Set(e.index))
+_free_vars(e::Quotient) = union(_free_vars(e.num), _free_vars(e.den))
+_free_vars(e::Product) =
+    isempty(e.terms) ? Set{Symbol}() : union((_free_vars(t) for t in e.terms)...)
+
+# The factors of an expression, as a fresh vector the caller may mutate.
+_factors(e::Product) = copy(e.terms)
+_factors(e::Estimand) = Estimand[e]
+
 # --- smart constructors -----------------------------------------------------
 
 """
-    prob(vars; given = Symbol[]) -> Prob
+    prob(vars; given = Symbol[]) -> Estimand
 
 Build the probability term `P(vars | given)`.
 
 `vars` may be a single `Symbol` or a vector of them. Both lists are sorted and
 de-duplicated, and any variable appearing in `given` is dropped from `vars`
-(since `P(X, Y | X) = P(Y | X)`).
+(since `P(X, Y | X) = P(Y | X)`). A term left with an empty head is the
+constant `1`.
 
 # Examples
 
@@ -125,6 +140,7 @@ P(Y)
 function prob(vars; given = Symbol[])
     g = sort(unique(_as_symbols(given)))
     v = sort(setdiff(unique(_as_symbols(vars)), g))
+    isempty(v) && return _ONE
     return Prob(v, g)
 end
 
@@ -140,6 +156,12 @@ Sum `term` over the variables in `index`.
 An empty `index` returns `term` unchanged, and nested sums are flattened into
 a single one. Summing a probability term over part of its own head marginalizes
 it directly: `Σ_a P(a, b | c)` becomes `P(b | c)`.
+
+Sums over a product are narrowed as far as they go: factors that do not mention
+the summation index are constants of the sum and are pulled out in front of it,
+and a factor whose whole head is summed over, and whose head no other factor
+under the sum mentions, sums to `1` and drops out. A denominator free of the
+index is likewise pulled out of the sum.
 
 # Examples
 
@@ -161,6 +183,14 @@ P(Y | X)
 julia> marginal(Symbol[], prob(:Y))
 P(Y)
 ```
+
+`P(Z | X)` does not mention `W`, so it leaves the sum, and what remains sums to
+one:
+
+```jldoctest
+julia> marginal([:W], product([prob(:Z; given = [:X]), prob(:W; given = [:X, :Z])]))
+P(Z | X)
+```
 """
 function marginal(index, term::Estimand)
     idx = sort(unique(_as_symbols(index)))
@@ -172,9 +202,92 @@ function marginal(index, term::Estimand)
     end
 
     # Σ_a Σ_b f  ==  Σ_{a, b} f
-    term isa Marginal && return Marginal(sort(union(idx, term.index)), term.term)
+    term isa Marginal && return marginal(union(idx, term.index), term.term)
+
+    # Σ_a (f / g) == (Σ_a f) / g, when g is a constant of the sum.
+    if term isa Quotient && isdisjoint(idx, _free_vars(term.den))
+        return quotient(marginal(idx, term.num), term.den)
+    end
+
+    if term isa Product
+        outside, inside, rest = _narrow_sum(term.terms, idx)
+        # Anything pulled out or dropped shrinks the summand, so re-entering
+        # `marginal` here terminates.
+        length(inside) == length(term.terms) ||
+            return _rebuild_sum(term.terms, outside, inside, rest)
+    end
 
     return Marginal(idx, term)
+end
+
+# Sort the positions of a summed product's factors into those that can leave the
+# sum and those that must stay, along with the summation index the latter still
+# need.
+#
+# The two rewrites feed each other, so they run to a fixpoint: pulling a factor
+# out cannot free an index, but dropping one that sums to one can leave further
+# factors constant in what is left of the index.
+function _narrow_sum(terms::Vector{Estimand}, index::Vector{Symbol})
+    outside = Int[]
+    inside = collect(eachindex(terms))
+    rest = index
+
+    while true
+        changed = false
+
+        # A factor mentioning none of the remaining indices is constant across
+        # the sum, so it can sit outside it.
+        keep = Int[]
+        for p in inside
+            if isdisjoint(rest, _free_vars(terms[p]))
+                push!(outside, p)
+                changed = true
+            else
+                push!(keep, p)
+            end
+        end
+        inside = keep
+
+        # Σ_a P(a | c) == 1, provided nothing else under the sum mentions `a`.
+        for (k, p) in pairs(inside)
+            t = terms[p]
+            t isa Prob && issubset(t.vars, rest) || continue
+            all(q -> q == p || isdisjoint(t.vars, _free_vars(terms[q])), inside) || continue
+            rest = setdiff(rest, t.vars)
+            deleteat!(inside, k)
+            changed = true
+            break
+        end
+
+        changed || break
+    end
+
+    return sort!(outside), inside, rest
+end
+
+# Reassemble a narrowed sum, leaving the factors that came out of it where they
+# were and putting what remains of the sum where its first factor stood.
+function _rebuild_sum(
+    terms::Vector{Estimand},
+    outside::Vector{Int},
+    inside::Vector{Int},
+    rest::Vector{Symbol},
+)
+    summed = marginal(rest, product(terms[inside]))
+    at = isempty(inside) ? typemax(Int) : first(inside)
+
+    factors = Estimand[]
+    placed = false
+    for p in outside
+        if !placed && p > at
+            push!(factors, summed)
+            placed = true
+        end
+        push!(factors, terms[p])
+    end
+    placed || push!(factors, summed)
+
+    return product(factors)
 end
 
 """
@@ -217,11 +330,15 @@ end
 
 Form the ratio `num / den`.
 
-A denominator of `1` returns `num` unchanged. When both sides are probability
-terms sharing the same conditioning set, and the denominator's variables are a
-subset of the numerator's, the ratio collapses to a conditional:
-`P(a, b | c) / P(b | c)` becomes `P(a | b, c)`. That is what turns the ratios of
-marginals produced by the ID recursion back into ordinary conditionals.
+A denominator of `1` returns `num` unchanged, and a factor appearing on both
+sides cancels. When both sides are probability terms sharing the same
+conditioning set, and the denominator's variables are a subset of the
+numerator's, the ratio collapses to a conditional: `P(a, b | c) / P(b | c)`
+becomes `P(a | b, c)`. That is what turns the ratios of marginals produced by
+the ID recursion back into ordinary conditionals.
+
+Cancellation assumes the cancelled factor is non-zero, which is the positivity
+assumption the identification results are stated under anyway.
 
 # Examples
 
@@ -240,6 +357,18 @@ P(Y, Z | X) / P(Z)
 """
 function quotient(num::Estimand, den::Estimand)
     isone(den) && return num
+
+    # A factor shared by both sides cancels. Re-entering with one factor fewer
+    # on each side lets the remaining rules see through the cancellation.
+    nf = _factors(num)
+    df = _factors(den)
+    for i in eachindex(nf)
+        j = findfirst(isequal(nf[i]), df)
+        j === nothing && continue
+        deleteat!(nf, i)
+        deleteat!(df, j)
+        return quotient(product(nf), product(df))
+    end
 
     # P(a, b | c) / P(b | c) == P(a | b, c).
     if num isa Prob &&
@@ -264,12 +393,6 @@ _vars_used(e::Marginal) = union(Set{Symbol}(e.index), _vars_used(e.term))
 _vars_used(e::Quotient) = union(_vars_used(e.num), _vars_used(e.den))
 _vars_used(e::Product) =
     isempty(e.terms) ? Set{Symbol}() : union((_vars_used(t) for t in e.terms)...)
-
-_free_vars(e::Prob) = Set{Symbol}(vcat(e.vars, e.given))
-_free_vars(e::Marginal) = setdiff(_free_vars(e.term), Set(e.index))
-_free_vars(e::Quotient) = union(_free_vars(e.num), _free_vars(e.den))
-_free_vars(e::Product) =
-    isempty(e.terms) ? Set{Symbol}() : union((_free_vars(t) for t in e.terms)...)
 
 _rename(e::Prob, m::Dict{Symbol,Symbol}) =
     prob([get(m, v, v) for v in e.vars]; given = [get(m, v, v) for v in e.given])

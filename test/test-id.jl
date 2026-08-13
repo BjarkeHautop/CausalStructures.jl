@@ -78,8 +78,9 @@ end
     @test Set(Set.(districts(subgraph(cg, [:Y1, :W2, :Y2])))) ==
           Set([Set([:Y1]), Set([:W2, :Y2])])
 
-    # The paper's answer: Σ_{w2} P(w2, y2) Σ_{w1} P(y1 | x, w1) P(w1).
-    @test string(id(cg, :X, [:Y1, :Y2])) == "Σ_{W2} P(W2, Y2) (Σ_{W1} P(W1) P(Y1 | W1, X))"
+    # The paper's answer: Σ_{w2} P(w2, y2) Σ_{w1} P(y1 | x, w1) P(w1), with the
+    # leading sum contracted to P(y2) since nothing else under it mentions W2.
+    @test string(id(cg, :X, [:Y1, :Y2])) == "P(Y2) (Σ_{W1} P(W1) P(Y1 | W1, X))"
 end
 
 @testitem "id: Q[S] conditionals become ratios of marginals" tags = [:unit] begin
@@ -95,9 +96,10 @@ end
     result = id(cg, :C, :E)
 
     @test result isa CausalStructures.Quotient
+    # The denominator sums over E as well, and no other factor there mentions
+    # it, so P(E | A, B, C) sums away and only the numerator keeps it.
     @test string(result) ==
-          "(Σ_{A} P(A) P(C | A, B) P(E | A, B, C)) / " *
-          "(Σ_{A, E'} P(A) P(C | A, B) P(E' | A, B, C))"
+          "(Σ_{A} P(A) P(C | A, B) P(E | A, B, C)) / (Σ_{A} P(A) P(C | A, B))"
 end
 
 @testitem "id: rejects malformed queries" tags = [:unit] begin
