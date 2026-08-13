@@ -6,8 +6,7 @@ CurrentModule = CausalStructures
 
 CausalStructures.jl is a causality-first graph package for Julia, built for
 performance and flexibility. Each graph class is its own type, validated on
-construction. Whether you are writing identification algorithms or learning
-about causal graphs for the first time, CausalStructures.jl is made for you.
+construction. It aims to serve both experts and novices in causal inference.
 
 ## Supported Graph Classes
 
