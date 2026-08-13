@@ -18,3 +18,24 @@ all_frontdoor_sets
 is_valid_iv
 all_iv_sets
 ```
+
+## Identification
+
+```@docs
+id
+idc
+```
+
+### Estimands
+
+```@docs
+Estimand
+Prob
+Marginal
+Product
+Quotient
+prob
+marginal
+product
+quotient
+```

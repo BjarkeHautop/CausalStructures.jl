@@ -142,3 +142,58 @@ work on ADMGs, e.g.:
 ```@example id
 is_valid_iv(admg, :X, :Y, [:Z])
 ```
+
+## General identification
+
+The methods discussed above are each sufficient, not necesary. CausalStructures
+also implements the ID algorithm of [shpitser2008complete](@cite) and returns the
+estimand as an [`Estimand`](@ref).
+
+On a graph with an observed confounder, it recovers the familiar g-formula:
+
+```@example id
+dag4 = cgraph("Z --> X + Y, X --> Y"; class = DAG)
+id(dag4, :X, :Y)
+```
+
+Projecting `U` out of the front-door graph gives an ADMG where no adjustment set
+exists, yet the effect is identified through the mediator:
+
+```@example id
+admg2 = latent_project(dag2, [:U])
+id(admg2, :X, :Y)
+```
+
+which is the standard front-door adjustment formula. The primed `X'` is a summation
+index distinct from the intervened value of `X`, following the usual convention.
+
+In the following graph the causal effect can not be identified:
+
+```@example id
+admg
+id(admg, :X, :Y) === nothing
+```
+
+[`idc`](@ref) extends this to conditional effects ``P(y \mid do(x), z)``:
+
+```@example id
+idc(admg2, :X, :Y; given = :M)
+```
+
+### Working with the result
+
+The result is an ordinary immutable tree of
+[`Prob`](@ref), [`Marginal`](@ref), [`Product`](@ref), and [`Quotient`](@ref)
+nodes, so it can be inspected or transformed programmatically:
+
+```@example id
+e = id(dag4, :X, :Y)
+(typeof(e), e.index, typeof.(e.term.terms))
+```
+
+Estimands compare and hash structurally, so two formulas built in different
+ways are equal when their trees agree:
+
+```@example id
+id(dag4, :X, :Y) == marginal([:Z], product([prob(:Y; given = [:X, :Z]), prob(:Z)]))
+```

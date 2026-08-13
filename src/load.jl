@@ -35,6 +35,7 @@ include("query/separation.jl")
 include("query/minimal-separator.jl")
 
 # Causal identification: adjustment sets, frontdoor, conditioning
+include("identification/estimand.jl")
 include("identification/enumerate-subsets.jl")
 include("identification/adjustment-admg.jl")
 include("identification/adjustment-mag.jl")
@@ -42,6 +43,7 @@ include("identification/adjustment-pag.jl")
 include("identification/adjustment-pdag.jl")
 include("identification/backdoor.jl")
 include("identification/frontdoor.jl")
+include("identification/id.jl")
 include("identification/iv.jl")
 include("identification/condition-marginalize.jl")
 
