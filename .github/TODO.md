@@ -2,11 +2,20 @@
 
 ## Algs
 
-- ID algorithm (Shpitser & Pearl 2006). Requires c-component factorization first.
+- Simplification of estimands; the ID recursion can emit ratios of marginals
+  that could be written more compactly (e.g. recognising when a summed
+  factor is a constant).
 
-- c-component factorization (Tian & Pearl 2002) — decomposes the joint distribution into c-components based on bidirected-connected components.
+- Hedge witness on non-identifiability (Shpitser & Pearl 2008, Fig. 4 line 5);
+  `id` just returns `nothing`. Separate `hedge(cg, x, y)`, not a wider `id`
+  return type. `(G, G ∩ S)` at the failure point still needs trimming to
+  C-forests.
 
-- IDC algorithm (Shpitser & Pearl 2008) — extends ID to conditional causal effects P(Y | do(X), Z).
+- Generalized Backdoor Criterion (GBC) (Maathuis and Colombo, 2015)
+
+- `possible_parent_sets(cpdag, x)`; the graph half of IDA (Maathuis et al.,
+  2009). Not `all_adjustment_sets`: one set per DAG in the class, duplicates
+  kept. Check local vs global multiplicities against the paper.
 
 ## Causal Graphs
 
