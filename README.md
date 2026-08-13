@@ -14,9 +14,10 @@ Status](https://github.com/BjarkeHautop/CausalStructures.jl/actions/workflows/Do
 [![BestieTemplate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JuliaBesties/BestieTemplate.jl/main/docs/src/assets/badge.json)](https://github.com/JuliaBesties/BestieTemplate.jl)
 [![Aqua QA](https://juliatesting.github.io/Aqua.jl/dev/assets/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
-CausalStructures.jl provides a type-driven interface for representing,
-validating, and manipulating causal graphs. Rather than treating every graph as
-an arbitrary collection of nodes and edges, graph classes explicitly encode their structural assumptions and invariants.
+CausalStructures.jl is a causality-first graph package for Julia, built for
+performance and flexibility. Each graph class is its own type, validated on
+construction. Whether you are writing identification algorithms or learning
+about causal graphs for the first time, CausalStructures.jl is made for you.
 
 ## Installation
 

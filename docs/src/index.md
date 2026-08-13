@@ -4,10 +4,10 @@ CurrentModule = CausalStructures
 
 # CausalStructures.jl
 
-CausalStructures.jl provides a type-driven interface for representing,
-validating, and manipulating causal graphs. Rather than treating every graph as
-an arbitrary collection of nodes and edges, graph classes explicitly encode
-their structural assumptions and invariants.
+CausalStructures.jl is a causality-first graph package for Julia, built for
+performance and flexibility. Each graph class is its own type, validated on
+construction. Whether you are writing identification algorithms or learning
+about causal graphs for the first time, CausalStructures.jl is made for you.
 
 ## Supported Graph Classes
 
@@ -29,8 +29,9 @@ CausalGraph
     └─ UNKNOWN        No structural constraints
 ```
 
-`UNKNOWN` can be used for currently unsupported graph classes. The graph constrains each class imposes are validated on construction, and errors
-if invalid.
+`UNKNOWN` can be used for currently unsupported graph classes. The constraints
+each class imposes are validated on construction, and an error is thrown if the
+graph is invalid.
 
 The following edge types exists:
 
