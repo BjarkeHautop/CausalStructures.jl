@@ -5,8 +5,6 @@
 #   caugi/src/rust/src/graph/dag/adjustment.rs
 #   caugi/src/rust/src/graph/admg/adjustment.rs
 
-# ── descendants bitmask ───────────────────────────────────────────────────────
-
 function _descendants_bitmask(
     B::Union{DAGBackend,ADMGBackend,AGBackend},
     seeds::Vector{Int},
@@ -30,8 +28,6 @@ function _descendants_bitmask(
     return mask
 end
 
-# ── forbidden set ─────────────────────────────────────────────────────────────
-
 # forb(X,Y) = De(cn(X,Y) \ Y) ∪ X,  where cn(X,Y) = De(X) ∩ An(Y)
 function _forbidden_set(
     B::Union{DAGBackend,ADMGBackend,AGBackend},
@@ -54,8 +50,6 @@ function _forbidden_set(
     end
     return forbidden
 end
-
-# ── proper backdoor graph (PBG) helpers ───────────────────────────────────────
 
 # Ancestors bitmask in G with removed directed edges deleted.
 function _ancestors_bitmask_filtered(
@@ -83,9 +77,7 @@ function _ancestors_bitmask_filtered(
     return mask
 end
 
-# In-place variant of `_ancestors_bitmask_filtered` for hot loops (enumerating
-# adjustment sets) that call it once per candidate: reuses caller-provided
-# `mask`/`stack` buffers instead of allocating fresh ones on every call.
+# In-place variant for hot loops
 function _ancestors_bitmask_filtered!(
     mask::BitVector,
     stack::Vector{Int},
@@ -146,10 +138,7 @@ function _admg_moral_adj_filtered(
     return adj
 end
 
-# In-place variant of `_admg_moral_adj_filtered`: reuses the `adj` array-of-arrays
-# (clearing each bucket with `empty!` instead of reallocating `n` fresh vectors)
-# and the `pa_buf`/`sp_buf`/`heads_buf` scratch buffers, for hot loops that
-# rebuild the moralized PBG once per candidate adjustment set.
+# In-place variant for hot loops
 function _admg_moral_adj_filtered!(
     adj::Vector{Vector{Int}},
     B::ADMGBackend,
@@ -264,8 +253,6 @@ function _m_separated_pbg(
     return true
 end
 
-# ── minimal-set pruning ───────────────────────────────────────────────────────
-
 # Is sorted vector a ⊆ sorted vector b?
 function _is_subset_of(a::Vector{Symbol}, b::Vector{Symbol})
     j = 1
@@ -296,9 +283,7 @@ end
 # ── DAG ───────────────────────────────────────────────────────────────────────
 
 # Build the proper backdoor graph as an actual DAG by dropping the edges
-# `_pbg_removed` identifies. `build_backend` always sorts the same node set
-# into the same index order, so `cg`'s node indices are valid for the result's
-# backend directly -- no Symbol round-trip needed (see the analogous comment
+# `_pbg_removed` identifies.
 # on `all_backdoor_sets(cg::ADMG, ...)` in backdoor.jl).
 function _pbg_dag(cg::DAG, xs::Vector{Int}, ys::Vector{Int})
     B = cg.backend
@@ -421,9 +406,7 @@ function all_adjustment_sets(
     end
     universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
 
-    # `_pbg_dag`'s backend shares `cg`'s node indices (see its docstring
-    # comment), so the hot loop below can index into it with `xs`/`ys`
-    # directly without any Symbol round-trip.
+    # `_pbg_dag`'s backend shares `cg`'s node indices
     Bx = _pbg_dag(cg, xs, ys).backend
 
     # Scratch buffers allocated once per `make_checker` call, reused across
@@ -621,8 +604,7 @@ function all_adjustment_sets(
     universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
     removed = _pbg_removed(B, xs, ys)
 
-    # Scratch buffers allocated once per `make_checker` call, reused across
-    # all its candidates (this rebuilds the moralized PBG once per candidate).
+    # Scratch buffers allocated once per `make_checker` call
     function make_checker()
         seeds_buf = Int[]
         anc_mask = falses(n)

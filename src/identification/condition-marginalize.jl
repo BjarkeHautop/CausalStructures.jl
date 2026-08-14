@@ -1,17 +1,11 @@
-# condition_marginalize: condition and/or marginalize variables in a DAG or AG
-#
-# DAG version was adapted from caugi: caugi/R/operations.R
+# Adapted from caugi: caugi/R/operations.R
 
-# Infer directed/undirected/bidirected edge type from anterior relationships.
-# Edge type between a and b is determined by:
+# Infer directed/undirected/bidirected edge type from anterior relationships:
 #   a ∈ Ant({b} ∪ S)?  b ∈ Ant({a} ∪ S)?  -->  edge
 #   no                  no                  -->  a <-> b
 #   yes                 yes                 -->  a --- b
 #   yes                 no                  -->  a --> b
 #   no                  yes                 -->  b --> a
-#
-# `full_ant[v]` is Ant({v} ∪ S) precomputed once per remaining node (S = cond_vars,
-# fixed for the whole call), so each pair only needs two O(1) set membership tests.
 function _edge_from_anteriors(a::Symbol, b::Symbol, full_ant::Dict{Symbol,Set{Symbol}})
     a_in_ant_b_S = a in full_ant[b]
     b_in_ant_a_S = b in full_ant[a]
@@ -27,8 +21,6 @@ function _edge_from_anteriors(a::Symbol, b::Symbol, full_ant::Dict{Symbol,Set{Sy
     end
 end
 
-# Marginalize and/or condition on variables in a DAG, ADMG, or AG (Definition
-# 4.2.1, Richardson & Spirtes 2002). Returns an AG over the remaining nodes.
 """
     condition_marginalize(cg::Union{DAG,ADMG,AbstractAG};
                           cond_vars = Symbol[], marg_vars = Symbol[]) -> AG
@@ -97,8 +89,6 @@ function condition_marginalize(
     remaining = [v for v in nodes(cg) if !(v in removed)]
     n_rem = length(remaining)
 
-    # validate=false is safe here: an empty edge set trivially satisfies every
-    # AG constraint.
     n_rem < 2 && return AG(Set(remaining), CausalEdge[]; validate = false)
 
     # Pre-compute anteriors for all remaining nodes and cond_vars on the original graph.
@@ -108,8 +98,7 @@ function condition_marginalize(
         ant_dict[v] = Set(anteriors(cg, v))  # open=true: v itself excluded
     end
 
-    # Ant(S), S = cond_vars: shared by every pair, so compute it once instead
-    # of re-unioning cond_vars's anterior sets inside the O(n^2) pair loop.
+    # Ant(S), S = cond_vars: shared by every pair, computed once.
     cond_closure = Set{Symbol}(cond_vars)
     for v in cond_vars
         haskey(ant_dict, v) && union!(cond_closure, ant_dict[v])
@@ -123,9 +112,7 @@ function condition_marginalize(
     end
 
     # Scratch buffer for the `restrict` argument passed to minimal_separator:
-    # remaining \ {a, b} followed by cond_vars. Reused across all O(n^2) pairs
-    # instead of allocating two fresh arrays (the filter and the concatenation)
-    # per pair.
+    # remaining \ {a, b} followed by cond_vars.
     cond_vec = collect(cond_vars)
     n_cond = length(cond_vec)
     restrict_buf = Vector{Symbol}(undef, n_rem - 2 + n_cond)
@@ -140,9 +127,8 @@ function condition_marginalize(
             is_adj = if adj_orig
                 true
             else
-                # a, b are adjacent in the margin iff no subset of the other
-                # remaining nodes (plus cond_vars, always included) separates
-                # them -- i.e. no such separator exists at all.
+                # a, b are adjacent in the margin iff no separator exists among
+                # the other remaining nodes (plus cond_vars, always included).
                 idx = 0
                 for k = 1:n_rem
                     (k == i || k == j) && continue
@@ -165,9 +151,5 @@ function condition_marginalize(
         end
     end
 
-    # validate=false is safe here: this implements Richardson & Spirtes's
-    # (2002) Definition 4.2.1 margin construction, which is correct by
-    # construction -- adjacency comes from m-separation and edge type from
-    # the anterior relation, exactly the invariants an AG must satisfy.
     return AG(Set(remaining), new_edges; validate = false)
 end

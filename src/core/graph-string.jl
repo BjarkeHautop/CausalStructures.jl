@@ -1,4 +1,4 @@
-# String DSL for building graphs, e.g. `cgraph("A --> B + C, D o-> E"; class = UNKNOWN)`.
+# String DSL for building graphs.
 #
 # Grammar:
 #   graph_str := statement (',' statement)*
@@ -70,9 +70,6 @@ function _graph_str_edge_marks(tok::AbstractString)
     return negated !== nothing, left_mark, right_mark
 end
 
-# `is_directed`/`is_bidirected`/etc. (edges.jl) only recognize the canonical mark
-# order (e.g. directed is (Tail, Arrow), never (Arrow, Tail)), so a reversed marker
-# like "<--" must swap src/dst rather than keep the literal left/right positions.
 function _graph_str_edge(left::Symbol, right::Symbol, tok::AbstractString)
     negated, left_mark, right_mark = _graph_str_edge_marks(tok)
     if negated

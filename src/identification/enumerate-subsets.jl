@@ -33,11 +33,9 @@ function _all_subsets(universe::Vector{Int}, min_size::Int, max_size::Int)
     return out
 end
 
-# Kept as its own function because giving the sequential and
-# threaded code paths their own local variable named `checker` inside a
-# single function made Julia's
-# closure-lowering share one box for both, so parallel tasks ended up
-# aliasing each other's "fresh" scratch buffers.
+# Kept as its own function: a shared `checker` local between the sequential
+# and threaded paths made Julia's closure-lowering box them together, so
+# parallel tasks ended up aliasing each other's "fresh" scratch buffers.
 function _search_subsets_sequential(
     universe::Vector{Int},
     min_size::Int,
@@ -94,23 +92,19 @@ function _search_subsets_threaded(
             end
         end
     end
-    # Chunks are contiguous slices of `candidates` assigned in increasing
-    # order, so this concatenation preserves the same global size-then-
-    # lexicographic order the sequential path produces.
+    # Chunks are contiguous slices of `candidates`, so concatenation preserves
+    # the same order the sequential path produces.
     return reduce(vcat, per_thread)
 end
 
 # Brute-force every subset of `universe` (node indices) of size
 # min_size:max_size`, keeping those for which `checker(cur)` returns `true`,
 # where `checker = make_checker()`.
-
+#
 # `make_checker` must be side-effect-free and return a *fresh* closure each
-# time it is called: on the sequential path it is called once, on the
-#threaded path once per task, so that each task gets its own scratch buffers
-# instead of racing on shared ones. `to_symbols(cur)` converts an accepted
-# candidate to the sorted `Vector{Symbol}` that gets returned; it may be
-# called concurrently from different tasks and must not share mutable state
-# with `checker`.
+# time, so each task on the threaded path gets its own scratch buffers instead
+# of racing on shared ones. `to_symbols(cur)` may be called concurrently and
+# must not share mutable state with `checker`.
 function _search_subsets(
     universe::Vector{Int},
     min_size::Int,
@@ -139,10 +133,9 @@ function _search_subsets(
 end
 
 # Shared brute-force search used by the `adjustment_set` methods for ADMG,
-# AG/MAG, and PAG: finds the smallest subset of `universe` (node indices) for
-# which `is_valid(z_idxs)` holds, trying sizes 0, 1, 2, ... in order and
-# stopping at the first valid set. Returns `nothing` if no subset up to
-# `length(universe)` is valid, distinct from a valid empty set (`Int[]`).
+# AG/MAG, and PAG: finds the smallest subset of `universe` for which
+# `is_valid(z_idxs)` holds, trying sizes 0, 1, 2, ... in order. Returns
+# `nothing` if no subset is valid, distinct from a valid empty set (`Int[]`).
 function _smallest_valid_subset(universe::Vector{Int}, is_valid::F) where {F<:Function}
     cur = Int[]
 

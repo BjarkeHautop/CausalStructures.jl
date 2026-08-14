@@ -6,10 +6,10 @@
 # node i's full neighborhood, and deg[b,i] gives each bucket's width within it.
 #
 # Built via counting sort: two passes over `edges` (count, then place) into
-# flat pre-sized arrays, avoiding the GC pressure of per-node growable buckets.
+# flat pre-sized arrays.
 # `pairs_fn(edge, si, di)` returns a fixed-length tuple of (node_idx, bucket,
 # value) triples describing every backend entry the edge contributes; a
-# bucket of 0 means "no entry" (kept so the tuple type stays concrete).
+# bucket of 0 means "no entry".
 
 function _counting_csr(
     n::Int,

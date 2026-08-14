@@ -88,9 +88,8 @@ function is_valid_backdoor(
     end
     isempty(parents_x) && return true
 
-    # obs = z ∪ X.  Every parent p of X is an ancestor of some x ∈ obs, so
+    # obs = z ∪ X. Every parent p of X is an ancestor of some x ∈ obs, so
     # ancestors(p ∪ y ∪ obs) = ancestors(y ∪ obs) for all parents p.
-    # Precompute the shared ancestor mask and blocked set once.
     obs_idxs = [z_idxs; xs]
     seeds = unique!([ys; obs_idxs])
     mask = _ancestors_bitmask(B, seeds)
@@ -100,10 +99,8 @@ function is_valid_backdoor(
         blocked[v] = true
     end
 
-    # Each parent is checked with its own Bayes-ball traversal (rather than one
-    # traversal seeded from all parents at once) so that a collider at some
-    # x ∈ X correctly reopens only when that x ∈ obs, without artificially
-    # connecting two parents that only share an x as a common child.
+    # Each parent gets its own Bayes-ball traversal so a collider at x ∈ X
+    # reopens only when that x ∈ obs.
     for p_idx in parents_x
         blocked[p_idx] && continue  # p is in obs --> trivially d-separated
         ys_mask[p_idx] && continue  # p is one of the outcomes itself, not a path to check
@@ -186,10 +183,8 @@ function all_backdoor_sets(
         end
     end
 
-    # Scratch buffers allocated once per `make_checker` call (once per thread
-    # under `_search_subsets`), reused across all its candidates. `universe`
-    # already excludes descendants of x, so unlike `is_valid_backdoor` this
-    # doesn't need to re-check that.
+    # `universe` already excludes descendants of x, so unlike `is_valid_backdoor`
+    # this doesn't need to re-check that.
     function make_checker()
         blocked = falses(n)
         seeds_buf = Int[]
@@ -233,8 +228,6 @@ function all_backdoor_sets(
     minimal && _prune_minimal!(valid_sets)
     return valid_sets
 end
-
-# ── ADMG ──────────────────────────────────────────────────────────────────────
 
 function is_valid_backdoor(
     cg::ADMG,
@@ -284,13 +277,9 @@ function all_backdoor_sets(
         Set(B.nodes),
         filter(e -> !(is_directed(e) && e.src in xs_syms), cg.edges),
     )
-    # gx's backend always assigns node indices by sorting the (identical) node
-    # set (see `build_backend`), so cg's indices are valid for gx's backend
-    # too -- no Symbol round-trip needed to bridge between them.
+    # gx's backend shares cg's node indices (see `build_backend`)
     Bx = gx.backend
 
-    # Scratch buffers allocated once per `make_checker` call, reused across
-    # all its candidates.
     function make_checker()
         z_mask = falses(n)
         seeds_buf = Int[]
@@ -419,7 +408,7 @@ function adjustment_set(
         z = minimal_separator(gx, x, y; restrict = restrict)
         z !== nothing && return z
 
-        # Defensive fallback: Pa(X) is always a valid (if non-minimal) backdoor set.
+        # Fallback: Pa(X) is always a valid (if non-minimal) backdoor set.
         keep = falses(n)
         for xi in xs, p in _parents_slice(B, xi)
             keep[p] = true

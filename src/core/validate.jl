@@ -1,5 +1,3 @@
-# Graph class validation (is_pdag, is_cpdag, is_dag, is_admg, is_ag, ...)
-#
 # Adapted from caugi:
 #   caugi/src/rust/src/graph/pdag/cpdag.rs  (CPDAG / MPDAG validation)
 #   caugi/src/rust/src/graph/alg/acyclic.rs (acyclicity check)
@@ -34,8 +32,7 @@ function directed_cycle_detected(cg::CausalGraph)
         end
     end
 
-    # Kahn's algorithm with a preallocated array queue (head-pointer advance
-    # instead of popfirst!, which is O(n) per call on a Vector).
+    # Kahn's algorithm with a preallocated array queue
     queue = Vector{Int}(undef, n)
     qlen = 0
     for i = 1:n
@@ -125,9 +122,7 @@ function validation_errors(::PAGConstraints, cg::CausalGraph)
     is_simple(cg) || push!(errors, "parallel edges are not allowed in PAG")
     isempty(errors) || return errors
 
-    # A PAG must be realizable: it is the image of some MAG under mag_to_pag.
-    # Resolve it to a MAG with mag_from_pag (which builds and validates that MAG),
-    # then require the round-trip mag_to_pag to recover the same marks.
+    # Roundtrip pag -> mag -> pag for validation
     local mag
     try
         mag = _mag_from_pag(cg.backend.nodes, cg.edges)
@@ -166,7 +161,6 @@ function _class_matches_or_satisfies(cg::CausalGraph, constraints::GraphConstrai
     return _satisfies_constraints(constraints, cg)
 end
 
-# Return an AbstractAG view of cg, reusing its backend if already AGBackend.
 _as_ag(cg::AbstractAG) = cg
 function _as_ag(cg::CausalGraph)
     B = cg.backend isa AGBackend ? cg.backend : build_backend(AG, nodes(cg), cg.edges)
@@ -247,9 +241,7 @@ function validation_errors(::MAGConstraints, cg::CausalGraph)
     n = length(B.nodes)
     n <= 2 && return errors
 
-    # Scratch buffers reused across every pair instead of allocated fresh per
-    # pair inside `minimal_separator`/`_reachable_ag` (this loop is O(n^2)
-    # per candidate MAG in `enumerate_mags`).
+    # Scratch buffers reused across every pair
     all_idxs = collect(1:n)
     a_mask = falses(n)
     a_stack = Int[]

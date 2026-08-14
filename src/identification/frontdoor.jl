@@ -164,13 +164,12 @@ function is_valid_frontdoor(
     return true
 end
 
-# Find Front-door Adjustment Sets. Based on
-# Reference: Jeong, Tian & Bareinboim (2022). Finding and Listing Front-Door
-#   Adjustment Sets. NeurIPS 2022.
+# Jeong, Tian & Bareinboim (2022). Finding and Listing Front-Door Adjustment
+# Sets. NeurIPS 2022.
 
-# G_X: graph with all outgoing directed edges from x removed.
-# In G_X every path from x starts with an arrow into x, so reachability from x
-# in G_X corresponds exactly to backdoor paths in G.
+# G_X: graph with all outgoing directed edges from x removed. Every path from
+# x in G_X starts with an arrow into x, so reachability from x in G_X
+# corresponds exactly to backdoor paths in G.
 function _build_gx(cg::DAG, x::Union{Symbol,AbstractVector{Symbol}})
     xs_syms = _as_symbol_set(x)
     gx_edges = filter(e -> !(e.src in xs_syms && e.dst_end == Arrow), cg.edges)
@@ -186,8 +185,8 @@ function _build_gx(cg::ADMG, x::Union{Symbol,AbstractVector{Symbol}})
     )
 end
 
-# Moral adjacency restricted to mask with removed_mask nodes' outgoing edges omitted.
-# Used by _get_dep (condition 3), which dynamically grows removed_mask during BFS.
+# Moral adjacency restricted to mask, with removed_mask nodes' outgoing edges
+# omitted. Used by _get_dep (condition 3), which grows removed_mask during BFS.
 function _moral_adj_gx(B::DAGBackend, mask::BitVector, removed_mask::BitVector)
     n = length(B.nodes)
     adj = [Int[] for _ = 1:n]
@@ -212,12 +211,10 @@ function _moral_adj_gx(B::DAGBackend, mask::BitVector, removed_mask::BitVector)
     return adj
 end
 
-# Moral adjacency for ADMGBackend: like the DAGBackend version above, but
-# marries every pair of nodes with an arrowhead into `ch` -- directed parents
-# AND bidirected spouses, since both represent potential colliders at `ch`.
-# Bidirected edges have no "outgoing" endpoint, so unlike parents they are
-# never filtered by removed_mask: cutting a node's outgoing directed edges
-# does not affect an edge into it from a latent common cause.
+# Like the DAGBackend version above, but marries every pair of nodes with an
+# arrowhead into `ch` -- directed parents AND bidirected spouses. Bidirected
+# edges have no "outgoing" endpoint, so unlike parents they are never filtered
+# by removed_mask.
 function _moral_adj_gx(B::ADMGBackend, mask::BitVector, removed_mask::BitVector)
     n = length(B.nodes)
     adj = [Int[] for _ = 1:n]
@@ -252,19 +249,13 @@ _has_incoming_arrowhead(B::DAGBackend, v::Int) = !isempty(_parents_slice(B, v))
 _has_incoming_arrowhead(B::ADMGBackend, v::Int) =
     !isempty(_parents_slice(B, v)) || !isempty(_spouses_slice(B, v))
 
-# GETDEP from Jeong, Tian & Bareinboim (2022), helper for Step 2 of FindFDSet.
-#
-# Given T (a candidate set), R' (the filtered candidate pool from Step 1), X, and Y,
-# finds a set Z' ⊆ R' \ T such that T ∪ Z' satisfies the third FD condition relative
-# to (X, Y), or returns nothing (⊥) if no such Z' exists.
-#
-# The BFS traverses the moralized graph of G'_T (ancestors of T∪X∪Y, with T's
-# outgoing edges removed), with X removed as a node (blocked in BFS).  Latent
-# nodes are traversed because BD paths can route through them; only nodes in R'
-# are candidates for Z'.
-#
-# Reference: Jeong, Tian & Bareinboim (2022). Finding and Listing Front-Door
-#   Adjustment Sets. NeurIPS 2022. Algorithm 4.
+# GETDEP, Jeong, Tian & Bareinboim (2022) Algorithm 4, helper for Step 2 of
+# FindFDSet. Given T (a candidate set), R' (the filtered pool from Step 1), X,
+# and Y, finds Z' ⊆ R' \ T such that T ∪ Z' satisfies the third FD condition
+# relative to (X, Y), or returns nothing if no such Z' exists. The BFS
+# traverses the moralized graph of G'_T with X blocked; latent nodes are
+# traversed (BD paths can route through them) but only R' nodes are candidates
+# for Z'.
 function _get_dep(
     B::Union{DAGBackend,ADMGBackend},
     x_set::BitVector,
@@ -346,15 +337,12 @@ function _get_dep(
     return z_prime
 end
 
-# GETCAUSALPATHGRAPH from Jeong, Tian & Bareinboim (2022), helper for Step 3 of FindFDSet.
-#
-# Constructs the causal path graph G' relative to (G, X, Y):
+# GETCAUSALPATHGRAPH, Jeong, Tian & Bareinboim (2022), helper for Step 3 of
+# FindFDSet. Constructs the causal path graph G' relative to (G, X, Y):
 #   PCP(X,Y) = (De(X) \ X) ∩ An(Y)_{G_{overline{X}}}
 #   G'' = G restricted to X ∪ Y ∪ PCP(X,Y)
-#   G' = G''_{overline{X} underline{Y}}:
-# (bidirected edges removed, which is a no-op for an explicit-latent DAG)
-# overline{X} = delete incoming edges to X (do(X)),
-# underline{Y} = delete outgoing edges from Y (condition on Y)
+#   G' = G''_{overline{X} underline{Y}}: overline{X} deletes incoming edges to
+#     X (do(X)), underline{Y} deletes outgoing edges from Y (condition on Y).
 #
 # Returns (cpg_mask, cpg_children) where cpg_mask marks the CPG node set and
 # cpg_children[v] lists the directed children of v in G'.
@@ -429,12 +417,10 @@ function _get_causal_path_graph(
     return cpg_mask, cpg_children
 end
 
-# GETCAND3RDFDC from Jeong, Tian & Bareinboim (2022), Step 2 of FindFDSet.
-#
-# Returns R'' ⊆ R': all v ∈ R' for which GETDEP(G, X, Y, {v}, R') != nothing,
-# meaning there exists Z' ⊆ R' \ {v} such that {v} ∪ Z' satisfies the third
-# FD condition. If GETDEP returns nothing for some v ∈ I, returns nothing
-# (infeasible: I must be included but cannot satisfy condition 3).
+# GETCAND3RDFDC, Jeong, Tian & Bareinboim (2022), Step 2 of FindFDSet. Returns
+# R'' ⊆ R': all v ∈ R' for which GETDEP(G, X, Y, {v}, R') != nothing, meaning
+# some Z' ⊆ R' \ {v} makes {v} ∪ Z' satisfy the third FD condition. Returns
+# nothing if some v ∈ I fails (I must be included but cannot satisfy it).
 function _getcand3rdfdc(
     B::Union{DAGBackend,ADMGBackend},
     x_set::BitVector,
@@ -466,12 +452,10 @@ _testsep(gx::DAG, x::Union{Symbol,AbstractVector{Symbol}}, v::Symbol) =
 _testsep(gx::ADMG, x::Union{Symbol,AbstractVector{Symbol}}, v::Symbol) =
     m_separated(gx, x, v, Symbol[])
 
-# GETCAND2NDFDC from Jeong, Tian & Bareinboim (2022), Step 1 of FindFDSet.
-#
-# Returns R' ⊆ R: all v ∈ R for which TESTSEP(G_X, X, v, ∅) = true (no unblocked
-# backdoor path from X to v). Since a BD path from X to Z exists iff it exists to
-# some v ∈ Z, every Z with I ⊆ Z ⊆ R' is guaranteed to satisfy the 2nd front-door
-# condition. Returns nothing if any v ∈ I has a BD path from X (I ⊆ Z ⊆ R infeasible).
+# GETCAND2NDFDC, Jeong, Tian & Bareinboim (2022), Step 1 of FindFDSet. Returns
+# R' ⊆ R: all v ∈ R for which TESTSEP(G_X, X, v, ∅) = true (no unblocked
+# backdoor path from X to v), so every Z with I ⊆ Z ⊆ R' satisfies the 2nd
+# front-door condition. Returns nothing if some v ∈ I has a backdoor path from X.
 function _getcand2ndfdc(
     gx::Union{DAG,ADMG},
     x::Union{Symbol,AbstractVector{Symbol}},

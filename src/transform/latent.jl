@@ -186,8 +186,6 @@ function exogenize(cg::DAG, nodes_to_exo::AbstractVector{Symbol})
     return DAG(Set(B.nodes), new_edges; validate = false)
 end
 
-# ── normalize_latent_structure ────────────────────────────────────────────────
-
 """
     normalize_latent_structure(cg::DAG, latents::AbstractVector{Symbol}) -> DAG
 

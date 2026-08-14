@@ -1,19 +1,9 @@
-# PAG Generalized Adjustment Criterion (GAC)
-# Perković, Textor, Kalisch, Maathuis (2018)
-#
-# A PAG's circle marks collapse to tails for the purposes of possible-descendant/
-# ancestor reachability, edge visibility, and m-separation in the proper backdoor
-# graph: X o-> Y behaves like X --> Y, and X o-o Y / X o-- Y / X --o Y all behave
-# like an undirected edge X --- Y. PossDe/PossAn already use this collapse for
-# `possible_descendants`/`possible_ancestors` (query/traversal.jl); the same
-# collapse extends naturally to edge visibility and to the proper back-door
-# graph's moralization, since a circle mark is never a definite arrowhead.
-# `_is_visible_edge` (adjustment-mag.jl) already implements visibility
-# generically over this collapsed view via `_collapsed_parents`.
+# PAG Generalized Adjustment Criterion (GAC), Perković, Textor, Kalisch,
+# Maathuis (2018). Circle marks collapse to tails: X o-> Y behaves like
+# X --> Y, and X o-o Y / X o-- Y / X --o Y behave like X --- Y, for
+# reachability, edge visibility, and PBG moralization alike.
 _collapsed_parents(B::PAGBackend, v::Int) =
     Iterators.flatten((_parents_slice(B, v), _circle_parents_slice(B, v)))
-
-# ── PossDe / PossAn bitmasks (forbidden set) ──────────────────────────────────
 
 # PossDe bitmask: reachable from seeds via collapsed children (near mark not an
 # arrowhead: children, circle_children, undirected, circle_undirected_in,
@@ -118,15 +108,9 @@ function _forbidden_set_pag(B::PAGBackend, xs::Vector{Int}, ys::Vector{Int})
     return forbidden
 end
 
-# ── proper backdoor graph (PBG) helpers ───────────────────────────────────────
-
 # PBG removed edges: x --> v or x o-> v with x ∈ X, v ∉ X, v ∈ PossAn(Y), and
 # the edge visible (see `_is_visible_edge` in adjustment-mag.jl). Invisible
-# edges might still hide confounding and must stay in the PBG -- this also
-# means non-amenable graphs automatically yield no valid adjustment set: an
-# invisible edge left in place keeps X and Y directly adjacent (hence never
-# separable) in the PBG for every candidate Z, since every intermediate node on
-# that same causal path is itself forbidden and so can never appear in Z.
+# edges might still hide confounding and must stay in the PBG.
 function _pbg_removed_pag(B::PAGBackend, xs::Vector{Int}, ys::Vector{Int})
     n = length(B.nodes)
     poss_an_y = _pag_possible_ancestors_bitmask(B, ys)
@@ -196,9 +180,7 @@ function _pag_anterior_bitmask_filtered(
     return mask
 end
 
-# In-place variant of `_pag_anterior_bitmask_filtered` for hot loops
-# (enumerating adjustment sets) that call it once per candidate: reuses
-# caller-provided `mask`/`stack` buffers instead of allocating fresh ones.
+# In-place variant for hot loops
 function _pag_anterior_bitmask_filtered!(
     mask::BitVector,
     stack::Vector{Int},
@@ -253,9 +235,8 @@ function _pag_anterior_bitmask_filtered!(
 end
 
 # Moralized PBG adjacency: collapsed parents and spouses of each retained node
-# are cliqued together (arrowhead-into-v evidence, as for AG/MAG); collapsed
-# undirected neighbors just get a direct edge (never an arrowhead into v, so
-# never collider-forming), as for PDAG.
+# are cliqued together, as for AG/MAG; collapsed undirected neighbors just get
+# a direct edge, as for PDAG.
 function _pag_moral_adj_filtered(
     B::PAGBackend,
     mask::BitVector,
@@ -308,10 +289,7 @@ function _pag_moral_adj_filtered(
     return adj
 end
 
-# In-place variant of `_pag_moral_adj_filtered`: reuses the `adj`
-# array-of-arrays (clearing each bucket with `empty!` instead of reallocating
-# `n` fresh vectors) and the `pa_buf`/`sp_buf`/`ne_buf` scratch buffers, for
-# hot loops that rebuild the moralized PBG once per candidate adjustment set.
+# In-place variant for hot loops
 function _pag_moral_adj_filtered!(
     adj::Vector{Vector{Int}},
     B::PAGBackend,
@@ -423,8 +401,6 @@ function _m_separated_pbg_pag(
     end
     return true
 end
-
-# ── public API ────────────────────────────────────────────────────────────────
 
 """
     is_valid_adjustment(cg::PAG, x, y, z = Symbol[]) -> Bool
@@ -558,9 +534,7 @@ function all_adjustment_sets(
     universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
     removed = _pbg_removed_pag(B, xs, ys)
 
-    # Scratch buffers allocated once per `make_checker` call, reused across
-    # all its candidates -- rebuilding the moralized PBG otherwise allocates
-    # fresh arrays per candidate.
+    # Scratch buffers allocated once per `make_checker` call
     function make_checker()
         seeds_buf = Int[]
         anc_mask = falses(n)

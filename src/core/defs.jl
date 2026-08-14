@@ -1,7 +1,3 @@
-# =========================
-# Basic definitions
-# =========================
-
 @enum Endpoint begin
     Tail
     Arrow
@@ -34,7 +30,7 @@ struct DAGBackend <: CausalBackend
     rowval::Vector{Int}
 end
 
-# UG backend: 1 bucket [undirected]; no deg matrix needed
+# UG backend: 1 bucket [undirected]
 struct UGBackend <: CausalBackend
     nodes::Vector{Symbol}
     index::Dict{Symbol,Int}

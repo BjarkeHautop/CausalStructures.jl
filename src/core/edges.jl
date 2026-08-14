@@ -1,5 +1,3 @@
-# Edge constructor functions and predicates
-
 function _ordered_pair(a::Symbol, b::Symbol)
     return isless(a, b) ? (a, b) : (b, a)
 end

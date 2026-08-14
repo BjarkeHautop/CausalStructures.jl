@@ -1,8 +1,7 @@
 # Instrumental Variables (Brito & Pearl 2002)
 
-# G_{overline{X}}: G with all incoming directed edges to X removed (do(X) intervention).
-# Works for both DAG and ADMG: bidirected edges in an ADMG are not incoming directed
-# edges and are left intact.
+# G_{overline{X}}: G with all incoming directed edges to X removed (do(X)).
+# Bidirected edges in an ADMG are left intact.
 function _build_g_do_x(cg::DAG, x::Symbol)
     return build_graph(
         DAG,
@@ -28,9 +27,8 @@ function _check_iv(cg, x, y, z, g_do_x)
     return true
 end
 
-# Dispatch to the right single-seed REACHABLE routine so the buffer-reusing
-# candidate loop in `all_iv_sets` below can stay backend-agnostic (it runs
-# for both DAG and ADMG).
+# Dispatch to the right single-seed REACHABLE routine so `all_iv_sets`'s
+# candidate loop stays backend-agnostic.
 _reachable_single!(visited, q, reached, B::DAGBackend, seed, a_mask, z_mask) =
     _reachable_dag_single!(visited, q, reached, B, seed, a_mask, z_mask)
 _reachable_single!(visited, q, reached, B::ADMGBackend, seed, a_mask, z_mask) =
@@ -173,8 +171,6 @@ function all_iv_sets(
     g_do_x = _build_g_do_x(cg, x)  # built once; x/y already excluded from universe
     Bd = g_do_x.backend
 
-    # Scratch buffers allocated once per `make_checker` call, reused across
-    # all its candidates and every element of z checked within each.
     function make_checker()
         empty_zmask = falses(n)
         excl_zmask = falses(n)

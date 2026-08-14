@@ -21,11 +21,10 @@ function _uniform_dag_counts(n::Int)
     return a
 end
 
-# Maps a uniformly drawn integer r in [1, sum(a[n])] to its outpoint
-# sequence k_1,...,k_I (sum k_i = n), following Appendix C: find k_1 among
-# a[n][1:n], rescale into the corresponding b_{n,k_1} range, then repeatedly
-# find the next layer's outpoint count among the b-recursion's terms and
-# rescale again, until the remaining core is empty.
+# Maps a uniformly drawn integer r in [1, sum(a[n])] to its outpoint sequence
+# k_1,...,k_I (sum k_i = n), following Appendix C: find k_1 among a[n][1:n],
+# rescale into the corresponding b_{n,k_1} range, then repeat for each next
+# layer until the remaining core is empty.
 function _uniform_dag_outpoints(a::Vector{Vector{BigInt}}, n::Int, r::BigInt)
     k1 = 1
     while r > a[n][k1]
@@ -58,16 +57,14 @@ end
 _sample_uniform_dag_outpoints(rng::Random.AbstractRNG, a::Vector{Vector{BigInt}}, n::Int) =
     _uniform_dag_outpoints(a, n, rand(rng, big(1):sum(a[n])))
 
-# Reconstructs the strictly-lower-triangular skeleton Q implied by an
-# outpoint sequence k_1,...,k_I (Section 4.2). Nodes are grouped into
-# contiguous index blocks from the base up: block I (indices 1:k_I) is the
-# innermost core (no arcs), then block I-1 (k_{I-1} new outpoints) is added
-# on top, and so on up to block 1 (the k_1 outpoints of the final DAG,
-# which therefore never appear as a target column below). For each target
-# column l in block i (i = I down to 2), the immediately new layer above it
-# (block i-1) must contribute at least one arc to l, while any layer further
-# above may optionally add one. Q[m, l] = true means an arc from the node at
-# index m to the node at index l (m > l).
+# Reconstructs the strictly-lower-triangular skeleton Q implied by an outpoint
+# sequence k_1,...,k_I (Section 4.2). Nodes are grouped into contiguous index
+# blocks from the base up: block I (indices 1:k_I) is the innermost core (no
+# arcs), then block I-1 is added on top, and so on up to block 1 (the final
+# DAG's outpoints, never a target column below). For each target column l in
+# block i, the layer immediately above it must contribute at least one arc to
+# l, while any layer further above may optionally add one. Q[m, l] = true
+# means an arc from the node at index m to the node at index l (m > l).
 function _uniform_dag_skeleton(rng::Random.AbstractRNG, ks::Vector{Int}, n::Int)
     Q = falses(n, n)
     I = length(ks)
@@ -148,8 +145,7 @@ function uniform_dag(rng::Random.AbstractRNG, n::Integer)
     end
 
     # validate=false is safe here: every arc Q[m, l] has m > l, so arcs only
-    # ever run from a higher to a lower Q-index -- acyclic by construction,
-    # independent of the label permutation applied above.
+    # ever run from a higher to a lower Q-index -- acyclic by construction.
     return DAG(node_set, edges; validate = false)
 end
 

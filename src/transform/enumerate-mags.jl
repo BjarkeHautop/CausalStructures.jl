@@ -1,11 +1,9 @@
 # Below this many total tail/arrow candidates, the fixed cost of spawning tasks
-# outweighs any benefit. Chosen from benchmarking: at total=4 threading was
-# slower than sequential (0.68x), but by total=16 it was already a solid win
-# (3.2x), climbing to ~4.6-4.9x for anything larger -- so the crossover sits
-# somewhere in single digits, well below the 4096 used for subset search
-# (each candidate here is much more expensive: building a MAG, an
-# m-separation validation, and a PAG round-trip, vs. a cheap adjustment
-# check there).
+# outweighs any benefit. Benchmarked: at total=4 threading was slower than
+# sequential (0.68x), but by total=16 it was already a solid win (3.2x),
+# climbing to ~4.6-4.9x beyond that -- well below the 4096 used for subset
+# search, since each candidate here is far more expensive (a MAG build, an
+# m-separation validation, and a PAG round-trip).
 const _ENUMERATE_MAGS_PARALLEL_THRESHOLD = 8
 
 """
@@ -78,11 +76,9 @@ function enumerate_mags(cg::PAG)
     return _enumerate_mags_threaded(circle_pos, mark, adj, B.nodes, node_set, target, total)
 end
 
-# Checks every `bits` assignment in `lo:hi` against `target`, appending valid MAGs
-# to a freshly-allocated output vector. `mark` is copied once here (not shared)
-# since each `bits` iteration overwrites every circle position in it -- safe to
-# call concurrently across disjoint `lo:hi` ranges as long as each call gets its
-# own copy, which is why this isn't hoisted above `enumerate_mags` itself.
+# Checks every `bits` assignment in `lo:hi` against `target`, appending valid
+# MAGs to a freshly-allocated output vector. `mark` is copied once here so
+# concurrent calls across disjoint `lo:hi` ranges each get their own copy.
 function _enumerate_mags_range(
     circle_pos::Vector{Tuple{Int,Int}},
     mark::Matrix{Endpoint},

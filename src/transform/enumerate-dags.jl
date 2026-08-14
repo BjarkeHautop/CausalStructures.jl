@@ -313,14 +313,11 @@ function _dag_enum_fork_children(pa, ch, und, input_pa, skeleton)
 end
 
 # Level-synchronized BFS over the fork tree: expands every state in the
-# current frontier by one level at a time (via `_dag_enum_fork_children`)
-# until it has at least `target` states or the whole MEC has been resolved,
-# whichever comes first. Level-synchronized rather than a DFS/stack-based
-# expansion (which would fully expand one lineage before touching its
-# siblings) because MEC subtrees can be wildly uneven in size: popping
-# depth-first can hit `target` having barely touched most of the tree,
-# leaving one huge unexpanded sibling to dominate a single task while
-# everyone else idles.
+# current frontier by one level at a time until it has at least `target`
+# states or the whole MEC has been resolved. Level-synchronized rather than
+# DFS because MEC subtrees can be wildly uneven in size: depth-first popping
+# can hit `target` having barely touched most of the tree, leaving one huge
+# unexpanded sibling to dominate a single task while everyone else idles.
 function _dag_enum_frontier(pa, ch, und, input_pa, skeleton, target::Int)
     frontier = [(pa, ch, und)]
     while length(frontier) < target

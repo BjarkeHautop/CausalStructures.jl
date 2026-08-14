@@ -296,9 +296,8 @@ function _idc(y::Vector{Symbol}, x::Vector{Symbol}, z::Vector{Symbol}, cg::ADMG)
         end
     end
 
-    # Once rule 2 has emptied the conditioning set there is nothing left to
-    # normalize by: Σ_y ID(y, x) sums a distribution over its own head and is
-    # identically 1. Returning early drops that vestigial denominator.
+    # Once rule 2 has emptied the conditioning set, Σ_y ID(y, x) is identically
+    # 1, so there is nothing left to normalize by.
     isempty(z) && return _id(y, x, prob(nodes(cg)), cg)
 
     joint = _id(sort(union(y, z)), x, prob(nodes(cg)), cg)

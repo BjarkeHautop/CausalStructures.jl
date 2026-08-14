@@ -7,12 +7,9 @@
 # result) and intersect. The difference per class is in how "ancestors" are
 # computed (directed-only vs anteriors) and which REACHABLE function is used.
 
-# ── DAG ───────────────────────────────────────────────────────────────────────
-#
 # Uses the directional Bayes-ball (_d_connected_restricted_mask) rather than
-# reusing the mark-based _relax_mixed! REACHABLE (separation.jl, used by the
-# ADMG/AG/PDAG paths below). Tried consolidating onto _relax_mixed! and
-# measured it consistently ~15-30% slower.
+# reusing the mark-based _relax_mixed! REACHABLE (separation.jl): consolidating
+# onto _relax_mixed! measured ~15-30% slower.
 
 function _d_connected_restricted_mask(
     B::DAGBackend,
@@ -269,8 +266,6 @@ function minimal_separator(
     return B.nodes[[v for v = 1:n if z_mask[v]]]
 end
 
-# ── ADMG and AG: shared FINDNEARESTSEP skeleton ────────────────────────────────
-
 function _find_nearest_sep(
     B::ADMGBackend,
     xs::Vector{Int},
@@ -391,13 +386,11 @@ function minimal_separator(
     return result === nothing ? nothing : B.nodes[result]
 end
 
-# Buffer-reusing existence check for MAG maximality (core/validate.jl), which
-# calls this O(n^2) times per candidate MAG in enumerate_mags. Existence of
-# *any* m-separator doesn't need the full FINDMINSEP (two passes + intersect,
-# for minimality); a single FINDNEARESTSEP pass from `u` already answers it:
-# if the largest possible candidate set (ancestors ∩ restrict) still leaves
-# `u`/`v` m-connected, no separator exists at all, and if it doesn't, the
-# returned set is itself already a valid (if not minimal) separator.
+# Buffer-reusing existence check for MAG maximality (core/validate.jl).
+# Existence of *any* m-separator doesn't need the full FINDMINSEP (two passes +
+# intersect, for minimality); a single FINDNEARESTSEP pass from `u` already
+# answers it: if the largest possible candidate set still leaves `u`/`v`
+# m-connected, no separator exists.
 function _ag_msep_exists!(
     B::AGBackend,
     u::Int,
@@ -454,8 +447,6 @@ function minimal_separator(
     result = _findminsep(B, xs, ys, inc_idxs, res_idxs)
     return result === nothing ? nothing : B.nodes[result]
 end
-
-# ── PAG ───────────────────────────────────────────────────────────────────────
 
 function _find_nearest_sep(
     B::PAGBackend,
@@ -523,8 +514,6 @@ function minimal_separator(
     result = _findminsep(B, xs, ys, inc_idxs, res_idxs)
     return result === nothing ? nothing : B.nodes[result]
 end
-
-# ── AbstractPDAG ──────────────────────────────────────────────────────────────
 
 # REACHABLE for PDAG (3 marks: Tail, Head, Undir); no spouse edges.
 function _reachable_pdag(

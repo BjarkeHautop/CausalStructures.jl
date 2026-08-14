@@ -1,14 +1,10 @@
 # ── Edge visibility (Zhang 2006) ─────────────────────────────────────────────
 #
-# A directed edge x --> y in a MAG or PAG is *visible* if there is graphical
-# evidence ruling out a latent confounder riding along that same edge: either a
-# witness node with an arrowhead into x that is not adjacent to y, or a
-# collider path into x, through nodes that are all parents of y, ending at such
-# a witness. Perković et al. (2018) Definition 6 (proper back-door graph) only
-# removes *visible* edges out of X -- an invisible edge might still hide
-# confounding, so it must stay in the proper back-door graph. `_collapsed_parents`
-# lets the same check serve both AGBackend (no circles) and PAGBackend, where
-# circle marks collapse to tails.
+# x --> y is *visible* if a witness rules out a latent confounder on that edge
+# (Zhang 2006). Only visible edges are removed in the proper back-door graph
+# (Perković et al. 2018, Def. 6). `_collapsed_parents` lets the same check
+# serve AGBackend and PAGBackend, where circle marks collapse to tails.
+
 _collapsed_parents(B::AGBackend, v::Int) = _parents_slice(B, v)
 
 function _is_visible_edge(B::Union{AGBackend,PAGBackend}, x::Int, y::Int)
@@ -56,9 +52,8 @@ function _is_visible_edge(B::Union{AGBackend,PAGBackend}, x::Int, y::Int)
 end
 
 # Compute PBG removed edges: x --> v with x ∈ X, v ∉ X, v ∈ An(Y), and the edge
-# x --> v visible. Unlike ADMG (see `_pbg_removed` in adjustment-admg.jl), a MAG
-# directed edge is not guaranteed confounding-free, so only visible edges can be
-# safely dropped from the proper back-door graph.
+# x --> v visible. A MAG directed edge is not guaranteed confounding-free, so
+# only visible edges can be safely dropped from the proper back-door graph.
 function _pbg_removed_ag(B::AGBackend, xs::Vector{Int}, ys::Vector{Int})
     n = length(B.nodes)
     an_y = _ancestors_bitmask(B, ys)
@@ -109,9 +104,7 @@ function _anterior_bitmask_filtered(
     return mask
 end
 
-# In-place variant of `_anterior_bitmask_filtered` for hot loops (enumerating
-# adjustment sets) that call it once per candidate: reuses caller-provided
-# `mask`/`stack` buffers instead of allocating fresh ones on every call.
+# In-place variant for hot loops
 function _anterior_bitmask_filtered!(
     mask::BitVector,
     stack::Vector{Int},
@@ -161,9 +154,8 @@ function _arrowhead_at_filtered(
 end
 
 # Augmented adjacency (Richardson & Spirtes 2002) for the MAG PBG.
-# Identical structure to _ag_augmented_adj but skips edges in `removed`.
-# removed only contains directed edges x --> v, so each node-pair has at most
-# one edge type in a valid MAG, making the check unambiguous.
+# Identical structure to _ag_augmented_adj but skips edges in `removed`,
+# since `removed` only contains directed edges x --> v.
 function _ag_augmented_adj_filtered(
     B::AGBackend,
     mask::BitVector,
@@ -225,13 +217,7 @@ function _ag_augmented_adj_filtered(
     return adj
 end
 
-# In-place variant of `_ag_augmented_adj_filtered`: reuses the `adj`
-# array-of-arrays (clearing each bucket with `empty!` instead of reallocating
-# `n` fresh vectors), the O(n^2) `visited` stamp array (via `stamp_ref`, only
-# reset on overflow, exactly like the original stamp trick but now persisted
-# across calls instead of allocated fresh per call), and a `q` scratch queue.
-# For hot loops that rebuild the augmented PBG adjacency once per candidate
-# adjustment set -- the O(n^2) `visited` allocation otherwise dominates.
+# In-place variant for hot loops
 function _ag_augmented_adj_filtered!(
     adj::Vector{Vector{Int}},
     visited::Vector{Int},
@@ -383,9 +369,7 @@ function all_adjustment_sets(
     universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
     removed = _pbg_removed_ag(B, xs, ys)
 
-    # Scratch buffers allocated once per `make_checker` call, reused across
-    # all its candidates -- rebuilding the augmented PBG adjacency otherwise
-    # allocates an O(n^2) `visited` array per candidate.
+    # Scratch buffers allocated once per `make_checker` call
     function make_checker()
         seeds_buf = Int[]
         anc_mask = falses(n)

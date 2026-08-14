@@ -115,11 +115,7 @@ function _subgraph_edges(edges::Vector{CausalEdge}, keep::Set{Symbol})
     return [edge for edge in edges if edge.src in keep && edge.dst in keep]
 end
 
-#  CPDAG -> MPDAG: removing a node can orphan a directed edge that was only
-#  strongly protected by that node (and undirected components need not stay
-#  chordal). The result is still Meek-closed, so it is a valid MPDAG.
-#  PAG -> UNKNOWN: the invariant marks of a Markov equivalence class are not
-#  preserved by vertex restriction, so the result need not be a realizable PAG.
+# See `subgraph`'s docstring for why CPDAG and PAG are downgraded.
 _subgraph_type(::Type{CPDAG}) = MPDAG
 _subgraph_type(::Type{PAG}) = UNKNOWN
 _subgraph_type(T::Type{<:CausalGraph}) = T

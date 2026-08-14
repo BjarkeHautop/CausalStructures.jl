@@ -222,11 +222,8 @@ end
 
 # Sort the positions of a summed product's factors into those that can leave the
 # sum and those that must stay, along with the summation index the latter still
-# need.
-#
-# The two rewrites feed each other, so they run to a fixpoint: pulling a factor
-# out cannot free an index, but dropping one that sums to one can leave further
-# factors constant in what is left of the index.
+# need. The two rewrites run to a fixpoint: dropping a factor that sums to one
+# can leave further factors constant in what remains of the index.
 function _narrow_sum(terms::Vector{Estimand}, index::Vector{Symbol})
     outside = Int[]
     inside = collect(eachindex(terms))
@@ -383,8 +380,8 @@ end
 
 # --- bound-variable renaming ------------------------------------------------
 #
-# A summation index that collides with a variable of the surrounding expression
-# is ambiguous. We follow convetion and use prime notation.
+# A summation index colliding with a variable of the surrounding expression is
+# ambiguous; renamed with prime notation.
 
 # Every symbol occurring anywhere, bound or free. Used to pick replacement
 # names that cannot collide with anything already in the tree.
@@ -408,14 +405,12 @@ function _rename(e::Marginal, m::Dict{Symbol,Symbol})
     return Marginal(e.index, _rename(e.term, active))
 end
 
-# Rename summation indices so that no sum binds a variable that is also used in
-# its surrounding context. The result is alpha-equivalent to `e`.
+# Rename summation indices so that no sum binds a variable also used in its
+# surrounding context. The result is alpha-equivalent to `e`.
 #
-# `reserved` names symbols that must not be bound anywhere in the result even if
-# they do not occur free in it. Callers pass the variables of the query, whose
-# values the estimand is a function of: a sum over `X` reads as ambiguous when
-# `X` is the variable being intervened on, whether or not the expression happens
-# to be constant in it.
+# `reserved` names symbols that must not be bound anywhere in the result even
+# if they do not occur free in it: callers pass the query variables, since a
+# sum over `X` reads as ambiguous whenever `X` is the intervened-on variable.
 function _freshen(e::Estimand, reserved = Set{Symbol}())
     return _freshen_walk(e, union(_free_vars(e), reserved))
 end
@@ -428,9 +423,8 @@ _freshen_walk(e::Quotient, outer::Set{Symbol}) =
     Quotient(_freshen_walk(e.num, outer), _freshen_walk(e.den, outer))
 
 function _freshen_walk(e::Marginal, outer::Set{Symbol})
-    # A replacement name has to avoid capturing something inside this sum's own
-    # subtree, and has to stay distinct from the context. Nothing further out
-    # matters.
+    # A replacement name must avoid capturing something inside this sum's own
+    # subtree and stay distinct from the context.
     taken = union(outer, _vars_used(e.term))
 
     mapping = Dict{Symbol,Symbol}()

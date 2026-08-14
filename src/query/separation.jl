@@ -4,8 +4,6 @@
 #   caugi/src/rust/src/graph/dag/separation.rs  (d_connected_restricted, Bayes-ball)
 #   caugi/src/rust/src/graph/alg/min_msep.rs    (REACHABLE, Bayes-ball for mixed graphs)
 
-# ── Shared ancestor / anterior masks ──────────────────────────────────────────
-
 # Ancestor bitmask: nodes reachable from seeds via directed parents only.
 function _ancestors_bitmask(
     B::Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend},
@@ -32,9 +30,7 @@ function _ancestors_bitmask(
     return mask
 end
 
-# In-place variant of `_ancestors_bitmask` for hot loops (e.g. enumerating
-# adjustment sets) that call it once per candidate: reuses caller-provided
-# `mask`/`stack` buffers instead of allocating fresh ones on every call.
+# In-place variant for hot loops
 function _ancestors_bitmask!(
     mask::BitVector,
     stack::Vector{Int},
@@ -61,17 +57,11 @@ function _ancestors_bitmask!(
     return mask
 end
 
-# In-place variant of `_anterior_bitmask` for hot loops (e.g. MAG maximality
-# checking) that call it once per candidate pair: reuses caller-provided
-# `mask`/`stack` buffers instead of allocating fresh ones on every call.
-function _anterior_bitmask!(
-    mask::BitVector,
-    stack::Vector{Int},
-    B::Union{AGBackend,PDAGBackend},
-    seeds::Vector{Int},
-)
-    fill!(mask, false)
-    empty!(stack)
+# Anterior bitmask (AG): nodes reachable from seeds via directed parents OR undirected edges.
+function _anterior_bitmask(B::Union{AGBackend,PDAGBackend}, seeds::Vector{Int})
+    n = length(B.nodes)
+    mask = falses(n)
+    stack = Int[]
     for s in seeds
         if !mask[s]
             mask[s] = true
@@ -96,11 +86,15 @@ function _anterior_bitmask!(
     return mask
 end
 
-# Anterior bitmask (AG): nodes reachable from seeds via directed parents OR undirected edges.
-function _anterior_bitmask(B::Union{AGBackend,PDAGBackend}, seeds::Vector{Int})
-    n = length(B.nodes)
-    mask = falses(n)
-    stack = Int[]
+# In-place variant for hot loops
+function _anterior_bitmask!(
+    mask::BitVector,
+    stack::Vector{Int},
+    B::Union{AGBackend,PDAGBackend},
+    seeds::Vector{Int},
+)
+    fill!(mask, false)
+    empty!(stack)
     for s in seeds
         if !mask[s]
             mask[s] = true
@@ -176,8 +170,6 @@ function _pag_anterior_bitmask(B::PAGBackend, seeds::Vector{Int})
     return mask
 end
 
-# ── Shared Bayes-ball primitive ────────────────────────────────────────────────
-#
 # Marks: 1=Tail, 2=Head, 3=Undir.
 # Pass rule at node v with in_mark m, out_mark o toward neighbor nbr:
 #   collider = (m == Head && o == Head)
@@ -243,9 +235,7 @@ function _reachable_dag(
     return reached
 end
 
-# In-place, single-seed variant of `_reachable_dag`: reuses `visited`/`q`/`reached`
-# buffers and takes a scalar seed instead of a `Vector{Int}`, for hot loops (e.g.
-# `all_backdoor_sets`) that call this once per parent of x, per candidate set.
+# In-place, single-seed variant of `_reachable_dag` for hot loops
 function _reachable_dag_single!(
     visited::BitMatrix,
     q::Vector{Tuple{Int,Int}},
@@ -335,9 +325,7 @@ function _reachable_admg(
     return reached
 end
 
-# In-place, single-seed variant of `_reachable_admg`: reuses `visited`/`q`/
-# `reached` buffers and takes a scalar seed instead of a `Vector{Int}`, for hot
-# loops (e.g. `all_backdoor_sets`) that call this once per candidate set.
+# In-place, single-seed variant of `_reachable_admg` for hot loops
 function _reachable_admg_single!(
     visited::BitMatrix,
     q::Vector{Tuple{Int,Int}},
@@ -383,9 +371,7 @@ function _reachable_admg_single!(
     return reached
 end
 
-# In-place, single-seed variant of `_reachable_ag`: reuses `visited`/`q`/
-# `reached` buffers and takes a scalar seed instead of a `Vector{Int}`, for hot
-# loops (e.g. MAG maximality checking) that call this once per candidate pair.
+# In-place, single-seed variant of `_reachable_ag` for hot loops
 function _reachable_ag_single!(
     visited::BitMatrix,
     q::Vector{Tuple{Int,Int}},
@@ -544,8 +530,6 @@ function _reachable_pag(
     return reached
 end
 
-# ── d_separated (DAG) ─────────────────────────────────────────────────────────
-
 """
     d_separated(cg::Union{DAG,AbstractPDAG}, x, y, z = Symbol[]) -> Bool
 
@@ -635,8 +619,6 @@ function d_separated(
     return !any(reached[yi] for yi in ys)
 end
 
-# ── d_separated (AbstractPDAG) ────────────────────────────────────────────────
-
 function d_separated(
     cg::AbstractPDAG,
     x::Union{Symbol,AbstractVector{Symbol}},
@@ -722,8 +704,6 @@ m_separated(
     z::AbstractVector{Symbol} = Symbol[],
 ) = d_separated(cg, x, y, z)
 
-# ── m_separated (ADMG) ────────────────────────────────────────────────────────
-
 # Returns true iff x ⊥_m y | z in ADMG cg.
 function m_separated(
     cg::ADMG,
@@ -752,8 +732,6 @@ function m_separated(
     return !any(reached[yi] for yi in ys)
 end
 
-# ── m_separated (AG) ──────────────────────────────────────────────────────────
-
 # Returns true iff x ⊥_m y | z in AG cg.
 function m_separated(
     cg::AbstractAG,
@@ -781,8 +759,6 @@ function m_separated(
     reached = _reachable_ag(B, seeds_bfs, mask, z_mask)
     return !any(reached[yi] for yi in ys)
 end
-
-# ── m_separated (PAG) ─────────────────────────────────────────────────────────
 
 # Returns true iff x ⊥_m y | z in PAG cg.
 function m_separated(

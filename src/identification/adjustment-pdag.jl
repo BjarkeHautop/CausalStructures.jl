@@ -1,12 +1,6 @@
-# ── PDAG/CPDAG/MPDAG proper-backdoor graph helpers ───────────────────────────
-#
-# Reference: Perković, Textor, Kalisch, Maathuis (2018), same paper as above.
-#
-# Key differences from ADMG/MAG:
-#   - forbidden set uses PossibleDe (children + undirected) rather than De
-#   - PBG removes X --> V where V ∈ PossibleAn(Y) (anteriors), not just An(Y)
-#   - moralization joins Pa(v) ∪ Ne(v) into a clique (undirected neighbors
-#     play the role spouses play for ADMG)
+# Perković, Textor, Kalisch, Maathuis (2018). Forbidden set uses PossibleDe
+# (children + undirected) rather than De; PBG removes X --> V where V ∈
+# PossibleAn(Y); moralization joins Pa(v) ∪ Ne(v) into a clique.
 
 # PossibleDe bitmask: reachable from seeds via directed children OR undirected.
 function _possible_descendants_bitmask(B::PDAGBackend, seeds::Vector{Int})
@@ -99,10 +93,7 @@ function _pdag_moral_adj_filtered(
     return adj
 end
 
-# In-place variant of `_pdag_moral_adj_filtered`: reuses the `adj`
-# array-of-arrays (clearing each bucket with `empty!` instead of reallocating
-# `n` fresh vectors) and the `pa_buf`/`ne_buf` scratch buffers, for hot loops
-# that rebuild the moralized PBG once per candidate adjustment set.
+# In-place variant for hot loops
 function _pdag_moral_adj_filtered!(
     adj::Vector{Vector{Int}},
     B::PDAGBackend,
@@ -306,8 +297,7 @@ function all_adjustment_sets(
     universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
     removed = _pbg_removed_pdag(B, xs, ys)
 
-    # Scratch buffers allocated once per `make_checker` call, reused across
-    # all its candidates (this rebuilds the moralized PBG once per candidate).
+    # Scratch buffers allocated once per `make_checker` call
     function make_checker()
         seeds_buf = Int[]
         anc_mask = falses(n)

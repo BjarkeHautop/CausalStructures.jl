@@ -270,9 +270,7 @@ end
 
 # Floyd's algorithm: k distinct integers sampled uniformly at random from
 # 1:n, in O(k) time/space -- avoids materializing an O(n) permutation when
-# k << n (e.g. a sparse random graph on many nodes). A BitSet (not Set{Int})
-# keeps this faster than randperm across the whole density range, since the
-# candidates are dense integers in 1:n.
+# k << n.
 function _sample_distinct(rng, n::Int, k::Int)
     seen = BitSet()
     sizehint!(seen, k)
@@ -429,9 +427,8 @@ function _sample_random_dag_edges(local_rng, node_names, n_total, m, p)
     return edges
 end
 
-# validate=false is safe here: edges are all `directed(...)` by construction
-# and oriented by a random topological ordering, so the result is acyclic by
-# construction.
+# validate=false is safe here: edges are oriented by a random topological
+# ordering, so the result is acyclic by construction.
 _finalize_generate_graph(::Type{DAG}, node_set, edges, latent_names) =
     DAG(node_set, edges; validate = false)
 
