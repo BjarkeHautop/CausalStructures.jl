@@ -71,29 +71,9 @@ function _pdag_moral_adj_filtered(
 )
     n = length(B.nodes)
     adj = [Int[] for _ = 1:n]
-    for v = 1:n
-        mask[v] || continue
-        pa = [p for p in _parents_slice(B, v) if mask[p] && !((p, v) in removed)]
-        ne = [w for w in _undirected_slice(B, v) if mask[w]]
-        for p in pa
-            push!(adj[v], p)
-            push!(adj[p], v)
-        end
-        for w in ne
-            push!(adj[v], w)  # reverse added when w is processed
-        end
-        for i in eachindex(pa), j = (i+1):lastindex(pa)
-            push!(adj[pa[i]], pa[j])
-            push!(adj[pa[j]], pa[i])
-        end
-    end
-    for v = 1:n
-        sort!(unique!(adj[v]))
-    end
-    return adj
+    return _pdag_moral_adj_filtered!(adj, B, mask, removed, Int[], Int[])
 end
 
-# In-place variant for hot loops
 function _pdag_moral_adj_filtered!(
     adj::Vector{Vector{Int}},
     B::PDAGBackend,

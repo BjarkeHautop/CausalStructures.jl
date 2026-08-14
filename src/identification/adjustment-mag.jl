@@ -80,31 +80,9 @@ function _anterior_bitmask_filtered(
     removed::Set{Tuple{Int,Int}},
 )
     n = length(B.nodes)
-    mask = falses(n)
-    stack = Int[]
-    for s in seeds
-        mask[s] && continue
-        mask[s] = true
-        push!(stack, s)
-    end
-    while !isempty(stack)
-        u = pop!(stack)
-        for p in _parents_slice(B, u)
-            (p, u) in removed && continue
-            mask[p] && continue
-            mask[p] = true
-            push!(stack, p)
-        end
-        for w in _undirected_slice(B, u)
-            mask[w] && continue
-            mask[w] = true
-            push!(stack, w)
-        end
-    end
-    return mask
+    return _anterior_bitmask_filtered!(falses(n), Int[], B, seeds, removed)
 end
 
-# In-place variant for hot loops
 function _anterior_bitmask_filtered!(
     mask::BitVector,
     stack::Vector{Int},
@@ -164,60 +142,10 @@ function _ag_augmented_adj_filtered(
     n = length(B.nodes)
     adj = [Int[] for _ = 1:n]
     visited = zeros(Int, n * n)
-    stamp = 0
-
-    for s = 1:n
-        mask[s] || continue
-        stamp += 1
-        if stamp == typemax(Int)
-            fill!(visited, 0)
-            stamp = 1
-        end
-
-        q = Tuple{Int,Int}[]
-
-        for v in _all_nbrs_slice(B, s)
-            mask[v] || continue
-            ((s, v) in removed || (v, s) in removed) && continue
-            push!(adj[s], v)
-            push!(adj[v], s)
-            key = (s - 1) * n + v
-            if visited[key] != stamp
-                visited[key] = stamp
-                push!(q, (s, v))
-            end
-        end
-
-        head = 1
-        while head <= length(q)
-            prev, curr = q[head]
-            head += 1
-            for nxt in _all_nbrs_slice(B, curr)
-                nxt == prev && continue
-                mask[nxt] || continue
-                _arrowhead_at_filtered(B, curr, prev, removed) || continue
-                _arrowhead_at_filtered(B, curr, nxt, removed) || continue
-
-                key = (curr - 1) * n + nxt
-                visited[key] == stamp && continue
-                visited[key] = stamp
-                push!(q, (curr, nxt))
-
-                if nxt != s
-                    push!(adj[s], nxt)
-                    push!(adj[nxt], s)
-                end
-            end
-        end
-    end
-
-    for v = 1:n
-        sort!(unique!(adj[v]))
-    end
-    return adj
+    q = Tuple{Int,Int}[]
+    return _ag_augmented_adj_filtered!(adj, visited, Ref(0), q, B, mask, removed)
 end
 
-# In-place variant for hot loops
 function _ag_augmented_adj_filtered!(
     adj::Vector{Vector{Int}},
     visited::Vector{Int},

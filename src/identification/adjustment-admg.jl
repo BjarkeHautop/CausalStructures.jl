@@ -58,26 +58,9 @@ function _ancestors_bitmask_filtered(
     removed::Set{Tuple{Int,Int}},
 )
     n = length(B.nodes)
-    mask = falses(n)
-    stack = Int[]
-    for s in seeds
-        mask[s] && continue
-        mask[s] = true
-        push!(stack, s)
-    end
-    while !isempty(stack)
-        u = pop!(stack)
-        for p in _parents_slice(B, u)
-            (p, u) in removed && continue
-            mask[p] && continue
-            mask[p] = true
-            push!(stack, p)
-        end
-    end
-    return mask
+    return _ancestors_bitmask_filtered!(falses(n), Int[], B, seeds, removed)
 end
 
-# In-place variant for hot loops
 function _ancestors_bitmask_filtered!(
     mask::BitVector,
     stack::Vector{Int},
@@ -114,31 +97,9 @@ function _admg_moral_adj_filtered(
 )
     n = length(B.nodes)
     adj = [Int[] for _ = 1:n]
-    for v = 1:n
-        mask[v] || continue
-        pa = [p for p in _parents_slice(B, v) if mask[p] && !((p, v) in removed)]
-        sp = [s for s in _spouses_slice(B, v) if mask[s]]
-        for p in pa
-            push!(adj[v], p)
-            push!(adj[p], v)
-        end
-        for s in sp
-            push!(adj[v], s)
-        end  # reverse added when s is processed
-        heads = sort!(unique!(vcat(pa, sp)))
-        for i in eachindex(heads), j = (i+1):lastindex(heads)
-            push!(adj[heads[i]], heads[j])
-            push!(adj[heads[j]], heads[i])
-        end
-    end
-    for v = 1:n
-
-        sort!(unique!(adj[v]))
-    end
-    return adj
+    return _admg_moral_adj_filtered!(adj, B, mask, removed, Int[], Int[], Int[])
 end
 
-# In-place variant for hot loops
 function _admg_moral_adj_filtered!(
     adj::Vector{Vector{Int}},
     B::ADMGBackend,

@@ -10,27 +10,9 @@ function _ancestors_bitmask(
     seeds::Vector{Int},
 )
     n = length(B.nodes)
-    mask = falses(n)
-    stack = Int[]
-    for s in seeds
-        if !mask[s]
-            mask[s] = true
-            push!(stack, s)
-        end
-    end
-    while !isempty(stack)
-        u = pop!(stack)
-        for p in _parents_slice(B, u)
-            if !mask[p]
-                mask[p] = true
-                push!(stack, p)
-            end
-        end
-    end
-    return mask
+    return _ancestors_bitmask!(falses(n), Int[], B, seeds)
 end
 
-# In-place variant for hot loops
 function _ancestors_bitmask!(
     mask::BitVector,
     stack::Vector{Int},
@@ -60,33 +42,9 @@ end
 # Anterior bitmask (AG): nodes reachable from seeds via directed parents OR undirected edges.
 function _anterior_bitmask(B::Union{AGBackend,PDAGBackend}, seeds::Vector{Int})
     n = length(B.nodes)
-    mask = falses(n)
-    stack = Int[]
-    for s in seeds
-        if !mask[s]
-            mask[s] = true
-            push!(stack, s)
-        end
-    end
-    while !isempty(stack)
-        u = pop!(stack)
-        for p in _parents_slice(B, u)
-            if !mask[p]
-                mask[p] = true
-                push!(stack, p)
-            end
-        end
-        for w in _undirected_slice(B, u)
-            if !mask[w]
-                mask[w] = true
-                push!(stack, w)
-            end
-        end
-    end
-    return mask
+    return _anterior_bitmask!(falses(n), Int[], B, seeds)
 end
 
-# In-place variant for hot loops
 function _anterior_bitmask!(
     mask::BitVector,
     stack::Vector{Int},

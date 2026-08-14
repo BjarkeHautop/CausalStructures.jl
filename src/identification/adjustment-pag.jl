@@ -140,47 +140,9 @@ function _pag_anterior_bitmask_filtered(
     removed::Set{Tuple{Int,Int}},
 )
     n = length(B.nodes)
-    mask = falses(n)
-    stack = Int[]
-    for s in seeds
-        mask[s] && continue
-        mask[s] = true
-        push!(stack, s)
-    end
-    while !isempty(stack)
-        u = pop!(stack)
-        for p in _parents_slice(B, u)
-            (p, u) in removed && continue
-            mask[p] && continue
-            mask[p] = true
-            push!(stack, p)
-        end
-        for p in _circle_parents_slice(B, u)
-            (p, u) in removed && continue
-            mask[p] && continue
-            mask[p] = true
-            push!(stack, p)
-        end
-        for w in _undirected_slice(B, u)
-            mask[w] && continue
-            mask[w] = true
-            push!(stack, w)
-        end
-        for w in _circle_undirected_out_slice(B, u)
-            mask[w] && continue
-            mask[w] = true
-            push!(stack, w)
-        end
-        for w in _circle_circle_slice(B, u)
-            mask[w] && continue
-            mask[w] = true
-            push!(stack, w)
-        end
-    end
-    return mask
+    return _pag_anterior_bitmask_filtered!(falses(n), Int[], B, seeds, removed)
 end
 
-# In-place variant for hot loops
 function _pag_anterior_bitmask_filtered!(
     mask::BitVector,
     stack::Vector{Int},
@@ -244,52 +206,9 @@ function _pag_moral_adj_filtered(
 )
     n = length(B.nodes)
     adj = [Int[] for _ = 1:n]
-    for v = 1:n
-        mask[v] || continue
-        pa = Int[]
-        for p in _parents_slice(B, v)
-            (mask[p] && !((p, v) in removed)) && push!(pa, p)
-        end
-        for p in _circle_parents_slice(B, v)
-            (mask[p] && !((p, v) in removed)) && push!(pa, p)
-        end
-        sp = [s for s in _spouses_slice(B, v) if mask[s]]
-        ne = Int[]
-        for w in _undirected_slice(B, v)
-            mask[w] && push!(ne, w)
-        end
-        for w in _circle_undirected_out_slice(B, v)
-            mask[w] && push!(ne, w)
-        end
-        for w in _circle_undirected_in_slice(B, v)
-            mask[w] && push!(ne, w)
-        end
-        for w in _circle_circle_slice(B, v)
-            mask[w] && push!(ne, w)
-        end
-        for p in pa
-            push!(adj[v], p)
-            push!(adj[p], v)
-        end
-        for s in sp
-            push!(adj[v], s)
-        end  # reverse added when s is processed
-        for w in ne
-            push!(adj[v], w)
-        end  # reverse added when w is processed
-        heads = sort!(unique!(vcat(pa, sp)))
-        for i in eachindex(heads), j = (i+1):lastindex(heads)
-            push!(adj[heads[i]], heads[j])
-            push!(adj[heads[j]], heads[i])
-        end
-    end
-    for v = 1:n
-        sort!(unique!(adj[v]))
-    end
-    return adj
+    return _pag_moral_adj_filtered!(adj, B, mask, removed, Int[], Int[], Int[])
 end
 
-# In-place variant for hot loops
 function _pag_moral_adj_filtered!(
     adj::Vector{Vector{Int}},
     B::PAGBackend,
