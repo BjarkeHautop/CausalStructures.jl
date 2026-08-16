@@ -399,6 +399,74 @@ function possible_descendants(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN
 end
 
 """
+    possible_parent_sets(cg::AbstractPDAG, x::Symbol) -> Vector{Vector{Symbol}}
+
+Return every possible parental set of `x` implied by `cg`: the
+graph-only half of the local IDA algorithm (Algorithm 3 of
+[maathuis2009estimating](@cite)).
+
+For each subset `S` of the undirected neighbors of `x`, consider the
+orientation that directs `S --> x` and directs the remaining undirected
+neighbors of `x` away from `x`. This orientation is *locally valid* if it
+introduces no new v-structure with collider `x`, that is, no node in `S` is
+non-adjacent to another parent in `pa(x) ∪ S`. For every locally valid `S`,
+`pa(x) ∪ S` is included in the result.
+
+Unlike [`all_adjustment_sets`](@ref), one entry is returned per locally valid
+subset `S`, not per DAG in the Markov equivalence class of `cg`. Theorem 3.2 of
+[maathuis2009estimating](@cite) shows the two collections agree when read as
+sets, but their multiplicities differ in general (Remark 3.3 therein).
+
+# Examples
+
+```jldoctest
+julia> using CausalStructures
+
+julia> cpdag = cgraph("X1 --- X2 + X3 + X4, X3 + X4 --> Y"; class = CPDAG);
+
+julia> sort(possible_parent_sets(cpdag, :X1); by = length)
+4-element Vector{Vector{Symbol}}:
+ []
+ [:X2]
+ [:X3]
+ [:X4]
+```
+
+# References
+
+- [maathuis2009estimating](@cite)
+"""
+function possible_parent_sets(cg::AbstractPDAG, x::Symbol)
+    pa = parents(cg, x)
+    sibs = neighbors(cg, x; mode = :undirected)
+    k = length(sibs)
+    k == 0 && return [sort(pa)]
+
+    result = Vector{Vector{Symbol}}()
+    for mask = 0:(2^k-1)
+        S = [sibs[i] for i = 1:k if ((mask >> (i - 1)) & 1) == 1]
+        _locally_valid_parent_orientation(cg, pa, S) && push!(result, sort([pa; S]))
+    end
+    return result
+end
+
+function _locally_valid_parent_orientation(
+    cg::AbstractPDAG,
+    pa::Vector{Symbol},
+    S::Vector{Symbol},
+)
+    isempty(S) && return true
+    all_parents = [pa; S]
+    for s in S
+        for q in all_parents
+            s === q && continue
+            has_edge(cg, s, q) || return false
+        end
+    end
+    return true
+end
+
+"""
     possible_ancestors(cg::PAG, node::Symbol; open::Bool = true) -> Vector{Symbol}
 
 Return the possible ancestors of `node` in `cg`: all nodes `V` for which there

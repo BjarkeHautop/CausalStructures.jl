@@ -383,6 +383,51 @@ end
     end
 end
 
+# ── possible_parent_sets ──────────────────────────────────────────────────────
+
+@testitem "possible_parent_sets matches the worked example (Maathuis, Kalisch & Bühlmann 2009, Fig. 2)" tags =
+    [:unit] begin
+    cpdag = cgraph("X1 --- X2 + X3 + X4, X3 + X4 --> Y", class = CPDAG)
+    result = possible_parent_sets(cpdag, :X1)
+    @test length(result) == 4
+    @test Set(Set.(result)) == Set([Set{Symbol}(), Set([:X2]), Set([:X3]), Set([:X4])])
+end
+
+@testitem "possible_parent_sets returns a single set when x has no undirected neighbors" tags =
+    [:unit] begin
+    cpdag = cgraph(directed(:A, :B), directed(:C, :B); class = CPDAG)
+    @test possible_parent_sets(cpdag, :B) == [[:A, :C]]
+    @test possible_parent_sets(cpdag, :A) == [Symbol[]]
+end
+
+@testitem "possible_parent_sets excludes subsets that create a new v-structure" tags =
+    [:unit] begin
+    # A --- B --- C, A and C not adjacent: {A, C} would create a new v-structure at B
+    cpdag = cgraph(undirected(:A, :B), undirected(:B, :C); class = CPDAG)
+    result = Set(Set.(possible_parent_sets(cpdag, :B)))
+    @test result == Set([Set{Symbol}(), Set([:A]), Set([:C])])
+    @test Set([:A, :C]) ∉ result
+end
+
+@testitem "possible_parent_sets: sets agree with parents over the DAGs in the equivalence class (Theorem 3.2)" tags =
+    [:unit] begin
+    cpdag = cgraph(
+        undirected(:B, :A),
+        undirected(:B, :D),
+        directed(:C, :E),
+        directed(:B, :E),
+        directed(:D, :F),
+        directed(:E, :F);
+        class = CPDAG,
+    )
+    dags = enumerate_dags(cpdag)
+    for x in [:A, :B, :C, :D, :E, :F]
+        from_local = Set(Set.(possible_parent_sets(cpdag, x)))
+        from_dags = Set(Set(parents(dag, x)) for dag in dags)
+        @test from_local == from_dags
+    end
+end
+
 # ── possible_ancestors / possible_descendants on PAG ─────────────────────────
 
 @testitem "possible_ancestors on PAG: unshielded collider (o-> edges)" tags = [:unit] begin
