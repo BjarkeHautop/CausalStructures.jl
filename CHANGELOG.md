@@ -9,7 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-- `d_separated`, `m_separated`, `minimal_separator` (`DAG`), and the backdoor/frontdoor/adjustment-set functions now accept a `Vector{Symbol}` (in addition to a single `Symbol`) for `x`/`y`, for querying sets of treatments/outcomes. `is_valid_iv`/`all_iv_sets` accept a `Vector{Symbol}` outcome `y` (the instrumental-set criterion still requires a single treatment `x`).
+- `d_separated`, `m_separated`, `minimal_separator` (`DAG`), and the backdoor/frontdoor/adjustment-set functions now accept a `Vector{Symbol}` (in addition to a single `Symbol`) for `x`/`y`, for querying sets of treatments/outcomes.
+- Added `id`/`idc` (Shpitser & Pearl's identification algorithm) for `DAG`/`ADMG`.
+- Added `possible_parent_sets`, the graph half of the local IDA algorithm, for `AbstractPDAG`.
+- Added `backdoor_set` (Generalized Backdoor Criterion, Maathuis & Colombo 2015) for `DAG`, `CPDAG`, `MAG`, and `PAG`.
+
+### Bug fixes
+
+- `possible_ancestors`/`possible_descendants` on `MPDAG` could include nodes only reachable via a partially directed cycle introduced by background knowledge; this also affected `is_valid_adjustment`/`all_adjustment_sets` on `MPDAG`.
 
 ## [0.3.0] - 2026-08-10
 
