@@ -383,6 +383,46 @@ end
     end
 end
 
+@testitem "possible_ancestors/descendants on MPDAG: partially directed cycles are unsound to ignore" tags =
+    [:unit] begin
+    # D --> B added as background knowledge to a 4-cycle CPDAG (Perković,
+    # Kalisch & Maathuis 2017/2018, Figure 1c): B --- C --- D and B --- A --- D
+    # look possibly-directed, but completing either creates a cycle with D --> B.
+    mpdag = cgraph(
+        undirected(:A, :B),
+        undirected(:B, :C),
+        undirected(:C, :D),
+        undirected(:D, :A),
+        directed(:D, :B);
+        class = MPDAG,
+    )
+    @test :D ∉ possible_descendants(mpdag, :B)
+    @test :B ∉ possible_ancestors(mpdag, :D)
+
+    # The compelled edge itself is unaffected.
+    @test :B in possible_descendants(mpdag, :D)
+    @test :D in possible_ancestors(mpdag, :B)
+end
+
+@testitem "possible_ancestors/descendants on CPDAG are unaffected by the MPDAG fix" tags =
+    [:unit] begin
+    # The CPDAG the MPDAG above added background knowledge to: same 4-cycle
+    # plus a B-D chord (needed for the undirected component to be chordal).
+    cpdag = cgraph(
+        undirected(:A, :B),
+        undirected(:B, :C),
+        undirected(:C, :D),
+        undirected(:D, :A),
+        undirected(:B, :D);
+        class = CPDAG,
+    )
+    for node in [:A, :B, :C, :D]
+        others = setdiff([:A, :B, :C, :D], [node])
+        @test Set(possible_descendants(cpdag, node)) == Set(others)
+        @test Set(possible_ancestors(cpdag, node)) == Set(others)
+    end
+end
+
 # ── possible_parent_sets ──────────────────────────────────────────────────────
 
 @testitem "possible_parent_sets matches the worked example (Maathuis, Kalisch & Bühlmann 2009, Fig. 2)" tags =

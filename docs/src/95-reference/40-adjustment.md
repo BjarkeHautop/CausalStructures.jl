@@ -12,6 +12,7 @@ is_valid_adjustment
 all_adjustment_sets
 is_valid_backdoor
 all_backdoor_sets
+backdoor_set
 frontdoor_set
 is_valid_frontdoor
 all_frontdoor_sets

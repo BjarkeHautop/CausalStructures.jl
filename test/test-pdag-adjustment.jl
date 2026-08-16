@@ -219,3 +219,23 @@ end
     @test is_valid_adjustment(pdag, [:X1, :X2], [:Y], [:L1, :L2])
     @test all_adjustment_sets(pdag, [:X1, :X2], [:Y]) == [[:L1, :L2]]
 end
+
+@testitem "is_valid_adjustment MPDAG: empty set is invalid when background knowledge introduces a partially directed cycle" tags =
+    [:unit] begin
+    # D --> B added as background knowledge to a 4-cycle CPDAG (Perković,
+    # Kalisch & Maathuis 2017/2018, Figure 1c). D has no compelled parent
+    # here, but D --> A --> B is a real member of the class with an open
+    # back-door path D <-- A --> B.
+    mpdag = cgraph(
+        undirected(:A, :B),
+        undirected(:B, :C),
+        undirected(:C, :D),
+        undirected(:D, :A),
+        directed(:D, :B);
+        class = MPDAG,
+    )
+    dags = enumerate_dags(mpdag)
+    @test any(d -> :A in parents(d, :D) && :A in parents(d, :B), dags)  # the confounding DAG exists
+    @test !is_valid_adjustment(mpdag, :D, :B)
+    @test !is_valid_adjustment(mpdag, :D, :B, Symbol[])
+end

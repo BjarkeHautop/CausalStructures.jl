@@ -2,28 +2,28 @@
 # (children + undirected) rather than De; PBG removes X --> V where V ∈
 # PossibleAn(Y); moralization joins Pa(v) ∪ Ne(v) into a clique.
 
-# PossibleDe bitmask: reachable from seeds via directed children OR undirected.
+# PossibleDe bitmask, i.e. b-PossDe (Definition 3.3): union of seeds and
+# _b_possibly_causal_reachable (traversal.jl) over each seed. Not naive
+# reachability -- that's unsound on MPDAG (see traversal.jl).
 function _possible_descendants_bitmask(B::PDAGBackend, seeds::Vector{Int})
     n = length(B.nodes)
     mask = falses(n)
-    stack = Int[]
     for s in seeds
-        mask[s] && continue
         mask[s] = true
-        push!(stack, s)
+        mask .|= _b_possibly_causal_reachable(B, s, _children_slice)
     end
-    while !isempty(stack)
-        u = pop!(stack)
-        for c in _children_slice(B, u)
-            mask[c] && continue
-            mask[c] = true
-            push!(stack, c)
-        end
-        for w in _undirected_slice(B, u)
-            mask[w] && continue
-            mask[w] = true
-            push!(stack, w)
-        end
+    return mask
+end
+
+# PossibleAn bitmask, i.e. b-PossAn: same as _possible_descendants_bitmask
+# via parents instead of children. Not _anterior_bitmask (naive reachability,
+# fine for AG moralization but unsound here for the same MPDAG reason).
+function _possible_ancestors_bitmask(B::PDAGBackend, seeds::Vector{Int})
+    n = length(B.nodes)
+    mask = falses(n)
+    for s in seeds
+        mask[s] = true
+        mask .|= _b_possibly_causal_reachable(B, s, _parents_slice)
     end
     return mask
 end
@@ -33,7 +33,7 @@ end
 function _forbidden_set_pdag(B::PDAGBackend, xs::Vector{Int}, ys::Vector{Int})
     n = length(B.nodes)
     poss_de_x = _possible_descendants_bitmask(B, xs)
-    ant_y = _anterior_bitmask(B, ys)
+    ant_y = _possible_ancestors_bitmask(B, ys)
     y_mask = falses(n)
     for y in ys
         y_mask[y] = true
@@ -49,7 +49,7 @@ end
 # PBG removed edges for PDAG: X --> V where V ∉ X and V ∈ PossibleAn(Y).
 function _pbg_removed_pdag(B::PDAGBackend, xs::Vector{Int}, ys::Vector{Int})
     n = length(B.nodes)
-    ant_y = _anterior_bitmask(B, ys)
+    ant_y = _possible_ancestors_bitmask(B, ys)
     x_mask = falses(n)
     for x in xs
         x_mask[x] = true
@@ -192,6 +192,7 @@ true
 # References
 
 - [perkovic2018complete](@cite)
+- [perkovic2017mpdag](@cite)
 """
 function is_valid_adjustment(
     cg::AbstractPDAG,
@@ -255,6 +256,7 @@ julia> all_adjustment_sets(pdag2, [:X1, :X2], [:Y])
 # References
 
 - [perkovic2018complete](@cite)
+- [perkovic2017mpdag](@cite)
 """
 function all_adjustment_sets(
     cg::AbstractPDAG,

@@ -563,3 +563,39 @@ function adjustment_set(
         throw(ArgumentError("Unknown adjustment_set type $type. Use :parents or :optimal."))
     end
 end
+
+"""
+    backdoor_set(cg::DAG, x::Symbol, y::Symbol) -> Union{Vector{Symbol},Nothing}
+
+Return a generalized back-door set relative to `(x, y)` and `cg` using the
+Generalized Backdoor Criterion (GBC; Maathuis & Colombo 2015, Corollary 4.1), or
+`nothing` if none exists.
+
+For a DAG this reduces to Pearl's original result: a generalized back-door set
+exists if and only if `y` is not a parent of `x`, and when it exists,
+`parents(cg, x)` is such a set (not necessarily minimal).
+
+# Examples
+
+```jldoctest
+julia> cg = cgraph("A --> X --> Y, A --> Y"; class = DAG);
+
+julia> backdoor_set(cg, :X, :Y)
+1-element Vector{Symbol}:
+ :A
+
+julia> backdoor_set(cg, :Y, :A) === nothing  # A is a parent of Y
+true
+```
+
+# References
+
+- [maathuiscolombo2015gbc](@cite)
+"""
+function backdoor_set(cg::DAG, x::Symbol, y::Symbol)
+    B = cg.backend
+    xi = node_index(cg, x)
+    yi = node_index(cg, y)
+    yi in _parents_slice(B, xi) && return nothing
+    return sort(B.nodes[_parents_slice(B, xi)])
+end

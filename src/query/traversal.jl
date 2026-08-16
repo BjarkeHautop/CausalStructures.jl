@@ -246,6 +246,68 @@ function exogenous_nodes(cg::AbstractPDAG; undirected_as_parents::Bool = false)
     return exogenous
 end
 
+# b-possibly-causal reachability (Definition 3.1/3.3, Perković, Kalisch &
+# Maathuis 2017/2018): a path V0,...,Vk is b-possibly-causal iff no edge
+# Vi <- Vj exists anywhere in the graph for i < j. Naive "children/parents +
+# undirected" reachability only checks consecutive steps, which is unsound on
+# MPDAG (background knowledge can create a partially directed cycle not on
+# the path itself). By Lemma 3.6 an unshielded witness path always exists
+# when any does, and for unshielded paths the all-pairs check collapses to
+# consecutive steps (Lemma 3.5) -- so this backtracks over unshielded paths
+# rather than doing a single visited-set BFS/DFS.
+function _b_possibly_causal_unshielded_extend(
+    B::PDAGBackend,
+    path::Vector{Int},
+    pred::Int,
+    w::Int,
+)
+    w in path && return false
+    for u in path
+        u == pred && continue
+        w in _all_nbrs_slice(B, u) && return false
+    end
+    return true
+end
+
+function _b_possibly_causal_reachable(
+    B::PDAGBackend,
+    x::Int,
+    forward::Function;
+    excluded::BitVector = falses(length(B.nodes)),
+)
+    n = length(B.nodes)
+    reach = falses(n)
+    path = [x]
+    _b_possibly_causal_dfs!(reach, path, B, x, forward, excluded)
+    return reach
+end
+
+function _b_possibly_causal_dfs!(
+    reach::BitVector,
+    path::Vector{Int},
+    B::PDAGBackend,
+    v::Int,
+    forward::Function,
+    excluded::BitVector,
+)
+    for w in forward(B, v)
+        (v == path[1] && excluded[w]) && continue
+        _b_possibly_causal_unshielded_extend(B, path, v, w) || continue
+        reach[w] = true
+        push!(path, w)
+        _b_possibly_causal_dfs!(reach, path, B, w, forward, excluded)
+        pop!(path)
+    end
+    for w in _undirected_slice(B, v)
+        _b_possibly_causal_unshielded_extend(B, path, v, w) || continue
+        reach[w] = true
+        push!(path, w)
+        _b_possibly_causal_dfs!(reach, path, B, w, forward, excluded)
+        pop!(path)
+    end
+    return nothing
+end
+
 """
     possible_ancestors(cg::AbstractPDAG, node::Symbol; open::Bool = true) -> Vector{Symbol}
 
@@ -253,10 +315,13 @@ Return the possible ancestors of `node` in `cg`: all nodes `V` for which there
 exists at least one DAG in the equivalence class represented by `cg` in which
 `V` is an ancestor of `node`.
 
-`V` is a possible ancestor of `node` if there is a **possibly directed path**
-from `V` to `node`: a path on which no edge is compelled in the direction away
-from `node`. Each step traverses either an undirected edge or a directed edge
-pointing toward `node`.
+`V` is a possible ancestor of `node` if there is a **b-possibly directed path**
+from `V` to `node` (Perković, Kalisch & Maathuis 2017/2018): a path on which
+no node, however far back, has a directed edge into an earlier node on the
+path. For [`CPDAG`](@ref) this reduces to the simpler "no edge compelled away
+from `node`" rule (checking only consecutive steps suffices there, Meek 1995,
+Lemma 1); for [`MPDAG`](@ref) checking only consecutive steps is unsound, since
+background knowledge can create partially directed cycles.
 
 When `open = true` (default), `node` itself is excluded. When `open = false`
 (closed definition), `node` is included. The default can be changed via
@@ -274,51 +339,27 @@ julia> possible_ancestors(cpdag, :C)
 2-element Vector{Symbol}:
  :A
  :B
+
+julia> mpdag = cgraph(
+           undirected(:A, :B), undirected(:B, :C), undirected(:C, :D),
+           undirected(:D, :A), directed(:D, :B);
+           class = MPDAG,
+       );
+
+julia> :B in possible_ancestors(mpdag, :D)  # B --> ... --> D would create a cycle with D --> B
+false
 ```
 
 # References
 
 - [perkovic2018complete](@cite)
+- [perkovic2017mpdag](@cite)
 """
 function possible_ancestors(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend
-    n = length(B.nodes)
     node_idx = node_index(cg, node)
-    seen = falses(n)
-    seen[node_idx] = true  # sentinel: prevents re-enqueuing via undirected edges
-    stack = Int[]
-    sizehint!(stack, n)
-    for p in _parents_slice(B, node_idx)
-        if !seen[p]
-            seen[p] = true
-            push!(stack, p)
-        end
-    end
-    for u in _undirected_slice(B, node_idx)
-        if !seen[u]
-            seen[u] = true
-            push!(stack, u)
-        end
-    end
-
-    while !isempty(stack)
-        idx = pop!(stack)
-        for p in _parents_slice(B, idx)
-            if !seen[p]
-                seen[p] = true
-                push!(stack, p)
-            end
-        end
-        for u in _undirected_slice(B, idx)
-            if !seen[u]
-                seen[u] = true
-                push!(stack, u)
-            end
-        end
-    end
-
-    seen[node_idx] = false  # clear sentinel so node doesn't appear in result
-    result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
+    reach = _b_possibly_causal_reachable(B, node_idx, _parents_slice)
+    result = [B.nodes[i] for i in eachindex(reach) if reach[i]]
     return open ? result : [node; result]
 end
 
@@ -329,10 +370,13 @@ Return the possible descendants of `node` in `cg`: all nodes `V` for which
 there exists at least one DAG in the equivalence class represented by `cg` in
 which `V` is a descendant of `node`.
 
-`V` is a possible descendant of `node` if there is a **possibly directed path**
-from `node` to `V`: a path on which no edge is compelled in the direction away
-from `node`. Each step traverses either an undirected edge or a directed edge
-pointing away from `node`.
+`V` is a possible descendant of `node` if there is a **b-possibly directed
+path** from `node` to `V` (Perković, Kalisch & Maathuis 2017/2018): a path on
+which no node, however far along, has a directed edge into an earlier node on
+the path. For [`CPDAG`](@ref) this reduces to the simpler "no edge compelled
+away from `node`" rule (checking only consecutive steps suffices there, Meek
+1995, Lemma 1); for [`MPDAG`](@ref) checking only consecutive steps is
+unsound, since background knowledge can create partially directed cycles.
 
 When `open = true` (default), `node` itself is excluded. When `open = false`
 (closed definition), `node` is included. The default can be changed via
@@ -350,51 +394,27 @@ julia> possible_descendants(cpdag, :A)
 2-element Vector{Symbol}:
  :B
  :C
+
+julia> mpdag = cgraph(
+           undirected(:A, :B), undirected(:B, :C), undirected(:C, :D),
+           undirected(:D, :A), directed(:D, :B);
+           class = MPDAG,
+       );
+
+julia> :D in possible_descendants(mpdag, :B)  # B --> ... --> D would create a cycle with D --> B
+false
 ```
 
 # References
 
 - [perkovic2018complete](@cite)
+- [perkovic2017mpdag](@cite)
 """
 function possible_descendants(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend
-    n = length(B.nodes)
     node_idx = node_index(cg, node)
-    seen = falses(n)
-    seen[node_idx] = true  # sentinel: prevents re-enqueuing via undirected edges
-    stack = Int[]
-    sizehint!(stack, n)
-    for c in _children_slice(B, node_idx)
-        if !seen[c]
-            seen[c] = true
-            push!(stack, c)
-        end
-    end
-    for u in _undirected_slice(B, node_idx)
-        if !seen[u]
-            seen[u] = true
-            push!(stack, u)
-        end
-    end
-
-    while !isempty(stack)
-        idx = pop!(stack)
-        for c in _children_slice(B, idx)
-            if !seen[c]
-                seen[c] = true
-                push!(stack, c)
-            end
-        end
-        for u in _undirected_slice(B, idx)
-            if !seen[u]
-                seen[u] = true
-                push!(stack, u)
-            end
-        end
-    end
-
-    seen[node_idx] = false  # clear sentinel so node doesn't appear in result
-    result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
+    reach = _b_possibly_causal_reachable(B, node_idx, _children_slice)
+    result = [B.nodes[i] for i in eachindex(reach) if reach[i]]
     return open ? result : [node; result]
 end
 
