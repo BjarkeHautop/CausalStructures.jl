@@ -10,6 +10,7 @@ minimal_separator
 adjustment_set
 is_valid_adjustment
 all_adjustment_sets
+possible_optimal_adjustment_sets
 is_valid_backdoor
 all_backdoor_sets
 backdoor_set

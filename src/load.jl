@@ -59,6 +59,11 @@ include("transform/mag.jl")
 include("transform/enumerate-dags.jl")
 include("transform/enumerate-mags.jl")
 
+# Depends on identification/backdoor.jl (adjustment_set) and
+# transform/background-knowledge.jl (apply_background_knowledge) above.
+include("identification/possible-adjustment-sets.jl")
+include("identification/possible-joint-parent-sets.jl")
+
 # I/O, generation, simulation, display, layout
 include("io/utils.jl")
 include("io/uniform-dag.jl")

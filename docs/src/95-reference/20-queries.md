@@ -9,6 +9,7 @@ descendants
 possible_ancestors
 possible_descendants
 possible_parent_sets
+possible_joint_parent_sets
 anteriors
 posteriors
 exogenous_nodes
