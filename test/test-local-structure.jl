@@ -78,3 +78,14 @@ end
     expected = cgraph("A --> B, A o-> X, X --> B + Y"; class = UNKNOWN)
     @test edges_set == Set((e.src, e.dst, e.src_end, e.dst_end) for e in expected.edges)
 end
+
+@testitem "_pa_mask returns parents, not children" tags = [:unit] begin
+    mag = cgraph(directed(:P, :T); class = MAG)
+    node_vec, index, adj, mark =
+        CausalStructures._pag_adj_marks(mag.backend.nodes, mag.edges)
+    n = length(node_vec)
+    pa_t = CausalStructures._pa_mask(adj, mark, n, [index[:T]])
+    @test [node_vec[i] for i = 1:n if pa_t[i]] == [:P]
+    pa_p = CausalStructures._pa_mask(adj, mark, n, [index[:P]])
+    @test isempty([node_vec[i] for i = 1:n if pa_p[i]])
+end

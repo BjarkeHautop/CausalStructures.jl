@@ -55,10 +55,11 @@ end
     possible_joint_parent_sets(cg::AbstractPDAG, xs::AbstractVector{Symbol}) ->
         Vector{Vector{Vector{Symbol}}}
 
-Return every locally valid joint parental structure of `xs` implied by `cg`:
-the graph part of joint-IDA (Nandy, Maathuis & Richardson 2017), generalizing
-[`possible_parent_sets`](@ref) from a single intervention node to a set of
-simultaneous interventions.
+Return every locally valid joint parental structure of `xs` implied by `cg`.
+
+This is the graph part of joint-IDA (Nandy, Maathuis & Richardson 2017),
+generalizing [`possible_parent_sets`](@ref) from a single intervention node to
+a set of simultaneous interventions.
 
 Every undirected edge incident to at least one node in `xs` is jointly
 reoriented, including edges directly between two nodes of `xs`. A candidate

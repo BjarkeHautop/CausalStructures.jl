@@ -65,6 +65,7 @@ include("transform/enumerate-mags.jl")
 # transform/background-knowledge.jl (apply_background_knowledge) above.
 include("identification/possible-adjustment-sets.jl")
 include("identification/possible-joint-parent-sets.jl")
+include("identification/pagcauses.jl")
 
 # I/O, generation, simulation, display, layout
 include("io/utils.jl")

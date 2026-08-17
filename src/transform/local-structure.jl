@@ -4,9 +4,7 @@
 # & Zhou 2025). Assumes no selection bias throughout, matching both papers.
 
 # PossDe(seeds, graph), closed (includes seeds), with `excluded` vertices
-# treated as removed from the graph entirely (not reachable, not reachable
-# through). Follows edges whose near mark at the current vertex is not an
-# arrowhead, mirroring `possible_descendants(cg::PAG, ...)`.
+# removed from the graph entirely. Mirrors `possible_descendants(cg::PAG, ...)`.
 function _possde_mask(
     adj::BitMatrix,
     mark::Matrix{Endpoint},
@@ -40,15 +38,14 @@ function _pa_mask(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int, targets)
     for t in targets
         for p = 1:n
             adj[p, t] || continue
-            (mark[t, p] == Arrow && mark[p, t] == Tail) && (pa[p] = true)
+            (mark[t, p] == Tail && mark[p, t] == Arrow) && (pa[p] = true)
         end
     end
     return pa
 end
 
-# F_v = {u in vprime | u *-o v}: members of vprime with a not-yet-resolved
-# (circle) mark at v specifically. Shared by the F-based circle resolution in
-# `_maximal_local_mag_marks!` and by `_bridged_relative_to` below.
+# F_v = {u in vprime | u *-o v}. Shared by `_maximal_local_mag_marks!`'s
+# F-based circle resolution and by `_bridged_relative_to` below.
 function _f_sets(
     adj::BitMatrix,
     mark::Matrix{Endpoint},
@@ -111,10 +108,8 @@ function _f_unimodal(path::Vector{Int}, F::Dict{Int,Set{Int}})
     return false
 end
 
-# Bridged relative to `vprime` (Definition 4, Wang, Tao, Qin & Zhou 2025 /
-# Definition 2, Wang, Qin & Zhou 2023): every pair of vertices in `mask`
-# connected by an o-o path within `mask` has an F-unimodal minimal circle
-# path between them.
+# Bridged relative to `vprime` (Definition 4/2025, Definition 2/2023): every
+# pair in `mask` on an o-o path within `mask` has an F-unimodal minimal one.
 function _bridged_relative_to(
     adj::BitMatrix,
     mark::Matrix{Endpoint},
@@ -133,10 +128,9 @@ function _bridged_relative_to(
     return true
 end
 
-# Wang, Qin & Zhou (2023), Algorithm 1: update `mark` in place by treating
-# `c_mask` (X's chosen local structure) as local background knowledge about
-# `x_idx` and closing under the corresponding rule set. Verified end-to-end
-# against the worked example in that paper (Fig. 1).
+# Wang, Qin & Zhou (2023), Algorithm 1: update `mark` in place, treating
+# `c_mask` as local background knowledge about `x_idx` and closing under the
+# corresponding rule set. Verified end-to-end against that paper's Fig. 1.
 function _maximal_local_mag_marks!(
     adj::BitMatrix,
     mark::Matrix{Endpoint},
@@ -271,9 +265,10 @@ end
 """
     maximal_local_mag(cg::PAG, x::Symbol, c::AbstractVector{Symbol}) -> UNKNOWN
 
-Return the maximal local MAG for the local structure `c` at `x` in `cg`
-(Wang, Qin & Zhou 2023, Algorithm 1): `cg` with `x <-> v` for `v in c` and
-`x --> v` for `x`'s other circle-marked neighbors, treated as local
+Return the maximal local MAG for the local structure `c` at `x` in `cg`.
+
+This is `cg` with `x <-> v` for `v in c` and `x --> v` for `x`'s other
+circle-marked neighbors (Wang, Qin & Zhou 2023, Algorithm 1), treated as local
 background knowledge about `x` and closed under the corresponding rule set.
 
 `c` should be a valid local structure, i.e. an entry of

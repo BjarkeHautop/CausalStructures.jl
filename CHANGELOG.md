@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `id`/`idc` (Shpitser & Pearl's identification algorithm) for `DAG`/`ADMG`.
 - Added `possible_parent_sets`, the graph half of the local IDA algorithm, for `AbstractPDAG`.
 - Added `backdoor_set` (Generalized Backdoor Criterion, Maathuis & Colombo 2015) for `DAG`, `CPDAG`, `MAG`, and `PAG`.
+- Added `possible_optimal_adjustment_sets` (O-set-based IDA) and `possible_joint_parent_sets` (joint-IDA) for `AbstractPDAG`.
+- Added `possible_d_sep` (D-SEP) for `AbstractAG`.
+- Added `possible_local_structures` and `maximal_local_mag` (Wang, Qin & Zhou 2023) for `PAG`.
+- Added `pagcauses` (PAGcauses, Wang, Tao, Qin & Zhou 2025), finding every valid adjustment set for a `PAG` without enumerating MAGs.
 
 ### Bug fixes
 
