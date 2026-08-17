@@ -95,13 +95,6 @@ function _mag_to_pag_edges(cg::MAG)
     # circles on every adjacency (entries for non-adjacent pairs are unused).
     mark = fill(Circle, n, n)
 
-    # Set the mark at j on edge i-j; return true if it changed.
-    function setmark!(i, j, m)
-        mark[i, j] == m && return false
-        mark[i, j] = m
-        return true
-    end
-
     # ── Step 0: orient unshielded colliders as in the MAG ──────────────────────
     for b = 1:n
         nb = [w for w = 1:n if adj[w, b]]
@@ -115,72 +108,145 @@ function _mag_to_pag_edges(cg::MAG)
         end
     end
 
-    # ── Path helpers ───────────────────────────────────────────────────────────
+    _close_pag_marks!(adj, mark, mmark)
 
-    # Does an uncovered possibly-directed path `start - first - ... - target`
-    # exist? "possibly directed" = no arrowhead points back toward `start`;
-    # "uncovered" = consecutive triples have non-adjacent endpoints. Vertices in
-    # `avoid` may not appear on the path.
-    function has_uncovered_pd_path(start, target, first, avoid)
-        first == start && return false
-        mark[first, start] == Arrow && return false   # arrowhead back at start
-        visited = falses(n)
-        visited[start] = true
-        for a in avoid
-            visited[a] = true
+    return _edges_from_marks(B.nodes, adj, mark)
+end
+
+# Convert a resolved (adj, mark) representation back into a CausalEdge list.
+function _edges_from_marks(nodes, adj::BitMatrix, mark::Matrix{Endpoint})
+    node_vec = nodes isa AbstractVector ? nodes : collect(nodes)
+    n = length(node_vec)
+    new_edges = CausalEdge[]
+    for i = 1:n, j = (i+1):n
+        adj[i, j] || continue
+        mi, mj = mark[j, i], mark[i, j]   # mark at i, mark at j
+        si, sj = node_vec[i], node_vec[j]
+        if mi == Tail && mj == Arrow
+            push!(new_edges, directed(si, sj))
+        elseif mi == Arrow && mj == Tail
+            push!(new_edges, directed(sj, si))
+        elseif mi == Arrow && mj == Arrow
+            push!(new_edges, bidirected(si, sj))
+        elseif mi == Tail && mj == Tail
+            push!(new_edges, undirected(si, sj))
+        elseif mi == Circle && mj == Arrow
+            push!(new_edges, partially_directed(si, sj))   # i o-> j
+        elseif mi == Arrow && mj == Circle
+            push!(new_edges, partially_directed(sj, si))   # j o-> i
+        elseif mi == Circle && mj == Tail
+            push!(new_edges, partially_undirected(si, sj)) # i o-- j
+        elseif mi == Tail && mj == Circle
+            push!(new_edges, partially_undirected(sj, si)) # j o-- i
+        else
+            push!(new_edges, partial(si, sj))              # i o-o j
         end
-        visited[first] && return false
-        visited[first] = true
-        function dfs(cur, prev)
-            cur == target && return true
-            for nxt = 1:n
-                adj[cur, nxt] || continue
-                visited[nxt] && continue
-                mark[nxt, cur] == Arrow && continue   # arrowhead back toward start
-                adj[prev, nxt] && continue            # uncovered: prev-nxt non-adjacent
-                visited[nxt] = true
-                dfs(nxt, cur) && return true
-                visited[nxt] = false
-            end
-            return false
-        end
-        return dfs(first, start)
     end
+    return new_edges
+end
 
-    # Is there a discriminating path <D, ..., A, beta, gamma> for `beta` in the
-    # current PAG? Every vertex strictly between D and beta is a collider on the
-    # path and a parent of gamma; D is not adjacent to gamma.
-    function has_discriminating_path(beta, gamma)
-        for a = 1:n
-            (a == beta || a == gamma) && continue
-            adj[a, beta] && adj[a, gamma] || continue
-            # A is a collider on the path: arrowhead into A from beta. The mark at
-            # beta itself is what R4 decides, so it must not be required here.
-            mark[beta, a] == Arrow || continue                               # A <-* beta
-            (mark[a, gamma] == Arrow && mark[gamma, a] == Tail) || continue  # A -> gamma
-            visited = falses(n)
-            visited[beta] = visited[gamma] = visited[a] = true
-            function dfs(v)
-                for w = 1:n
-                    adj[w, v] || continue
-                    visited[w] && continue
-                    mark[w, v] == Arrow || continue   # arrowhead at v: v is a collider
-                    if !adj[w, gamma]
-                        return true                   # w = D, non-adjacent to gamma
-                    end
-                    # Otherwise w must continue the collider/parent chain.
-                    mark[v, w] == Arrow || continue                          # v <-> w
-                    (mark[w, gamma] == Arrow && mark[gamma, w] == Tail) || continue  # w -> gamma
-                    visited[w] = true
-                    dfs(w) && return true
-                    visited[w] = false
-                end
-                return false
-            end
-            dfs(a) && return true
+# Does an uncovered possibly-directed path `start - first - ... - target`
+# exist? "possibly directed" = no arrowhead points back toward `start`;
+# "uncovered" = consecutive triples have non-adjacent endpoints. Vertices in
+# `avoid` may not appear on the path. Shared by R9/R10 in _close_pag_marks!
+# and _close_pag_marks_local!.
+function _has_uncovered_pd_path(
+    adj::BitMatrix,
+    mark::Matrix{Endpoint},
+    n::Int,
+    start,
+    target,
+    first,
+    avoid,
+)
+    first == start && return false
+    mark[first, start] == Arrow && return false   # arrowhead back at start
+    visited = falses(n)
+    visited[start] = true
+    for a in avoid
+        visited[a] = true
+    end
+    visited[first] && return false
+    visited[first] = true
+    function dfs(cur, prev)
+        cur == target && return true
+        for nxt = 1:n
+            adj[cur, nxt] || continue
+            visited[nxt] && continue
+            mark[nxt, cur] == Arrow && continue   # arrowhead back toward start
+            adj[prev, nxt] && continue            # uncovered: prev-nxt non-adjacent
+            visited[nxt] = true
+            dfs(nxt, cur) && return true
+            visited[nxt] = false
         end
         return false
     end
+    return dfs(first, start)
+end
+
+# Is there a discriminating path <D, ..., A, beta, gamma> for `beta` in the
+# current PAG? Every vertex strictly between D and beta is a collider on the
+# path and a parent of gamma; D is not adjacent to gamma. Shared by R4 in
+# _close_pag_marks! and R'_4 in _close_pag_marks_local!.
+function _has_discriminating_path(
+    adj::BitMatrix,
+    mark::Matrix{Endpoint},
+    n::Int,
+    beta,
+    gamma,
+)
+    for a = 1:n
+        (a == beta || a == gamma) && continue
+        adj[a, beta] && adj[a, gamma] || continue
+        # A is a collider on the path: arrowhead into A from beta. The mark at
+        # beta itself is what R4/R'_4 decides, so it must not be required here.
+        mark[beta, a] == Arrow || continue                               # A <-* beta
+        (mark[a, gamma] == Arrow && mark[gamma, a] == Tail) || continue  # A -> gamma
+        visited = falses(n)
+        visited[beta] = visited[gamma] = visited[a] = true
+        function dfs(v)
+            for w = 1:n
+                adj[w, v] || continue
+                visited[w] && continue
+                mark[w, v] == Arrow || continue   # arrowhead at v: v is a collider
+                if !adj[w, gamma]
+                    return true                   # w = D, non-adjacent to gamma
+                end
+                # Otherwise w must continue the collider/parent chain.
+                mark[v, w] == Arrow || continue                          # v <-> w
+                (mark[w, gamma] == Arrow && mark[gamma, w] == Tail) || continue  # w -> gamma
+                visited[w] = true
+                dfs(w) && return true
+                visited[w] = false
+            end
+            return false
+        end
+        dfs(a) && return true
+    end
+    return false
+end
+
+# Close `mark` under Zhang's complete orientation rules R1-R10, in place, until
+# no further mark is implied.
+function _close_pag_marks!(
+    adj::BitMatrix,
+    mark::Matrix{Endpoint},
+    mmark::Union{Matrix{Endpoint},Nothing} = nothing,
+)
+    n = size(adj, 1)
+
+    # Set the mark at j on edge i-j; return true if it changed.
+    function setmark!(i, j, m)
+        mark[i, j] == m && return false
+        mark[i, j] = m
+        return true
+    end
+
+    # ── Path helpers (shared with _close_pag_marks_local!) ─────────────────────
+    has_uncovered_pd_path(start, target, first, avoid) =
+        _has_uncovered_pd_path(adj, mark, n, start, target, first, avoid)
+    has_discriminating_path(beta, gamma) =
+        _has_discriminating_path(adj, mark, n, beta, gamma)
 
     # Find an uncovered circle path `A - C - ... - D - B` (every edge o-o) with
     # C not adjacent to B and D not adjacent to A; return its vertex list or
@@ -289,18 +355,20 @@ function _mag_to_pag_edges(cg::MAG)
 
         # R4: discriminating path <D, ..., A, beta, gamma> for beta with beta o-*
         # gamma. If beta is a collider in cg, orient beta <-> gamma; otherwise
-        # orient beta -> gamma.
-        for beta = 1:n, gamma = 1:n
-            beta == gamma && continue
-            adj[beta, gamma] || continue
-            mark[gamma, beta] == Circle || continue
-            has_discriminating_path(beta, gamma) || continue
-            if mmark[gamma, beta] == Arrow   # collider in the MAG
-                changed |= setmark!(beta, gamma, Arrow)
-                changed |= setmark!(gamma, beta, Arrow)
-            else
-                changed |= setmark!(beta, gamma, Arrow)
-                changed |= setmark!(gamma, beta, Tail)
+        # orient beta -> gamma. Skipped without a ground-truth mmark to consult.
+        if mmark !== nothing
+            for beta = 1:n, gamma = 1:n
+                beta == gamma && continue
+                adj[beta, gamma] || continue
+                mark[gamma, beta] == Circle || continue
+                has_discriminating_path(beta, gamma) || continue
+                if mmark[gamma, beta] == Arrow   # collider in the MAG
+                    changed |= setmark!(beta, gamma, Arrow)
+                    changed |= setmark!(gamma, beta, Arrow)
+                else
+                    changed |= setmark!(beta, gamma, Arrow)
+                    changed |= setmark!(gamma, beta, Tail)
+                end
             end
         end
 
@@ -430,34 +498,187 @@ function _mag_to_pag_edges(cg::MAG)
         end
     end
 
-    # ── Emit the PAG as an UNKNOWN graph ───────────────────────────────────────
-    new_edges = CausalEdge[]
-    for i = 1:n, j = (i+1):n
-        adj[i, j] || continue
-        mi, mj = mark[j, i], mark[i, j]   # mark at i, mark at j
-        si, sj = B.nodes[i], B.nodes[j]
-        if mi == Tail && mj == Arrow
-            push!(new_edges, directed(si, sj))
-        elseif mi == Arrow && mj == Tail
-            push!(new_edges, directed(sj, si))
-        elseif mi == Arrow && mj == Arrow
-            push!(new_edges, bidirected(si, sj))
-        elseif mi == Tail && mj == Tail
-            push!(new_edges, undirected(si, sj))
-        elseif mi == Circle && mj == Arrow
-            push!(new_edges, partially_directed(si, sj))   # i o-> j
-        elseif mi == Arrow && mj == Circle
-            push!(new_edges, partially_directed(sj, si))   # j o-> i
-        elseif mi == Circle && mj == Tail
-            push!(new_edges, partially_undirected(si, sj)) # i o-- j
-        elseif mi == Tail && mj == Circle
-            push!(new_edges, partially_undirected(sj, si)) # j o-- i
-        else
-            push!(new_edges, partial(si, sj))              # i o-o j
+    return mark
+end
+
+# Close `mark` under the rule set for incorporating local background
+# knowledge about one vertex under no selection bias (Wang, Qin & Zhou 2023):
+# Zhang's R1-R3/R8-R10, R4 replaced by R'_4, R11 added, R5-R7 omitted (they
+# only concern undirected/selection-bias edges). Callers must ensure
+# `adj`/`mark` has no undirected edges; this function does not check that.
+function _close_pag_marks_local!(adj::BitMatrix, mark::Matrix{Endpoint})
+    n = size(adj, 1)
+
+    function setmark!(i, j, m)
+        mark[i, j] == m && return false
+        mark[i, j] = m
+        return true
+    end
+    has_uncovered_pd_path(start, target, first, avoid) =
+        _has_uncovered_pd_path(adj, mark, n, start, target, first, avoid)
+    has_discriminating_path(beta, gamma) =
+        _has_discriminating_path(adj, mark, n, beta, gamma)
+
+    changed = true
+    while changed
+        changed = false
+
+        # R1: alpha *-> beta o-* gamma, alpha,gamma non-adjacent => beta -> gamma
+        for beta = 1:n, alpha = 1:n, gamma = 1:n
+            (alpha == beta || beta == gamma || alpha == gamma) && continue
+            adj[alpha, beta] && adj[beta, gamma] || continue
+            mark[alpha, beta] == Arrow || continue
+            mark[gamma, beta] == Circle || continue
+            adj[alpha, gamma] && continue
+            changed |= setmark!(gamma, beta, Tail)
+            changed |= setmark!(beta, gamma, Arrow)
+        end
+
+        # R2: alpha -> beta *-> gamma or alpha *-> beta -> gamma, and alpha *-o
+        # gamma => alpha *-> gamma
+        for alpha = 1:n, gamma = 1:n
+            alpha == gamma && continue
+            adj[alpha, gamma] || continue
+            mark[alpha, gamma] == Circle || continue
+            for beta = 1:n
+                (beta == alpha || beta == gamma) && continue
+                adj[alpha, beta] && adj[beta, gamma] || continue
+                chain1 =
+                    mark[alpha, beta] == Arrow &&
+                    mark[beta, alpha] == Tail &&
+                    mark[beta, gamma] == Arrow
+                chain2 =
+                    mark[alpha, beta] == Arrow &&
+                    mark[beta, gamma] == Arrow &&
+                    mark[gamma, beta] == Tail
+                if chain1 || chain2
+                    changed |= setmark!(alpha, gamma, Arrow)
+                    break
+                end
+            end
+        end
+
+        # R3: alpha *-> beta <-* gamma, alpha *-o theta o-* gamma, alpha,gamma
+        # non-adjacent, theta *-o beta => theta *-> beta
+        for theta = 1:n, beta = 1:n
+            theta == beta && continue
+            adj[theta, beta] || continue
+            mark[theta, beta] == Circle || continue
+            for alpha = 1:n, gamma = 1:n
+                (alpha == gamma) && continue
+                (alpha == beta || alpha == theta || gamma == beta || gamma == theta) &&
+                    continue
+                adj[alpha, beta] && adj[gamma, beta] || continue
+                mark[alpha, beta] == Arrow && mark[gamma, beta] == Arrow || continue
+                adj[alpha, theta] && adj[gamma, theta] || continue
+                mark[alpha, theta] == Circle && mark[gamma, theta] == Circle || continue
+                adj[alpha, gamma] && continue
+                changed |= setmark!(theta, beta, Arrow)
+                break
+            end
+        end
+
+        # R'_4 (Wang, Qin & Zhou 2023): discriminating path <D,...,A,beta,gamma>
+        # for beta with beta o-> gamma => beta -> gamma, unconditionally (unlike
+        # R4, it does not need to know whether beta is a collider).
+        for beta = 1:n, gamma = 1:n
+            beta == gamma && continue
+            adj[beta, gamma] || continue
+            mark[gamma, beta] == Circle || continue
+            mark[beta, gamma] == Arrow || continue
+            has_discriminating_path(beta, gamma) || continue
+            changed |= setmark!(gamma, beta, Tail)
+        end
+
+        # R8: alpha -> beta -> gamma or alpha -o beta -> gamma, and alpha o->
+        # gamma => alpha -> gamma
+        for alpha = 1:n, gamma = 1:n
+            alpha == gamma && continue
+            adj[alpha, gamma] || continue
+            (mark[alpha, gamma] == Arrow && mark[gamma, alpha] == Circle) || continue
+            for beta = 1:n
+                (beta == alpha || beta == gamma) && continue
+                adj[alpha, beta] && adj[beta, gamma] || continue
+                into_beta =
+                    mark[alpha, beta] == Arrow &&
+                    (mark[beta, alpha] == Tail || mark[beta, alpha] == Circle)
+                beta_to_gamma = mark[beta, gamma] == Arrow && mark[gamma, beta] == Tail
+                if into_beta && beta_to_gamma
+                    changed |= setmark!(gamma, alpha, Tail)
+                    break
+                end
+            end
+        end
+
+        # R9: alpha o-> gamma with an uncovered p.d. path alpha - beta - ... -
+        # gamma where beta is not adjacent to gamma => alpha -> gamma
+        for alpha = 1:n, gamma = 1:n
+            alpha == gamma && continue
+            adj[alpha, gamma] || continue
+            (mark[alpha, gamma] == Arrow && mark[gamma, alpha] == Circle) || continue
+            for beta = 1:n
+                (beta == alpha || beta == gamma) && continue
+                adj[alpha, beta] || continue
+                adj[beta, gamma] && continue          # beta not adjacent to gamma
+                mark[beta, alpha] == Arrow && continue
+                if has_uncovered_pd_path(alpha, gamma, beta, Int[])
+                    changed |= setmark!(gamma, alpha, Tail)
+                    break
+                end
+            end
+        end
+
+        # R10: alpha o-> gamma, beta -> gamma <- delta, uncovered p.d. paths
+        # alpha..beta and alpha..delta whose first vertices are distinct and
+        # non-adjacent => alpha -> gamma
+        for alpha = 1:n, gamma = 1:n
+            alpha == gamma && continue
+            adj[alpha, gamma] || continue
+            (mark[alpha, gamma] == Arrow && mark[gamma, alpha] == Circle) || continue
+            par = [
+                v for v = 1:n if v != gamma &&
+                    adj[v, gamma] &&
+                    mark[v, gamma] == Arrow &&
+                    mark[gamma, v] == Tail
+            ]
+            length(par) >= 2 || continue
+            done = false
+            for bi in eachindex(par), di in eachindex(par)
+                bi == di && continue
+                bnode, dnode = par[bi], par[di]
+                for mu = 1:n
+                    (mu == alpha || mu == gamma) && continue
+                    adj[alpha, mu] || continue
+                    mark[mu, alpha] == Arrow && continue
+                    has_uncovered_pd_path(alpha, bnode, mu, [gamma]) || continue
+                    for omega = 1:n
+                        (omega == alpha || omega == gamma || omega == mu) && continue
+                        adj[alpha, omega] || continue
+                        adj[mu, omega] && continue        # mu, omega non-adjacent
+                        mark[omega, alpha] == Arrow && continue
+                        has_uncovered_pd_path(alpha, dnode, omega, [gamma]) || continue
+                        changed |= setmark!(gamma, alpha, Tail)
+                        done = true
+                        break
+                    end
+                    done && break
+                end
+                done && break
+            end
+        end
+
+        # R11 (Wang, Qin & Zhou 2023): A --o B, no selection bias => A --> B
+        # (the only alternative resolution, an undirected edge, is ruled out).
+        for a = 1:n, b = 1:n
+            a == b && continue
+            adj[a, b] || continue
+            mark[b, a] == Tail || continue
+            mark[a, b] == Circle || continue
+            changed |= setmark!(a, b, Arrow)
         end
     end
 
-    return new_edges
+    return mark
 end
 
 """
@@ -509,15 +730,14 @@ MAG with 4 nodes and 4 edges:
 """
 mag_from_pag(cg::PAG) = _mag_from_pag(cg.backend.nodes, cg.edges)
 
-# Core of mag_from_pag, working on raw node/edge data so PAG validation can call it
-# on a not-yet-validated graph.
-function _mag_from_pag(nodes, edges::Vector{CausalEdge})
+# Build the (node_vec, index, adj, mark) working representation shared by code
+# that manipulates PAG-style circle marks directly: adj is the symmetric
+# adjacency, mark[i, j] is the mark at node j on edge i-j.
+function _pag_adj_marks(nodes, edges::Vector{CausalEdge})
     node_vec = collect(nodes)
     n = length(node_vec)
     index = Dict(s => i for (i, s) in enumerate(node_vec))
 
-    # adj is the symmetric adjacency; mark[i, j] is the mark at node j on edge
-    # i-j (mirroring mag_to_pag's convention).
     adj = falses(n, n)
     mark = fill(Circle, n, n)
     for e in edges
@@ -526,6 +746,14 @@ function _mag_from_pag(nodes, edges::Vector{CausalEdge})
         mark[j, i] = e.src_end   # mark at i (src)
         mark[i, j] = e.dst_end   # mark at j (dst)
     end
+    return node_vec, index, adj, mark
+end
+
+# Core of mag_from_pag, working on raw node/edge data so PAG validation can call it
+# on a not-yet-validated graph.
+function _mag_from_pag(nodes, edges::Vector{CausalEdge})
+    node_vec, _, adj, mark = _pag_adj_marks(nodes, edges)
+    n = length(node_vec)
 
     # Step 1: resolve every circle opposite a fixed mark
     # Such a circle always makes the edge directed: opposite an arrowhead it turns

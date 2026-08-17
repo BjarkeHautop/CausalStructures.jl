@@ -10,6 +10,8 @@ possible_ancestors
 possible_descendants
 possible_parent_sets
 possible_joint_parent_sets
+possible_d_sep
+possible_local_structures
 anteriors
 posteriors
 exogenous_nodes

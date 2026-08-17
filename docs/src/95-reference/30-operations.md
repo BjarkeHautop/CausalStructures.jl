@@ -19,4 +19,5 @@ ag_to_mag
 enumerate_mags
 mag_to_pag
 mag_from_pag
+maximal_local_mag
 ```

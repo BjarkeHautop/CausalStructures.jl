@@ -33,6 +33,7 @@ include("core/backend.jl")
 include("query/traversal.jl")
 include("query/separation.jl")
 include("query/minimal-separator.jl")
+include("query/possible-d-sep.jl")
 
 # Causal identification: adjustment sets, frontdoor, conditioning
 include("identification/estimand.jl")
@@ -56,6 +57,7 @@ include("transform/latent.jl")
 include("transform/pdag.jl")
 include("transform/background-knowledge.jl")
 include("transform/mag.jl")
+include("transform/local-structure.jl")
 include("transform/enumerate-dags.jl")
 include("transform/enumerate-mags.jl")
 
