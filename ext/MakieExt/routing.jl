@@ -1,10 +1,7 @@
 # Automatic edge routing: bends an edge around any non-incident node it would
-# otherwise cross, adapted from CausalStructures (R)'s edge routing
-# (R/plot-routing.R by Frederik Fabricius-Bjerre and Johan Larsson). Pure
-# functions operating on plain Point2f coordinates in axis data space; since
-# Makie draws with `aspect = DataAspect()`, Euclidean distance in data space
-# is already physically isotropic, so (unlike the R version, whose "native"
-# grid units are aspect-distorted) no unit conversion is needed here.
+# otherwise cross.
+# Coordinates are axis data space; Makie draws with `aspect = DataAspect()`,
+# so Euclidean distance there is already isotropic and needs no conversion.
 
 _unit(p::Point2f) =
     (n = _norm2(p); n < 1.0f-6 ? Point2f(0, 0) : Point2f(p[1] / n, p[2] / n))
@@ -49,9 +46,7 @@ end
 # Clip a cubic Bezier (control points p0,p1,p2c,p2) to the node boundaries at
 # each end and sample it into `n` points, or return `nothing` if the curve
 # doesn't clear both boundaries (e.g. a node large enough to swallow it).
-# Shared by both `_route_edge_path` (obstacle avoidance) and
-# `_fanned_edge_path` (multi-edge separation) since both ultimately just bow
-# a chord and need the same border-clipping/sampling step.
+# Shared by `_route_edge_path` and `_fanned_edge_path`.
 function _clip_and_sample_bezier(
     p0::Point2f,
     p1::Point2f,
@@ -69,9 +64,8 @@ function _clip_and_sample_bezier(
     # the caller fall back to the straight (clipped) edge.
     (d_from(1.0f0) <= r_from || d_to(0.0f0) <= r_to) && return nothing
 
-    # Clip to the node borders by bisection: distance from each center grows
-    # monotonically as we move into the curve, so we can locate the
-    # parameter at which the curve crosses each border.
+    # Distance from each center grows monotonically along the curve, so
+    # bisection locates the parameter at which it crosses each border.
     u_start = _bisect_u(d_from, r_from, true)
     u_end = _bisect_u(d_to, r_to, false)
     u_start >= u_end && return nothing
@@ -79,15 +73,12 @@ function _clip_and_sample_bezier(
     return [q(Float32(u_start + (u_end - u_start) * i / (n - 1))) for i = 0:(n-1)]
 end
 
-# Compute a routed edge path that avoids obstructing nodes. The curve is
-# built between the two node *centers* p0/p2 so that, after clipping to the
-# node borders, it appears to project radially from each center. The
-# straight center-to-center segment is tested against every obstacle node
-# (center `o`, radius `orad`); if none is closer than `orad + clearance`, no
-# routing is needed and `nothing` is returned. Otherwise a cubic Bezier is
-# bowed perpendicular to the chord, away from the worst-violating obstacle,
-# by enough to clear it, then clipped to each node boundary and sampled into
-# `n` points.
+# Compute a routed edge path that avoids obstructing nodes, or `nothing` when
+# no obstacle comes within `orad + clearance` of the straight center-to-center
+# segment. The curve is built between the node *centers* p0/p2 so that, once
+# clipped to the borders, it appears to project radially from each. It is a
+# cubic Bezier bowed perpendicular to the chord, away from the worst-violating
+# obstacle, by enough to clear it.
 function _route_edge_path(
     p0::Point2f,
     p2::Point2f,
@@ -131,12 +122,10 @@ function _route_edge_path(
     bend = -worst_side
     nperp = Point2f(bend * -diff[2] / seg_len, bend * diff[1] / seg_len)
 
-    # Cubic Bezier bowed away from the obstacle. Placing the control handles
-    # only partway along the chord (handle_frac) makes the curve leave each
-    # node at a steeper angle, so it reads as projecting from the center. h is
-    # the perpendicular offset of the control points, sized so the curve
-    # clears the obstacle (required displacement worst_violation, plus a
-    # clearance-sized safety margin) at its projection worst_t, where the
+    # Placing the control handles only partway along the chord (handle_frac)
+    # makes the curve leave each node at a steeper angle, so it reads as
+    # projecting from the center. h is their perpendicular offset, sized to
+    # clear worst_violation (plus a clearance margin) at worst_t, where the
     # cubic reaches 3 * t * (1 - t) * h.
     handle_frac = 0.2f0
     tt = clamp(worst_t, 0.15f0, 0.85f0)
@@ -151,13 +140,11 @@ function _route_edge_path(
     return _clip_and_sample_bezier(p0, p1, p2c, p2, r_from, r_to, n)
 end
 
-# Compute a symmetric fan-out path for one of several edges sharing the same
-# pair of nodes (e.g. an ADMG's X --> Y and X <-> Y, which would otherwise
-# draw as two perfectly overlapping lines). Bows the chord perpendicular by
-# signed offset `h` - callers assign each sibling edge a distinct `h` (e.g.
-# evenly spaced around 0) so the group fans out into distinct arcs. Same
-# control-point construction as `_route_edge_path`, just with `h` given
-# directly instead of being sized to clear an obstacle.
+# Compute a symmetric fan-out path for one of several edges sharing a node
+# pair, which would otherwise draw as overlapping lines. Bows the chord
+# perpendicular by signed offset `h`; callers give each sibling edge a distinct
+# `h`. Same control-point construction as `_route_edge_path`, with `h` given
+# directly instead of sized to clear an obstacle.
 function _fanned_edge_path(
     p0::Point2f,
     p2::Point2f,

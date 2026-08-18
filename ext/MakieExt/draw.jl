@@ -25,10 +25,8 @@ _resolve_font(font) =
 
 # Minimum node-circle radius, in pixels, for `label` to fit inside it at the
 # given fontsize/font, with `padding` (pixels) clear on every side. Pixels
-# rather than data units: text renders at a fixed pixel size regardless of
-# the axis's zoom, so a data-space radius only corresponds to a given pixel
-# size at one particular zoom level - see the note in `Makie.plot` on how
-# this is turned into a data-space radius once that zoom level is chosen.
+# rather than data units, because text renders at a fixed pixel size
+# regardless of axis zoom; `Makie.plot` converts this once it picks the ratio.
 function _text_fit_pixel_radius(label::AbstractString, fontsize::Real, font, padding::Real)
     bb = Makie.text_bb(label, _resolve_font(font), Float32(fontsize))
     w, h = Float32(Makie.widths(bb)[1]), Float32(Makie.widths(bb)[2])
@@ -102,13 +100,9 @@ function _draw_edge!(
     has_circle_src = e.src_end === _Circle
     has_circle_dst = e.dst_end === _Circle
 
-    # Arrowheads and circle marks are stroked outlines (poly with
-    # strokewidth = linewidth), not just fills: at a vertex/curve, that
-    # stroke paints roughly linewidth/2 (screen pixels) past the
-    # mathematical path coordinate. Left uncorrected, a tip/circle placed
-    # exactly on the node boundary therefore renders with its stroke
-    # overlapping the node - same root cause as the R port's
-    # "Fix plot edge overlapping on arrowhead on pkgdown".
+    # Arrowheads and circle marks are stroked outlines, so the stroke paints
+    # roughly linewidth/2 (screen pixels) past the path coordinate. Without
+    # this gap a tip placed exactly on the node boundary overlaps the node.
     half_lw_data = (Float32(linewidth) / 2.0f0) / px_per_data_unit
     gap_from = (has_arrow_src || has_circle_src) ? half_lw_data : 0.0f0
     gap_to = (has_arrow_dst || has_circle_dst) ? half_lw_data : 0.0f0
@@ -189,19 +183,14 @@ function _draw_edge!(
     end
 end
 
-# Assigns each edge a signed fan-out slot: 0 for edges that are the only one
-# connecting their (unordered) pair of nodes, and evenly spaced values
-# centered on 0 for edges sharing a pair with others (regardless of edge
-# type or direction) - e.g. an ADMG's X --> Y and X <-> Y, or a graph with
-# two antiparallel edges A --> B and B --> A. Grouping ignores direction so
-# that antiparallel edges fan out too, since they'd otherwise draw as
-# perfectly overlapping lines just like same-direction duplicates.
+# Assigns each edge a signed fan-out slot: 0 when it is the only edge on its
+# (unordered) node pair, otherwise evenly spaced values centered on 0. Grouping
+# ignores direction so antiparallel edges fan out too, not just an ADMG's
+# X --> Y and X <-> Y.
 #
-# `_fanned_edge_path` derives its bow direction from each edge's own
-# src->dst vector, so an edge stored in the reverse direction of its
-# group's canonical order (`key[1] --> key[2]`) would otherwise cancel out
-# a same-signed slot instead of landing on the opposite side; flipping its
-# slot's sign corrects for that.
+# `_fanned_edge_path` bows along each edge's own src->dst vector, so an edge
+# stored reversed relative to its group's canonical order would land on the
+# same side as its opposite; flipping its slot's sign corrects for that.
 function _edge_fan_slots(edges::AbstractVector{CausalEdge})
     groups = Dict{Tuple{Symbol,Symbol},Vector{Int}}()
     for (i, e) in enumerate(edges)
@@ -345,17 +334,12 @@ function Makie.plot(
     # when node_radius is given explicitly.
     r_ref = Float32(something(node_radius, max(0.12, 0.4 * sin(π / max(n, 2)))))
 
-    # The figure is a fixed size (`fig_size`), independent of layout/graph -
-    # otherwise the same graph would render at a different size depending on
-    # which layout algorithm placed its nodes (each has its own arbitrary
-    # coordinate scale and relative spacing). Node circle radii (data units)
-    # are then solved for the pixels-per-data-unit ratio that this fixed
-    # canvas implies, rather than the other way around: text is
-    # fixed-pixel-sized regardless of axis zoom, so a data-space radius only
-    # fits a label at one particular ratio - see `_text_fit_pixel_radius`. A
-    # consequence of fixing the canvas is that very tightly-clustered nodes
-    # (relative to the rest of the layout) may get smaller circles/labels
-    # rather than blowing up the figure.
+    # The figure is a fixed size (`fig_size`) so the same graph doesn't render
+    # at a different size per layout algorithm. Node radii (data units) are
+    # then solved for the pixels-per-data-unit ratio that canvas implies, since
+    # text is fixed-pixel-sized regardless of zoom (`_text_fit_pixel_radius`).
+    # Tightly-clustered nodes therefore get smaller circles rather than
+    # blowing up the figure.
     xs = [p[1] for p in positions]
     ys = [p[2] for p in positions]
     bbox_w = max(maximum(xs) - minimum(xs), 1.0f-3)
@@ -397,10 +381,8 @@ function Makie.plot(
         pixel_radii ./ px_per_unit
     end
 
-    # Arrowhead/open-circle-endpoint sizes stay consistent across the plot
-    # regardless of any single node's label length, so they're based on the
-    # typical (not per-node) node radius - r_ref when node_radius is given
-    # explicitly, otherwise the mean of the text-fit radii.
+    # Based on the typical (not per-node) radius, so endpoint marks stay
+    # consistent across the plot regardless of any one node's label length.
     r_typical = node_radius !== nothing ? r_ref : Float32(sum(r_nodes) / n)
     r_arrow = Float32(something(arrow_size, r_typical * 0.4f0))
     r_circle = Float32(something(circle_size, r_typical * 0.28f0))
@@ -412,19 +394,16 @@ function Makie.plot(
         Dict{Symbol,Int}(cg.backend.nodes[i] => i for i in eachindex(cg.backend.nodes))
     fan_slots = _edge_fan_slots(cg.edges)
 
-    # Explicit axis data limits (rather than Makie's autolimits, which don't
-    # account for node circles' rendered extent at all) so nodes at the
-    # boundary aren't clipped. DataAspect keeps x/y scale equal, so whichever
-    # of xlim/ylim is narrower than the fixed canvas is centered with slack.
+    # Explicit axis data limits: Makie's autolimits ignore the node circles'
+    # rendered extent, so boundary nodes would clip.
     margin = 1.3f0 * maximum(r_nodes)
     xlo, xhi = minimum(xs) - margin, maximum(xs) + margin
     ylo, yhi = minimum(ys) - margin, maximum(ys) + margin
     xlo == xhi && (xlo -= 1.0f0; xhi += 1.0f0)
     ylo == yhi && (ylo -= 1.0f0; yhi += 1.0f0)
 
-    # DataAspect renders both axes at the same scale, set by whichever of
-    # x/y is the tighter fit against the fixed canvas (the other axis gets
-    # centered with slack) - see gap_from/gap_to in _draw_edge!.
+    # DataAspect renders both axes at the same scale, set by whichever of x/y
+    # is the tighter fit against the fixed canvas.
     px_per_data_unit = min(avail_w / (xhi - xlo), avail_h / (yhi - ylo))
 
     fig = Makie.Figure(;
@@ -479,7 +458,6 @@ function Makie.plot(
         )
     end
 
-    # Node circles and labels.
     for i in eachindex(cg.backend.nodes)
         node = cg.backend.nodes[i]
         _draw_filled_circle!(
