@@ -71,17 +71,14 @@ function _cgraph_collect(items...)
 
     for item in items
 
-        # single edge
         if item isa CausalEdge
             push!(edges, item)
             push!(nodes, item.src)
             push!(nodes, item.dst)
 
-            # node wrapper
         elseif item isa GraphNode
             push!(nodes, item.name)
 
-            # vector of edges
         elseif item isa AbstractVector{<:CausalEdge}
             for e in item
                 push!(edges, e)

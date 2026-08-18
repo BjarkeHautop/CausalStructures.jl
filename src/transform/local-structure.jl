@@ -130,7 +130,7 @@ end
 
 # Wang, Qin & Zhou (2023), Algorithm 1: update `mark` in place, treating
 # `c_mask` as local background knowledge about `x_idx` and closing under the
-# corresponding rule set. Verified end-to-end against that paper's Fig. 1.
+# corresponding rule set.
 function _maximal_local_mag_marks!(
     adj::BitMatrix,
     mark::Matrix{Endpoint},

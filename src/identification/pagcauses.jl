@@ -53,8 +53,7 @@ end
 
 # Vertices reachable from `x` by a collider path beginning with an arrowhead
 # (Definition 5), non-endpoints restricted to `allowed`, computed in M_X (X's
-# directed-out edges excluded): confirmed against the paper's Fig. 2(b), which
-# gives W-bar = {A}, not {A, C, Y}, for W = empty.
+# directed-out edges excluded).
 function _collider_path_reach(
     adj::BitMatrix,
     mark::Matrix{Endpoint},

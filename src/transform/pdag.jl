@@ -58,7 +58,6 @@ function dag_from_pdag(cg::AbstractPDAG)
             clique = true
             for i in eachindex(nbrs), j = (i+1):length(nbrs)
                 a, b = nbrs[i], nbrs[j]
-                # adjacent if any edge type connects a and b
                 if b ∉ pa[a] && b ∉ ch[a] && b ∉ und[a]
                     clique = false
                     break
@@ -67,8 +66,8 @@ function dag_from_pdag(cg::AbstractPDAG)
             clique || continue
 
             # Condition (c): every undirected neighbor of x must also be
-            # adjacent to every existing parent of x. See
-            # Definition 4.2 in Wienöbst, Bannach & Liśkiewicz (UAI 2021).
+            # adjacent to every existing parent of x (Wienöbst, Bannach &
+            # Liśkiewicz, UAI 2021, Definition 4.2).
             if !isempty(nbrs) && !isempty(pa[x])
                 for u in nbrs, p in pa[x]
                     if p ∉ pa[u] && p ∉ ch[u] && p ∉ und[u]
@@ -84,7 +83,6 @@ function dag_from_pdag(cg::AbstractPDAG)
                 push!(out_pa[x], u)
             end
 
-            # Remove x from working graph
             for p in pa[x]
                 delete!(ch[p], x)
             end
@@ -109,9 +107,7 @@ function dag_from_pdag(cg::AbstractPDAG)
     end
 
     # validate=false is safe here: Dor-Tarsi only orients toward a sink whose
-    # undirected neighbors form a clique, which never creates a cycle, and
-    # node pairs (hence self-loop freedom) are inherited from the valid input
-    # PDAG.
+    # undirected neighbors form a clique, which never creates a cycle.
     return DAG(Set(B.nodes), new_edges; validate = false)
 end
 
@@ -166,7 +162,6 @@ function meek_closure(cg::AbstractPDAG; check_cycles::Bool = true, r4::Bool = tr
 
     adjacent(a, b) = b in pa[a] || b in ch[a] || b in und[a]
 
-    # BFS reachability over directed edges
     function has_dir_path(src, tgt)
         src == tgt && return true
         seen = falses(n)
@@ -303,7 +298,6 @@ function dag_to_cpdag(cg::DAG)
     B = cg.backend
     n = length(B.nodes)
 
-    # Skeleton adjacency (symmetric, by node index)
     adj = [Set{Int}() for _ = 1:n]
     for i = 1:n
         for p in _parents_slice(B, i)
@@ -350,8 +344,8 @@ function dag_to_cpdag(cg::DAG)
     # DAG's edges (only v-structure orientations), so no cycle is possible.
     pdag = PDAG(Set(B.nodes), edges; validate = false)
     result = meek_closure(pdag)
-    # validate=false is safe here: v-structure detection + Meek closure is the
-    # canonical Chickering construction of the CPDAG representing a DAG's MEC.
+    # validate=false is safe here: v-structures + Meek closure is Chickering's
+    # construction of the CPDAG for a DAG's MEC.
     return CPDAG(Set(result.backend.nodes), result.edges; validate = false)
 end
 
@@ -392,7 +386,6 @@ function markov_equivalent(g1::DAG, g2::DAG)
     length(B2.nodes) != n && return false
     Set(B1.nodes) != Set(B2.nodes) && return false
 
-    # Build skeleton adjacency sets (by Symbol) for both graphs.
     adj1 = Dict{Symbol,Set{Symbol}}(v => Set{Symbol}() for v in B1.nodes)
     for i = 1:n
         vi = B1.nodes[i]
@@ -473,11 +466,8 @@ function ag_to_mag(cg::AG)
     all_edges = copy(cg.edges)
 
     while true
-        # validate=false is safe here: this is Richardson & Spirtes's (2002)
-        # AG augmentation procedure, which is correct by construction at every
-        # step (each added edge follows the ancestral relation in the current
-        # graph); rebuilt every iteration, so validating it here would be
-        # O(iterations) redundant validation.
+        # validate=false is safe here: each added edge follows the ancestral
+        # relation in the current graph (Richardson & Spirtes 2002).
         current = AG(all_nodes, all_edges; validate = false)
         B = current.backend
         n = length(B.nodes)
@@ -503,8 +493,7 @@ function ag_to_mag(cg::AG)
         !found && break
     end
 
-    # validate=false is safe here: the while loop only stops once every
-    # non-adjacent pair is m-separated (the exact MAG maximality condition),
-    # and each edge was added via the same theorem-correct augmentation as above.
+    # validate=false is safe here: the loop only stops once every non-adjacent
+    # pair is m-separated, which is exactly MAG maximality.
     return MAG(all_nodes, all_edges; validate = false)
 end

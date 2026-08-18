@@ -245,7 +245,6 @@ end
 
 # Build the proper backdoor graph as an actual DAG by dropping the edges
 # `_pbg_removed` identifies.
-# on `all_backdoor_sets(cg::ADMG, ...)` in backdoor.jl).
 function _pbg_dag(cg::DAG, xs::Vector{Int}, ys::Vector{Int})
     B = cg.backend
     removed = _pbg_removed(B, xs, ys)

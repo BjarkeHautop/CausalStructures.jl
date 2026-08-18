@@ -168,12 +168,8 @@ function _would_create_v_structure_enum(a::Int, b::Int, pa, ch, und)
 end
 
 # Build a DAG directly from index-based parent/child adjacency, skipping the
-# generic edge-list -> counting-sort backend rebuild that `DAG(nodes, edges)`
-# would otherwise repeat identically at every leaf of the recursion: the node
-# set and its ordering/index are fixed for the whole enumeration (only edge
-# orientations change), so `ordered_nodes`/`index` from `build_backend` would
-# just recompute what `node_names`/`index` already are, and the counting sort
-# would just re-derive the same buckets `pa`/`ch` already hold.
+# `DAG(nodes, edges)` backend rebuild: the node set and its index are fixed for
+# the whole enumeration, and `pa`/`ch` already hold the sorted buckets.
 function _dag_from_index_adjacency(
     node_names::Vector{Symbol},
     index::Dict{Symbol,Int},
@@ -220,10 +216,8 @@ function _dag_from_index_adjacency(
     end
 
     backend = DAGBackend(node_names, index, colptr, deg, rowval)
-    # validate=false is safe here: Chickering's recursion checks
-    # `_has_dir_path_enum(ch, b, a)` before every orientation, so no cycle
-    # can be introduced, and node pairs (hence self-loop freedom) never
-    # change from the source PDAG's skeleton.
+    # validate=false is safe here: the recursion checks `_has_dir_path_enum`
+    # before every orientation, and the skeleton never changes.
     return DAG(new_edges, backend)
 end
 
@@ -241,10 +235,9 @@ function _list_dags_enum!(pa, ch, und, input_pa, skeleton, node_names, index, ou
         _would_create_v_structure_enum(a, b, pa, ch, und) && continue
         _has_dir_path_enum(ch, b, a) && continue
 
-        # Orient (a, b) and its Meek closure in place, recurse, then undo back
-        # to `mark` -- rather than copying all n parent/child/undirected sets
-        # per branch -- so both orientations of this edge can still be
-        # explored independently from the same shared state.
+        # Orient in place, recurse, then undo back to `mark`, so both
+        # orientations are explored from the same shared state without
+        # copying pa/ch/und per branch.
         mark = length(trail)
         _orient_sets!(a, b, und, pa, ch, trail)
         _apply_meek_sets!(pa, ch, und, trail)
@@ -279,17 +272,15 @@ function _count_dags_enum!(pa, ch, und, input_pa, skeleton, count, trail)
     end
 end
 
-# Threaded MEC listing: fork the Chickering recursion into independent
-# branches up front, each with its own (pa, ch, und) copy, and hand each to
-# `_list_dags_enum!`/`_count_dags_enum!` unchanged. Kept as separate
-# functions, same reason as in `_search_subsets_sequential`
+# Threaded MEC listing: fork the recursion into independent branches up front,
+# each with its own (pa, ch, und) copy, then hand each to `_list_dags_enum!` /
+# `_count_dags_enum!` unchanged.
 
-# MEC subtrees can be wildly uneven in size.
+# Branches per thread to fork, since MEC subtrees can be wildly uneven in size.
 const _DAG_ENUM_FRONTIER_MULTIPLIER = 4
 
-# One step of the Chickering branching on copies of (pa, ch, und) rather than
-# the shared mutate + undo-trail `_list_dags_enum!` uses, so each resulting
-# child can be handed to a separate task.
+# One branching step on copies of (pa, ch, und) rather than the shared
+# mutate-and-undo `_list_dags_enum!` uses, so each child can go to its own task.
 function _dag_enum_fork_children(pa, ch, und, input_pa, skeleton)
     edge = _smallest_und_edge_enum(und)
     edge === nothing && return nothing
@@ -312,12 +303,10 @@ function _dag_enum_fork_children(pa, ch, und, input_pa, skeleton)
     return children
 end
 
-# Level-synchronized BFS over the fork tree: expands every state in the
-# current frontier by one level at a time until it has at least `target`
-# states or the whole MEC has been resolved. Level-synchronized rather than
-# DFS because MEC subtrees can be wildly uneven in size: depth-first popping
-# can hit `target` having barely touched most of the tree, leaving one huge
-# unexpanded sibling to dominate a single task while everyone else idles.
+# Level-synchronized BFS over the fork tree, expanding until the frontier holds
+# at least `target` states or the MEC is resolved. BFS rather than DFS: with
+# uneven subtrees, depth-first popping can hit `target` while leaving one huge
+# unexpanded sibling to dominate a single task.
 function _dag_enum_frontier(pa, ch, und, input_pa, skeleton, target::Int)
     frontier = [(pa, ch, und)]
     while length(frontier) < target

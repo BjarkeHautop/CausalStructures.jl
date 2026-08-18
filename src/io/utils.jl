@@ -219,7 +219,6 @@ function is_simple(cg::CausalGraph)
         return true
     end
 
-    # self-loops
     for e in cg.edges
         if e.src == e.dst
             return false
@@ -492,7 +491,6 @@ function simulate_data(
 
     ordering = topological_sort(cg)
 
-    # random coefficients for each parent->child sampled uniformly in coef_range
     coeffs = Dict{Tuple{Symbol,Symbol},Float64}()
     for e in cg.edges
         coeffs[(e.src, e.dst)] =
@@ -523,7 +521,6 @@ function simulate_data(
             μ = Statistics.mean(v)
             σ = Statistics.std(v)
             if σ == 0.0
-                # leave as-is if no variation
                 continue
             end
             data[k] = (v .- μ) ./ σ

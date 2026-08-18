@@ -252,7 +252,6 @@ function validation_errors(::MAGConstraints, cg::CausalGraph)
     reached = falses(n)
 
     for u = 1:n, v = (u+1):n
-        # skip adjacent pairs
         v ∈ _all_nbrs_slice(B, u) && continue
         if !_ag_msep_exists!(
             B,

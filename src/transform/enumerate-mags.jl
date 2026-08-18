@@ -1,9 +1,7 @@
 # Below this many total tail/arrow candidates, the fixed cost of spawning tasks
-# outweighs any benefit. Benchmarked: at total=4 threading was slower than
-# sequential (0.68x), but by total=16 it was already a solid win (3.2x),
-# climbing to ~4.6-4.9x beyond that -- well below the 4096 used for subset
-# search, since each candidate here is far more expensive (a MAG build, an
-# m-separation validation, and a PAG round-trip).
+# outweighs any benefit. Much lower than the threshold for subset search, since
+# each candidate here costs a MAG build, an m-separation check, and a PAG
+# round-trip.
 const _ENUMERATE_MAGS_PARALLEL_THRESHOLD = 8
 
 """
@@ -54,7 +52,7 @@ function enumerate_mags(cg::PAG)
         mark[i, j] = e.dst_end   # mark at j (dst)
     end
 
-    # Each circle endpoint (mark at j on edge i-j) is an independent tail/arrow choice.
+    # Each circle endpoint is an independent tail/arrow choice.
     circle_pos = [(i, j) for i = 1:n for j = 1:n if adj[i, j] && mark[i, j] == Circle]
     total = 2^length(circle_pos)
 
