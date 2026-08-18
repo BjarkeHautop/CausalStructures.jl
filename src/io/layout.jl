@@ -14,7 +14,7 @@ end
     layout(cg::CausalGraph, method::Symbol = :stress; kwargs...)
 
 Compute 2-D node positions for `cg` and return them as a
-`Vector{NTuple{2,Float64}}` in the same order as `nodes(cg)`.
+`Dict{Symbol,NTuple{2,Float64}}` keyed by node name.
 
 Requires the NetworkLayout package to be loaded (`using NetworkLayout`):
 
@@ -40,10 +40,17 @@ dag = cgraph(directed(:A, :X), directed(:X, :Y); class = DAG)
 layout(dag)                # :stress (the default)
 layout(dag, :spring)
 layout(dag, :spring; seed = 1405, iterations = 200)
+
+positions = layout(dag, :spring)
+positions[:A] = (0.0, 2.0)
+plot(dag; layout = positions)
 ```
 """
 function layout(cg::CausalGraph, method::Symbol = _default_layout_method(); kwargs...)
-    return _layout_impl(cg, Val(method); kwargs...)
+    coords = _layout_impl(cg, Val(method); kwargs...)
+    return Dict{Symbol,NTuple{2,Float64}}(
+        nd => (Float64(p[1]), Float64(p[2])) for (nd, p) in zip(cg.backend.nodes, coords)
+    )
 end
 
 # Fallback for any method not handled by a loaded extension.

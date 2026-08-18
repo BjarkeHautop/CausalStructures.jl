@@ -52,38 +52,36 @@ function _clip_and_sample_bezier(
     p1::Point2f,
     p2c::Point2f,
     p2::Point2f,
-    r_from::Float32,
-    r_to::Float32,
+    g_from::_NodeGeom,
+    g_to::_NodeGeom,
     n::Int,
 )
     q(t) = _cubic_bezier(p0, p1, p2c, p2, t)
-    d_from(t) = _norm2(q(t) - p0)
-    d_to(t) = _norm2(q(t) - p2)
+    f_from(t) = _radial_fraction(g_from, q(t))
+    f_to(t) = _radial_fraction(g_to, q(t))
 
     # If a node is large enough to swallow the whole curve, give up and let
     # the caller fall back to the straight (clipped) edge.
-    (d_from(1.0f0) <= r_from || d_to(0.0f0) <= r_to) && return nothing
+    (f_from(1.0f0) <= 1.0f0 || f_to(0.0f0) <= 1.0f0) && return nothing
 
-    # Distance from each center grows monotonically along the curve, so
-    # bisection locates the parameter at which it crosses each border.
-    u_start = _bisect_u(d_from, r_from, true)
-    u_end = _bisect_u(d_to, r_to, false)
+    # The fraction grows monotonically away from each center along the curve,
+    # so bisection locates the border crossing, whatever the node's shape.
+    u_start = _bisect_u(f_from, 1.0f0, true)
+    u_end = _bisect_u(f_to, 1.0f0, false)
     u_start >= u_end && return nothing
 
     return [q(Float32(u_start + (u_end - u_start) * i / (n - 1))) for i = 0:(n-1)]
 end
 
-# Compute a routed edge path that avoids obstructing nodes, or `nothing` when
-# no obstacle comes within `orad + clearance` of the straight center-to-center
-# segment. The curve is built between the node *centers* p0/p2 so that, once
-# clipped to the borders, it appears to project radially from each. It is a
-# cubic Bezier bowed perpendicular to the chord, away from the worst-violating
-# obstacle, by enough to clear it.
+# Routed edge path avoiding obstructing nodes, or `nothing` when no obstacle
+# comes within `orad + clearance` of the straight center-to-center segment. The
+# cubic Bezier is built between the node *centers* so that, once clipped to the
+# borders, it appears to project radially from each.
 function _route_edge_path(
     p0::Point2f,
     p2::Point2f,
-    r_from::Float32,
-    r_to::Float32,
+    g_from::_NodeGeom,
+    g_to::_NodeGeom,
     obstacles::AbstractVector{Tuple{Point2f,Float32}},
     clearance::Float32;
     n::Int = 40,
@@ -137,7 +135,7 @@ function _route_edge_path(
     p1 = p0 + handle_frac * diff + h * nperp
     p2c = p0 + (1.0f0 - handle_frac) * diff + h * nperp
 
-    return _clip_and_sample_bezier(p0, p1, p2c, p2, r_from, r_to, n)
+    return _clip_and_sample_bezier(p0, p1, p2c, p2, g_from, g_to, n)
 end
 
 # Compute a symmetric fan-out path for one of several edges sharing a node
@@ -148,8 +146,8 @@ end
 function _fanned_edge_path(
     p0::Point2f,
     p2::Point2f,
-    r_from::Float32,
-    r_to::Float32,
+    g_from::_NodeGeom,
+    g_to::_NodeGeom,
     h::Float32;
     n::Int = 40,
 )
@@ -163,7 +161,7 @@ function _fanned_edge_path(
     p1 = p0 + handle_frac * diff + h * nperp
     p2c = p0 + (1.0f0 - handle_frac) * diff + h * nperp
 
-    return _clip_and_sample_bezier(p0, p1, p2c, p2, r_from, r_to, n)
+    return _clip_and_sample_bezier(p0, p1, p2c, p2, g_from, g_to, n)
 end
 
 # Shortens a sampled polyline by trim_start/trim_end of arc length at each

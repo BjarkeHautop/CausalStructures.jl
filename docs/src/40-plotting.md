@@ -49,17 +49,25 @@ Extra keyword arguments are forwarded to the underlying NetworkLayout algorithm:
 plot(dag; layout = :spring, seed = 1405, iterations = 500)
 ```
 
-`layout` also accepts a `Vector` of `(x, y)` positions (one per node, in the
-order returned by `nodes(cg)`) instead of a `Symbol`.
+`layout` also accepts explicit positions instead of a `Symbol`: either a
+`Dict` of `(x, y)` pairs keyed by node name, or a `Vector` of them in the
+order returned by `nodes(cg)`:
+
+```@example plot
+plot(dag; layout = Dict(
+    :A => (0, 1), :C => (0, -1), :K => (1, 1), :X => (1, -1),
+    :D => (2, -1), :F => (2, -2), :Y => (3, 0), :G => (3, 1), :H => (4, 0),
+))
+```
 
 !!! tip "Tweaking a layout by hand"
-    [`layout`](@ref) itself returns this `Vector`, so you can compute a
-    starting layout, tweak individual node positions by hand, and pass the
-    modified vector back to `plot`:
+    [`layout`](@ref) returns exactly this `Dict`, so you can compute a
+    starting layout, move individual nodes by name, and pass it back to
+    `plot`:
 
     ```@example plot
     positions = layout(dag, :spring)
-    positions[1] = (0.0, 2.0)
+    positions[:A] = (0.0, 2.0)
     plot(dag; layout = positions)
     ```
 
@@ -72,7 +80,9 @@ Each node style argument accepts either a scalar (applied to all nodes) or a `Di
 | `node_color`        | `:white`                             | fill color                      |
 | `node_strokecolor`  | `:black`                             | border color                    |
 | `node_strokewidth`  | `2.0`                                | border line width               |
-| `node_radius`       | `nothing` (text-fit, per node)       | radius of each node circle      |
+| `node_linestyle`    | `nothing` (solid)                    | border line style               |
+| `node_shape`        | `:round`                             | node outline shape              |
+| `node_radius`       | `nothing` (text-fit, per node)       | size of each node               |
 | `node_padding`      | `10.0`                                | clearance kept around each node's label when `node_radius` is `nothing` |
 | `arrow_size`        | `0.4 ×` node-count-based reference   | length of arrowhead triangles   |
 | `circle_size`       | `0.28 ×` node-count-based reference  | radius of open-circle endpoints |
@@ -92,9 +102,27 @@ plot(dag;
 )
 ```
 
+### Node shapes
+
+`node_shape` is either `:round` (the default) or `:box`.
+
+```@example plot
+plot(dag; node_shape = Dict(:K => :box, :default => :round))
+```
+
+`node_linestyle` styles the border - a dashed border is the usual mark for an
+unobserved variable:
+
+```@example plot
+plot(cgraph("U --> X + Y, X --> Y"; class = DAG);
+    node_linestyle = Dict(:U => :dash),
+    node_strokecolor = Dict(:U => :gray50, :default => :black),
+)
+```
+
 ### Text-fit node sizing
 
-By default (`node_radius = nothing`), each node's circle is sized to fit its
+By default (`node_radius = nothing`), each node is sized to fit its
 own label:
 
 ```@example plot
@@ -102,7 +130,7 @@ longlabels = cgraph("Exposure --> Mediator --> Y_outcome"; class = DAG)
 plot(longlabels)
 ```
 
-Pass `node_radius` explicitly to size every node uniformly instead:
+Pass `node_radius` explicitly to size every node uniformly instead
 
 ```@example plot
 plot(dag; node_radius = 0.18, arrow_size = 0.07)
@@ -164,9 +192,25 @@ Each label style argument accepts either a scalar or a `Dict{Symbol, <value>}` k
 
 | Keyword          | Default    | Controls                |
 | ---------------- | ---------- | ------------------------ |
+| `labels`         | `nothing`  | text drawn in each node   |
 | `label_color`    | `:black`   | node label text color     |
 | `label_fontsize` | `14.0`     | node label font size      |
 | `label_font`     | `:regular` | node label font           |
+
+By default each node is labelled with its own name. `labels` can be
+used to overwrite this:
+
+```@example plot
+plot(cgraph("A0 --> L1 --> A1 --> Y, A0 --> Y + A1"; class = DAG);
+    labels = Dict(
+        :A0 => "Treatment\nat baseline",
+        :L1 => "Confounder\nat time 1",
+        :A1 => "Treatment\nat time 1",
+    ),
+)
+```
+
+Node sizing accounts for multi-line labels, so the nodes grow to fit.
 
 ```@example plot
 plot(dag; label_fontsize = 18, label_color = :navy)

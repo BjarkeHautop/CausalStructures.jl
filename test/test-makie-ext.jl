@@ -119,9 +119,9 @@ end
     using NetworkLayout
 
     ext = Base.get_extension(CausalStructures, :MakieExt)
-    r_short = ext._text_fit_pixel_radius("A", 14.0f0, :regular, 4.0f0)
-    r_long = ext._text_fit_pixel_radius("Exposure", 14.0f0, :regular, 4.0f0)
-    @test r_long > r_short
+    short = ext._text_fit_pixel_size("A", :round, 14.0f0, :regular, 4.0f0)
+    long = ext._text_fit_pixel_size("Exposure", :round, 14.0f0, :regular, 4.0f0)
+    @test long[1] > short[1]
 
     # Default (node_radius = nothing): a graph with long labels plots without
     # error, with node circles sized per label instead of uniformly.
@@ -132,6 +132,25 @@ end
     # Explicit node_radius overrides text-fit sizing back to a uniform value.
     fig2 = Makie.plot(dag; layout = :stress, node_radius = 0.1)
     @test fig2 isa Makie.Figure
+end
+
+@testitem "MakieExt: node sizing rounds out to equal sides for short labels" tags = [:unit] begin
+    using Makie
+
+    ext = Base.get_extension(CausalStructures, :MakieExt)
+
+    # Within the aspect cap: a circle and a square.
+    for shape in (:round, :box)
+        hw, hh = ext._text_fit_pixel_size("X", shape, 14.0f0, :regular, 10.0f0)
+        @test hw ≈ hh
+    end
+
+    # Past the cap: the node stretches instead of growing to its longest side.
+    for shape in (:round, :box)
+        hw, hh = ext._text_fit_pixel_size("Birth weight", shape, 14.0f0, :regular, 4.0f0)
+        @test hw > hh
+        @test hw / hh > ext._NODE_ASPECT_CAP
+    end
 end
 
 @testitem "Makie.plot: node-wide edge_color/arrow_fill Dict overrides every edge touching a node" tags =
@@ -220,4 +239,127 @@ end
 
     fig_title = Makie.plot(dag; layout = :stress, title = "Stretched", title_gap = 12.0)
     @test fig_title isa Makie.Figure
+end
+
+@testitem "Makie.plot: node shapes render, and unknown shapes error" tags = [:unit] begin
+    using Makie
+    using NetworkLayout
+
+    dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+
+    for shape in (:round, :box)
+        @test Makie.plot(dag; layout = :stress, node_shape = shape) isa Makie.Figure
+    end
+
+    fig =
+        Makie.plot(dag; layout = :stress, node_shape = Dict(:A => :box, :default => :round))
+    @test fig isa Makie.Figure
+
+    @test_throws ErrorException Makie.plot(dag; layout = :stress, node_shape = :hexagon)
+end
+
+@testitem "MakieExt: node boundary geometry per shape" tags = [:unit] begin
+    using Makie
+    using Makie: Point2f
+
+    ext = Base.get_extension(CausalStructures, :MakieExt)
+    right = Point2f(1, 0)
+    up = Point2f(0, 1)
+    diag = Point2f(sqrt(0.5f0), sqrt(0.5f0))
+
+    # Equal half-extents: a round node is a circle, a box is a square.
+    circle = ext._NodeGeom(Point2f(0, 0), :round, 2.0f0, 2.0f0)
+    @test ext._boundary_distance(circle, right) ≈ 2.0f0
+    @test ext._boundary_distance(circle, diag) ≈ 2.0f0
+    @test ext._circumradius(circle) ≈ 2.0f0
+
+    square = ext._NodeGeom(Point2f(0, 0), :box, 2.0f0, 2.0f0)
+    @test ext._boundary_distance(square, right) ≈ 2.0f0
+    @test ext._boundary_distance(square, diag) ≈ 2.0f0 * sqrt(2.0f0)
+
+    # A box reaches further at its corner than along its sides.
+    rect = ext._NodeGeom(Point2f(0, 0), :box, 3.0f0, 1.0f0)
+    @test ext._boundary_distance(rect, right) ≈ 3.0f0
+    @test ext._boundary_distance(rect, up) ≈ 1.0f0
+    @test ext._boundary_distance(rect, diag) ≈ sqrt(2.0f0)
+    @test ext._circumradius(rect) ≈ sqrt(10.0f0)
+
+    ellipse = ext._NodeGeom(Point2f(0, 0), :round, 3.0f0, 1.0f0)
+    @test ext._boundary_distance(ellipse, right) ≈ 3.0f0
+    @test ext._boundary_distance(ellipse, up) ≈ 1.0f0
+    @test ext._circumradius(ellipse) ≈ 3.0f0
+
+    # `_radial_fraction` crosses 1 exactly at the boundary, whatever the shape.
+    @test ext._radial_fraction(rect, Point2f(3, 0)) ≈ 1.0f0
+    @test ext._radial_fraction(rect, Point2f(1.5, 0)) ≈ 0.5f0
+    @test ext._radial_fraction(rect, Point2f(6, 0)) ≈ 2.0f0
+    @test ext._radial_fraction(ellipse, Point2f(0, 1)) ≈ 1.0f0
+
+    # Inflating grows the outline by `pad` on every side.
+    @test ext._boundary_distance(ext._inflate(rect, 0.5f0), up) ≈ 1.5f0
+end
+
+@testitem "Makie.plot: custom and multi-line labels" tags = [:unit] begin
+    using Makie
+    using NetworkLayout
+
+    ext = Base.get_extension(CausalStructures, :MakieExt)
+
+    # A two-line label is taller than the same text on one line.
+    h1 = ext._text_fit_pixel_size("Exposure", :box, 14.0f0, :regular, 4.0f0)[2]
+    h2 = ext._text_fit_pixel_size("Exposure\nat baseline", :box, 14.0f0, :regular, 4.0f0)[2]
+    @test h2 > h1
+
+    dag = cgraph(directed(:A0, :L1), directed(:L1, :Y); class = DAG)
+    fig = Makie.plot(
+        dag;
+        layout = :stress,
+        node_shape = :box,
+        labels = Dict(:A0 => "Treatment\nat baseline", :L1 => "Confounder"),
+    )
+    @test fig isa Makie.Figure
+
+    # Nodes with no entry keep their own name; :default covers the rest.
+    fig_default = Makie.plot(dag; layout = :stress, labels = Dict(:default => "?"))
+    @test fig_default isa Makie.Figure
+end
+
+@testitem "Makie.plot: node_linestyle draws a dashed border" tags = [:unit] begin
+    using Makie
+    using NetworkLayout
+
+    dag = cgraph(directed(:U, :X), directed(:U, :Y), directed(:X, :Y); class = DAG)
+    @test Makie.plot(dag; layout = :stress, node_linestyle = :dash) isa Makie.Figure
+    fig = Makie.plot(
+        dag;
+        layout = :stress,
+        node_linestyle = Dict(:U => :dash),
+        node_shape = Dict(:U => :box, :default => :round),
+    )
+    @test fig isa Makie.Figure
+end
+
+@testitem "Makie.plot: layout accepts positions keyed by node name" tags = [:unit] begin
+    using Makie
+    using NetworkLayout
+
+    dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+    fig =
+        Makie.plot(dag; layout = Dict(:A => (0.0, 0.0), :B => (1.0, 0.0), :C => (2.0, 1.0)))
+    @test fig isa Makie.Figure
+
+    @test_throws ErrorException Makie.plot(dag; layout = Dict(:A => (0.0, 0.0)))
+end
+
+@testitem "Makie.plot: edges clip to non-circular node outlines" tags = [:unit] begin
+    using Makie
+    using NetworkLayout
+
+    # The routed A --> C curve has to clip against B's box, not a circle.
+    g = cgraph(directed(:A, :C), node(:B); class = DAG)
+    fig = Makie.plot(g; layout = [(0.0, 0.0), (1.0, 0.0), (2.0, 0.0)], node_shape = :box)
+    @test fig isa Makie.Figure
+
+    admg = cgraph(directed(:X, :Y), bidirected(:X, :Y); class = ADMG)
+    @test Makie.plot(admg; layout = :stress, node_shape = :box) isa Makie.Figure
 end

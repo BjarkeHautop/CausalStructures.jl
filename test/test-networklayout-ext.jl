@@ -2,12 +2,11 @@
     using NetworkLayout
 
     dag = cgraph(directed(:A, :B), directed(:B, :C), directed(:A, :C); class = DAG)
-    n = length(nodes(dag))
 
     for method in (:spring, :stress, :sfdp, :spectral, :shell, :squaregrid)
         pos = layout(dag, method)
-        @test length(pos) == n
-        @test all(p -> p isa Tuple{Float64,Float64}, pos)
+        @test pos isa Dict{Symbol,NTuple{2,Float64}}
+        @test issetequal(keys(pos), nodes(dag))
     end
 end
 
@@ -23,7 +22,18 @@ end
 
     dag = cgraph(node(:A), node(:B), node(:C); class = DAG)
     pos = layout(dag, :spring)
-    @test length(pos) == 3
+    @test issetequal(keys(pos), [:A, :B, :C])
+end
+
+@testitem "NetworkLayoutExt: layout output feeds straight back into plot" tags = [:unit] begin
+    using Makie
+    using NetworkLayout
+
+    dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+    positions = layout(dag, :spring; seed = 1405)
+    positions[:A] = (0.0, 2.0)
+
+    @test Makie.plot(dag; layout = positions) isa Makie.Figure
 end
 
 @testitem "NetworkLayoutExt: default layout method becomes :stress once loaded" tags =

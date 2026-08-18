@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `possible_local_structures` and `maximal_local_mag` (Wang, Qin & Zhou 2023) for `PAG`.
 - Added `pagcauses` (PAGcauses, Wang, Tao, Qin & Zhou 2025), finding every valid adjustment set for a `PAG` without enumerating MAGs.
 
+- New plot features:
+  - `plot` gained `node_shape` (`:round` or `:box`), per node or for the whole graph. Both shapes are fitted to their label but rounded out to equal sides unless the label is oblong, so short labels give circles and squares while long ones give ellipses and rectangles. Edges clip to (and route around) the shape actually drawn.
+  - `plot` gained `node_linestyle`, for dashed or dotted node borders.
+  - `plot` gained `labels`, overriding the text drawn in each node, so labels can carry spaces, subscripts, or several lines.
+  - `plot`'s `layout` keyword now also accepts a `Dict` of positions keyed by node name, not just a `Vector` in `nodes(cg)` order.
+
 ### Bug fixes
 
 - `possible_ancestors`/`possible_descendants` on `MPDAG` could include nodes only reachable via a partially directed cycle introduced by background knowledge; this also affected `is_valid_adjustment`/`all_adjustment_sets` on `MPDAG`.

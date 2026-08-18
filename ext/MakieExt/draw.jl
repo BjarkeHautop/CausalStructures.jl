@@ -1,15 +1,7 @@
-# Drawing primitives and the cgraph_plot implementation.
+# Drawing primitives and the plot implementation.
 #
-# Endpoint semantics per CausalEdge:
-#   src_end / dst_end : Tail | Arrow | Circle
-#
-# Edge type - endpoint marks:
-#   -->   Tail  - Arrow   : line + arrowhead at dst
-#   ---   Tail  - Tail    : plain line
-#   <->   Arrow - Arrow   : line + arrowheads at both ends
-#   o->   Circle- Arrow   : open circle at src + arrowhead at dst
-#   o--   Circle- Tail    : open circle at src + line
-#   o-o   Circle- Circle  : open circles at both ends
+# Each CausalEdge carries src_end / dst_end (Tail | Arrow | Circle), drawn as
+# a plain end, an arrowhead, or an open circle - see `_edge_type`.
 
 const _Tail = CausalStructures.Tail
 const _Arrow = CausalStructures.Arrow
@@ -22,16 +14,6 @@ end
 _resolve_font(font) =
     font isa Symbol ? Makie.to_font(Makie.current_default_theme()[:fonts], font) :
     Makie.to_font(font)
-
-# Minimum node-circle radius, in pixels, for `label` to fit inside it at the
-# given fontsize/font, with `padding` (pixels) clear on every side. Pixels
-# rather than data units, because text renders at a fixed pixel size
-# regardless of axis zoom; `Makie.plot` converts this once it picks the ratio.
-function _text_fit_pixel_radius(label::AbstractString, fontsize::Real, font, padding::Real)
-    bb = Makie.text_bb(label, _resolve_font(font), Float32(fontsize))
-    w, h = Float32(Makie.widths(bb)[1]), Float32(Makie.widths(bb)[2])
-    return 0.5f0 * sqrt(w^2 + h^2) + Float32(padding)
-end
 
 # Filled circle polygon in data coordinates (used for both node bodies and
 # open-circle endpoint markers).
@@ -78,10 +60,8 @@ end
 function _draw_edge!(
     ax,
     e::CausalEdge,
-    p_src::Point2f,
-    p_dst::Point2f,
-    r_from::Float32,
-    r_to::Float32,
+    g_src::_NodeGeom,
+    g_dst::_NodeGeom,
     r_arrow::Float32,
     r_circle::Float32,
     obstacles::AbstractVector{Tuple{Point2f,Float32}},
@@ -91,6 +71,7 @@ function _draw_edge!(
     fill = color,
     linewidth = 1.5f0,
 )
+    p_src, p_dst = g_src.center, g_dst.center
     diff = p_dst - p_src
     len = _norm2(diff)
     len < 1.0f-6 && return
@@ -106,20 +87,19 @@ function _draw_edge!(
     half_lw_data = (Float32(linewidth) / 2.0f0) / px_per_data_unit
     gap_from = (has_arrow_src || has_circle_src) ? half_lw_data : 0.0f0
     gap_to = (has_arrow_dst || has_circle_dst) ? half_lw_data : 0.0f0
-    r_from_eff = r_from + gap_from
-    r_to_eff = r_to + gap_to
+    g_from = _inflate(g_src, gap_from)
+    g_to = _inflate(g_dst, gap_to)
 
     # Minimum gap (beyond an obstacle's own radius) an edge must keep from a
     # non-incident node before it is left alone.
-    clearance = 0.05f0 * (r_from + r_to)
+    clearance = 0.05f0 * (_circumradius(g_src) + _circumradius(g_dst))
 
-    routed = _route_edge_path(p_src, p_dst, r_from_eff, r_to_eff, obstacles, clearance)
+    routed = _route_edge_path(p_src, p_dst, g_from, g_to, obstacles, clearance)
     # Real obstacles take priority: only fan siblings apart when nothing
     # actually forces this edge to route around a node.
     fanned =
         routed === nothing && fan_slot != 0.0f0 ?
-        _fanned_edge_path(p_src, p_dst, r_from_eff, r_to_eff, fan_slot * 0.3f0 * len) :
-        nothing
+        _fanned_edge_path(p_src, p_dst, g_from, g_to, fan_slot * 0.3f0 * len) : nothing
 
     path = if routed !== nothing
         routed
@@ -127,7 +107,10 @@ function _draw_edge!(
         fanned
     else
         dir = Point2f(diff[1] / len, diff[2] / len)
-        [p_src + r_from_eff * dir, p_dst - r_to_eff * dir]
+        [
+            p_src + _boundary_distance(g_from, dir) * dir,
+            p_dst - _boundary_distance(g_to, dir) * dir,
+        ]
     end
 
     m = length(path)
@@ -184,13 +167,10 @@ function _draw_edge!(
 end
 
 # Assigns each edge a signed fan-out slot: 0 when it is the only edge on its
-# (unordered) node pair, otherwise evenly spaced values centered on 0. Grouping
-# ignores direction so antiparallel edges fan out too, not just an ADMG's
-# X --> Y and X <-> Y.
-#
-# `_fanned_edge_path` bows along each edge's own src->dst vector, so an edge
-# stored reversed relative to its group's canonical order would land on the
-# same side as its opposite; flipping its slot's sign corrects for that.
+# node pair, otherwise evenly spaced values centered on 0. Grouping ignores
+# direction, so antiparallel edges fan out too - and since `_fanned_edge_path`
+# bows along each edge's own src->dst vector, a reversed edge needs its slot's
+# sign flipped to land opposite its sibling rather than on top of it.
 function _edge_fan_slots(edges::AbstractVector{CausalEdge})
     groups = Dict{Tuple{Symbol,Symbol},Vector{Int}}()
     for (i, e) in enumerate(edges)
@@ -231,21 +211,9 @@ const _EDGE_TYPE_SYMBOLS = (
     :partial,
 )
 
-# Resolve a per-edge style attribute.
-#
-# `val` may be:
-#   - a scalar  --> applied to all edges
-#   - a Dict keyed by any mix of:
-#       (Symbol, Symbol)  specific edge, e.g. (:X, :Y) => :red
-#       Symbol            a node name, e.g. :X => :red, applied to every
-#                         edge touching that node - unless the symbol is one
-#                         of the reserved edge-type names below, in which
-#                         case it's treated as an edge-type key instead
-#       Symbol            edge type,     e.g. :directed => :blue
-#       :default          fallback inside the dict
-#
-# Lookup precedence: specific edge > node-wide (dst, then src) > edge type >
-# :default > `fallback`.
+# Resolve a per-edge style attribute: either a scalar, or a Dict keyed by
+# (src, dst) tuple, node name, edge type, or :default - tried in that order. A
+# symbol that names an edge type is never read as a node-wide key.
 function _resolve_edge(val, e::CausalEdge, fallback)
     val isa AbstractDict || return val
     key = (e.src, e.dst)
@@ -279,12 +247,13 @@ end
 Visualize a [`CausalGraph`](@ref) using Makie. Requires loading a Makie
 backend (e.g. `using CairoMakie`) before calling.
 
-Keyword arguments: `layout`, `node_radius`, `node_padding`, `arrow_size`,
-`circle_size`, `node_color`, `node_strokecolor`, `node_strokewidth`,
-`edge_color`, `arrow_fill`, `linewidth`, `label_color`, `label_fontsize`,
-`label_font`, `title`, `title_fontsize`, `title_color`, `title_gap`,
-`outer_margin`, `fig_size`. Style keywords accept either a scalar (applied to everything)
-or a `Dict` for per-node/per-edge overrides.
+Keyword arguments: `layout`, `labels`, `node_shape`, `node_radius`,
+`node_padding`, `arrow_size`, `circle_size`, `node_color`,
+`node_strokecolor`, `node_strokewidth`, `node_linestyle`, `edge_color`,
+`arrow_fill`, `linewidth`, `label_color`, `label_fontsize`, `label_font`,
+`title`, `title_fontsize`, `title_color`, `title_gap`, `outer_margin`,
+`fig_size`. Style keywords accept either a scalar (applied to everything) or
+a `Dict` for per-node/per-edge overrides.
 
 See the [Plotting](@ref plotting-guide) page for the full keyword reference,
 styling precedence rules, and examples.
@@ -298,12 +267,16 @@ dag = cgraph(directed(:A, :X), directed(:A, :Y), directed(:X, :Y); class = DAG)
 
 Makie.plot(dag; node_color = :lightblue, edge_color = :gray40)
 Makie.plot(dag; edge_color = Dict((:A, :X) => :red, :default => :black))
+Makie.plot(dag; node_shape = Dict(:A => :box, :default => :round))
+Makie.plot(dag; node_shape = :box, labels = Dict(:A => "Age at\nbaseline"))
 Makie.plot(dag; title = "My DAG", layout = :spring)
 ```
 """
 function Makie.plot(
     cg::CausalGraph;
-    layout::Union{Symbol,AbstractVector} = CausalStructures._default_layout_method(),
+    layout::Union{Symbol,AbstractVector,AbstractDict} = CausalStructures._default_layout_method(),
+    labels = nothing,
+    node_shape = :round,
     node_radius::Union{Real,Nothing} = nothing,
     node_padding::Real = CausalStructures._PLOT_NODE_PADDING_DEFAULT,
     arrow_size::Union{Real,Nothing} = nothing,
@@ -311,6 +284,7 @@ function Makie.plot(
     node_color = CausalStructures._PLOT_NODE_COLOR_DEFAULT,
     node_strokecolor = CausalStructures._PLOT_NODE_STROKECOLOR_DEFAULT,
     node_strokewidth = CausalStructures._PLOT_NODE_STROKEWIDTH_DEFAULT,
+    node_linestyle = nothing,
     edge_color = CausalStructures._PLOT_EDGE_COLOR_DEFAULT,
     arrow_fill = CausalStructures._PLOT_EDGE_ARROW_FILL_DEFAULT,
     linewidth = CausalStructures._PLOT_LINEWIDTH_DEFAULT,
@@ -325,21 +299,37 @@ function Makie.plot(
     fig_size::NTuple{2,Real} = CausalStructures._PLOT_FIG_SIZE_DEFAULT,
     layout_kwargs...,
 )
-    n = length(cg.backend.nodes)
+    node_names = cg.backend.nodes
+    n = length(node_names)
     n == 0 && error("Cannot plot an empty graph (0 nodes).")
 
     positions = _rescale_to_unit_extent(_positions(cg, layout, layout_kwargs))
 
-    # Reference radius (node-count based, ignoring label length), used only
+    shapes = Symbol[Symbol(_resolve_node(node_shape, nd, :round)) for nd in node_names]
+    for (i, sh) in enumerate(shapes)
+        sh in _NODE_SHAPES || error(
+            "Unknown node_shape $(repr(sh)) for node $(repr(node_names[i])). " *
+            "Available: " *
+            join(map(repr, _NODE_SHAPES), ", ") *
+            ".",
+        )
+    end
+
+    node_labels = [
+        labels === nothing ? string(nd) : _resolve_node(labels, nd, string(nd)) for
+        nd in node_names
+    ]
+
+    # Reference size (node-count based, ignoring label length), used only
     # when node_radius is given explicitly.
     r_ref = Float32(something(node_radius, max(0.12, 0.4 * sin(π / max(n, 2)))))
 
-    # The figure is a fixed size (`fig_size`) so the same graph doesn't render
-    # at a different size per layout algorithm. Node radii (data units) are
-    # then solved for the pixels-per-data-unit ratio that canvas implies, since
-    # text is fixed-pixel-sized regardless of zoom (`_text_fit_pixel_radius`).
-    # Tightly-clustered nodes therefore get smaller circles rather than
-    # blowing up the figure.
+    # The figure is a fixed size, independent of layout/graph - otherwise the
+    # same graph would render at a different size depending only on which
+    # layout algorithm placed its nodes. Node sizes (data units) are therefore
+    # solved for the pixels-per-data-unit ratio the canvas implies, since text
+    # is fixed-pixel-sized regardless of zoom. Tightly-clustered nodes then
+    # get smaller labels rather than a bigger figure.
     xs = [p[1] for p in positions]
     ys = [p[2] for p in positions]
     bbox_w = max(maximum(xs) - minimum(xs), 1.0f-3)
@@ -349,18 +339,25 @@ function Makie.plot(
     avail_w = Float32(fig_size[1]) - 2.0f0 * Float32(outer_margin)
     avail_h = fig_height_budget - 2.0f0 * Float32(outer_margin)
 
-    r_nodes = if node_radius !== nothing
-        fill(r_ref, n)
+    half_w, half_h = if node_radius !== nothing
+        fill(r_ref, n), fill(r_ref, n)
     else
-        pixel_radii = Float32[
-            max(
+        pixel_sizes = [
+            max.(
                 6.0f0,
-                _text_fit_pixel_radius(
-                    string(cg.backend.nodes[i]),
-                    _resolve_node(label_fontsize, cg.backend.nodes[i], 14.0f0),
-                    _resolve_node(label_font, cg.backend.nodes[i], :regular),
+                _text_fit_pixel_size(
+                    node_labels[i],
+                    shapes[i],
+                    _resolve_node(label_fontsize, node_names[i], 14.0f0),
+                    _resolve_node(label_font, node_names[i], :regular),
                     node_padding,
                 ),
+            ) for i = 1:n
+        ]
+        # Nodes are kept apart by their circumradius, whatever their shape.
+        pixel_radii = Float32[
+            _circumradius(
+                _NodeGeom(Point2f(0, 0), shapes[i], pixel_sizes[i][1], pixel_sizes[i][2]),
             ) for i = 1:n
         ]
         # px_per_unit that keeps the closest label-fit pair from overlapping.
@@ -378,32 +375,41 @@ function Makie.plot(
         px_fit_w = (avail_w - 2.6f0 * maxpr) / bbox_w
         px_fit_h = (avail_h - 2.6f0 * maxpr) / bbox_h
         px_per_unit = max(10.0f0, min(px_overlap, px_fit_w, px_fit_h))
-        pixel_radii ./ px_per_unit
+        (
+            Float32[p[1] / px_per_unit for p in pixel_sizes],
+            Float32[p[2] / px_per_unit for p in pixel_sizes],
+        )
     end
 
-    # Based on the typical (not per-node) radius, so endpoint marks stay
-    # consistent across the plot regardless of any one node's label length.
-    r_typical = node_radius !== nothing ? r_ref : Float32(sum(r_nodes) / n)
+    geoms = [
+        _NodeGeom(positions[i], shapes[i], half_w[i], half_h[i]) for
+        i in eachindex(positions)
+    ]
+    radii = Float32[_circumradius(g) for g in geoms]
+
+    # Arrowhead/open-circle-endpoint sizes stay consistent across the plot
+    # regardless of any single node's label length, so they're based on the
+    # typical (not per-node) node size.
+    r_typical = node_radius !== nothing ? r_ref : Float32(sum(radii) / n)
     r_arrow = Float32(something(arrow_size, r_typical * 0.4f0))
     r_circle = Float32(something(circle_size, r_typical * 0.28f0))
 
-    node_pos = Dict{Symbol,Point2f}(
-        cg.backend.nodes[i] => positions[i] for i in eachindex(cg.backend.nodes)
-    )
-    node_idx =
-        Dict{Symbol,Int}(cg.backend.nodes[i] => i for i in eachindex(cg.backend.nodes))
+    node_idx = Dict{Symbol,Int}(node_names[i] => i for i in eachindex(node_names))
     fan_slots = _edge_fan_slots(cg.edges)
 
-    # Explicit axis data limits: Makie's autolimits ignore the node circles'
-    # rendered extent, so boundary nodes would clip.
-    margin = 1.3f0 * maximum(r_nodes)
+    # Explicit axis data limits (rather than Makie's autolimits, which don't
+    # account for the nodes' rendered extent at all) so nodes at the boundary
+    # aren't clipped. DataAspect keeps x/y scale equal, so whichever of
+    # xlim/ylim is narrower than the fixed canvas is centered with slack.
+    margin = 1.3f0 * maximum(radii)
     xlo, xhi = minimum(xs) - margin, maximum(xs) + margin
     ylo, yhi = minimum(ys) - margin, maximum(ys) + margin
     xlo == xhi && (xlo -= 1.0f0; xhi += 1.0f0)
     ylo == yhi && (ylo -= 1.0f0; yhi += 1.0f0)
 
-    # DataAspect renders both axes at the same scale, set by whichever of x/y
-    # is the tighter fit against the fixed canvas.
+    # DataAspect renders both axes at the same scale, set by whichever of
+    # x/y is the tighter fit against the fixed canvas (the other axis gets
+    # centered with slack) - see gap_from/gap_to in _draw_edge!.
     px_per_data_unit = min(avail_w / (xhi - xlo), avail_h / (yhi - ylo))
 
     fig = Makie.Figure(;
@@ -430,12 +436,11 @@ function Makie.plot(
 
     # Edges drawn first so nodes appear on top.
     for (i, e) in enumerate(cg.edges)
-        # Every other node is a candidate obstacle for routing, at its own
-        # (possibly text-fit) radius.
+        # Every other node is a candidate obstacle for routing.
         src_idx = node_idx[e.src]
         dst_idx = node_idx[e.dst]
         obstacles = Tuple{Point2f,Float32}[
-            (positions[j], r_nodes[j]) for
+            (positions[j], radii[j]) for
             j in eachindex(positions) if j != src_idx && j != dst_idx
         ]
 
@@ -443,10 +448,8 @@ function Makie.plot(
         _draw_edge!(
             ax,
             e,
-            node_pos[e.src],
-            node_pos[e.dst],
-            r_nodes[src_idx],
-            r_nodes[dst_idx],
+            geoms[src_idx],
+            geoms[dst_idx],
             r_arrow,
             r_circle,
             obstacles,
@@ -458,25 +461,26 @@ function Makie.plot(
         )
     end
 
-    for i in eachindex(cg.backend.nodes)
-        node = cg.backend.nodes[i]
-        _draw_filled_circle!(
+    # Node bodies and labels.
+    for i in eachindex(node_names)
+        nd = node_names[i]
+        _draw_node!(
             ax,
-            positions[i],
-            r_nodes[i];
-            color = _resolve_node(node_color, node, :white),
-            strokecolor = _resolve_node(node_strokecolor, node, :black),
-            strokewidth = Float32(_resolve_node(node_strokewidth, node, 2.0f0)),
+            geoms[i];
+            color = _resolve_node(node_color, nd, :white),
+            strokecolor = _resolve_node(node_strokecolor, nd, :black),
+            strokewidth = Float32(_resolve_node(node_strokewidth, nd, 2.0)),
+            linestyle = _resolve_node(node_linestyle, nd, nothing),
         )
         Makie.text!(
             ax,
             positions[i][1],
             positions[i][2];
-            text = string(node),
+            text = node_labels[i],
             align = (:center, :center),
-            color = _resolve_node(label_color, node, :black),
-            fontsize = Float32(_resolve_node(label_fontsize, node, 14.0f0)),
-            font = _resolve_node(label_font, node, :regular),
+            color = _resolve_node(label_color, nd, :black),
+            fontsize = Float32(_resolve_node(label_fontsize, nd, 14.0f0)),
+            font = _resolve_node(label_font, nd, :regular),
         )
     end
 
