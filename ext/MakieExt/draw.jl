@@ -66,6 +66,7 @@ function _draw_edge!(
     r_circle::Float32,
     obstacles::AbstractVector{Tuple{Point2f,Float32}},
     fan_slot::Float32,
+    curvature::Float32,
     px_per_data_unit::Float32;
     color = :black,
     fill = color,
@@ -94,14 +95,19 @@ function _draw_edge!(
     # non-incident node before it is left alone.
     clearance = 0.05f0 * (_circumradius(g_src) + _circumradius(g_dst))
 
-    routed = _route_edge_path(p_src, p_dst, g_from, g_to, obstacles, clearance)
-    # Real obstacles take priority: only fan siblings apart when nothing
-    # actually forces this edge to route around a node.
+    bowed =
+        curvature != 0.0f0 ? _bowed_edge_path(p_src, p_dst, g_from, g_to, curvature * len) :
+        nothing
+    routed =
+        bowed === nothing ?
+        _route_edge_path(p_src, p_dst, g_from, g_to, obstacles, clearance) : nothing
     fanned =
-        routed === nothing && fan_slot != 0.0f0 ?
-        _fanned_edge_path(p_src, p_dst, g_from, g_to, fan_slot * 0.3f0 * len) : nothing
+        bowed === nothing && routed === nothing && fan_slot != 0.0f0 ?
+        _bowed_edge_path(p_src, p_dst, g_from, g_to, fan_slot * 0.3f0 * len) : nothing
 
-    path = if routed !== nothing
+    path = if bowed !== nothing
+        bowed
+    elseif routed !== nothing
         routed
     elseif fanned !== nothing
         fanned
@@ -168,7 +174,7 @@ end
 
 # Assigns each edge a signed fan-out slot: 0 when it is the only edge on its
 # node pair, otherwise evenly spaced values centered on 0. Grouping ignores
-# direction, so antiparallel edges fan out too - and since `_fanned_edge_path`
+# direction, so antiparallel edges fan out too - and since `_bowed_edge_path`
 # bows along each edge's own src->dst vector, a reversed edge needs its slot's
 # sign flipped to land opposite its sibling rather than on top of it.
 function _edge_fan_slots(edges::AbstractVector{CausalEdge})
@@ -212,12 +218,15 @@ const _EDGE_TYPE_SYMBOLS = (
 )
 
 # Resolve a per-edge style attribute: either a scalar, or a Dict keyed by
-# (src, dst) tuple, node name, edge type, or :default - tried in that order. A
-# symbol that names an edge type is never read as a node-wide key.
+# CausalEdge, (src, dst) tuple, node name, edge type, or :default - tried in
+# that order, most specific first.
 function _resolve_edge(val, e::CausalEdge, fallback)
     val isa AbstractDict || return val
+    haskey(val, e) && return val[e]
     key = (e.src, e.dst)
     haskey(val, key) && return val[key]
+    rev = (e.dst, e.src)
+    haskey(val, rev) && return val[rev]
     if !(e.dst in _EDGE_TYPE_SYMBOLS) && haskey(val, e.dst)
         return val[e.dst]
     end
@@ -250,10 +259,12 @@ backend (e.g. `using CairoMakie`) before calling.
 Keyword arguments: `layout`, `labels`, `node_shape`, `node_radius`,
 `node_padding`, `arrow_size`, `circle_size`, `node_color`,
 `node_strokecolor`, `node_strokewidth`, `node_linestyle`, `edge_color`,
-`arrow_fill`, `linewidth`, `label_color`, `label_fontsize`, `label_font`,
-`title`, `title_fontsize`, `title_color`, `title_gap`, `outer_margin`,
-`fig_size`. Style keywords accept either a scalar (applied to everything) or
-a `Dict` for per-node/per-edge overrides.
+`arrow_fill`, `linewidth`, `curvature`, `label_color`, `label_fontsize`,
+`label_font`, `title`, `title_fontsize`, `title_color`, `title_gap`,
+`outer_margin`, `fig_size`. Style keywords accept either a scalar (applied to
+everything) or a `Dict` for per-node/per-edge overrides; a per-edge `Dict` may
+be keyed by a `CausalEdge`, a `(src, dst)` tuple, a node name, an edge-type
+symbol, or `:default`.
 
 See the [Plotting](@ref plotting-guide) page for the full keyword reference,
 styling precedence rules, and examples.
@@ -267,8 +278,10 @@ dag = cgraph(directed(:A, :X), directed(:A, :Y), directed(:X, :Y); class = DAG)
 
 Makie.plot(dag; node_color = :lightblue, edge_color = :gray40)
 Makie.plot(dag; edge_color = Dict((:A, :X) => :red, :default => :black))
+Makie.plot(dag; edge_color = Dict(directed(:A, :X) => :red, :default => :black))
 Makie.plot(dag; node_shape = Dict(:A => :box, :default => :round))
 Makie.plot(dag; node_shape = :box, labels = Dict(:A => "Age at\nbaseline"))
+Makie.plot(dag; curvature = Dict((:A, :Y) => 0.3))
 Makie.plot(dag; title = "My DAG", layout = :spring)
 ```
 """
@@ -288,6 +301,7 @@ function Makie.plot(
     edge_color = CausalStructures._PLOT_EDGE_COLOR_DEFAULT,
     arrow_fill = CausalStructures._PLOT_EDGE_ARROW_FILL_DEFAULT,
     linewidth = CausalStructures._PLOT_LINEWIDTH_DEFAULT,
+    curvature = CausalStructures._PLOT_CURVATURE_DEFAULT,
     label_color = CausalStructures._PLOT_LABEL_COLOR_DEFAULT,
     label_fontsize = CausalStructures._PLOT_LABEL_FONTSIZE_DEFAULT,
     label_font = CausalStructures._PLOT_LABEL_FONT_DEFAULT,
@@ -454,6 +468,7 @@ function Makie.plot(
             r_circle,
             obstacles,
             fan_slots[i],
+            Float32(_resolve_edge(curvature, e, 0.0)),
             px_per_data_unit;
             color = resolved_color,
             fill = something(_resolve_edge(arrow_fill, e, nothing), resolved_color),

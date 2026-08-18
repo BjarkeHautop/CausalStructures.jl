@@ -363,3 +363,122 @@ end
     admg = cgraph(directed(:X, :Y), bidirected(:X, :Y); class = ADMG)
     @test Makie.plot(admg; layout = :stress, node_shape = :box) isa Makie.Figure
 end
+
+@testitem "MakieExt: curvature bows an edge, signed relative to src --> dst" tags = [:unit] begin
+    using Makie
+
+    ext = Base.get_extension(CausalStructures, :MakieExt)
+    P = Makie.Point2f
+    p0, p2 = P(0, 0), P(2, 0)
+    g_from = ext._NodeGeom(p0, :round, 0.1f0, 0.1f0)
+    g_to = ext._NodeGeom(p2, :round, 0.1f0, 0.1f0)
+
+    left = ext._bowed_edge_path(p0, p2, g_from, g_to, 0.3f0)
+    right = ext._bowed_edge_path(p0, p2, g_from, g_to, -0.3f0)
+
+    # Chord runs along +x, so "left" is +y and the two bows mirror each other.
+    mid_left = left[length(left)÷2][2]
+    mid_right = right[length(right)÷2][2]
+    @test mid_left > 0
+    @test mid_right < 0
+    @test mid_left ≈ -mid_right
+
+    # A larger magnitude bows further from the chord.
+    gentle = ext._bowed_edge_path(p0, p2, g_from, g_to, 0.1f0)
+    @test gentle[length(gentle)÷2][2] < mid_left
+end
+
+@testitem "Makie.plot: curvature accepts a scalar and a Dict" tags = [:unit] begin
+    using Makie
+    using NetworkLayout
+
+    admg = cgraph(directed(:X, :Y), bidirected(:X, :Z), directed(:Z, :Y); class = ADMG)
+
+    @test Makie.plot(admg; layout = :stress, curvature = 0.3) isa Makie.Figure
+    @test Makie.plot(admg; layout = :stress, curvature = Dict(:bidirected => 0.3)) isa
+          Makie.Figure
+    @test Makie.plot(
+        admg;
+        layout = :stress,
+        curvature = Dict((:X, :Y) => -0.4, :default => 0.0),
+    ) isa Makie.Figure
+end
+
+@testitem "Makie.plot: explicit curvature is not overridden by routing or fanning" tags =
+    [:unit] begin
+    using Makie
+    using NetworkLayout
+
+    ext = Base.get_extension(CausalStructures, :MakieExt)
+
+    # B sits on the straight A--C chord, so A --> C would normally be routed
+    # around it; an explicit curvature takes precedence instead.
+    g = cgraph(directed(:A, :C), node(:B); class = DAG)
+    positions = [(0.0, 0.0), (1.0, 0.0), (2.0, 0.0)]
+    @test Makie.plot(g; layout = positions, curvature = 0.3) isa Makie.Figure
+
+    # Routing bends away from the obstacle; asking for the opposite sign gets
+    # the opposite side, which only holds if curvature wins.
+    P = Makie.Point2f
+    p0, p2 = P(0, 0), P(2, 0)
+    geom(p) = ext._NodeGeom(p, :round, 0.1f0, 0.1f0)
+    obstacles = [(P(1, 0.05), 0.1f0)]
+    routed = ext._route_edge_path(p0, p2, geom(p0), geom(p2), obstacles, 0.05f0)
+    bowed = ext._bowed_edge_path(p0, p2, geom(p0), geom(p2), 0.3f0)
+    @test routed[length(routed)÷2][2] < 0
+    @test bowed[length(bowed)÷2][2] > 0
+end
+
+@testitem "MakieExt: a CausalEdge key names one exact edge" tags = [:unit] begin
+    using Makie
+
+    ext = Base.get_extension(CausalStructures, :MakieExt)
+
+    e_dir = CausalStructures.directed(:X, :Y)
+    e_bi = CausalStructures.bidirected(:X, :Y)
+
+    # The two edges of an ADMG's shared pair, told apart.
+    val = Dict(e_bi => :crimson, :default => :steelblue)
+    @test ext._resolve_edge(val, e_bi, :fallback) == :crimson
+    @test ext._resolve_edge(val, e_dir, :fallback) == :steelblue
+
+    # Either spelling of a symmetric edge is the same key.
+    @test ext._resolve_edge(Dict(CausalStructures.bidirected(:Y, :X) => :red), e_bi, :f) ==
+          :red
+
+    # Antiparallel directed edges are separable too.
+    val = Dict(e_dir => :red, CausalStructures.directed(:Y, :X) => :blue)
+    @test ext._resolve_edge(val, e_dir, :fallback) == :red
+    @test ext._resolve_edge(val, CausalStructures.directed(:Y, :X), :fallback) == :blue
+
+    # An exact edge outranks the pair, the node, and the type.
+    val = Dict(e_bi => :crimson, (:X, :Y) => :red, :X => :green, :bidirected => :navy)
+    @test ext._resolve_edge(val, e_bi, :fallback) == :crimson
+end
+
+@testitem "MakieExt: a tuple edge key names an unordered node pair" tags = [:unit] begin
+    using Makie
+
+    ext = Base.get_extension(CausalStructures, :MakieExt)
+    e_ax = CausalStructures.directed(:A, :X)
+
+    # Either spelling of the pair picks out the edge...
+    @test ext._resolve_edge(Dict((:A, :X) => :red), e_ax, :fallback) == :red
+    @test ext._resolve_edge(Dict((:X, :A) => :red), e_ax, :fallback) == :red
+
+    # ...and so does either spelling of a symmetric edge, whose endpoints are
+    # canonicalized on construction.
+    e_xz = CausalStructures.bidirected(:Z, :X)
+    @test ext._resolve_edge(Dict((:X, :Z) => :red), e_xz, :fallback) == :red
+    @test ext._resolve_edge(Dict((:Z, :X) => :red), e_xz, :fallback) == :red
+
+    # A tuple names a node pair, so where two edges share one it resolves for
+    # both; a CausalEdge key is what tells an ADMG's X --> Y and X <-> Y apart.
+    val = Dict((:X, :Y) => :red)
+    @test ext._resolve_edge(val, CausalStructures.directed(:X, :Y), :fallback) == :red
+    @test ext._resolve_edge(val, CausalStructures.bidirected(:X, :Y), :fallback) == :red
+
+    # A tuple in either order still outranks a node-wide key.
+    val = Dict((:X, :A) => :blue, :A => :red, :default => :black)
+    @test ext._resolve_edge(val, e_ax, :fallback) == :blue
+end

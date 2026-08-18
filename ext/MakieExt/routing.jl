@@ -46,7 +46,7 @@ end
 # Clip a cubic Bezier (control points p0,p1,p2c,p2) to the node boundaries at
 # each end and sample it into `n` points, or return `nothing` if the curve
 # doesn't clear both boundaries (e.g. a node large enough to swallow it).
-# Shared by `_route_edge_path` and `_fanned_edge_path`.
+# Shared by `_route_edge_path` and `_bowed_edge_path`.
 function _clip_and_sample_bezier(
     p0::Point2f,
     p1::Point2f,
@@ -138,12 +138,12 @@ function _route_edge_path(
     return _clip_and_sample_bezier(p0, p1, p2c, p2, g_from, g_to, n)
 end
 
-# Compute a symmetric fan-out path for one of several edges sharing a node
-# pair, which would otherwise draw as overlapping lines. Bows the chord
-# perpendicular by signed offset `h`; callers give each sibling edge a distinct
-# `h`. Same control-point construction as `_route_edge_path`, with `h` given
-# directly instead of sized to clear an obstacle.
-function _fanned_edge_path(
+# Bows the chord perpendicular by the signed offset `h`, positive being to the
+# left of `p0 --> p2`. Same control-point construction as `_route_edge_path`,
+# with `h` given directly instead of sized to clear an obstacle. Serves both an
+# explicit `curvature` and the automatic fanning apart of edges that share a
+# node pair (which would otherwise draw as overlapping lines).
+function _bowed_edge_path(
     p0::Point2f,
     p2::Point2f,
     g_from::_NodeGeom,

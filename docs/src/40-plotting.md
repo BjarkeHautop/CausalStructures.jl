@@ -11,6 +11,14 @@ using CairoMakie
 using NetworkLayout
 ```
 
+!!! note "General-purpose by design"
+    `plot` deliberately imposes no conventions of its own. There are many conventions
+    in the literature, such as boxing conditioned variables, dashing latent variables,
+    representing `<->` as an arc, or colouring exposures and outcomes. These conventions
+    also sometimes disagree with one another. Rather than imposing a particular convention,
+    we provide the capabilities and leave these choices to the caller. Downstream packages
+    are encouraged to build an opinionated layer on top.
+
 ## Basic usage
 
 Pass any `CausalGraph` to `plot`. Consider Figure 6.5 of
@@ -140,16 +148,18 @@ plot(dag; node_radius = 0.18, arrow_size = 0.07)
 
 Each edge style argument accepts either a scalar or a `Dict` keyed by (and follows this precedence):
 
-1. a `(src, dst)` tuple for a specific edge
-2. a node name (`Symbol`), applying to every edge touching that node
-3. an edge-type symbol (`:directed`, `:undirected`, `:bidirected`, `:partially_directed`, `:partially_undirected`, `:partial`)
-4. `:default` as a fallback
+1. a `CausalEdge` for one exact edge, e.g. `bidirected(:X, :Y)`
+2. a `(src, dst)` tuple for the node pair, in either order
+3. a node name (`Symbol`), applying to every edge touching that node
+4. an edge-type symbol (`:directed`, `:undirected`, `:bidirected`, `:partially_directed`, `:partially_undirected`, `:partial`)
+5. `:default` as a fallback
 
 | Keyword      | Default   | Controls             |
 | ------------ | --------- | --------------------- |
 | `edge_color` | `:black`  | line / marker color   |
 | `arrow_fill` | `nothing` | arrowhead fill color  |
 | `linewidth`  | `1.5`     | line width            |
+| `curvature`  | `0.0`     | how far the edge bows |
 
 Color edges by type:
 
@@ -178,6 +188,27 @@ plot(dag;
 )
 ```
 
+A tuple key names an unordered node pair, so you never have to know how an
+edge is stored: `(:A, :X)` and `(:X, :A)` mean the same thing, and either
+picks out the edge between those two nodes whatever its endpoint marks.
+
+Naming a pair is not the same as naming an edge, though. An `ADMG` may carry
+both `X --> Y` and `X <-> Y`, and a tuple key applies to both of them. Key the
+`Dict` by a `CausalEdge` to single one out:
+
+```@example plot
+shared = cgraph("X --> Y, X <-> Y"; class = ADMG)
+
+plot(shared;
+    edge_color = Dict(bidirected(:X, :Y) => :crimson, :default => :steelblue),
+)
+```
+
+Symmetric edges are stored in a canonical order, so `bidirected(:Y, :X)` is
+the same key as `bidirected(:X, :Y)` and either spelling works. The same key
+separates the two directed edges of a graph carrying both `X --> Y` and
+`Y --> X`, which only `UNKNOWN` admits.
+
 `arrow_fill` is the arrowhead's fill color; `nothing` (the default) matches
 the edge's own resolved `edge_color`, so arrowheads render solid. Pass a
 transparent color for a hollow, outline-only arrowhead:
@@ -185,6 +216,33 @@ transparent color for a hollow, outline-only arrowhead:
 ```@example plot
 plot(dag; arrow_fill = :transparent)
 ```
+
+### Curved edges
+
+`curvature` bows an edge into an arc instead of drawing it straight. It is a
+signed fraction of the straight `src`-to-`dst` distance: `0.0` (the default)
+is straight, positive values bow to the left as seen travelling from `src` to
+`dst`, negative to the right. Values around `0.2` to `0.4` read as a gentle
+arc.
+
+```@example plot
+plot(admg; curvature = Dict(:bidirected => 0.3))
+```
+
+Because the key can be a specific edge, `curvature` doubles as the manual
+override for when [Automatic edge routing](@ref) picks an awkward path:
+
+```@example plot
+plot(dag; curvature = Dict((:A, :X) => -0.35, :default => 0.0))
+```
+
+An explicitly curved edge is left exactly as asked: neither the automatic
+routing nor the automatic fanning apart of edges sharing a node pair will
+straighten it out again or bend it further.
+
+While the `Dict` key may be written either way round, the *sign* is read off
+the edge as stored, so a positive `curvature` on `(:X, :A)` bows the same way
+as on `(:A, :X)`. Flip the sign, not the key, to bow an edge the other way.
 
 ## Label styling
 

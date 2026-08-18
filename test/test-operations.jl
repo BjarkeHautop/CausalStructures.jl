@@ -753,3 +753,60 @@ end
     other = cgraph(bidirected(:A, :B), bidirected(:C, :B); class = MAG)  # collider at B
     @test !markov_equivalent(mags[1], other)
 end
+
+@testitem "CausalEdge: symmetric edges are stored in canonical order" tags = [:unit] begin
+    # Identical endpoint marks (--- <-> o-o) mean the same thing either way
+    # round, so the endpoints are sorted and the two spellings compare equal.
+    @test bidirected(:Z, :X) == bidirected(:X, :Z)
+    @test undirected(:Z, :X) == undirected(:X, :Z)
+    @test partial(:Z, :X) == partial(:X, :Z)
+    for e in (bidirected(:Z, :X), undirected(:Z, :X), partial(:Z, :X))
+        @test e.src == :X
+        @test e.dst == :Z
+    end
+
+    # Equal edges hash equally, so they collapse in a Set.
+    @test length(Set([bidirected(:Z, :X), bidirected(:X, :Z)])) == 1
+
+    # Differing marks carry direction, so those edges are stored as given.
+    @test directed(:Z, :X).src == :Z
+    @test partially_directed(:Z, :X).src == :Z
+    @test partially_undirected(:Z, :X).src == :Z
+    @test directed(:Z, :X) != directed(:X, :Z)
+
+    # The canonical order also shows up in what a graph reports back.
+    g = cgraph("Z <-> X"; class = ADMG)
+    @test edges(g) == [bidirected(:X, :Z)]
+end
+
+@testitem "cgraph: parallel edges are rejected" tags = [:unit] begin
+    @test_throws ErrorException cgraph("X --> Y, X --> Y"; class = DAG)
+    @test_throws ErrorException cgraph("X --- Y, Y --- X"; class = UG)
+    @test_throws ErrorException cgraph("X <-> Z, Z <-> X"; class = ADMG)
+    @test_throws ErrorException cgraph("X --> Y, X --- Y"; class = PDAG)
+    @test_throws ErrorException cgraph("X o-o Y, Y o-o X"; class = PAG)
+
+    # An ADMG may carry a directed and a bidirected edge on the same pair.
+    admg = cgraph("X --> Y, X <-> Y"; class = ADMG)
+    @test length(edges(admg)) == 2
+
+    # Two directed edges in opposite directions stay a cycle error, not a
+    # parallel-edge one.
+    err = try
+        cgraph("X --> Y, Y --> X"; class = DAG)
+    catch e
+        sprint(showerror, e)
+    end
+    @test occursin("directed cycles", err)
+    @test !occursin("parallel edges", err)
+
+    # UNKNOWN stays permissive; `is_simple` is how you ask.
+    unk = cgraph("X <-> Z, Z <-> X"; class = UNKNOWN)
+    @test length(edges(unk)) == 2
+    @test !is_simple(unk)
+
+    # Re-adding an existing edge is rejected too, in either spelling.
+    g = cgraph("X <-> Z"; class = ADMG)
+    @test_throws ErrorException add_edges(g, bidirected(:X, :Z))
+    @test_throws ErrorException add_edges(g, bidirected(:Z, :X))
+end

@@ -11,12 +11,23 @@ An edge between two nodes, specified by source (`src`), destination (`dst`), and
 endpoint marks at each end (`src_end`, `dst_end`). Use the edge constructor functions
 (`directed`, `undirected`, `bidirected`, etc.) rather than constructing `CausalEdge`
 directly.
+
+An edge whose two endpoint marks are identical (`---`, `<->`, `o-o`) means the same
+thing either way round, so its endpoints are stored in a canonical order: `src` is
+whichever node name sorts first.
 """
 struct CausalEdge
     src::Symbol
     dst::Symbol
     src_end::Endpoint
     dst_end::Endpoint
+
+    function CausalEdge(src::Symbol, dst::Symbol, src_end::Endpoint, dst_end::Endpoint)
+        if src_end === dst_end && isless(dst, src)
+            src, dst = dst, src
+        end
+        return new(src, dst, src_end, dst_end)
+    end
 end
 
 abstract type CausalBackend end

@@ -61,12 +61,38 @@ function directed_cycle_detected(cg::CausalGraph)
     return visited != n
 end
 
+# At most one edge may connect a given pair of nodes. Two exceptions are not
+# reported here:
+#   - two directed edges in opposite directions, which is a 2-cycle and is
+#     reported by `directed_cycle_detected` instead;
+#   - in an ADMG, a directed edge alongside a bidirected one (X --> Y with
+#     X <-> Y), which is a legitimate ADMG structure.
+function parallel_edges_detected(cg::CausalGraph; admg::Bool = false)
+    groups = Dict{Tuple{Symbol,Symbol},Vector{CausalEdge}}()
+    for e in cg.edges
+        push!(get!(() -> CausalEdge[], groups, _ordered_pair(e.src, e.dst)), e)
+    end
+
+    for es in values(groups)
+        length(es) == 1 && continue
+        if length(es) == 2
+            a, b = es
+            is_directed(a) && is_directed(b) && a.src == b.dst && continue
+            admg && is_directed(a) != is_directed(b) && continue
+        end
+        return true
+    end
+    return false
+end
+
 function validation_errors(::DAGConstraints, cg::CausalGraph)
     errors = String[]
 
     all(is_directed, cg.edges) || push!(errors, "invalid edge type for graph class DAG")
 
     all(e -> e.src != e.dst, cg.edges) || push!(errors, "self-loops are not allowed in DAG")
+
+    parallel_edges_detected(cg) && push!(errors, "parallel edges are not allowed in DAG")
 
     directed_cycle_detected(cg) && push!(errors, "directed cycles are not allowed in DAG")
 
@@ -82,6 +108,8 @@ function validation_errors(::PDAGConstraints, cg::CausalGraph)
     all(e -> e.src != e.dst, cg.edges) ||
         push!(errors, "self-loops are not allowed in PDAG")
 
+    parallel_edges_detected(cg) && push!(errors, "parallel edges are not allowed in PDAG")
+
     directed_cycle_detected(cg) && push!(errors, "directed cycles are not allowed in PDAG")
 
     return errors
@@ -94,6 +122,8 @@ function validation_errors(::UGConstraints, cg::CausalGraph)
 
     all(e -> e.src != e.dst, cg.edges) || push!(errors, "self-loops are not allowed in UG")
 
+    parallel_edges_detected(cg) && push!(errors, "parallel edges are not allowed in UG")
+
     return errors
 end
 
@@ -105,6 +135,9 @@ function validation_errors(::ADMGConstraints, cg::CausalGraph)
 
     all(e -> e.src != e.dst, cg.edges) ||
         push!(errors, "self-loops are not allowed in ADMG")
+
+    parallel_edges_detected(cg, admg = true) &&
+        push!(errors, "parallel edges are not allowed in ADMG")
 
     directed_cycle_detected(cg) && push!(errors, "directed cycles are not allowed in ADMG")
 
@@ -119,7 +152,7 @@ function validation_errors(::PAGConstraints, cg::CausalGraph)
     errors = String[]
 
     all(e -> e.src != e.dst, cg.edges) || push!(errors, "self-loops are not allowed in PAG")
-    is_simple(cg) || push!(errors, "parallel edges are not allowed in PAG")
+    parallel_edges_detected(cg) && push!(errors, "parallel edges are not allowed in PAG")
     isempty(errors) || return errors
 
     # Roundtrip pag -> mag -> pag for validation
@@ -174,6 +207,8 @@ function validation_errors(::AGConstraints, cg::CausalGraph)
         push!(errors, "invalid edge type for graph class AG")
 
     all(e -> e.src != e.dst, cg.edges) || push!(errors, "self-loops are not allowed in AG")
+
+    parallel_edges_detected(cg) && push!(errors, "parallel edges are not allowed in AG")
 
     directed_cycle_detected(cg) && push!(errors, "directed cycles are not allowed in AG")
 

@@ -23,9 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `plot` gained `node_linestyle`, for dashed or dotted node borders.
   - `plot` gained `labels`, overriding the text drawn in each node, so labels can carry spaces, subscripts, or several lines.
   - `plot`'s `layout` keyword now also accepts a `Dict` of positions keyed by node name, not just a `Vector` in `nodes(cg)` order.
+  - `plot` gained `curvature`, bowing an edge into an arc by a signed fraction of its length; per edge, per edge type, or for the whole graph. An explicitly curved edge overrides the automatic obstacle routing and parallel-edge fanning.
+  - `plot`'s per-edge style `Dict`s accept a `CausalEdge` key (e.g. `bidirected(:X, :Y)`) naming one exact edge, which is what separates the two edges of an `ADMG`'s shared pair. A `(src, dst)` tuple key now names an unordered node pair, matching either way round, so styling no longer requires knowing which way an edge is stored.
 
 ### Bug fixes
 
+- Parallel edges are now rejected on construction for every graph class except `UNKNOWN`; previously `cgraph("X --> Y, X --> Y"; class = DAG)` and friends were accepted.
 - `possible_ancestors`/`possible_descendants` on `MPDAG` could include nodes only reachable via a partially directed cycle introduced by background knowledge; this also affected `is_valid_adjustment`/`all_adjustment_sets` on `MPDAG`.
 
 ## [0.3.0] - 2026-08-10

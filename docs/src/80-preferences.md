@@ -49,6 +49,7 @@ the same way, e.g. `set_preferences!(CausalStructures, "plot_node_color" => "lig
 | `"plot_node_strokewidth"` | `2.0` | |
 | `"plot_edge_color"` | `"black"` | |
 | `"plot_linewidth"` | `1.5` | |
+| `"plot_curvature"` | `0.0` | |
 | `"plot_label_color"` | `"black"` | |
 | `"plot_label_fontsize"` | `14.0` | |
 | `"plot_label_font"` | `"regular"` | Any [Makie-compatible font](https://docs.makie.org/stable/explanations/fonts) name or theme key |
