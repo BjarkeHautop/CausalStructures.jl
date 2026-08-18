@@ -69,9 +69,8 @@ plot(dag; layout = Dict(
 ```
 
 !!! tip "Tweaking a layout by hand"
-    [`layout`](@ref) returns exactly this `Dict`, so you can compute a
-    starting layout, move individual nodes by name, and pass it back to
-    `plot`:
+    You can compute a starting layout using [`layout`](@ref), and then
+    manually adjust a few nodes:
 
     ```@example plot
     positions = layout(dag, :spring)
@@ -118,8 +117,7 @@ plot(dag;
 plot(dag; node_shape = Dict(:K => :box, :default => :round))
 ```
 
-`node_linestyle` styles the border - a dashed border is the usual mark for an
-unobserved variable:
+`node_linestyle` can be used to style the border:
 
 ```@example plot
 plot(cgraph("U --> X + Y, X --> Y"; class = DAG);
@@ -172,7 +170,7 @@ plot(admg;
 )
 ```
 
-Highlight a specific edge:
+Highlight a specific edge using a tuple key:
 
 ```@example plot
 plot(dag;
@@ -180,21 +178,9 @@ plot(dag;
 )
 ```
 
-Highlight every edge touching a node:
-
-```@example plot
-plot(dag;
-    edge_color = Dict(:A => :red, :default => :black),
-)
-```
-
-A tuple key names an unordered node pair, so you never have to know how an
-edge is stored: `(:A, :X)` and `(:X, :A)` mean the same thing, and either
-picks out the edge between those two nodes whatever its endpoint marks.
-
-Naming a pair is not the same as naming an edge, though. An `ADMG` may carry
-both `X --> Y` and `X <-> Y`, and a tuple key applies to both of them. Key the
-`Dict` by a `CausalEdge` to single one out:
+A tuple key uses an unordered node pair. However, an `ADMG`
+may carry both `X --> Y` and `X <-> Y`, and a tuple key would then
+apply to both of them. To distinguish them a `CausalEdge` can be used:
 
 ```@example plot
 shared = cgraph("X --> Y, X <-> Y"; class = ADMG)
@@ -205,9 +191,15 @@ plot(shared;
 ```
 
 Symmetric edges are stored in a canonical order, so `bidirected(:Y, :X)` is
-the same key as `bidirected(:X, :Y)` and either spelling works. The same key
-separates the two directed edges of a graph carrying both `X --> Y` and
-`Y --> X`, which only `UNKNOWN` admits.
+the same key as `bidirected(:X, :Y)`.
+
+Highlight every edge touching a node:
+
+```@example plot
+plot(dag;
+    edge_color = Dict(:A => :red, :default => :black),
+)
+```
 
 `arrow_fill` is the arrowhead's fill color; `nothing` (the default) matches
 the edge's own resolved `edge_color`, so arrowheads render solid. Pass a
@@ -219,34 +211,20 @@ plot(dag; arrow_fill = :transparent)
 
 ### Curved edges
 
-`curvature` bows an edge into an arc instead of drawing it straight. It is a
-signed fraction of the straight `src`-to-`dst` distance: `0.0` (the default)
-is straight, positive values bow to the left as seen travelling from `src` to
-`dst`, negative to the right. Values around `0.2` to `0.4` read as a gentle
-arc.
+`curvature` bows an edge into an arc instead of drawing it straight. Positive
+values bow to the left as seen travelling from `src` to `dst`, negative to the right.
 
 ```@example plot
-plot(admg; curvature = Dict(:bidirected => 0.3))
+plot(admg; curvature = Dict(:bidirected => -0.3))
 ```
 
-Because the key can be a specific edge, `curvature` doubles as the manual
-override for when [Automatic edge routing](@ref) picks an awkward path:
-
-```@example plot
-plot(dag; curvature = Dict((:A, :X) => -0.35, :default => 0.0))
-```
-
-An explicitly curved edge is left exactly as asked: neither the automatic
-routing nor the automatic fanning apart of edges sharing a node pair will
-straighten it out again or bend it further.
-
-While the `Dict` key may be written either way round, the *sign* is read off
-the edge as stored, so a positive `curvature` on `(:X, :A)` bows the same way
-as on `(:A, :X)`. Flip the sign, not the key, to bow an edge the other way.
+Because the key can be a specific edge, `curvature` can also be used as a manual
+if the [Automatic edge routing](@ref) picks an awkward path.
 
 ## Label styling
 
-Each label style argument accepts either a scalar or a `Dict{Symbol, <value>}` keyed by node name, with `:default` as a fallback (same resolution rules as node styling).
+Each label style argument accepts either a scalar or a `Dict{Symbol, <value>}` keyed by node name,
+with `:default` as a fallback (same resolution rules as node styling).
 
 | Keyword          | Default    | Controls                |
 | ---------------- | ---------- | ------------------------ |
