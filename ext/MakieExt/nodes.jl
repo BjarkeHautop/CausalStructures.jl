@@ -1,13 +1,9 @@
 # Node geometry: shapes, boundary hit-testing, and label-fit sizing.
-#
-# A node is drawn either :round or as a :box, the latter being the usual mark
-# for a variable that is conditioned on.
 
-const _NODE_SHAPES = (:round, :box)
+const _NODE_SHAPES = (:circle, :square, :ellipse, :rect)
 
-# How oblong a label must be before a node stretches rather than growing to
-# equal sides.
-const _NODE_ASPECT_CAP = 1.4f0
+_is_round_family(shape::Symbol) = shape === :circle || shape === :ellipse
+_is_fixed_aspect(shape::Symbol) = shape === :circle || shape === :square
 
 struct _NodeGeom
     center::Point2f
@@ -16,20 +12,19 @@ struct _NodeGeom
     hh::Float32
 end
 
-# Grows the outline by `pad` on every side.
 _inflate(g::_NodeGeom, pad::Float32) = _NodeGeom(g.center, g.shape, g.hw + pad, g.hh + pad)
 
-# Edge routing treats nodes as circular obstacles, so a box gets its corner.
+# Edge routing treats nodes as circular/elliptical obstacles, so a box/rect
+# uses its corner-to-center distance instead.
 function _circumradius(g::_NodeGeom)
-    g.shape === :round && return max(g.hw, g.hh)
+    _is_round_family(g.shape) && return max(g.hw, g.hh)
     return sqrt(g.hw^2 + g.hh^2)
 end
 
-# Center-to-boundary distance along the unit vector `dir`, i.e. where an edge
-# leaving in that direction starts.
+# Center-to-boundary distance along the unit vector `dir`.
 function _boundary_distance(g::_NodeGeom, dir::Point2f)
     c, s = abs(dir[1]), abs(dir[2])
-    if g.shape === :round
+    if _is_round_family(g.shape)
         denom = sqrt((g.hh * c)^2 + (g.hw * s)^2)
         return denom < 1.0f-6 ? min(g.hw, g.hh) : g.hw * g.hh / denom
     end
@@ -38,8 +33,7 @@ function _boundary_distance(g::_NodeGeom, dir::Point2f)
     return min(tx, ty)
 end
 
-# Distance to `p` as a fraction of the boundary in that direction: < 1 inside,
-# > 1 outside, so one bisection clips a curve against either shape.
+# < 1 inside, > 1 outside, so one bisection clips a curve against either shape.
 function _radial_fraction(g::_NodeGeom, p::Point2f)
     v = p - g.center
     n = _norm2(v)
@@ -48,7 +42,7 @@ function _radial_fraction(g::_NodeGeom, p::Point2f)
 end
 
 function _shape_polygon(g::_NodeGeom; n::Int = 60)
-    if g.shape === :box
+    if !_is_round_family(g.shape)
         x, y = g.center[1], g.center[2]
         return [
             Point2f(x - g.hw, y - g.hh),
@@ -97,8 +91,8 @@ function _draw_node!(
     return nothing
 end
 
-# Rendered size (pixels) of a label. LaTeXStrings and `rich` text are measured
-# through their string form, which is approximate but keeps sizing finite.
+# LaTeXStrings and `rich` text are measured through their string form, which
+# is approximate but keeps sizing finite.
 function _text_pixel_size(label, fontsize::Real, font)
     s = label isa AbstractString ? String(label) : string(label)
     lines = split(s, '\n')
@@ -122,22 +116,21 @@ function _text_pixel_size(label, fontsize::Real, font)
 end
 
 # Half-extents (pixels) fitting `label` inside a node of the given shape, with
-# `padding` clear on every side, equalized while within `_NODE_ASPECT_CAP`.
-# Pixels because text is fixed-pixel-sized; `Makie.plot` converts to data units
-# once it picks the ratio.
+# `padding` clear on every side. Pixels because text is fixed-pixel-sized;
+# `Makie.plot` converts to data units once it picks the ratio.
 function _text_fit_pixel_size(label, shape::Symbol, fontsize::Real, font, padding::Real)
     w, h = _text_pixel_size(label, fontsize, font)
     pad = Float32(padding)
 
-    # A round node needs the text box inscribed in the ellipse, which
-    # hw = w/sqrt(2), hh = h/sqrt(2) satisfies.
-    hw, hh = if shape === :round
+    # A round/elliptical node needs the text box inscribed in the ellipse:
+    # hw = w/sqrt(2), hh = h/sqrt(2).
+    hw, hh = if _is_round_family(shape)
         w / sqrt(2.0f0) + pad, h / sqrt(2.0f0) + pad
     else
         0.5f0 * w + pad, 0.5f0 * h + pad
     end
 
-    hi, lo = max(hw, hh), min(hw, hh)
-    (lo <= 0.0f0 || hi / lo <= _NODE_ASPECT_CAP) && return hi, hi
-    return hw, hh
+    _is_fixed_aspect(shape) || return hw, hh
+    hi = max(hw, hh)
+    return hi, hi
 end

@@ -279,8 +279,8 @@ dag = cgraph(directed(:A, :X), directed(:A, :Y), directed(:X, :Y); class = DAG)
 Makie.plot(dag; node_color = :lightblue, edge_color = :gray40)
 Makie.plot(dag; edge_color = Dict((:A, :X) => :red, :default => :black))
 Makie.plot(dag; edge_color = Dict(directed(:A, :X) => :red, :default => :black))
-Makie.plot(dag; node_shape = Dict(:A => :box, :default => :round))
-Makie.plot(dag; node_shape = :box, labels = Dict(:A => "Age at\nbaseline"))
+Makie.plot(dag; node_shape = Dict(:A => :square, :default => :circle))
+Makie.plot(dag; node_shape = :rect, labels = Dict(:A => "Age at\nbaseline"))
 Makie.plot(dag; curvature = Dict((:A, :Y) => 0.3))
 Makie.plot(dag; title = "My DAG", layout = :spring)
 ```
@@ -289,7 +289,7 @@ function Makie.plot(
     cg::CausalGraph;
     layout::Union{Symbol,AbstractVector,AbstractDict} = CausalStructures._default_layout_method(),
     labels = nothing,
-    node_shape = :round,
+    node_shape = :circle,
     node_radius::Union{Real,Nothing} = nothing,
     node_padding::Real = CausalStructures._PLOT_NODE_PADDING_DEFAULT,
     arrow_size::Union{Real,Nothing} = nothing,
@@ -319,7 +319,7 @@ function Makie.plot(
 
     positions = _rescale_to_unit_extent(_positions(cg, layout, layout_kwargs))
 
-    shapes = Symbol[Symbol(_resolve_node(node_shape, nd, :round)) for nd in node_names]
+    shapes = Symbol[Symbol(_resolve_node(node_shape, nd, :circle)) for nd in node_names]
     for (i, sh) in enumerate(shapes)
         sh in _NODE_SHAPES || error(
             "Unknown node_shape $(repr(sh)) for node $(repr(node_names[i])). " *
@@ -374,13 +374,6 @@ function Makie.plot(
                 _NodeGeom(Point2f(0, 0), shapes[i], pixel_sizes[i][1], pixel_sizes[i][2]),
             ) for i = 1:n
         ]
-        # px_per_unit that keeps the closest label-fit pair from overlapping.
-        px_overlap = 400.0f0
-        for i = 1:n, j = (i+1):n
-            d = _norm2(positions[i] - positions[j])
-            d < 1.0f-6 && continue
-            px_overlap = max(px_overlap, 1.15f0 * (pixel_radii[i] + pixel_radii[j]) / d)
-        end
         # px_per_unit that fits the bbox (plus a margin sized to the largest
         # label, in data units at that same ratio) inside the fixed canvas.
         # Solved in closed form: margin = 1.3*maxpr/px, so
@@ -388,7 +381,7 @@ function Makie.plot(
         maxpr = maximum(pixel_radii)
         px_fit_w = (avail_w - 2.6f0 * maxpr) / bbox_w
         px_fit_h = (avail_h - 2.6f0 * maxpr) / bbox_h
-        px_per_unit = max(10.0f0, min(px_overlap, px_fit_w, px_fit_h))
+        px_per_unit = max(10.0f0, min(px_fit_w, px_fit_h))
         (
             Float32[p[1] / px_per_unit for p in pixel_sizes],
             Float32[p[2] / px_per_unit for p in pixel_sizes],

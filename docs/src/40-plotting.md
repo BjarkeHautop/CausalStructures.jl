@@ -88,7 +88,7 @@ Each node style argument accepts either a scalar (applied to all nodes) or a `Di
 | `node_strokecolor`  | `:black`                             | border color                    |
 | `node_strokewidth`  | `2.0`                                | border line width               |
 | `node_linestyle`    | `nothing` (solid)                    | border line style               |
-| `node_shape`        | `:round`                             | node outline shape              |
+| `node_shape`        | `:circle`                             | node outline shape              |
 | `node_radius`       | `nothing` (text-fit, per node)       | size of each node               |
 | `node_padding`      | `10.0`                                | clearance kept around each node's label when `node_radius` is `nothing` |
 | `arrow_size`        | `0.4 ×` node-count-based reference   | length of arrowhead triangles   |
@@ -111,10 +111,10 @@ plot(dag;
 
 ### Node shapes
 
-`node_shape` is either `:round` (the default) or `:box`.
+`node_shape` is one of `:circle` (the default), `:square`, `:ellipse`, or `:rect`. Main use of `:ellipse`/`:rect` is to fit an oblong label.
 
 ```@example plot
-plot(dag; node_shape = Dict(:K => :box, :default => :round))
+plot(dag; node_shape = Dict(:K => :square, :default => :circle))
 ```
 
 `node_linestyle` can be used to style the border:

@@ -1,6 +1,6 @@
 name = "CausalStructures"
 uuid = "b41ab49a-79bc-5eac-acbb-517b17bd5c16"
-version = "0.3.1"
+version = "0.4.0-DEV"
 authors = ["Bjarke Hautop Kristensen <bjarke.hautop@gmail.com>"]
 
 [workspace]

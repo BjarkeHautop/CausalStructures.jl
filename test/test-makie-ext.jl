@@ -119,8 +119,8 @@ end
     using NetworkLayout
 
     ext = Base.get_extension(CausalStructures, :MakieExt)
-    short = ext._text_fit_pixel_size("A", :round, 14.0f0, :regular, 4.0f0)
-    long = ext._text_fit_pixel_size("Exposure", :round, 14.0f0, :regular, 4.0f0)
+    short = ext._text_fit_pixel_size("A", :circle, 14.0f0, :regular, 4.0f0)
+    long = ext._text_fit_pixel_size("Exposure", :circle, 14.0f0, :regular, 4.0f0)
     @test long[1] > short[1]
 
     # Default (node_radius = nothing): a graph with long labels plots without
@@ -139,17 +139,18 @@ end
 
     ext = Base.get_extension(CausalStructures, :MakieExt)
 
-    # Within the aspect cap: a circle and a square.
-    for shape in (:round, :box)
+    # :circle/:square always come out equal-sided, whatever the label.
+    for shape in (:circle, :square)
         hw, hh = ext._text_fit_pixel_size("X", shape, 14.0f0, :regular, 10.0f0)
+        @test hw ≈ hh
+        hw, hh = ext._text_fit_pixel_size("Birth weight", shape, 14.0f0, :regular, 4.0f0)
         @test hw ≈ hh
     end
 
-    # Past the cap: the node stretches instead of growing to its longest side.
-    for shape in (:round, :box)
+    # :ellipse/:rect stretch to fit an oblong label instead.
+    for shape in (:ellipse, :rect)
         hw, hh = ext._text_fit_pixel_size("Birth weight", shape, 14.0f0, :regular, 4.0f0)
         @test hw > hh
-        @test hw / hh > ext._NODE_ASPECT_CAP
     end
 end
 
@@ -247,12 +248,15 @@ end
 
     dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
 
-    for shape in (:round, :box)
+    for shape in (:circle, :square)
         @test Makie.plot(dag; layout = :stress, node_shape = shape) isa Makie.Figure
     end
 
-    fig =
-        Makie.plot(dag; layout = :stress, node_shape = Dict(:A => :box, :default => :round))
+    fig = Makie.plot(
+        dag;
+        layout = :stress,
+        node_shape = Dict(:A => :square, :default => :circle),
+    )
     @test fig isa Makie.Figure
 
     @test_throws ErrorException Makie.plot(dag; layout = :stress, node_shape = :hexagon)
@@ -268,23 +272,23 @@ end
     diag = Point2f(sqrt(0.5f0), sqrt(0.5f0))
 
     # Equal half-extents: a round node is a circle, a box is a square.
-    circle = ext._NodeGeom(Point2f(0, 0), :round, 2.0f0, 2.0f0)
+    circle = ext._NodeGeom(Point2f(0, 0), :circle, 2.0f0, 2.0f0)
     @test ext._boundary_distance(circle, right) ≈ 2.0f0
     @test ext._boundary_distance(circle, diag) ≈ 2.0f0
     @test ext._circumradius(circle) ≈ 2.0f0
 
-    square = ext._NodeGeom(Point2f(0, 0), :box, 2.0f0, 2.0f0)
+    square = ext._NodeGeom(Point2f(0, 0), :square, 2.0f0, 2.0f0)
     @test ext._boundary_distance(square, right) ≈ 2.0f0
     @test ext._boundary_distance(square, diag) ≈ 2.0f0 * sqrt(2.0f0)
 
     # A box reaches further at its corner than along its sides.
-    rect = ext._NodeGeom(Point2f(0, 0), :box, 3.0f0, 1.0f0)
+    rect = ext._NodeGeom(Point2f(0, 0), :square, 3.0f0, 1.0f0)
     @test ext._boundary_distance(rect, right) ≈ 3.0f0
     @test ext._boundary_distance(rect, up) ≈ 1.0f0
     @test ext._boundary_distance(rect, diag) ≈ sqrt(2.0f0)
     @test ext._circumradius(rect) ≈ sqrt(10.0f0)
 
-    ellipse = ext._NodeGeom(Point2f(0, 0), :round, 3.0f0, 1.0f0)
+    ellipse = ext._NodeGeom(Point2f(0, 0), :circle, 3.0f0, 1.0f0)
     @test ext._boundary_distance(ellipse, right) ≈ 3.0f0
     @test ext._boundary_distance(ellipse, up) ≈ 1.0f0
     @test ext._circumradius(ellipse) ≈ 3.0f0
@@ -306,15 +310,16 @@ end
     ext = Base.get_extension(CausalStructures, :MakieExt)
 
     # A two-line label is taller than the same text on one line.
-    h1 = ext._text_fit_pixel_size("Exposure", :box, 14.0f0, :regular, 4.0f0)[2]
-    h2 = ext._text_fit_pixel_size("Exposure\nat baseline", :box, 14.0f0, :regular, 4.0f0)[2]
+    h1 = ext._text_fit_pixel_size("Exposure", :square, 14.0f0, :regular, 4.0f0)[2]
+    h2 =
+        ext._text_fit_pixel_size("Exposure\nat baseline", :square, 14.0f0, :regular, 4.0f0)[2]
     @test h2 > h1
 
     dag = cgraph(directed(:A0, :L1), directed(:L1, :Y); class = DAG)
     fig = Makie.plot(
         dag;
         layout = :stress,
-        node_shape = :box,
+        node_shape = :square,
         labels = Dict(:A0 => "Treatment\nat baseline", :L1 => "Confounder"),
     )
     @test fig isa Makie.Figure
@@ -334,7 +339,7 @@ end
         dag;
         layout = :stress,
         node_linestyle = Dict(:U => :dash),
-        node_shape = Dict(:U => :box, :default => :round),
+        node_shape = Dict(:U => :square, :default => :circle),
     )
     @test fig isa Makie.Figure
 end
@@ -357,11 +362,11 @@ end
 
     # The routed A --> C curve has to clip against B's box, not a circle.
     g = cgraph(directed(:A, :C), node(:B); class = DAG)
-    fig = Makie.plot(g; layout = [(0.0, 0.0), (1.0, 0.0), (2.0, 0.0)], node_shape = :box)
+    fig = Makie.plot(g; layout = [(0.0, 0.0), (1.0, 0.0), (2.0, 0.0)], node_shape = :square)
     @test fig isa Makie.Figure
 
     admg = cgraph(directed(:X, :Y), bidirected(:X, :Y); class = ADMG)
-    @test Makie.plot(admg; layout = :stress, node_shape = :box) isa Makie.Figure
+    @test Makie.plot(admg; layout = :stress, node_shape = :square) isa Makie.Figure
 end
 
 @testitem "MakieExt: curvature bows an edge, signed relative to src --> dst" tags = [:unit] begin
@@ -370,8 +375,8 @@ end
     ext = Base.get_extension(CausalStructures, :MakieExt)
     P = Makie.Point2f
     p0, p2 = P(0, 0), P(2, 0)
-    g_from = ext._NodeGeom(p0, :round, 0.1f0, 0.1f0)
-    g_to = ext._NodeGeom(p2, :round, 0.1f0, 0.1f0)
+    g_from = ext._NodeGeom(p0, :circle, 0.1f0, 0.1f0)
+    g_to = ext._NodeGeom(p2, :circle, 0.1f0, 0.1f0)
 
     left = ext._bowed_edge_path(p0, p2, g_from, g_to, 0.3f0)
     right = ext._bowed_edge_path(p0, p2, g_from, g_to, -0.3f0)
@@ -421,7 +426,7 @@ end
     # the opposite side, which only holds if curvature wins.
     P = Makie.Point2f
     p0, p2 = P(0, 0), P(2, 0)
-    geom(p) = ext._NodeGeom(p, :round, 0.1f0, 0.1f0)
+    geom(p) = ext._NodeGeom(p, :circle, 0.1f0, 0.1f0)
     obstacles = [(P(1, 0.05), 0.1f0)]
     routed = ext._route_edge_path(p0, p2, geom(p0), geom(p2), obstacles, 0.05f0)
     bowed = ext._bowed_edge_path(p0, p2, geom(p0), geom(p2), 0.3f0)
