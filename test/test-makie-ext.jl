@@ -154,6 +154,36 @@ end
     end
 end
 
+@testitem "MakieExt: _stretch_to_aspect stretches the narrower bbox dimension to match the target" tags =
+    [:unit] begin
+    using Makie
+
+    ext = Base.get_extension(CausalStructures, :MakieExt)
+
+    # n <= 1: nothing to stretch, positions come back unchanged.
+    @test ext._stretch_to_aspect(Point2f[], 2.0) == Point2f[]
+    one_pos = [Point2f(1, 2)]
+    @test ext._stretch_to_aspect(one_pos, 2.0) == one_pos
+
+    # A tall, narrow bbox (width 1, height 4, aspect 0.25) widened to aspect 2:
+    # x spreads out, y is untouched.
+    positions = [Point2f(-0.5f0, -2.0f0), Point2f(0.5f0, 2.0f0)]
+    stretched = ext._stretch_to_aspect(positions, 2.0)
+    xs = [p[1] for p in stretched]
+    ys = [p[2] for p in stretched]
+    @test (maximum(xs) - minimum(xs)) / (maximum(ys) - minimum(ys)) ≈ 2.0f0
+    @test ys == [-2.0f0, 2.0f0]
+
+    # A wide, short bbox (width 4, height 1, aspect 4) narrowed to aspect 2:
+    # y spreads out, x is untouched.
+    positions2 = [Point2f(-2.0f0, -0.5f0), Point2f(2.0f0, 0.5f0)]
+    stretched2 = ext._stretch_to_aspect(positions2, 2.0)
+    xs2 = [p[1] for p in stretched2]
+    ys2 = [p[2] for p in stretched2]
+    @test (maximum(xs2) - minimum(xs2)) / (maximum(ys2) - minimum(ys2)) ≈ 2.0f0
+    @test xs2 == [-2.0f0, 2.0f0]
+end
+
 @testitem "Makie.plot: node-wide edge_color/arrow_fill Dict overrides every edge touching a node" tags =
     [:unit] begin
     using Makie
