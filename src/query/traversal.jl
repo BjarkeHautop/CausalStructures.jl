@@ -434,7 +434,7 @@ non-adjacent to another parent in `pa(x) ∪ S`. For every locally valid `S`,
 
 Unlike [`all_adjustment_sets`](@ref), one entry is returned per locally valid
 subset `S`, not per DAG in the Markov equivalence class of `cg`. Theorem 3.2 of
-[maathuis2009estimating](@cite) shows the two collections agree when read as
+[maathuis2009estimating](@citet) shows the two collections agree when read as
 sets, but their multiplicities differ in general (Remark 3.3 therein).
 
 # Examples

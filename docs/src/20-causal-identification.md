@@ -12,7 +12,7 @@ using NetworkLayout
 
 The [`adjustment_set`](@ref) function supports three different strategies for
 finding adjustment sets. Let's build a DAG with multiple confounders and
-mediators -- Figure 6.5 of [peters2017elements](@cite):
+mediators -- Figure 6.5 of [peters2017elements](@citet):
 
 ```@example id
 dag = cgraph(
@@ -146,7 +146,7 @@ is_valid_iv(admg, :X, :Y, [:Z])
 ## General identification
 
 The methods discussed above are each sufficient, not necesary. CausalStructures
-also implements the ID algorithm of [shpitser2008complete](@cite) and returns the
+also implements the ID algorithm of [shpitser2008complete](@citet) and returns the
 estimand as an [`Estimand`](@ref).
 
 On a graph with an observed confounder, it recovers the familiar g-formula:

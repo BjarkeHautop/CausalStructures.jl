@@ -364,8 +364,8 @@ julia> sort(adjustment_set(cg2, [:X1, :X2], [:Y]; type = :optimal))
 
 # References
 
-- [henckel2022graphical](@cite) (`:optimal`)
-- [pearl2009causality](@cite) (`:parents` and `:backdoor`)
+- [henckel2022graphical](@cite)
+- [pearl2009causality](@cite)
 """
 function adjustment_set(
     cg::DAG,

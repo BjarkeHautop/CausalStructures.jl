@@ -83,7 +83,7 @@ algorithms.
 [`generate_graph`](@ref) uses an Erdős–Rényi model and therefore does not sample
 uniformly from the space of DAGs. [`uniform_dag`](@ref) instead draws exactly
 uniformly from all labelled DAGs on `n` nodes using the recursive enumeration
-algorithm of [kuipers2015uniform](@cite).
+algorithm of [kuipers2015uniform](@citet).
 
 ```@example bench
 for n in (10, 20, 40)

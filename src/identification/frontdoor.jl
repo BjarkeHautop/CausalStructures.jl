@@ -491,7 +491,7 @@ no such set exists.
 - `restrict`: candidate pool from which the set is drawn. Defaults to all nodes
   in `cg` except `x` and `y`.
 
-Implements Algorithm 1 of [jeong2022finding](@cite):
+Implements Algorithm 1 of [jeong2022finding](@citet):
 - Step 1 (GETCAND2NDFDC): drop candidates that have a backdoor path from X.
 - Step 2 (GETCAND3RDFDC): drop candidates for which condition 3 cannot be met.
 - Step 3: check that the remaining set blocks all directed paths X --> Y.
@@ -720,7 +720,7 @@ to (`x`, `y`) in `cg`.
 - `restrict`: candidate pool from which sets are drawn. Defaults to all nodes
   in `cg` except `x` and `y`.
 
-Implements Algorithm 2 (LISTFDSETS) of [jeong2022finding](@cite). The
+Implements Algorithm 2 (LISTFDSETS) of [jeong2022finding](@citet). The
 algorithm has polynomial-delay guarantees: it outputs the first result in
 polynomial time and takes polynomial time between consecutive results. For
 [`ADMG`](@ref), see the note on m-separation in [`frontdoor_set`](@ref).

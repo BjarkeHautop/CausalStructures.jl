@@ -3,8 +3,8 @@
 Here we explain how to build a causal graph and briefly describe the meaning of
 each causal graph class. For a comprehensive introduction to these and the
 underlying theory, see, for instance, [pearl2009causality](@cite) or
-[peters2017elements](@cite); [richardsonspirtes2002ancestral](@cite) covers
-`AG`/`MAG` specifically, and [zhang2008completeness](@cite) covers `PAG`.
+[peters2017elements](@cite); [richardsonspirtes2002ancestral](@citet) covers
+`AG`/`MAG` specifically, and [zhang2008completeness](@citet) covers `PAG`.
 
 ## Constructing graphs
 

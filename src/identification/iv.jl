@@ -92,7 +92,7 @@ true
 # References
 
 - [brito2002generalized](@cite)
-- [pearl2009causality](@cite), Definition 7.4.1.
+- [pearl2009causality](@cite)
 """
 function is_valid_iv(
     cg::Union{DAG,ADMG},

@@ -22,7 +22,7 @@ using NetworkLayout
 ## Basic usage
 
 Pass any `CausalGraph` to `plot`. Consider Figure 6.5 of
-[peters2017elements](@cite):
+[peters2017elements](@citet):
 
 ```@example plot
 dag = cgraph(
