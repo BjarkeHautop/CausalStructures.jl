@@ -176,42 +176,10 @@ function _m_separated_pbg(
     removed::Set{Tuple{Int,Int}},
 )
     (isempty(xs) || isempty(ys)) && return true
-    n = length(B.nodes)
-
     seeds = unique([xs; ys; z])
     mask = _ancestors_bitmask_filtered(B, seeds, removed)
     adj = _admg_moral_adj_filtered(B, mask, removed)
-
-    y_mask = falses(n)
-    for y in ys
-        y_mask[y] = true
-    end
-    blocked = falses(n)
-    for v in z
-
-        blocked[v] = true
-    end
-
-    visited = falses(n)
-    queue = Int[]
-    for x in xs
-        (mask[x] && !blocked[x] && !visited[x]) || continue
-        visited[x] = true
-        push!(queue, x)
-    end
-
-    head = 1
-    while head <= length(queue)
-        u = queue[head]
-        head += 1
-        for w in adj[u]
-            (visited[w] || blocked[w]) && continue
-            y_mask[w] && return false
-            visited[w] = true
-            push!(queue, w)
-        end
-    end
-    return true
+    return _bfs_blocked_reaches(adj, mask, xs, ys, z)
 end
 
 # Is sorted vector a ⊆ sorted vector b?
@@ -239,6 +207,100 @@ function _prune_minimal!(sets::Vector{Vector{Symbol}})
         push!(out, z)
     end
     copy!(sets, out)
+end
+
+# Shared BFS core for the `_m/d_separated_pbg*` checks below (ADMG/AG/PAG/PDAG):
+# with `mask` restricting which nodes are present in the PBG, `adj` its
+# moralized adjacency, and `z` the blocking set, decide whether any x in `xs`
+# reaches any y in `ys`.
+function _bfs_blocked_reaches(
+    adj::Vector{Vector{Int}},
+    mask::BitVector,
+    xs::Vector{Int},
+    ys::Vector{Int},
+    z::Vector{Int},
+)
+    n = length(mask)
+    y_mask = falses(n)
+    for y in ys
+        y_mask[y] = true
+    end
+    blocked = falses(n)
+    for v in z
+        blocked[v] = true
+    end
+
+    visited = falses(n)
+    queue = Int[]
+    for x in xs
+        (mask[x] && !blocked[x] && !visited[x]) || continue
+        visited[x] = true
+        push!(queue, x)
+    end
+
+    head = 1
+    while head <= length(queue)
+        u = queue[head]
+        head += 1
+        for w in adj[u]
+            (visited[w] || blocked[w]) && continue
+            y_mask[w] && return false
+            visited[w] = true
+            push!(queue, w)
+        end
+    end
+    return true
+end
+
+# Shared candidate-checker factory for `all_adjustment_sets` (ADMG/AG/PAG/PDAG):
+# `recompute!(seeds_buf)` (re)computes the anterior/ancestor mask and moralized
+# PBG adjacency for a candidate `z` into caller-owned scratch and returns them;
+# this wraps that in the blocked/visited/queue bookkeeping and BFS common to
+# every graph class's `all_adjustment_sets`.
+function _make_pbg_checker(
+    n::Int,
+    xs::Vector{Int},
+    ys::Vector{Int},
+    y_mask::BitVector,
+    recompute!::Function,
+)
+    seeds_buf = Int[]
+    blocked = falses(n)
+    visited = falses(n)
+    queue = Int[]
+
+    return function valid_candidate(z_idxs::Vector{Int})
+        empty!(seeds_buf)
+        append!(seeds_buf, xs)
+        append!(seeds_buf, ys)
+        append!(seeds_buf, z_idxs)
+        anc_mask, adj = recompute!(seeds_buf)
+
+        fill!(blocked, false)
+        for v in z_idxs
+            blocked[v] = true
+        end
+        fill!(visited, false)
+        empty!(queue)
+        for xi in xs
+            (anc_mask[xi] && !blocked[xi] && !visited[xi]) || continue
+            visited[xi] = true
+            push!(queue, xi)
+        end
+
+        head = 1
+        while head <= length(queue)
+            u = queue[head]
+            head += 1
+            for w in adj[u]
+                (visited[w] || blocked[w]) && continue
+                y_mask[w] && return false
+                visited[w] = true
+                push!(queue, w)
+            end
+        end
+        return true
+    end
 end
 
 # ── DAG ───────────────────────────────────────────────────────────────────────
@@ -566,50 +628,20 @@ function all_adjustment_sets(
 
     # Scratch buffers allocated once per `make_checker` call
     function make_checker()
-        seeds_buf = Int[]
         anc_mask = falses(n)
         anc_stack = Int[]
         adj = [Int[] for _ = 1:n]
         pa_buf = Int[]
         sp_buf = Int[]
         heads_buf = Int[]
-        blocked = falses(n)
-        visited = falses(n)
-        queue = Int[]
 
-        return function valid_candidate(z_idxs::Vector{Int})
-            empty!(seeds_buf)
-            append!(seeds_buf, xs)
-            append!(seeds_buf, ys)
-            append!(seeds_buf, z_idxs)
+        function recompute!(seeds_buf)
             _ancestors_bitmask_filtered!(anc_mask, anc_stack, B, seeds_buf, removed)
             _admg_moral_adj_filtered!(adj, B, anc_mask, removed, pa_buf, sp_buf, heads_buf)
-
-            fill!(blocked, false)
-            for v in z_idxs
-                blocked[v] = true
-            end
-            fill!(visited, false)
-            empty!(queue)
-            for xi in xs
-                (anc_mask[xi] && !blocked[xi] && !visited[xi]) || continue
-                visited[xi] = true
-                push!(queue, xi)
-            end
-
-            head = 1
-            while head <= length(queue)
-                u = queue[head]
-                head += 1
-                for w in adj[u]
-                    (visited[w] || blocked[w]) && continue
-                    y_mask[w] && return false
-                    visited[w] = true
-                    push!(queue, w)
-                end
-            end
-            return true
+            return anc_mask, adj
         end
+
+        return _make_pbg_checker(n, xs, ys, y_mask, recompute!)
     end
 
     to_symbols(cur) = sort([B.nodes[v] for v in cur])

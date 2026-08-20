@@ -284,41 +284,10 @@ function _m_separated_pbg_pag(
     removed::Set{Tuple{Int,Int}},
 )
     (isempty(xs) || isempty(ys)) && return true
-    n = length(B.nodes)
-
     seeds = unique([xs; ys; z])
     mask = _pag_anterior_bitmask_filtered(B, seeds, removed)
     adj = _pag_moral_adj_filtered(B, mask, removed)
-
-    y_mask = falses(n)
-    for y in ys
-        y_mask[y] = true
-    end
-    blocked = falses(n)
-    for v in z
-        blocked[v] = true
-    end
-
-    visited = falses(n)
-    queue = Int[]
-    for x in xs
-        (mask[x] && !blocked[x] && !visited[x]) || continue
-        visited[x] = true
-        push!(queue, x)
-    end
-
-    head = 1
-    while head <= length(queue)
-        u = queue[head]
-        head += 1
-        for w in adj[u]
-            (visited[w] || blocked[w]) && continue
-            y_mask[w] && return false
-            visited[w] = true
-            push!(queue, w)
-        end
-    end
-    return true
+    return _bfs_blocked_reaches(adj, mask, xs, ys, z)
 end
 
 """
@@ -455,50 +424,20 @@ function all_adjustment_sets(
 
     # Scratch buffers allocated once per `make_checker` call
     function make_checker()
-        seeds_buf = Int[]
         anc_mask = falses(n)
         anc_stack = Int[]
         adj = [Int[] for _ = 1:n]
         pa_buf = Int[]
         sp_buf = Int[]
         ne_buf = Int[]
-        blocked = falses(n)
-        visited = falses(n)
-        queue = Int[]
 
-        return function valid_candidate(z_idxs::Vector{Int})
-            empty!(seeds_buf)
-            append!(seeds_buf, xs)
-            append!(seeds_buf, ys)
-            append!(seeds_buf, z_idxs)
+        function recompute!(seeds_buf)
             _pag_anterior_bitmask_filtered!(anc_mask, anc_stack, B, seeds_buf, removed)
             _pag_moral_adj_filtered!(adj, B, anc_mask, removed, pa_buf, sp_buf, ne_buf)
-
-            fill!(blocked, false)
-            for v in z_idxs
-                blocked[v] = true
-            end
-            fill!(visited, false)
-            empty!(queue)
-            for xi in xs
-                (anc_mask[xi] && !blocked[xi] && !visited[xi]) || continue
-                visited[xi] = true
-                push!(queue, xi)
-            end
-
-            head = 1
-            while head <= length(queue)
-                u = queue[head]
-                head += 1
-                for w in adj[u]
-                    (visited[w] || blocked[w]) && continue
-                    y_mask[w] && return false
-                    visited[w] = true
-                    push!(queue, w)
-                end
-            end
-            return true
+            return anc_mask, adj
         end
+
+        return _make_pbg_checker(n, xs, ys, y_mask, recompute!)
     end
 
     to_symbols(cur) = sort([B.nodes[v] for v in cur])
