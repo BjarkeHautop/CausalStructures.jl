@@ -211,11 +211,10 @@ plot(dag; arrow_fill = :transparent)
 
 ### Curved edges
 
-`curvature` bows an edge into an arc instead of drawing it straight. Positive
-values bow to the left as seen travelling from `src` to `dst`, negative to the right.
+`curvature` bows an edge into an arc instead of drawing it straight. Positive values bow to the left as seen travelling from `src` to `dst`, negative to the right.
 
 ```@example plot
-plot(admg; curvature = Dict(:bidirected => -0.3))
+plot(admg; curvature = Dict(:bidirected => -0.1))
 ```
 
 Because the key can be a specific edge, `curvature` can also be used as a manual
