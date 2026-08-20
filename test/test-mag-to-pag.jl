@@ -157,3 +157,102 @@ end
     @test m_separated(m_collider, :D, :C, [:A]) != m_separated(m_noncollider, :D, :C, [:A])
     @test Set(mag_to_pag(m_collider).edges) != Set(mag_to_pag(m_noncollider).edges)
 end
+
+@testitem "mag_to_pag: discriminating path with an intermediate parent vertex orients the collider (R4)" setup=[
+    PagEdge,
+] tags = [:unit] begin
+    # Discriminating path <D, X, A, B, C> for B: D <-> X <-> A <-> B, with X
+    # and A both parents of C and D not adjacent to C.
+    mag = cgraph(
+        bidirected(:D, :X),
+        bidirected(:X, :A),
+        bidirected(:A, :B),
+        directed(:X, :C),
+        directed(:A, :C),
+        bidirected(:B, :C);
+        class = MAG,
+    )
+    pag = mag_to_pag(mag)
+    @test pag_edge(pag, :B, :C) == "<->"   # R4: collider => B <-> C
+end
+
+@testitem "mag_to_pag: discriminating path with an intermediate parent vertex orients the non-collider (R4)" setup=[
+    PagEdge,
+] tags = [:unit] begin
+    # Same configuration as above but with B --> C, so B is a non-collider on
+    # the discriminating path and R4 orients B --> C (tail at B invariant).
+    mag = cgraph(
+        bidirected(:D, :X),
+        bidirected(:X, :A),
+        bidirected(:A, :B),
+        directed(:X, :C),
+        directed(:A, :C),
+        directed(:B, :C);
+        class = MAG,
+    )
+    pag = mag_to_pag(mag)
+    @test pag_edge(pag, :B, :C) == "-->"   # R4: non-collider => B --> C
+end
+
+@testitem "_pag_rule_r10!: fires with two disjoint uncovered p.d. paths to gamma's parents" tags =
+    [:unit] begin
+    Endpoint = CausalStructures.Endpoint
+    Circle, Arrow, Tail =
+        CausalStructures.Circle, CausalStructures.Arrow, CausalStructures.Tail
+
+    # alpha o-> gamma, beta --> gamma <-- delta, with uncovered p.d. paths
+    # alpha-mu-beta and alpha-omega-delta; mu and omega are distinct and
+    # non-adjacent.
+    n = 6
+    alpha, gamma, beta, delta, mu, omega = 1, 2, 3, 4, 5, 6
+    adj = falses(n, n)
+    for (i, j) in [
+        (alpha, gamma),
+        (beta, gamma),
+        (delta, gamma),
+        (alpha, mu),
+        (mu, beta),
+        (alpha, omega),
+        (omega, delta),
+    ]
+        adj[i, j] = adj[j, i] = true
+    end
+    mark = fill(Circle, n, n)
+    mark[alpha, gamma], mark[gamma, alpha] = Arrow, Circle
+    mark[beta, gamma], mark[gamma, beta] = Arrow, Tail
+    mark[delta, gamma], mark[gamma, delta] = Arrow, Tail
+
+    @test CausalStructures._pag_rule_r10!(adj, mark, n)
+    @test mark[gamma, alpha] == Tail   # R10: alpha -> gamma
+end
+
+@testitem "_pag_rule_r10!: does not fire when the two paths' first vertices are adjacent" tags =
+    [:unit] begin
+    Circle, Arrow, Tail =
+        CausalStructures.Circle, CausalStructures.Arrow, CausalStructures.Tail
+
+    # Same as above but mu and omega are adjacent, violating R10's
+    # non-adjacency requirement on the paths' first vertices.
+    n = 6
+    alpha, gamma, beta, delta, mu, omega = 1, 2, 3, 4, 5, 6
+    adj = falses(n, n)
+    for (i, j) in [
+        (alpha, gamma),
+        (beta, gamma),
+        (delta, gamma),
+        (alpha, mu),
+        (mu, beta),
+        (alpha, omega),
+        (omega, delta),
+        (mu, omega),
+    ]
+        adj[i, j] = adj[j, i] = true
+    end
+    mark = fill(Circle, n, n)
+    mark[alpha, gamma], mark[gamma, alpha] = Arrow, Circle
+    mark[beta, gamma], mark[gamma, beta] = Arrow, Tail
+    mark[delta, gamma], mark[gamma, delta] = Arrow, Tail
+
+    @test !CausalStructures._pag_rule_r10!(adj, mark, n)
+    @test mark[gamma, alpha] == Circle
+end

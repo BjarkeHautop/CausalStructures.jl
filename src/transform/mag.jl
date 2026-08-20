@@ -226,6 +226,336 @@ function _has_discriminating_path(
     return false
 end
 
+function _setmark!(mark::Matrix{Endpoint}, i, j, m)
+    mark[i, j] == m && return false
+    mark[i, j] = m
+    return true
+end
+
+# R1: alpha *-> beta o-* gamma, alpha,gamma non-adjacent => beta -> gamma
+function _pag_rule_r1!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
+    changed = false
+    for beta = 1:n, alpha = 1:n, gamma = 1:n
+        (alpha == beta || beta == gamma || alpha == gamma) && continue
+        adj[alpha, beta] && adj[beta, gamma] || continue
+        mark[alpha, beta] == Arrow || continue
+        mark[gamma, beta] == Circle || continue
+        adj[alpha, gamma] && continue
+        changed |= _setmark!(mark, gamma, beta, Tail)
+        changed |= _setmark!(mark, beta, gamma, Arrow)
+    end
+    return changed
+end
+
+# R2: alpha -> beta *-> gamma or alpha *-> beta -> gamma, and alpha *-o gamma
+# => alpha *-> gamma
+function _pag_rule_r2!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
+    changed = false
+    for alpha = 1:n, gamma = 1:n
+        alpha == gamma && continue
+        adj[alpha, gamma] || continue
+        mark[alpha, gamma] == Circle || continue
+        for beta = 1:n
+            (beta == alpha || beta == gamma) && continue
+            adj[alpha, beta] && adj[beta, gamma] || continue
+            chain1 =
+                mark[alpha, beta] == Arrow &&
+                mark[beta, alpha] == Tail &&
+                mark[beta, gamma] == Arrow
+            chain2 =
+                mark[alpha, beta] == Arrow &&
+                mark[beta, gamma] == Arrow &&
+                mark[gamma, beta] == Tail
+            if chain1 || chain2
+                changed |= _setmark!(mark, alpha, gamma, Arrow)
+                break
+            end
+        end
+    end
+    return changed
+end
+
+# R3: alpha *-> beta <-* gamma, alpha *-o theta o-* gamma, alpha,gamma
+# non-adjacent, theta *-o beta => theta *-> beta
+function _pag_rule_r3!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
+    changed = false
+    for theta = 1:n, beta = 1:n
+        theta == beta && continue
+        adj[theta, beta] || continue
+        mark[theta, beta] == Circle || continue
+        for alpha = 1:n, gamma = 1:n
+            (alpha == gamma) && continue
+            (alpha == beta || alpha == theta || gamma == beta || gamma == theta) && continue
+            adj[alpha, beta] && adj[gamma, beta] || continue
+            mark[alpha, beta] == Arrow && mark[gamma, beta] == Arrow || continue
+            adj[alpha, theta] && adj[gamma, theta] || continue
+            mark[alpha, theta] == Circle && mark[gamma, theta] == Circle || continue
+            adj[alpha, gamma] && continue
+            changed |= _setmark!(mark, theta, beta, Arrow)
+            break
+        end
+    end
+    return changed
+end
+
+# R4: discriminating path <D, ..., A, beta, gamma> for beta with beta o-*
+# gamma. If beta is a collider in the MAG `mmark` comes from, orient
+# beta <-> gamma; otherwise orient beta -> gamma. Only used by
+# _close_pag_marks! (skipped there without a ground-truth mmark to consult);
+# _close_pag_marks_local! uses R'_4 instead, which needs no such oracle.
+function _pag_rule_r4!(
+    adj::BitMatrix,
+    mark::Matrix{Endpoint},
+    n::Int,
+    mmark::Matrix{Endpoint},
+)
+    changed = false
+    for beta = 1:n, gamma = 1:n
+        beta == gamma && continue
+        adj[beta, gamma] || continue
+        mark[gamma, beta] == Circle || continue
+        _has_discriminating_path(adj, mark, n, beta, gamma) || continue
+        if mmark[gamma, beta] == Arrow   # collider in the MAG
+            changed |= _setmark!(mark, beta, gamma, Arrow)
+            changed |= _setmark!(mark, gamma, beta, Arrow)
+        else
+            changed |= _setmark!(mark, beta, gamma, Arrow)
+            changed |= _setmark!(mark, gamma, beta, Tail)
+        end
+    end
+    return changed
+end
+
+# R'_4 (Wang, Qin & Zhou 2023): discriminating path <D,...,A,beta,gamma> for
+# beta with beta o-> gamma => beta -> gamma, unconditionally (unlike R4, it
+# does not need to know whether beta is a collider). Only used by
+# _close_pag_marks_local!.
+function _pag_rule_r4_local!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
+    changed = false
+    for beta = 1:n, gamma = 1:n
+        beta == gamma && continue
+        adj[beta, gamma] || continue
+        mark[gamma, beta] == Circle || continue
+        mark[beta, gamma] == Arrow || continue
+        _has_discriminating_path(adj, mark, n, beta, gamma) || continue
+        changed |= _setmark!(mark, gamma, beta, Tail)
+    end
+    return changed
+end
+
+# Find an uncovered circle path `A - C - ... - D - B` (every edge o-o) with C
+# not adjacent to B and D not adjacent to A; return its vertex list or
+# nothing. Used by R5.
+function _uncovered_circle_path(
+    adj::BitMatrix,
+    mark::Matrix{Endpoint},
+    n::Int,
+    anode,
+    bnode,
+)
+    for c = 1:n
+        (c == anode || c == bnode) && continue
+        (adj[anode, c] && mark[anode, c] == Circle && mark[c, anode] == Circle) || continue
+        adj[bnode, c] && continue   # C not adjacent to B
+        visited = falses(n)
+        visited[anode] = visited[bnode] = visited[c] = true
+        path = Int[anode, c]
+        function dfs(cur, prev)
+            # Try to close the path at B through cur = D.
+            if cur != c &&
+               adj[cur, bnode] &&
+               mark[cur, bnode] == Circle &&
+               mark[bnode, cur] == Circle &&
+               !adj[anode, cur] &&
+               !adj[prev, bnode]
+                push!(path, bnode)
+                return true
+            end
+            for nxt = 1:n
+                adj[cur, nxt] || continue
+                visited[nxt] && continue
+                nxt == bnode && continue
+                (mark[cur, nxt] == Circle && mark[nxt, cur] == Circle) || continue
+                adj[prev, nxt] && continue   # uncovered
+                visited[nxt] = true
+                push!(path, nxt)
+                dfs(nxt, cur) && return true
+                pop!(path)
+                visited[nxt] = false
+            end
+            return false
+        end
+        dfs(c, anode) && return path
+    end
+    return nothing
+end
+
+# R5: alpha o-o beta with an uncovered circle path between them => make
+# alpha - beta and every edge on the path undirected. Only used by
+# _close_pag_marks! (R5-R7 concern undirected/selection-bias edges, which
+# _close_pag_marks_local! excludes by construction).
+function _pag_rule_r5!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
+    changed = false
+    for anode = 1:n, bnode = (anode+1):n
+        adj[anode, bnode] || continue
+        (mark[anode, bnode] == Circle && mark[bnode, anode] == Circle) || continue
+        p = _uncovered_circle_path(adj, mark, n, anode, bnode)
+        p === nothing && continue
+        for k = 1:(length(p)-1)
+            changed |= _setmark!(mark, p[k], p[k+1], Tail)
+            changed |= _setmark!(mark, p[k+1], p[k], Tail)
+        end
+        changed |= _setmark!(mark, anode, bnode, Tail)
+        changed |= _setmark!(mark, bnode, anode, Tail)
+    end
+    return changed
+end
+
+# R6: alpha - beta o-* gamma (alpha,beta undirected) => beta -* gamma. Only
+# used by _close_pag_marks!, see _pag_rule_r5! for why.
+function _pag_rule_r6!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
+    changed = false
+    for beta = 1:n
+        has_undir = any(
+            a ->
+                a != beta && adj[a, beta] && mark[a, beta] == Tail && mark[beta, a] == Tail,
+            1:n,
+        )
+        has_undir || continue
+        for gamma = 1:n
+            gamma == beta && continue
+            adj[beta, gamma] || continue
+            mark[gamma, beta] == Circle || continue
+            changed |= _setmark!(mark, gamma, beta, Tail)
+        end
+    end
+    return changed
+end
+
+# R7: alpha -o beta o-* gamma, alpha,gamma non-adjacent => beta -* gamma. Only
+# used by _close_pag_marks!, see _pag_rule_r5! for why.
+function _pag_rule_r7!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
+    changed = false
+    for beta = 1:n, alpha = 1:n
+        alpha == beta && continue
+        adj[alpha, beta] || continue
+        (mark[alpha, beta] == Circle && mark[beta, alpha] == Tail) || continue
+        for gamma = 1:n
+            (gamma == beta || gamma == alpha) && continue
+            adj[beta, gamma] || continue
+            mark[gamma, beta] == Circle || continue
+            adj[alpha, gamma] && continue
+            changed |= _setmark!(mark, gamma, beta, Tail)
+        end
+    end
+    return changed
+end
+
+# R8: alpha -> beta -> gamma or alpha -o beta -> gamma, and alpha o-> gamma =>
+# alpha -> gamma
+function _pag_rule_r8!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
+    changed = false
+    for alpha = 1:n, gamma = 1:n
+        alpha == gamma && continue
+        adj[alpha, gamma] || continue
+        (mark[alpha, gamma] == Arrow && mark[gamma, alpha] == Circle) || continue
+        for beta = 1:n
+            (beta == alpha || beta == gamma) && continue
+            adj[alpha, beta] && adj[beta, gamma] || continue
+            into_beta =
+                mark[alpha, beta] == Arrow &&
+                (mark[beta, alpha] == Tail || mark[beta, alpha] == Circle)
+            beta_to_gamma = mark[beta, gamma] == Arrow && mark[gamma, beta] == Tail
+            if into_beta && beta_to_gamma
+                changed |= _setmark!(mark, gamma, alpha, Tail)
+                break
+            end
+        end
+    end
+    return changed
+end
+
+# R9: alpha o-> gamma with an uncovered p.d. path alpha - beta - ... - gamma
+# where beta is not adjacent to gamma => alpha -> gamma
+function _pag_rule_r9!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
+    changed = false
+    for alpha = 1:n, gamma = 1:n
+        alpha == gamma && continue
+        adj[alpha, gamma] || continue
+        (mark[alpha, gamma] == Arrow && mark[gamma, alpha] == Circle) || continue
+        for beta = 1:n
+            (beta == alpha || beta == gamma) && continue
+            adj[alpha, beta] || continue
+            adj[beta, gamma] && continue          # beta not adjacent to gamma
+            mark[beta, alpha] == Arrow && continue
+            if _has_uncovered_pd_path(adj, mark, n, alpha, gamma, beta, Int[])
+                changed |= _setmark!(mark, gamma, alpha, Tail)
+                break
+            end
+        end
+    end
+    return changed
+end
+
+# R10: alpha o-> gamma, beta -> gamma <- delta, uncovered p.d. paths
+# alpha..beta and alpha..delta whose first vertices are distinct and
+# non-adjacent => alpha -> gamma
+function _pag_rule_r10!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
+    changed = false
+    for alpha = 1:n, gamma = 1:n
+        alpha == gamma && continue
+        adj[alpha, gamma] || continue
+        (mark[alpha, gamma] == Arrow && mark[gamma, alpha] == Circle) || continue
+        par = [
+            v for v = 1:n if v != gamma &&
+                adj[v, gamma] &&
+                mark[v, gamma] == Arrow &&
+                mark[gamma, v] == Tail
+        ]
+        length(par) >= 2 || continue
+        done = false
+        for bi in eachindex(par), di in eachindex(par)
+            bi == di && continue
+            bnode, dnode = par[bi], par[di]
+            for mu = 1:n
+                (mu == alpha || mu == gamma) && continue
+                adj[alpha, mu] || continue
+                mark[mu, alpha] == Arrow && continue
+                _has_uncovered_pd_path(adj, mark, n, alpha, bnode, mu, [gamma]) || continue
+                for omega = 1:n
+                    (omega == alpha || omega == gamma || omega == mu) && continue
+                    adj[alpha, omega] || continue
+                    adj[mu, omega] && continue        # mu, omega non-adjacent
+                    mark[omega, alpha] == Arrow && continue
+                    _has_uncovered_pd_path(adj, mark, n, alpha, dnode, omega, [gamma]) ||
+                        continue
+                    changed |= _setmark!(mark, gamma, alpha, Tail)
+                    done = true
+                    break
+                end
+                done && break
+            end
+            done && break
+        end
+    end
+    return changed
+end
+
+# R11 (Wang, Qin & Zhou 2023): A --o B, no selection bias => A --> B (the only
+# alternative resolution, an undirected edge, is ruled out). Only used by
+# _close_pag_marks_local!.
+function _pag_rule_r11!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
+    changed = false
+    for a = 1:n, b = 1:n
+        a == b && continue
+        adj[a, b] || continue
+        mark[b, a] == Tail || continue
+        mark[a, b] == Circle || continue
+        changed |= _setmark!(mark, a, b, Arrow)
+    end
+    return changed
+end
+
 # Close `mark` under Zhang's complete orientation rules R1-R10, in place, until
 # no further mark is implied.
 function _close_pag_marks!(
@@ -234,270 +564,20 @@ function _close_pag_marks!(
     mmark::Union{Matrix{Endpoint},Nothing} = nothing,
 )
     n = size(adj, 1)
-
-    # Set the mark at j on edge i-j; return true if it changed.
-    function setmark!(i, j, m)
-        mark[i, j] == m && return false
-        mark[i, j] = m
-        return true
-    end
-
-    # ── Path helpers (shared with _close_pag_marks_local!) ─────────────────────
-    has_uncovered_pd_path(start, target, first, avoid) =
-        _has_uncovered_pd_path(adj, mark, n, start, target, first, avoid)
-    has_discriminating_path(beta, gamma) =
-        _has_discriminating_path(adj, mark, n, beta, gamma)
-
-    # Find an uncovered circle path `A - C - ... - D - B` (every edge o-o) with
-    # C not adjacent to B and D not adjacent to A; return its vertex list or
-    # nothing. Used by R5.
-    function uncovered_circle_path(anode, bnode)
-        for c = 1:n
-            (c == anode || c == bnode) && continue
-            (adj[anode, c] && mark[anode, c] == Circle && mark[c, anode] == Circle) ||
-                continue
-            adj[bnode, c] && continue   # C not adjacent to B
-            visited = falses(n)
-            visited[anode] = visited[bnode] = visited[c] = true
-            path = Int[anode, c]
-            function dfs(cur, prev)
-                # Try to close the path at B through cur = D.
-                if cur != c &&
-                   adj[cur, bnode] &&
-                   mark[cur, bnode] == Circle &&
-                   mark[bnode, cur] == Circle &&
-                   !adj[anode, cur] &&
-                   !adj[prev, bnode]
-                    push!(path, bnode)
-                    return true
-                end
-                for nxt = 1:n
-                    adj[cur, nxt] || continue
-                    visited[nxt] && continue
-                    nxt == bnode && continue
-                    (mark[cur, nxt] == Circle && mark[nxt, cur] == Circle) || continue
-                    adj[prev, nxt] && continue   # uncovered
-                    visited[nxt] = true
-                    push!(path, nxt)
-                    dfs(nxt, cur) && return true
-                    pop!(path)
-                    visited[nxt] = false
-                end
-                return false
-            end
-            dfs(c, anode) && return path
-        end
-        return nothing
-    end
-
-    # ── Orientation rules R1-R10, applied to a fixpoint ────────────────────────
     changed = true
     while changed
         changed = false
-
-        # R1: alpha *-> beta o-* gamma, alpha,gamma non-adjacent => beta -> gamma
-        for beta = 1:n, alpha = 1:n, gamma = 1:n
-            (alpha == beta || beta == gamma || alpha == gamma) && continue
-            adj[alpha, beta] && adj[beta, gamma] || continue
-            mark[alpha, beta] == Arrow || continue
-            mark[gamma, beta] == Circle || continue
-            adj[alpha, gamma] && continue
-            changed |= setmark!(gamma, beta, Tail)
-            changed |= setmark!(beta, gamma, Arrow)
-        end
-
-        # R2: alpha -> beta *-> gamma or alpha *-> beta -> gamma, and alpha *-o
-        # gamma => alpha *-> gamma
-        for alpha = 1:n, gamma = 1:n
-            alpha == gamma && continue
-            adj[alpha, gamma] || continue
-            mark[alpha, gamma] == Circle || continue
-            for beta = 1:n
-                (beta == alpha || beta == gamma) && continue
-                adj[alpha, beta] && adj[beta, gamma] || continue
-                chain1 =
-                    mark[alpha, beta] == Arrow &&
-                    mark[beta, alpha] == Tail &&
-                    mark[beta, gamma] == Arrow
-                chain2 =
-                    mark[alpha, beta] == Arrow &&
-                    mark[beta, gamma] == Arrow &&
-                    mark[gamma, beta] == Tail
-                if chain1 || chain2
-                    changed |= setmark!(alpha, gamma, Arrow)
-                    break
-                end
-            end
-        end
-
-        # R3: alpha *-> beta <-* gamma, alpha *-o theta o-* gamma, alpha,gamma
-        # non-adjacent, theta *-o beta => theta *-> beta
-        for theta = 1:n, beta = 1:n
-            theta == beta && continue
-            adj[theta, beta] || continue
-            mark[theta, beta] == Circle || continue
-            found = false
-            for alpha = 1:n, gamma = 1:n
-                (alpha == gamma) && continue
-                (alpha == beta || alpha == theta || gamma == beta || gamma == theta) &&
-                    continue
-                adj[alpha, beta] && adj[gamma, beta] || continue
-                mark[alpha, beta] == Arrow && mark[gamma, beta] == Arrow || continue
-                adj[alpha, theta] && adj[gamma, theta] || continue
-                mark[alpha, theta] == Circle && mark[gamma, theta] == Circle || continue
-                adj[alpha, gamma] && continue
-                changed |= setmark!(theta, beta, Arrow)
-                found = true
-                break
-            end
-            found && continue
-        end
-
-        # R4: discriminating path <D, ..., A, beta, gamma> for beta with beta o-*
-        # gamma. If beta is a collider in cg, orient beta <-> gamma; otherwise
-        # orient beta -> gamma. Skipped without a ground-truth mmark to consult.
-        if mmark !== nothing
-            for beta = 1:n, gamma = 1:n
-                beta == gamma && continue
-                adj[beta, gamma] || continue
-                mark[gamma, beta] == Circle || continue
-                has_discriminating_path(beta, gamma) || continue
-                if mmark[gamma, beta] == Arrow   # collider in the MAG
-                    changed |= setmark!(beta, gamma, Arrow)
-                    changed |= setmark!(gamma, beta, Arrow)
-                else
-                    changed |= setmark!(beta, gamma, Arrow)
-                    changed |= setmark!(gamma, beta, Tail)
-                end
-            end
-        end
-
-        # R5: alpha o-o beta with an uncovered circle path between them => make
-        # alpha - beta and every edge on the path undirected
-        for anode = 1:n, bnode = (anode+1):n
-            adj[anode, bnode] || continue
-            (mark[anode, bnode] == Circle && mark[bnode, anode] == Circle) || continue
-            p = uncovered_circle_path(anode, bnode)
-            p === nothing && continue
-            for k = 1:(length(p)-1)
-                changed |= setmark!(p[k], p[k+1], Tail)
-                changed |= setmark!(p[k+1], p[k], Tail)
-            end
-            changed |= setmark!(anode, bnode, Tail)
-            changed |= setmark!(bnode, anode, Tail)
-        end
-
-        # R6: alpha - beta o-* gamma (alpha,beta undirected) => beta -* gamma
-        for beta = 1:n
-            has_undir = any(
-                a ->
-                    a != beta &&
-                    adj[a, beta] &&
-                    mark[a, beta] == Tail &&
-                    mark[beta, a] == Tail,
-                1:n,
-            )
-            has_undir || continue
-            for gamma = 1:n
-                gamma == beta && continue
-                adj[beta, gamma] || continue
-                mark[gamma, beta] == Circle || continue
-                changed |= setmark!(gamma, beta, Tail)
-            end
-        end
-
-        # R7: alpha -o beta o-* gamma, alpha,gamma non-adjacent => beta -* gamma
-        for beta = 1:n, alpha = 1:n
-            alpha == beta && continue
-            adj[alpha, beta] || continue
-            (mark[alpha, beta] == Circle && mark[beta, alpha] == Tail) || continue
-            for gamma = 1:n
-                (gamma == beta || gamma == alpha) && continue
-                adj[beta, gamma] || continue
-                mark[gamma, beta] == Circle || continue
-                adj[alpha, gamma] && continue
-                changed |= setmark!(gamma, beta, Tail)
-            end
-        end
-
-        # R8: alpha -> beta -> gamma or alpha -o beta -> gamma, and alpha o->
-        # gamma => alpha -> gamma
-        for alpha = 1:n, gamma = 1:n
-            alpha == gamma && continue
-            adj[alpha, gamma] || continue
-            (mark[alpha, gamma] == Arrow && mark[gamma, alpha] == Circle) || continue
-            for beta = 1:n
-                (beta == alpha || beta == gamma) && continue
-                adj[alpha, beta] && adj[beta, gamma] || continue
-                into_beta =
-                    mark[alpha, beta] == Arrow &&
-                    (mark[beta, alpha] == Tail || mark[beta, alpha] == Circle)
-                beta_to_gamma = mark[beta, gamma] == Arrow && mark[gamma, beta] == Tail
-                if into_beta && beta_to_gamma
-                    changed |= setmark!(gamma, alpha, Tail)
-                    break
-                end
-            end
-        end
-
-        # R9: alpha o-> gamma with an uncovered p.d. path alpha - beta - ... -
-        # gamma where beta is not adjacent to gamma => alpha -> gamma
-        for alpha = 1:n, gamma = 1:n
-            alpha == gamma && continue
-            adj[alpha, gamma] || continue
-            (mark[alpha, gamma] == Arrow && mark[gamma, alpha] == Circle) || continue
-            for beta = 1:n
-                (beta == alpha || beta == gamma) && continue
-                adj[alpha, beta] || continue
-                adj[beta, gamma] && continue          # beta not adjacent to gamma
-                mark[beta, alpha] == Arrow && continue
-                if has_uncovered_pd_path(alpha, gamma, beta, Int[])
-                    changed |= setmark!(gamma, alpha, Tail)
-                    break
-                end
-            end
-        end
-
-        # R10: alpha o-> gamma, beta -> gamma <- delta, uncovered p.d. paths
-        # alpha..beta and alpha..delta whose first vertices are distinct and
-        # non-adjacent => alpha -> gamma
-        for alpha = 1:n, gamma = 1:n
-            alpha == gamma && continue
-            adj[alpha, gamma] || continue
-            (mark[alpha, gamma] == Arrow && mark[gamma, alpha] == Circle) || continue
-            par = [
-                v for v = 1:n if v != gamma &&
-                    adj[v, gamma] &&
-                    mark[v, gamma] == Arrow &&
-                    mark[gamma, v] == Tail
-            ]
-            length(par) >= 2 || continue
-            done = false
-            for bi in eachindex(par), di in eachindex(par)
-                bi == di && continue
-                bnode, dnode = par[bi], par[di]
-                for mu = 1:n
-                    (mu == alpha || mu == gamma) && continue
-                    adj[alpha, mu] || continue
-                    mark[mu, alpha] == Arrow && continue
-                    has_uncovered_pd_path(alpha, bnode, mu, [gamma]) || continue
-                    for omega = 1:n
-                        (omega == alpha || omega == gamma || omega == mu) && continue
-                        adj[alpha, omega] || continue
-                        adj[mu, omega] && continue        # mu, omega non-adjacent
-                        mark[omega, alpha] == Arrow && continue
-                        has_uncovered_pd_path(alpha, dnode, omega, [gamma]) || continue
-                        changed |= setmark!(gamma, alpha, Tail)
-                        done = true
-                        break
-                    end
-                    done && break
-                end
-                done && break
-            end
-        end
+        changed |= _pag_rule_r1!(adj, mark, n)
+        changed |= _pag_rule_r2!(adj, mark, n)
+        changed |= _pag_rule_r3!(adj, mark, n)
+        mmark !== nothing && (changed |= _pag_rule_r4!(adj, mark, n, mmark))
+        changed |= _pag_rule_r5!(adj, mark, n)
+        changed |= _pag_rule_r6!(adj, mark, n)
+        changed |= _pag_rule_r7!(adj, mark, n)
+        changed |= _pag_rule_r8!(adj, mark, n)
+        changed |= _pag_rule_r9!(adj, mark, n)
+        changed |= _pag_rule_r10!(adj, mark, n)
     end
-
     return mark
 end
 
@@ -508,176 +588,18 @@ end
 # `adj`/`mark` has no undirected edges; this function does not check that.
 function _close_pag_marks_local!(adj::BitMatrix, mark::Matrix{Endpoint})
     n = size(adj, 1)
-
-    function setmark!(i, j, m)
-        mark[i, j] == m && return false
-        mark[i, j] = m
-        return true
-    end
-    has_uncovered_pd_path(start, target, first, avoid) =
-        _has_uncovered_pd_path(adj, mark, n, start, target, first, avoid)
-    has_discriminating_path(beta, gamma) =
-        _has_discriminating_path(adj, mark, n, beta, gamma)
-
     changed = true
     while changed
         changed = false
-
-        # R1: alpha *-> beta o-* gamma, alpha,gamma non-adjacent => beta -> gamma
-        for beta = 1:n, alpha = 1:n, gamma = 1:n
-            (alpha == beta || beta == gamma || alpha == gamma) && continue
-            adj[alpha, beta] && adj[beta, gamma] || continue
-            mark[alpha, beta] == Arrow || continue
-            mark[gamma, beta] == Circle || continue
-            adj[alpha, gamma] && continue
-            changed |= setmark!(gamma, beta, Tail)
-            changed |= setmark!(beta, gamma, Arrow)
-        end
-
-        # R2: alpha -> beta *-> gamma or alpha *-> beta -> gamma, and alpha *-o
-        # gamma => alpha *-> gamma
-        for alpha = 1:n, gamma = 1:n
-            alpha == gamma && continue
-            adj[alpha, gamma] || continue
-            mark[alpha, gamma] == Circle || continue
-            for beta = 1:n
-                (beta == alpha || beta == gamma) && continue
-                adj[alpha, beta] && adj[beta, gamma] || continue
-                chain1 =
-                    mark[alpha, beta] == Arrow &&
-                    mark[beta, alpha] == Tail &&
-                    mark[beta, gamma] == Arrow
-                chain2 =
-                    mark[alpha, beta] == Arrow &&
-                    mark[beta, gamma] == Arrow &&
-                    mark[gamma, beta] == Tail
-                if chain1 || chain2
-                    changed |= setmark!(alpha, gamma, Arrow)
-                    break
-                end
-            end
-        end
-
-        # R3: alpha *-> beta <-* gamma, alpha *-o theta o-* gamma, alpha,gamma
-        # non-adjacent, theta *-o beta => theta *-> beta
-        for theta = 1:n, beta = 1:n
-            theta == beta && continue
-            adj[theta, beta] || continue
-            mark[theta, beta] == Circle || continue
-            for alpha = 1:n, gamma = 1:n
-                (alpha == gamma) && continue
-                (alpha == beta || alpha == theta || gamma == beta || gamma == theta) &&
-                    continue
-                adj[alpha, beta] && adj[gamma, beta] || continue
-                mark[alpha, beta] == Arrow && mark[gamma, beta] == Arrow || continue
-                adj[alpha, theta] && adj[gamma, theta] || continue
-                mark[alpha, theta] == Circle && mark[gamma, theta] == Circle || continue
-                adj[alpha, gamma] && continue
-                changed |= setmark!(theta, beta, Arrow)
-                break
-            end
-        end
-
-        # R'_4 (Wang, Qin & Zhou 2023): discriminating path <D,...,A,beta,gamma>
-        # for beta with beta o-> gamma => beta -> gamma, unconditionally (unlike
-        # R4, it does not need to know whether beta is a collider).
-        for beta = 1:n, gamma = 1:n
-            beta == gamma && continue
-            adj[beta, gamma] || continue
-            mark[gamma, beta] == Circle || continue
-            mark[beta, gamma] == Arrow || continue
-            has_discriminating_path(beta, gamma) || continue
-            changed |= setmark!(gamma, beta, Tail)
-        end
-
-        # R8: alpha -> beta -> gamma or alpha -o beta -> gamma, and alpha o->
-        # gamma => alpha -> gamma
-        for alpha = 1:n, gamma = 1:n
-            alpha == gamma && continue
-            adj[alpha, gamma] || continue
-            (mark[alpha, gamma] == Arrow && mark[gamma, alpha] == Circle) || continue
-            for beta = 1:n
-                (beta == alpha || beta == gamma) && continue
-                adj[alpha, beta] && adj[beta, gamma] || continue
-                into_beta =
-                    mark[alpha, beta] == Arrow &&
-                    (mark[beta, alpha] == Tail || mark[beta, alpha] == Circle)
-                beta_to_gamma = mark[beta, gamma] == Arrow && mark[gamma, beta] == Tail
-                if into_beta && beta_to_gamma
-                    changed |= setmark!(gamma, alpha, Tail)
-                    break
-                end
-            end
-        end
-
-        # R9: alpha o-> gamma with an uncovered p.d. path alpha - beta - ... -
-        # gamma where beta is not adjacent to gamma => alpha -> gamma
-        for alpha = 1:n, gamma = 1:n
-            alpha == gamma && continue
-            adj[alpha, gamma] || continue
-            (mark[alpha, gamma] == Arrow && mark[gamma, alpha] == Circle) || continue
-            for beta = 1:n
-                (beta == alpha || beta == gamma) && continue
-                adj[alpha, beta] || continue
-                adj[beta, gamma] && continue          # beta not adjacent to gamma
-                mark[beta, alpha] == Arrow && continue
-                if has_uncovered_pd_path(alpha, gamma, beta, Int[])
-                    changed |= setmark!(gamma, alpha, Tail)
-                    break
-                end
-            end
-        end
-
-        # R10: alpha o-> gamma, beta -> gamma <- delta, uncovered p.d. paths
-        # alpha..beta and alpha..delta whose first vertices are distinct and
-        # non-adjacent => alpha -> gamma
-        for alpha = 1:n, gamma = 1:n
-            alpha == gamma && continue
-            adj[alpha, gamma] || continue
-            (mark[alpha, gamma] == Arrow && mark[gamma, alpha] == Circle) || continue
-            par = [
-                v for v = 1:n if v != gamma &&
-                    adj[v, gamma] &&
-                    mark[v, gamma] == Arrow &&
-                    mark[gamma, v] == Tail
-            ]
-            length(par) >= 2 || continue
-            done = false
-            for bi in eachindex(par), di in eachindex(par)
-                bi == di && continue
-                bnode, dnode = par[bi], par[di]
-                for mu = 1:n
-                    (mu == alpha || mu == gamma) && continue
-                    adj[alpha, mu] || continue
-                    mark[mu, alpha] == Arrow && continue
-                    has_uncovered_pd_path(alpha, bnode, mu, [gamma]) || continue
-                    for omega = 1:n
-                        (omega == alpha || omega == gamma || omega == mu) && continue
-                        adj[alpha, omega] || continue
-                        adj[mu, omega] && continue        # mu, omega non-adjacent
-                        mark[omega, alpha] == Arrow && continue
-                        has_uncovered_pd_path(alpha, dnode, omega, [gamma]) || continue
-                        changed |= setmark!(gamma, alpha, Tail)
-                        done = true
-                        break
-                    end
-                    done && break
-                end
-                done && break
-            end
-        end
-
-        # R11 (Wang, Qin & Zhou 2023): A --o B, no selection bias => A --> B
-        # (the only alternative resolution, an undirected edge, is ruled out).
-        for a = 1:n, b = 1:n
-            a == b && continue
-            adj[a, b] || continue
-            mark[b, a] == Tail || continue
-            mark[a, b] == Circle || continue
-            changed |= setmark!(a, b, Arrow)
-        end
+        changed |= _pag_rule_r1!(adj, mark, n)
+        changed |= _pag_rule_r2!(adj, mark, n)
+        changed |= _pag_rule_r3!(adj, mark, n)
+        changed |= _pag_rule_r4_local!(adj, mark, n)
+        changed |= _pag_rule_r8!(adj, mark, n)
+        changed |= _pag_rule_r9!(adj, mark, n)
+        changed |= _pag_rule_r10!(adj, mark, n)
+        changed |= _pag_rule_r11!(adj, mark, n)
     end
-
     return mark
 end
 
