@@ -112,6 +112,23 @@ end
     @test Set(mag_to_pag(out).edges) == Set(pag.edges)
 end
 
+@testitem "cgraph rejects a shielded triangle marked with all arrowheads as a PAG" tags =
+    [:unit] begin
+    # A --> B, A --> C, B --> C is a valid MAG, but the triangle is
+    # shielded, so no edge's mark is invariant across the equivalence class: the
+    # true invariant PAG for this skeleton is all circles (A o-o B o-o C o-o A).
+    @test_throws ErrorException cgraph(
+        directed(:A, :B),
+        directed(:A, :C),
+        directed(:B, :C);
+        class = PAG,
+    )
+
+    mag = cgraph(directed(:A, :B), directed(:A, :C), directed(:B, :C); class = MAG)
+    pag = mag_to_pag(mag)
+    @test Set(pag.edges) == Set([partial(:A, :B), partial(:A, :C), partial(:B, :C)])
+end
+
 # ── Determinism ─────────────────────────────────────────────────────────────────
 
 @testitem "mag_from_pag: is deterministic" tags = [:unit] begin
