@@ -1,9 +1,9 @@
-# Local structures at a vertex X in a PAG: a choice of which of X's circle
+# Local structures at a node X in a PAG: a choice of which of X's circle
 # marks become arrowheads (X <-> V) versus tails (X --> V), validated by
 # Proposition 2 (Wang, Qin & Zhou 2023) and used by PAGcauses (Wang, Tao, Qin
 # & Zhou 2025). Assumes no selection bias throughout, matching both papers.
 
-# PossDe(seeds, graph), closed (includes seeds), with `excluded` vertices
+# PossDe(seeds, graph), closed (includes seeds), with `excluded` nodes
 # removed from the graph entirely. Mirrors `possible_descendants(cg::PAG, ...)`.
 function _possde_mask(
     adj::BitMatrix,
@@ -32,7 +32,7 @@ function _possde_mask(
     return reach
 end
 
-# Directed parents (in the whole graph) of any vertex in `targets`.
+# Directed parents (in the whole graph) of any node in `targets`.
 function _pa_mask(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int, targets)
     pa = falses(n)
     for t in targets
@@ -46,15 +46,9 @@ end
 
 # F_v = {u in vprime | u *-o v}. Shared by `_maximal_local_mag_marks!`'s
 # F-based circle resolution and by `_bridged_relative_to` below.
-function _f_sets(
-    adj::BitMatrix,
-    mark::Matrix{Endpoint},
-    n::Int,
-    vertices,
-    vprime::BitVector,
-)
+function _f_sets(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int, nodes, vprime::BitVector)
     F = Dict{Int,Set{Int}}()
-    for v in vertices
+    for v in nodes
         F[v] = Set(u for u = 1:n if vprime[u] && adj[u, v] && mark[u, v] == Circle)
     end
     return F
@@ -238,8 +232,8 @@ for every other circle-marked neighbor. This is the graph-only ingredient
 PAGcauses (Wang, Tao, Qin & Zhou 2025) enumerates local structures with; pair
 an entry with [`maximal_local_mag`](@ref) to get the corresponding graph.
 
-Assumes `cg` has no selection bias (no undirected edges), as both source
-papers do throughout.
+Throws `ArgumentError` if `cg` has selection bias (undirected edges), since
+both source papers assume none throughout.
 
 # References
 
@@ -247,6 +241,7 @@ papers do throughout.
 - [wang2025pagcauses](@citet)
 """
 function possible_local_structures(cg::PAG, x::Symbol)
+    _check_no_selection_variables(cg, "possible_local_structures (Wang, Qin & Zhou 2023)")
     node_vec, index, adj, mark = _pag_adj_marks(cg.backend.nodes, cg.edges)
     n = length(node_vec)
     x_idx = index[x]
@@ -278,8 +273,8 @@ which is why it is returned as [`UNKNOWN`](@ref) rather than validated as a
 `MAG` or `PAG`): only what the local background knowledge about `x` implies
 is resolved, not necessarily everything.
 
-Assumes `cg` has no selection bias (no undirected edges), as both source
-papers do throughout.
+Throws `ArgumentError` if `cg` has selection bias (undirected edges), since
+both source papers assume none throughout.
 
 # Examples
 
@@ -301,6 +296,7 @@ UNKNOWN with 4 nodes and 4 edges:
 - [wang2025pagcauses](@citet)
 """
 function maximal_local_mag(cg::PAG, x::Symbol, c::AbstractVector{Symbol})
+    _check_no_selection_variables(cg, "maximal_local_mag (Wang, Qin & Zhou 2023)")
     node_vec, index, adj, mark = _pag_adj_marks(cg.backend.nodes, cg.edges)
     n = length(node_vec)
     x_idx = index[x]

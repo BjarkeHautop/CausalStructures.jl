@@ -9,7 +9,7 @@ underlying theory, see, for instance, [pearl2009causality](@citet) or
 ## Constructing graphs
 
 [`cgraph`](@ref) is the entry point for building any graph. Give it some edges
-(and, if you have isolated vertices, some [`node`](@ref)s), tell it which
+(and, if you have isolated nodes, some [`node`](@ref)s), tell it which
 `class` you want, and it builds and validates the graph for you.
 
 ```@docs
@@ -71,8 +71,8 @@ ADMG
 ### Ancestral Graphs
 
 [`AbstractAG`](@ref) allows for directed (`-->`), bidirected (`<->`), and
-undirected edges (`---`). In an ancestral graph, an arrowhead at a vertex
-indicates that the vertex is not an ancestor of the other endpoint. Thus, a
+undirected edges (`---`). In an ancestral graph, an arrowhead at a node
+indicates that the node is not an ancestor of the other endpoint. Thus, a
 bidirected edge (`<->`) indicates that neither endpoint is an ancestor of the
 other. In causal applications, such edges commonly represent unobserved
 confounding. Undirected edges have a different meaning here than in a `PDAG`:

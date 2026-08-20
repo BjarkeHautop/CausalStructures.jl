@@ -2,7 +2,7 @@
 #
 # Adapted from caugi: caugi/src/rust/src/graph/dag/transforms.rs
 
-# Vertex-elimination latent projection: for each latent node v (in index order),
+# Node-elimination latent projection: for each latent node v (in index order),
 #   1. add p-->c for all p ∈ Pa(v), c ∈ Ch(v)
 #   2. add s<->c for all s ∈ Sib(v), c ∈ Ch(v)
 #   3. add a<->b for all pairs a,b ∈ Ch(v)
@@ -14,7 +14,7 @@
 Project out latent (unobserved) variables from `cg` to produce an
 [`ADMG`](@ref) over the observed variables only.
 
-Each latent node `v` is eliminated by vertex substitution: directed edges
+Each latent node `v` is eliminated by node substitution: directed edges
 `p --> c` are added for every parent `p` and child `c` of `v`, and bidirected
 edges `s <-> c` are added for every sibling `s` (bidirected neighbor) and child
 `c` of `v`. All pairs of children of `v` also become bidirected-connected.

@@ -1,5 +1,5 @@
 # D-SEP(X, Y, G) \ {X}: V is in D-SEP if there is a collider path between X and
-# V in G on which every vertex (including V) is an ancestor of X or Y in G.
+# V in G on which every node (including V) is an ancestor of X or Y in G.
 function _d_sep_mask(
     B::AGBackend,
     x::Int,
@@ -58,8 +58,8 @@ end
     possible_d_sep(cg::AbstractAG, x::Symbol, y::Union{Symbol,AbstractVector{Symbol}}) ->
         Vector{Symbol}
 
-Return D-SEP(x, y, cg): every vertex `V != x` for which there is a collider
-path between `x` and `V` in `cg` on which every vertex, including `V`, is an
+Return D-SEP(x, y, cg): every node `V != x` for which there is a collider
+path between `x` and `V` in `cg` on which every node, including `V`, is an
 ancestor of `x` or of some member of `y`.
 
 D-SEP is the set [`backdoor_set`](@ref)`(::MAG, ...)` and

@@ -433,7 +433,7 @@ end
     ag_to_mag(cg::AG) -> MAG
 
 Convert an [`AG`](@ref) to a Markov equivalent [`MAG`](@ref) by adding edges
-between every pair of non-adjacent vertices that cannot be m-separated by any
+between every pair of non-adjacent nodes that cannot be m-separated by any
 subset of the remaining nodes.
 
 For each non-separable pair (u, v), the edge type is determined by the

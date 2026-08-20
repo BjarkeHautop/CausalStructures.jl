@@ -215,7 +215,7 @@ end
 
 An Ancestral Graph. Directed, undirected, and bidirected edges only.
 It contains no directed cycles, and if `X <-> Y` then neither `X` is an ancestor of
-`Y` nor `Y` of `X`. Additionally, vertices incident to an undirected edge have no
+`Y` nor `Y` of `X`. Additionally, nodes incident to an undirected edge have no
 arrowheads pointing at them on any adjacent edge (i.e., no parents or spouses).
 
 # References

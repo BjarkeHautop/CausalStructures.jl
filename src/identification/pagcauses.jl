@@ -51,7 +51,7 @@ function _possan_mask(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int, targets)
     return reach
 end
 
-# Vertices reachable from `x` by a collider path beginning with an arrowhead
+# Nodes reachable from `x` by a collider path beginning with an arrowhead
 # (Definition 5), non-endpoints restricted to `allowed`, computed in M_X (X's
 # directed-out edges excluded).
 function _collider_path_reach(
@@ -86,7 +86,7 @@ function _collider_path_reach(
     return reach
 end
 
-# Vertices reachable from `x` via a strictly bidirected chain through members
+# Nodes reachable from `x` via a strictly bidirected chain through members
 # of `allowed`, followed by one wildcard arrowhead-in edge (the collider-path
 # shape "X <-> ... <-> V_{k-1} <-* V" of Definition 6(1) and Definition 7).
 function _bidirected_chain_reach(
@@ -294,7 +294,7 @@ covariate adjustment (Wang, Tao, Qin & Zhou 2025, Algorithm 1, "PAGcauses"),
 found without enumerating MAGs.
 
 The naive approach enumerates every MAG consistent with `cg` (up to
-`O(3^((d^2-d)/2))` of them for `d` vertices) and checks D-SEP in each. This
+`O(3^((d^2-d)/2))` of them for `d` nodes) and checks D-SEP in each. This
 instead turns "does some MAG give D-SEP = `W`" into a purely graphical
 existence check (Theorem 2) for each of the `O(2^d)` candidate sets `W`,
 without ever constructing a MAG; the paper's complexity analysis (Sec. 3.4)
@@ -310,8 +310,8 @@ and searches it for potential adjustment sets (Definition 6) with a block set
 satisfying Theorem 2, pruned by the definite sets every such MAG must contain
 (DD-SEP, Definition 7).
 
-Assumes `cg` has no selection bias (no undirected edges), as the paper does
-throughout.
+Throws `ArgumentError` if `cg` has selection bias (undirected edges), since
+the paper assumes none throughout.
 
 # Examples
 
@@ -335,6 +335,7 @@ julia> sort(sort.(pagcauses(pag, :X, :Y)))
 - [wang2025pagcauses](@citet)
 """
 function pagcauses(cg::PAG, x::Symbol, y::Symbol)
+    _check_no_selection_variables(cg, "pagcauses (Wang, Tao, Qin & Zhou 2025)")
     node_vec, index, adj0, mark0 = _pag_adj_marks(cg.backend.nodes, cg.edges)
     n = length(node_vec)
     xi, yi = index[x], index[y]

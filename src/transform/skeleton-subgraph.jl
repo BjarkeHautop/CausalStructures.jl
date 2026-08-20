@@ -131,7 +131,7 @@ induced subgraph need not satisfy the stronger class invariant:
   orphan a directed edge that was only strongly protected by that node, but the
   result is still Meek-closed and therefore a valid MPDAG.
 - [`PAG`](@ref) subgraphs are returned as [`UNKNOWN`](@ref): the invariant marks
-  of a Markov equivalence class are not preserved by vertex restriction, so the
+  of a Markov equivalence class are not preserved by node restriction, so the
   result need not be a valid PAG.
 
 # Examples

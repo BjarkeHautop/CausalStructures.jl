@@ -15,7 +15,7 @@ function _touched_sibling_edges(cg::AbstractPDAG, xs::AbstractVector{Symbol})
     return touched
 end
 
-# `gained[v]` collects the vertices newly directed into `v` by this
+# `gained[v]` collects the nodes newly directed into `v` by this
 # orientation (v may or may not be in `xs`).
 function _gained_parents(touched::Vector{Tuple{Symbol,Symbol}}, mask::Int)
     gained = Dict{Symbol,Vector{Symbol}}()
@@ -64,7 +64,7 @@ a set of simultaneous interventions.
 Every undirected edge incident to at least one node in `xs` is jointly
 reoriented, including edges directly between two nodes of `xs`. A candidate
 orientation is locally valid if it introduces no new v-structure at *any*
-vertex that gains a parent from it (not only at nodes in `xs`: two
+node that gains a parent from it (not only at nodes in `xs`: two
 non-adjacent members of `xs` directing an edge into the same outside neighbor
 is also a new v-structure), and if the result is acyclic when combined with
 `cg`'s existing directed edges.

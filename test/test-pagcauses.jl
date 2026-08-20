@@ -156,3 +156,15 @@ end
     wbar = CausalStructures._w_bar_mask(adj, mark, n, xi, yi, falses(n))
     @test Set(node_vec[v] for v = 1:n if wbar[v]) == Set([:A])
 end
+
+@testitem "pagcauses: rejects graphs with undirected (selection-variable) edges" tags =
+    [:unit, :pagcauses] begin
+    pag = cgraph(
+        undirected(:A, :B),
+        undirected(:B, :C),
+        undirected(:C, :D),
+        undirected(:A, :D);
+        class = PAG,
+    )
+    @test_throws ArgumentError pagcauses(pag, :A, :B)
+end

@@ -147,7 +147,7 @@ end
 
 # Does an uncovered possibly-directed path `start - first - ... - target`
 # exist? "possibly directed" = no arrowhead points back toward `start`;
-# "uncovered" = consecutive triples have non-adjacent endpoints. Vertices in
+# "uncovered" = consecutive triples have non-adjacent endpoints. Nodes in
 # `avoid` may not appear on the path. Shared by R9/R10 in _close_pag_marks!
 # and _close_pag_marks_local!.
 function _has_uncovered_pd_path(
@@ -185,7 +185,7 @@ function _has_uncovered_pd_path(
 end
 
 # Is there a discriminating path <D, ..., A, beta, gamma> for `beta` in the
-# current PAG? Every vertex strictly between D and beta is a collider on the
+# current PAG? Every node strictly between D and beta is a collider on the
 # path and a parent of gamma; D is not adjacent to gamma. Shared by R4 in
 # _close_pag_marks! and R'_4 in _close_pag_marks_local!.
 function _has_discriminating_path(
@@ -344,7 +344,7 @@ function _pag_rule_r4_local!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
 end
 
 # Find an uncovered circle path `A - C - ... - D - B` (every edge o-o) with C
-# not adjacent to B and D not adjacent to A; return its vertex list or
+# not adjacent to B and D not adjacent to A; return its node list or
 # nothing. Used by R5.
 function _uncovered_circle_path(
     adj::BitMatrix,
@@ -498,7 +498,7 @@ function _pag_rule_r9!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
 end
 
 # R10: alpha o-> gamma, beta -> gamma <- delta, uncovered p.d. paths
-# alpha..beta and alpha..delta whose first vertices are distinct and
+# alpha..beta and alpha..delta whose first nodes are distinct and
 # non-adjacent => alpha -> gamma
 function _pag_rule_r10!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
     changed = false
@@ -582,7 +582,7 @@ function _close_pag_marks!(
 end
 
 # Close `mark` under the rule set for incorporating local background
-# knowledge about one vertex under no selection bias (Wang, Qin & Zhou 2023):
+# knowledge about one node under no selection bias (Wang, Qin & Zhou 2023):
 # Zhang's R1-R3/R8-R10, R4 replaced by R'_4, R11 added, R5-R7 omitted (they
 # only concern undirected/selection-bias edges). Callers must ensure
 # `adj`/`mark` has no undirected edges; this function does not check that.

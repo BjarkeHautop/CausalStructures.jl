@@ -1,10 +1,6 @@
-function _check_no_selection_variables(cg::CausalGraph)
+function _check_no_selection_variables(cg::CausalGraph, context::AbstractString)
     any(is_undirected, cg.edges) && throw(
-        ArgumentError(
-            "backdoor_set implements the generalized back-door criterion of " *
-            "Maathuis & Colombo (2015), which assumes no selection variables " *
-            "(no undirected edges in the MAG/PAG)",
-        ),
+        ArgumentError("$context assumes no selection variables (no undirected edges)"),
     )
     return nothing
 end
@@ -60,7 +56,7 @@ true
 - [maathuiscolombo2015gbc](@citet)
 """
 function backdoor_set(cg::MAG, x::Symbol, y::Symbol)
-    _check_no_selection_variables(cg)
+    _check_no_selection_variables(cg, "backdoor_set (GBC, Maathuis & Colombo 2015)")
     B = cg.backend
     n = length(B.nodes)
     xi = node_index(cg, x)

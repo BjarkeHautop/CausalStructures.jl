@@ -90,3 +90,16 @@ end
     pa_p = CausalStructures._pa_mask(adj, mark, n, [index[:P]])
     @test isempty([node_vec[i] for i = 1:n if pa_p[i]])
 end
+
+@testitem "possible_local_structures and maximal_local_mag reject graphs with undirected (selection-variable) edges" tags =
+    [:unit, :local_structure] begin
+    pag = cgraph(
+        undirected(:A, :B),
+        undirected(:B, :C),
+        undirected(:C, :D),
+        undirected(:A, :D);
+        class = PAG,
+    )
+    @test_throws ArgumentError possible_local_structures(pag, :A)
+    @test_throws ArgumentError maximal_local_mag(pag, :A, Symbol[])
+end
