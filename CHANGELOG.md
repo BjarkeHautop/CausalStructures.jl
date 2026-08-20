@@ -14,7 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### New features
 
 - `plot`'s `node_shape` now supports `:ellipse`/`:rect` for label-fit stretching.
-- Added `plot`'s `stretch_to_fig_size` to stretch the layout to fill an uneven `fig_size` instead of leaving margins.
+- `plot` now supports a `stretch_to_fig_size` to stretch the layout to fill `fig_size`
+instead of following the aspect of the layout.
 
 ### Bug fixes
 

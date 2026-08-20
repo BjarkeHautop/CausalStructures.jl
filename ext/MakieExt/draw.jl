@@ -345,7 +345,7 @@ function Makie.plot(
     outer_margin::Real = 16,
     title_gap::Real = 4.0,
     fig_size::NTuple{2,Real} = CausalStructures._PLOT_FIG_SIZE_DEFAULT,
-    stretch_to_fig_size::Bool = false,
+    stretch_to_fig_size::Bool = CausalStructures._PLOT_STRETCH_TO_FIG_SIZE_DEFAULT,
     layout_kwargs...,
 )
     node_names = cg.backend.nodes

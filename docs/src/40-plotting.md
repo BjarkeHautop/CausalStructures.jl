@@ -1,8 +1,7 @@
 # [Plotting](@id plotting-guide)
 
-Plotting is provided by the `MakieExt` extension and requires loading a
-[Makie](https://docs.makie.org/stable/) backend before use. Node placement
-requires [NetworkLayout.jl](https://github.com/JuliaGraphs/NetworkLayout.jl)
+Plotting requires loading a [Makie](https://docs.makie.org/stable/) backend before use.
+Node placement requires [NetworkLayout.jl](https://github.com/JuliaGraphs/NetworkLayout.jl)
 (or bring your own layout). Below we use CairoMakie:
 
 ```@example plot

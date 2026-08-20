@@ -171,10 +171,13 @@ In the following graph the causal effect can not be identified:
 
 ```@example id
 admg
+```
+
+```@example id
 id(admg, :X, :Y) === nothing
 ```
 
-[`idc`](@ref) extends this to conditional effects ``P(y \mid do(x), z)``:
+[`idc`](@ref) extends [`id`](@ref) to conditional effects ``P(y \mid do(x), z)``:
 
 ```@example id
 idc(admg2, :X, :Y; given = :M)
@@ -182,18 +185,11 @@ idc(admg2, :X, :Y; given = :M)
 
 ### Working with the result
 
-The result is an ordinary immutable tree of
+The result is an immutable tree of
 [`Prob`](@ref), [`Marginal`](@ref), [`Product`](@ref), and [`Quotient`](@ref)
 nodes, so it can be inspected or transformed programmatically:
 
 ```@example id
 e = id(dag4, :X, :Y)
 (typeof(e), e.index, typeof.(e.term.terms))
-```
-
-Estimands compare and hash structurally, so two formulas built in different
-ways are equal when their trees agree:
-
-```@example id
-id(dag4, :X, :Y) == marginal([:Z], product([prob(:Y; given = [:X, :Z]), prob(:Z)]))
 ```

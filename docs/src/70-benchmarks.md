@@ -112,29 +112,18 @@ for k in (5, 7, 9)
 end
 ```
 
-[`enumerate_dags`](@ref) is slower than [`count_dags`](@ref), since it must
-materialize every DAG rather than simply count them:
-
-```@example bench
-for k in (5, 6, 7)
-    names = [Symbol("V$i") for i = 1:k]
-    clique_edges = [undirected(names[i], names[j]) for i = 1:k for j = (i+1):k]
-    pdag = cgraph(clique_edges...; class = PDAG)
-    d = length(enumerate_dags(pdag))
-    t = @benchmark enumerate_dags($pdag) samples = 5 evals = 1
-    println("k=$k  DAGs=$d  ", median(t))
-end
-```
+[`enumerate_dags`](@ref) is slightly slower than [`count_dags`](@ref) (and uses
+much more memory), since it must materialize every DAG rather than simply count
+them.
 
 ### MAG equivalence class enumeration
 
-[`enumerate_mags`](@ref) is the PAG/MAG counterpart to [`enumerate_dags`](@ref),
-but the algorithm behind it is not the same: it brute-forces every
+[`enumerate_mags`](@ref) is the PAG/MAG counterpart to [`enumerate_dags`](@ref).
+While `enumerate_dags` is fairly efficient via Chickering's recursive pruning,
+the algorithm for `enumerate_mags` is simply just brute-forcing every
 tail/arrowhead assignment for each circle endpoint in the PAG (`2^k`
-candidates for `k` circle endpoints), validates each candidate as a MAG, and
-keeps the ones that map back to the original PAG. There's no analog of
-Chickering's recursive pruning here, so it's considerably more expensive than
-[`count_dags`](@ref)/[`enumerate_dags`](@ref) at a comparable scale:
+candidates for `k` circle endpoints), and checks if it's a valid PAG. Thus, it's
+considerably more expensive than [`count_dags`](@ref)/[`enumerate_dags`](@ref):
 
 ```@example bench
 for k in (3, 4, 5)
@@ -147,7 +136,8 @@ for k in (3, 4, 5)
 end
 ```
 
-[`count_dags`](@ref), [`enumerate_dags`](@ref), [`enumerate_mags`](@ref), and
-the whole `all_*_sets` family all parallelize their search across
-`Threads.nthreads()` automatically once the problem is large enough to
-benefit.
+!!! tip "Parallel search"
+    [`count_dags`](@ref), [`enumerate_dags`](@ref), [`enumerate_mags`](@ref), and
+    the whole `all_*_sets` family all parallelize their search across
+    `Threads.nthreads()` automatically once the problem is large enough to
+    benefit.

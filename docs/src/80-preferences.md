@@ -56,3 +56,4 @@ the same way, e.g. `set_preferences!(CausalStructures, "plot_node_color" => "lig
 | `"plot_node_padding"` | `10.0` | Space between label and circle edge; ignored when `node_radius` is set explicitly |
 | `"plot_edge_arrow_fill"` | `nothing` | `nothing` matches the edge's own color (solid arrowhead); set e.g. `"transparent"` for a hollow one |
 | `"plot_fig_size"` | `[600.0, 450.0]` | Pixels, fixed regardless of graph/layout; see [Figure size and margins](@ref) |
+| `"plot_stretch_to_fig_size"` | `false` | Stretch the layout to fill an uneven `fig_size` instead of leaving margins |
