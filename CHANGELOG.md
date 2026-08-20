@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug fixes
 
 - Fixed `plot` node sizes being shrunk by an unrelated close node pair elsewhere in the graph.
+- Fixed `plot`'s automatic edge routing to use all nodes.
+- Fixed `plot` clipping a curved edge at the canvas edge.
+- Fixed `plot`'s `curvature` being unable to force a straight edge to override the automatic routing. `curvature` now defaults to `nothing` (auto-route) so any explicit value now works correctly.
 
 ## [0.3.1] - 2026-18-10
 
