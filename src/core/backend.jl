@@ -97,6 +97,12 @@ function _counting_csr(
     return colptr, deg, rowval
 end
 
+function _ordered_index(nodes)
+    ordered_nodes = sort!(unique(collect(nodes)))
+    index = Dict(n => i for (i, n) in enumerate(ordered_nodes))
+    return ordered_nodes, index, length(ordered_nodes)
+end
+
 function _dag_pairs(edge, si, di)
     if edge.src_end == Tail && edge.dst_end == Arrow
         return ((di, 1, si), (si, 2, di))
@@ -108,9 +114,7 @@ function _dag_pairs(edge, si, di)
 end
 
 function build_backend(::Type{DAG}, nodes, edges::Vector{CausalEdge})
-    ordered_nodes = sort!(unique(collect(nodes)))
-    index = Dict(n => i for (i, n) in enumerate(ordered_nodes))
-    n = length(ordered_nodes)
+    ordered_nodes, index, n = _ordered_index(nodes)
 
     colptr, deg, rowval = _counting_csr(n, 2, edges, index, _dag_pairs)  # [parents, children]
     return DAGBackend(ordered_nodes, index, colptr, deg, rowval)
@@ -119,9 +123,7 @@ end
 _ug_pairs(_edge, si, di) = ((si, 1, di), (di, 1, si))
 
 function build_backend(::Type{UG}, nodes, edges::Vector{CausalEdge})
-    ordered_nodes = sort!(unique(collect(nodes)))
-    index = Dict(n => i for (i, n) in enumerate(ordered_nodes))
-    n = length(ordered_nodes)
+    ordered_nodes, index, n = _ordered_index(nodes)
 
     colptr, _, rowval = _counting_csr(n, 1, edges, index, _ug_pairs)
     return UGBackend(ordered_nodes, index, colptr, rowval)
@@ -140,9 +142,7 @@ function _pdag_pairs(edge, si, di)
 end
 
 function build_backend(::Type{<:AbstractPDAG}, nodes, edges::Vector{CausalEdge})
-    ordered_nodes = sort!(unique(collect(nodes)))
-    index = Dict(n => i for (i, n) in enumerate(ordered_nodes))
-    n = length(ordered_nodes)
+    ordered_nodes, index, n = _ordered_index(nodes)
 
     # [parents, undirected, children]
     colptr, deg, rowval = _counting_csr(n, 3, edges, index, _pdag_pairs)
@@ -162,9 +162,7 @@ function _admg_pairs(edge, si, di)
 end
 
 function build_backend(::Type{ADMG}, nodes, edges::Vector{CausalEdge})
-    ordered_nodes = sort!(unique(collect(nodes)))
-    index = Dict(n => i for (i, n) in enumerate(ordered_nodes))
-    n = length(ordered_nodes)
+    ordered_nodes, index, n = _ordered_index(nodes)
 
     # [parents, spouses, children]
     colptr, deg, rowval = _counting_csr(n, 3, edges, index, _admg_pairs)
@@ -186,9 +184,7 @@ function _ag_pairs(edge, si, di)
 end
 
 function build_backend(::Type{<:AbstractAG}, nodes, edges::Vector{CausalEdge})
-    ordered_nodes = sort!(unique(collect(nodes)))
-    index = Dict(n => i for (i, n) in enumerate(ordered_nodes))
-    n = length(ordered_nodes)
+    ordered_nodes, index, n = _ordered_index(nodes)
 
     # [parents, undirected, spouses, children]
     colptr, deg, rowval = _counting_csr(n, 4, edges, index, _ag_pairs)
@@ -209,9 +205,7 @@ function _unknown_pairs(edge, si, di)
 end
 
 function build_backend(::Type{UNKNOWN}, nodes, edges::Vector{CausalEdge})
-    ordered_nodes = sort!(unique(collect(nodes)))
-    index = Dict(n => i for (i, n) in enumerate(ordered_nodes))
-    n = length(ordered_nodes)
+    ordered_nodes, index, n = _ordered_index(nodes)
 
     # [parents, undirected, spouses, children]; Circle-endpoint edges --> undirected bucket
     colptr, deg, rowval = _counting_csr(n, 4, edges, index, _unknown_pairs)
@@ -239,9 +233,7 @@ function _pag_pairs(edge, si, di)
 end
 
 function build_backend(::Type{PAG}, nodes, edges::Vector{CausalEdge})
-    ordered_nodes = sort!(unique(collect(nodes)))
-    index = Dict(n => i for (i, n) in enumerate(ordered_nodes))
-    n = length(ordered_nodes)
+    ordered_nodes, index, n = _ordered_index(nodes)
 
     colptr, deg, rowval = _counting_csr(n, 9, edges, index, _pag_pairs)
     return PAGBackend(ordered_nodes, index, colptr, deg, rowval)

@@ -85,63 +85,49 @@ function parallel_edges_detected(cg::CausalGraph; admg::Bool = false)
     return false
 end
 
-function validation_errors(::DAGConstraints, cg::CausalGraph)
+function _basic_structural_errors(
+    cg::CausalGraph,
+    class_name::String,
+    edge_ok::Function;
+    admg::Bool = false,
+    check_cycles::Bool = true,
+)
     errors = String[]
 
-    all(is_directed, cg.edges) || push!(errors, "invalid edge type for graph class DAG")
+    all(edge_ok, cg.edges) || push!(errors, "invalid edge type for graph class $class_name")
 
-    all(e -> e.src != e.dst, cg.edges) || push!(errors, "self-loops are not allowed in DAG")
+    all(e -> e.src != e.dst, cg.edges) ||
+        push!(errors, "self-loops are not allowed in $class_name")
 
-    parallel_edges_detected(cg) && push!(errors, "parallel edges are not allowed in DAG")
+    parallel_edges_detected(cg; admg) &&
+        push!(errors, "parallel edges are not allowed in $class_name")
 
-    directed_cycle_detected(cg) && push!(errors, "directed cycles are not allowed in DAG")
+    check_cycles &&
+        directed_cycle_detected(cg) &&
+        push!(errors, "directed cycles are not allowed in $class_name")
 
     return errors
+end
+
+function validation_errors(::DAGConstraints, cg::CausalGraph)
+    return _basic_structural_errors(cg, "DAG", is_directed)
 end
 
 function validation_errors(::PDAGConstraints, cg::CausalGraph)
-    errors = String[]
-
-    all(e -> is_directed(e) || is_undirected(e), cg.edges) ||
-        push!(errors, "invalid edge type for graph class PDAG")
-
-    all(e -> e.src != e.dst, cg.edges) ||
-        push!(errors, "self-loops are not allowed in PDAG")
-
-    parallel_edges_detected(cg) && push!(errors, "parallel edges are not allowed in PDAG")
-
-    directed_cycle_detected(cg) && push!(errors, "directed cycles are not allowed in PDAG")
-
-    return errors
+    return _basic_structural_errors(cg, "PDAG", e -> is_directed(e) || is_undirected(e))
 end
 
 function validation_errors(::UGConstraints, cg::CausalGraph)
-    errors = String[]
-
-    all(is_undirected, cg.edges) || push!(errors, "invalid edge type for graph class UG")
-
-    all(e -> e.src != e.dst, cg.edges) || push!(errors, "self-loops are not allowed in UG")
-
-    parallel_edges_detected(cg) && push!(errors, "parallel edges are not allowed in UG")
-
-    return errors
+    return _basic_structural_errors(cg, "UG", is_undirected; check_cycles = false)
 end
 
 function validation_errors(::ADMGConstraints, cg::CausalGraph)
-    errors = String[]
-
-    all(e -> is_directed(e) || is_bidirected(e), cg.edges) ||
-        push!(errors, "invalid edge type for graph class ADMG")
-
-    all(e -> e.src != e.dst, cg.edges) ||
-        push!(errors, "self-loops are not allowed in ADMG")
-
-    parallel_edges_detected(cg, admg = true) &&
-        push!(errors, "parallel edges are not allowed in ADMG")
-
-    directed_cycle_detected(cg) && push!(errors, "directed cycles are not allowed in ADMG")
-
-    return errors
+    return _basic_structural_errors(
+        cg,
+        "ADMG",
+        e -> is_directed(e) || is_bidirected(e);
+        admg = true,
+    )
 end
 
 function validation_errors(::UNKNOWNConstraints, ::UNKNOWN)
@@ -149,10 +135,7 @@ function validation_errors(::UNKNOWNConstraints, ::UNKNOWN)
 end
 
 function validation_errors(::PAGConstraints, cg::CausalGraph)
-    errors = String[]
-
-    all(e -> e.src != e.dst, cg.edges) || push!(errors, "self-loops are not allowed in PAG")
-    parallel_edges_detected(cg) && push!(errors, "parallel edges are not allowed in PAG")
+    errors = _basic_structural_errors(cg, "PAG", Returns(true); check_cycles = false)
     isempty(errors) || return errors
 
     # Roundtrip pag -> mag -> pag for validation
@@ -201,17 +184,11 @@ function _as_ag(cg::CausalGraph)
 end
 
 function validation_errors(::AGConstraints, cg::CausalGraph)
-    errors = String[]
-
-    all(e -> is_directed(e) || is_undirected(e) || is_bidirected(e), cg.edges) ||
-        push!(errors, "invalid edge type for graph class AG")
-
-    all(e -> e.src != e.dst, cg.edges) || push!(errors, "self-loops are not allowed in AG")
-
-    parallel_edges_detected(cg) && push!(errors, "parallel edges are not allowed in AG")
-
-    directed_cycle_detected(cg) && push!(errors, "directed cycles are not allowed in AG")
-
+    errors = _basic_structural_errors(
+        cg,
+        "AG",
+        e -> is_directed(e) || is_undirected(e) || is_bidirected(e),
+    )
     isempty(errors) || return errors
 
     B = _as_ag(cg).backend
