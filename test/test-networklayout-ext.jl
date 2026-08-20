@@ -1,4 +1,5 @@
-@testitem "NetworkLayoutExt: every method returns one 2D position per node" tags = [:unit] begin
+@testitem "NetworkLayoutExt: every method returns one 2D position per node" tags =
+    [:unit, :layout] begin
     using NetworkLayout
 
     dag = cgraph(directed(:A, :B), directed(:B, :C), directed(:A, :C); class = DAG)
@@ -10,14 +11,14 @@
     end
 end
 
-@testitem "NetworkLayoutExt: :spring is reproducible with a seed" tags = [:unit] begin
+@testitem "NetworkLayoutExt: :spring is reproducible with a seed" tags = [:unit, :layout] begin
     using NetworkLayout
 
     dag = cgraph(directed(:A, :B), directed(:B, :C), directed(:C, :D); class = DAG)
     @test layout(dag, :spring; seed = 42) == layout(dag, :spring; seed = 42)
 end
 
-@testitem "NetworkLayoutExt: handles a graph with no edges" tags = [:unit] begin
+@testitem "NetworkLayoutExt: handles a graph with no edges" tags = [:unit, :layout] begin
     using NetworkLayout
 
     dag = cgraph(node(:A), node(:B), node(:C); class = DAG)
@@ -25,7 +26,8 @@ end
     @test issetequal(keys(pos), [:A, :B, :C])
 end
 
-@testitem "NetworkLayoutExt: layout output feeds straight back into plot" tags = [:unit] begin
+@testitem "NetworkLayoutExt: layout output feeds straight back into plot" tags =
+    [:unit, :layout] begin
     using Makie
     using NetworkLayout
 
@@ -37,7 +39,7 @@ end
 end
 
 @testitem "NetworkLayoutExt: default layout method becomes :stress once loaded" tags =
-    [:unit] begin
+    [:unit, :layout] begin
     using NetworkLayout
 
     @test CausalStructures._default_layout_method() == :stress

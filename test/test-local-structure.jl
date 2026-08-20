@@ -3,7 +3,7 @@
 # ingredients of PAGcauses (Wang, Tao, Qin & Zhou 2025).
 
 @testitem "maximal_local_mag matches Fig. 1 of Wang, Qin & Zhou (2023) end to end" tags =
-    [:unit] begin
+    [:unit, :local_structure] begin
     # Fig. 1(a); not a valid PAG
     fig1a = cgraph(
         "V1 o-o V2 + V5, V2 o-o V3 + V5, V5 o-o V3, V5 o-> V4, V1 o-> V4, V3 o-> V4";
@@ -30,7 +30,7 @@
 end
 
 @testitem "possible_local_structures rejects sets that aren't pairwise adjacent" tags =
-    [:unit] begin
+    [:unit, :local_structure] begin
     # X has circles to A, B, Y; Y isn't adjacent to A or B, so any C
     # containing Y with A or B fails Prop. 2's completeness condition.
     mag = cgraph(
@@ -49,7 +49,7 @@ end
 end
 
 @testitem "maximal_local_mag: empty local structure directs all circles away from x" tags =
-    [:unit] begin
+    [:unit, :local_structure] begin
     mag = cgraph(
         bidirected(:A, :X),
         directed(:B, :X),
@@ -64,7 +64,8 @@ end
     @test edges_set == Set((e.src, e.dst, e.src_end, e.dst_end) for e in expected.edges)
 end
 
-@testitem "maximal_local_mag: c = {A} orients X's arrow at the A end only" tags = [:unit] begin
+@testitem "maximal_local_mag: c = {A} orients X's arrow at the A end only" tags =
+    [:unit, :local_structure] begin
     mag = cgraph(
         bidirected(:A, :X),
         directed(:B, :X),
@@ -79,7 +80,7 @@ end
     @test edges_set == Set((e.src, e.dst, e.src_end, e.dst_end) for e in expected.edges)
 end
 
-@testitem "_pa_mask returns parents, not children" tags = [:unit] begin
+@testitem "_pa_mask returns parents, not children" tags = [:unit, :local_structure] begin
     mag = cgraph(directed(:P, :T); class = MAG)
     node_vec, index, adj, mark =
         CausalStructures._pag_adj_marks(mag.backend.nodes, mag.edges)

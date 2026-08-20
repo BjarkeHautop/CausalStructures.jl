@@ -1,6 +1,6 @@
 # Exercises MakieExt (drawing, routing, fan-out, styling).
 
-@testitem "Makie.plot: draws every edge type without error" tags = [:unit] begin
+@testitem "Makie.plot: draws every edge type without error" tags = [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -17,7 +17,7 @@
     @test fig isa Makie.Figure
 end
 
-@testitem "Makie.plot: routes an edge around an obstacle node" tags = [:unit] begin
+@testitem "Makie.plot: routes an edge around an obstacle node" tags = [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -27,7 +27,7 @@ end
     @test fig isa Makie.Figure
 end
 
-@testitem "Makie.plot: fans out multiple edges between the same pair" tags = [:unit] begin
+@testitem "Makie.plot: fans out multiple edges between the same pair" tags = [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -36,7 +36,7 @@ end
     @test fig isa Makie.Figure
 end
 
-@testitem "Makie.plot: resolves per-edge and per-node style dicts" tags = [:unit] begin
+@testitem "Makie.plot: resolves per-edge and per-node style dicts" tags = [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -61,7 +61,7 @@ end
     @test fig_fallback isa Makie.Figure
 end
 
-@testitem "Makie.plot: title options" tags = [:unit] begin
+@testitem "Makie.plot: title options" tags = [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -80,7 +80,7 @@ end
 end
 
 @testitem "Makie.plot: accepts a custom position vector, errors on length mismatch" tags =
-    [:unit] begin
+    [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -91,7 +91,7 @@ end
     @test_throws ErrorException Makie.plot(dag; layout = [(0.0, 0.0)])
 end
 
-@testitem "Makie.plot: errors on an empty graph" tags = [:unit] begin
+@testitem "Makie.plot: errors on an empty graph" tags = [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -99,7 +99,7 @@ end
     @test_throws ErrorException Makie.plot(empty_g)
 end
 
-@testitem "Makie.plot: explicit geometry keyword overrides" tags = [:unit] begin
+@testitem "Makie.plot: explicit geometry keyword overrides" tags = [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -114,7 +114,7 @@ end
     @test fig isa Makie.Figure
 end
 
-@testitem "Makie.plot: text-fit node sizing grows for longer labels" tags = [:unit] begin
+@testitem "Makie.plot: text-fit node sizing grows for longer labels" tags = [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -134,7 +134,8 @@ end
     @test fig2 isa Makie.Figure
 end
 
-@testitem "MakieExt: node sizing rounds out to equal sides for short labels" tags = [:unit] begin
+@testitem "MakieExt: node sizing rounds out to equal sides for short labels" tags =
+    [:unit, :plot] begin
     using Makie
 
     ext = Base.get_extension(CausalStructures, :MakieExt)
@@ -155,7 +156,7 @@ end
 end
 
 @testitem "MakieExt: _stretch_to_aspect stretches the narrower bbox dimension to match the target" tags =
-    [:unit] begin
+    [:unit, :plot] begin
     using Makie
 
     ext = Base.get_extension(CausalStructures, :MakieExt)
@@ -185,7 +186,7 @@ end
 end
 
 @testitem "Makie.plot: node-wide edge_color/arrow_fill Dict overrides every edge touching a node" tags =
-    [:unit] begin
+    [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -217,7 +218,7 @@ end
 end
 
 @testitem "Makie.plot: arrow_fill defaults to edge color and accepts hollow arrowheads" tags =
-    [:unit] begin
+    [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -238,7 +239,7 @@ end
 end
 
 @testitem "Makie.plot: NetworkLayout output with far-flung isolated nodes doesn't blow up figure size" tags =
-    [:unit] begin
+    [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -260,7 +261,7 @@ end
     @test (w, h) == (600, 450)
 end
 
-@testitem "Makie.plot: outer_margin and title_gap keywords" tags = [:unit] begin
+@testitem "Makie.plot: outer_margin and title_gap keywords" tags = [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -272,7 +273,7 @@ end
     @test fig_title isa Makie.Figure
 end
 
-@testitem "Makie.plot: node shapes render, and unknown shapes error" tags = [:unit] begin
+@testitem "Makie.plot: node shapes render, and unknown shapes error" tags = [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -292,7 +293,7 @@ end
     @test_throws ErrorException Makie.plot(dag; layout = :stress, node_shape = :hexagon)
 end
 
-@testitem "MakieExt: node boundary geometry per shape" tags = [:unit] begin
+@testitem "MakieExt: node boundary geometry per shape" tags = [:unit, :plot] begin
     using Makie
     using Makie: Point2f
 
@@ -333,7 +334,7 @@ end
     @test ext._boundary_distance(ext._inflate(rect, 0.5f0), up) ≈ 1.5f0
 end
 
-@testitem "Makie.plot: custom and multi-line labels" tags = [:unit] begin
+@testitem "Makie.plot: custom and multi-line labels" tags = [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -359,7 +360,7 @@ end
     @test fig_default isa Makie.Figure
 end
 
-@testitem "Makie.plot: node_linestyle draws a dashed border" tags = [:unit] begin
+@testitem "Makie.plot: node_linestyle draws a dashed border" tags = [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -374,7 +375,7 @@ end
     @test fig isa Makie.Figure
 end
 
-@testitem "Makie.plot: layout accepts positions keyed by node name" tags = [:unit] begin
+@testitem "Makie.plot: layout accepts positions keyed by node name" tags = [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -386,7 +387,7 @@ end
     @test_throws ErrorException Makie.plot(dag; layout = Dict(:A => (0.0, 0.0)))
 end
 
-@testitem "Makie.plot: edges clip to non-circular node outlines" tags = [:unit] begin
+@testitem "Makie.plot: edges clip to non-circular node outlines" tags = [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -399,7 +400,8 @@ end
     @test Makie.plot(admg; layout = :stress, node_shape = :square) isa Makie.Figure
 end
 
-@testitem "MakieExt: curvature bows an edge, signed relative to src --> dst" tags = [:unit] begin
+@testitem "MakieExt: curvature bows an edge, signed relative to src --> dst" tags =
+    [:unit, :plot] begin
     using Makie
 
     ext = Base.get_extension(CausalStructures, :MakieExt)
@@ -423,7 +425,7 @@ end
     @test gentle[length(gentle)÷2][2] < mid_left
 end
 
-@testitem "Makie.plot: curvature accepts a scalar and a Dict" tags = [:unit] begin
+@testitem "Makie.plot: curvature accepts a scalar and a Dict" tags = [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -440,7 +442,7 @@ end
 end
 
 @testitem "Makie.plot: explicit curvature is not overridden by routing or fanning" tags =
-    [:unit] begin
+    [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -464,7 +466,7 @@ end
     @test bowed[length(bowed)÷2][2] > 0
 end
 
-@testitem "MakieExt: a CausalEdge key names one exact edge" tags = [:unit] begin
+@testitem "MakieExt: a CausalEdge key names one exact edge" tags = [:unit, :plot] begin
     using Makie
 
     ext = Base.get_extension(CausalStructures, :MakieExt)
@@ -491,7 +493,7 @@ end
     @test ext._resolve_edge(val, e_bi, :fallback) == :crimson
 end
 
-@testitem "MakieExt: a tuple edge key names an unordered node pair" tags = [:unit] begin
+@testitem "MakieExt: a tuple edge key names an unordered node pair" tags = [:unit, :plot] begin
     using Makie
 
     ext = Base.get_extension(CausalStructures, :MakieExt)

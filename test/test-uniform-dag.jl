@@ -1,11 +1,11 @@
 # ── uniform_dag ─────────────────────────────────────────────────────────────
 
-@testitem "uniform_dag: errors on invalid n" tags = [:unit] begin
+@testitem "uniform_dag: errors on invalid n" tags = [:unit, :uniform_dag] begin
     @test_throws ErrorException uniform_dag(0)
     @test_throws ErrorException uniform_dag(-3)
 end
 
-@testitem "uniform_dag: n=1 yields a single node and no edges" tags = [:unit] begin
+@testitem "uniform_dag: n=1 yields a single node and no edges" tags = [:unit, :uniform_dag] begin
     using Random
     dag = uniform_dag(Random.Xoshiro(1), 1)
     @test dag isa DAG
@@ -13,7 +13,7 @@ end
     @test isempty(dag.edges)
 end
 
-@testitem "uniform_dag: returns a valid DAG with correct nodes" tags = [:unit] begin
+@testitem "uniform_dag: returns a valid DAG with correct nodes" tags = [:unit, :uniform_dag] begin
     using Random
     n = 8
     dag = uniform_dag(Random.Xoshiro(7), n)
@@ -23,26 +23,28 @@ end
     @test Set(nodes(dag)) == Set([Symbol("V$i") for i = 1:n])
 end
 
-@testitem "uniform_dag: reproducible with same seed" tags = [:unit] begin
+@testitem "uniform_dag: reproducible with same seed" tags = [:unit, :uniform_dag] begin
     using Random
     g1 = uniform_dag(Random.Xoshiro(42), 9)
     g2 = uniform_dag(Random.Xoshiro(42), 9)
     @test Set((e.src, e.dst) for e in g1.edges) == Set((e.src, e.dst) for e in g2.edges)
 end
 
-@testitem "uniform_dag: DAG counts match A003024 (labelled DAGs by n)" tags = [:unit] begin
+@testitem "uniform_dag: DAG counts match A003024 (labelled DAGs by n)" tags =
+    [:unit, :uniform_dag] begin
     a = CausalStructures._uniform_dag_counts(8)
     a_n = [sum(a[m]) for m = 1:8]
     @test a_n == BigInt[1, 3, 25, 543, 29281, 3781503, 1138779265, 783702329343]
 end
 
 @testitem "uniform_dag: outpoint counts for n=5 match Kuipers & Moffa Table 1" tags =
-    [:unit] begin
+    [:unit, :uniform_dag] begin
     a = CausalStructures._uniform_dag_counts(5)
     @test a[5] == BigInt[16885, 10710, 1610, 75, 1]
 end
 
-@testitem "uniform_dag: reproduces the Kuipers & Moffa worked example" tags = [:unit] begin
+@testitem "uniform_dag: reproduces the Kuipers & Moffa worked example" tags =
+    [:unit, :uniform_dag] begin
     # Section 4.3: for n=5, drawing r=28405 yields the outpoint sequence
     # k_1=3, k_2=1, k_3=1.
     a = CausalStructures._uniform_dag_counts(5)
@@ -50,7 +52,7 @@ end
     @test ks == [3, 1, 1]
 end
 
-@testitem "uniform_dag: outpoint sequences always sum to n" tags = [:unit] begin
+@testitem "uniform_dag: outpoint sequences always sum to n" tags = [:unit, :uniform_dag] begin
     n = 12
     a = CausalStructures._uniform_dag_counts(n)
     a_n = sum(a[n])
@@ -62,7 +64,7 @@ end
 end
 
 @testitem "uniform_dag: exhaustive uniformity check against brute force (n=3)" tags =
-    [:unit] begin
+    [:unit, :uniform_dag] begin
     using Random
 
     # Brute-force every labelled DAG on 3 nodes: 3 states (none, i->j, j->i)

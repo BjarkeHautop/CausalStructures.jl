@@ -1,4 +1,4 @@
-@testitem "prob sorts and de-duplicates variables" tags = [:unit] begin
+@testitem "prob sorts and de-duplicates variables" tags = [:unit, :estimand] begin
     @test prob([:Y, :W]) == prob([:W, :Y])
     @test prob([:Y, :Y, :W]) == prob([:W, :Y])
     @test prob(:Y; given = [:X, :Z]) == prob(:Y; given = [:Z, :X])
@@ -7,17 +7,17 @@
     @test prob(:Y) == prob([:Y])
 end
 
-@testitem "prob drops conditioned variables from the head" tags = [:unit] begin
+@testitem "prob drops conditioned variables from the head" tags = [:unit, :estimand] begin
     # P(X, Y | X) == P(Y | X)
     @test prob([:X, :Y]; given = [:X]) == prob(:Y; given = [:X])
 end
 
-@testitem "prob prints with and without a conditioning set" tags = [:unit] begin
+@testitem "prob prints with and without a conditioning set" tags = [:unit, :estimand] begin
     @test string(prob([:Y, :W]; given = [:X])) == "P(W, Y | X)"
     @test string(prob(:Y)) == "P(Y)"
 end
 
-@testitem "prob with an empty head is one" tags = [:unit] begin
+@testitem "prob with an empty head is one" tags = [:unit, :estimand] begin
     @test isone(prob(Symbol[]))
     @test isone(prob(Symbol[]; given = [:X]))
 
@@ -25,12 +25,12 @@ end
     @test isone(prob([:X, :Y]; given = [:X, :Y]))
 end
 
-@testitem "marginal with an empty index is the identity" tags = [:unit] begin
+@testitem "marginal with an empty index is the identity" tags = [:unit, :estimand] begin
     p = prob(:Y; given = [:X])
     @test marginal(Symbol[], p) == p
 end
 
-@testitem "marginal flattens nested sums" tags = [:unit] begin
+@testitem "marginal flattens nested sums" tags = [:unit, :estimand] begin
     inner = marginal([:W], prob(:Y; given = [:W, :X]))
     outer = marginal([:Z], inner)
 
@@ -39,12 +39,12 @@ end
     @test outer.term isa Prob
 end
 
-@testitem "marginal prints its index set" tags = [:unit] begin
+@testitem "marginal prints its index set" tags = [:unit, :estimand] begin
     e = marginal([:W], prob(:Y; given = [:W, :X]))
     @test string(e) == "Σ_{W} P(Y | W, X)"
 end
 
-@testitem "product flattens, drops ones, and collapses singletons" tags = [:unit] begin
+@testitem "product flattens, drops ones, and collapses singletons" tags = [:unit, :estimand] begin
     a = prob(:W; given = [:X])
     b = prob(:Y; given = [:W, :X])
 
@@ -58,7 +58,7 @@ end
     @test length(nested.terms) == 3
 end
 
-@testitem "empty product is the multiplicative identity" tags = [:unit] begin
+@testitem "empty product is the multiplicative identity" tags = [:unit, :estimand] begin
     e = product(Estimand[])
 
     @test isone(e)
@@ -66,17 +66,17 @@ end
     @test string(e) == "1"
 end
 
-@testitem "product preserves factor order when printing" tags = [:unit] begin
+@testitem "product preserves factor order when printing" tags = [:unit, :estimand] begin
     e = product([prob(:W; given = [:X]), prob(:Y; given = [:W, :X])])
     @test string(e) == "P(W | X) P(Y | W, X)"
 end
 
-@testitem "quotient with a unit denominator collapses" tags = [:unit] begin
+@testitem "quotient with a unit denominator collapses" tags = [:unit, :estimand] begin
     n = prob(:Y; given = [:X])
     @test quotient(n, one(Estimand)) == n
 end
 
-@testitem "quotient prints as a ratio" tags = [:unit] begin
+@testitem "quotient prints as a ratio" tags = [:unit, :estimand] begin
     # The conditioning sets differ, so this ratio is not a conditional and is
     # kept as one.
     e = quotient(prob([:Y, :Z]; given = [:X]), prob(:Z))
@@ -85,7 +85,8 @@ end
     @test string(e) == "P(Y, Z | X) / P(Z)"
 end
 
-@testitem "quotient collapses a ratio of probabilities to a conditional" tags = [:unit] begin
+@testitem "quotient collapses a ratio of probabilities to a conditional" tags =
+    [:unit, :estimand] begin
     # P(Y, Z | X) / P(Z | X) == P(Y | X, Z)
     @test quotient(prob([:Y, :Z]; given = [:X]), prob(:Z; given = [:X])) ==
           prob(:Y; given = [:X, :Z])
@@ -100,7 +101,7 @@ end
     @test quotient(prob(:Y; given = [:X]), prob(:Z; given = [:X])) isa Quotient
 end
 
-@testitem "marginal over part of the head marginalizes the term" tags = [:unit] begin
+@testitem "marginal over part of the head marginalizes the term" tags = [:unit, :estimand] begin
     # Σ_W P(W, Y | X) == P(Y | X)
     @test marginal([:W], prob([:W, :Y]; given = [:X])) == prob(:Y; given = [:X])
 
@@ -111,7 +112,7 @@ end
     @test marginal([:Q], prob(:Y; given = [:X])) isa Marginal
 end
 
-@testitem "printing parenthesizes non-atomic subterms" tags = [:unit] begin
+@testitem "printing parenthesizes non-atomic subterms" tags = [:unit, :estimand] begin
     inner = marginal([:W], prob(:Y; given = [:W, :X]))
 
     # A sum inside a product must be bracketed: it would otherwise swallow the
@@ -131,7 +132,7 @@ end
     @test string(marginal([:W], prod_term)) == "Σ_{W} P(W | X) P(Y | W, X)"
 end
 
-@testitem "marginal pulls constant factors out of the sum" tags = [:unit] begin
+@testitem "marginal pulls constant factors out of the sum" tags = [:unit, :estimand] begin
     # P(Y | X) does not mention W, so it is a constant of the sum, and what is
     # left of the sum stays where that factor's neighbour stood.
     e = marginal([:W], product([prob(:Y; given = [:X]), prob(:V; given = [:X, :W])]))
@@ -139,7 +140,7 @@ end
     @test string(e) == "P(Y | X) (Σ_{W} P(V | W, X))"
 end
 
-@testitem "marginal drops a factor that sums to one" tags = [:unit] begin
+@testitem "marginal drops a factor that sums to one" tags = [:unit, :estimand] begin
     # Σ_W P(W | X, Z) == 1, leaving P(Z | X) behind.
     e = marginal([:W], product([prob(:Z; given = [:X]), prob(:W; given = [:X, :Z])]))
     @test e == prob(:Z; given = [:X])
@@ -151,7 +152,8 @@ end
     @test isone(whole)
 end
 
-@testitem "marginal keeps a factor another factor still depends on" tags = [:unit] begin
+@testitem "marginal keeps a factor another factor still depends on" tags =
+    [:unit, :estimand] begin
     # Σ_W P(W | X) P(Y | W, X) is not P(Y | X) times anything: the second factor
     # depends on W, so neither factor may leave and neither sums away.
     e = marginal([:W], product([prob(:W; given = [:X]), prob(:Y; given = [:W, :X])]))
@@ -160,7 +162,7 @@ end
     @test string(e) == "Σ_{W} P(W | X) P(Y | W, X)"
 end
 
-@testitem "marginal pulls a constant denominator out of the sum" tags = [:unit] begin
+@testitem "marginal pulls a constant denominator out of the sum" tags = [:unit, :estimand] begin
     # Σ_W (P(Y, W | X) / P(Z)) == (Σ_W P(Y, W | X)) / P(Z), and the numerator
     # then marginalizes directly.
     e = marginal([:W], quotient(prob([:Y, :W]; given = [:X]), prob(:Z)))
@@ -171,7 +173,7 @@ end
     @test kept isa Marginal
 end
 
-@testitem "quotient cancels a factor shared by both sides" tags = [:unit] begin
+@testitem "quotient cancels a factor shared by both sides" tags = [:unit, :estimand] begin
     # P(Z | X) P(Y | X, Z) / P(Z | X) == P(Y | X, Z)
     num = product([prob(:Z; given = [:X]), prob(:Y; given = [:X, :Z])])
     @test quotient(num, prob(:Z; given = [:X])) == prob(:Y; given = [:X, :Z])
@@ -183,7 +185,7 @@ end
     @test quotient(num, prob(:Z; given = [:W])) isa Quotient
 end
 
-@testitem "estimands hash consistently with equality" tags = [:unit] begin
+@testitem "estimands hash consistently with equality" tags = [:unit, :estimand] begin
     a = marginal([:W], product([prob(:W; given = [:X]), prob(:Y; given = [:W, :X])]))
     b = marginal([:W], product([prob(:W; given = [:X]), prob(:Y; given = [:W, :X])]))
 
@@ -192,13 +194,13 @@ end
     @test length(Set([a, b])) == 1
 end
 
-@testitem "estimands of different shapes are not equal" tags = [:unit] begin
+@testitem "estimands of different shapes are not equal" tags = [:unit, :estimand] begin
     @test prob(:Y) != marginal([:W], prob(:Y))
     @test prob(:Y) != quotient(prob(:Y), prob(:X))
     @test prob(:Y; given = [:X]) != prob(:X; given = [:Y])
 end
 
-@testitem "_freshen renames a sum that shadows a free variable" tags = [:unit] begin
+@testitem "_freshen renames a sum that shadows a free variable" tags = [:unit, :estimand] begin
     # A is free in the first factor, so the sum in the second must not bind it.
     e = product([prob(:B; given = [:A]), marginal([:A], prob(:C; given = [:A]))])
 
@@ -206,7 +208,7 @@ end
 end
 
 @testitem "_freshen seeds the walk with free variables, not just reserved ones" tags =
-    [:unit] begin
+    [:unit, :estimand] begin
     # Guards against the entry point being bypassed: passing a `reserved` set
     # must not lose the expression's own free variables.
     e = product([prob(:B; given = [:A]), marginal([:A], prob(:C; given = [:A]))])
@@ -214,7 +216,7 @@ end
     @test string(CausalStructures._freshen(e, Set([:B]))) == "P(B | A) (Σ_{A'} P(C | A'))"
 end
 
-@testitem "_freshen lets disjoint scopes reuse a name" tags = [:unit] begin
+@testitem "_freshen lets disjoint scopes reuse a name" tags = [:unit, :estimand] begin
     # Two sibling sums are separate scopes, so both may bind A' -- renaming one
     # does not touch the other, and no ambiguity arises.
     e = product([
@@ -227,12 +229,12 @@ end
           "P(B | A) (Σ_{A'} P(C | A')) (Σ_{A'} P(D | A'))"
 end
 
-@testitem "_freshen leaves a non-shadowing sum alone" tags = [:unit] begin
+@testitem "_freshen leaves a non-shadowing sum alone" tags = [:unit, :estimand] begin
     e = marginal([:W], product([prob(:W; given = [:X]), prob(:Y; given = [:W, :X])]))
     @test CausalStructures._freshen(e) == e
 end
 
-@testitem "latex rendering" tags = [:unit] begin
+@testitem "latex rendering" tags = [:unit, :estimand] begin
     e = marginal([:W], product([prob(:W; given = [:X]), prob(:Y; given = [:W, :X])]))
     latex = sprint(show, MIME("text/latex"), e)
 

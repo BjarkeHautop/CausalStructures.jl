@@ -16,7 +16,7 @@ end
 # ── is_valid_adjustment ────────────────────────────────────────────────────
 
 @testitem "is_valid_adjustment PAG: visible confounder blocks backdoor" setup =
-    [PagAdjustmentHelpers] tags = [:unit] begin
+    [PagAdjustmentHelpers] tags = [:unit, :pag_adjustment] begin
     # B --> X (witness, unconnected to Y) makes A o-> X visible; A <-> X, A --> Y,
     # X --> Y: A confounds X and causes Y, so conditioning on A blocks the backdoor.
     mag = cgraph(
@@ -34,7 +34,7 @@ end
 end
 
 @testitem "is_valid_adjustment PAG: invisible edge is not amenable" setup =
-    [PagAdjustmentHelpers] tags = [:unit] begin
+    [PagAdjustmentHelpers] tags = [:unit, :pag_adjustment] begin
     # A --> X --> Y, A --> Y (DAG-as-MAG): A is X's only parent and is itself
     # adjacent to Y, so X --> Y is invisible (Perković et al. 2018, Example 3).
     # mag_to_pag reveals the full equivalence class is even less resolved
@@ -47,7 +47,7 @@ end
 end
 
 @testitem "is_valid_adjustment PAG: descendant of X is forbidden" setup =
-    [PagAdjustmentHelpers] tags = [:unit] begin
+    [PagAdjustmentHelpers] tags = [:unit, :pag_adjustment] begin
     # A <-> X (confounder, visible via witness B), X --> M --> Y, A --> Y:
     # M is a possible descendant of X on the causal path, hence forbidden.
     mag = cgraph(
@@ -66,7 +66,7 @@ end
 end
 
 @testitem "is_valid_adjustment PAG: all-circle triangle has no valid set" setup =
-    [PagAdjustmentHelpers] tags = [:unit] begin
+    [PagAdjustmentHelpers] tags = [:unit, :pag_adjustment] begin
     # Fully unresolved 3-node PAG (every edge o-o): amenability can't be
     # established for any causal path out of X, so nothing satisfies the GAC.
     mag = cgraph(bidirected(:A, :X), bidirected(:A, :Y), directed(:X, :Y); class = MAG)
@@ -79,7 +79,7 @@ end
 # ── all_adjustment_sets ────────────────────────────────────────────────────
 
 @testitem "all_adjustment_sets PAG: finds {A} for visible confounder" setup =
-    [PagAdjustmentHelpers] tags = [:unit] begin
+    [PagAdjustmentHelpers] tags = [:unit, :pag_adjustment] begin
     mag = cgraph(
         directed(:B, :X),
         bidirected(:A, :X),
@@ -93,14 +93,14 @@ end
 end
 
 @testitem "all_adjustment_sets PAG: non-amenable graph returns no sets" setup =
-    [PagAdjustmentHelpers] tags = [:unit] begin
+    [PagAdjustmentHelpers] tags = [:unit, :pag_adjustment] begin
     mag = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = MAG)
     pag = mag_to_pag(mag)
     @test isempty(all_adjustment_sets(pag, :X, :Y))
 end
 
 @testitem "all_adjustment_sets PAG: consistent with is_valid_adjustment" setup =
-    [PagAdjustmentHelpers] tags = [:unit] begin
+    [PagAdjustmentHelpers] tags = [:unit, :pag_adjustment] begin
     mag = cgraph(
         directed(:B, :X),
         bidirected(:A, :X),
@@ -120,7 +120,7 @@ end
 # ── adjustment_set ─────────────────────────────────────────────────────────
 
 @testitem "adjustment_set PAG: returns valid set, prefers smaller" setup =
-    [PagAdjustmentHelpers] tags = [:unit] begin
+    [PagAdjustmentHelpers] tags = [:unit, :pag_adjustment] begin
     mag = cgraph(
         directed(:B, :X),
         bidirected(:A, :X),
@@ -135,7 +135,7 @@ end
 end
 
 @testitem "adjustment_set PAG: no valid set for non-amenable graph" setup =
-    [PagAdjustmentHelpers] tags = [:unit] begin
+    [PagAdjustmentHelpers] tags = [:unit, :pag_adjustment] begin
     mag = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = MAG)
     pag = mag_to_pag(mag)
     @test adjustment_set(pag, :X, :Y) == Symbol[]
@@ -143,7 +143,7 @@ end
 end
 
 @testitem "is_valid_adjustment/all_adjustment_sets/adjustment_set PAG: accepts Vector{Symbol} for x and y" tags =
-    [:unit] begin
+    [:unit, :pag_adjustment] begin
     mag = cgraph(
         directed(:B1, :X1),
         bidirected(:A1, :X1),

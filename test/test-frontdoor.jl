@@ -69,7 +69,8 @@
     end
 end
 
-@testitem "is_valid_frontdoor: M satisfies criterion on classic graph" tags = [:unit] begin
+@testitem "is_valid_frontdoor: M satisfies criterion on classic graph" tags =
+    [:unit, :frontdoor] begin
     cg = cgraph(
         directed(:U, :X),
         directed(:X, :M),
@@ -80,7 +81,8 @@ end
     @test is_valid_frontdoor(cg, :X, :Y, [:M])
 end
 
-@testitem "is_valid_frontdoor: empty Z fails when directed path exists" tags = [:unit] begin
+@testitem "is_valid_frontdoor: empty Z fails when directed path exists" tags =
+    [:unit, :frontdoor] begin
     cg = cgraph(
         directed(:U, :X),
         directed(:X, :M),
@@ -92,7 +94,7 @@ end
 end
 
 @testitem "is_valid_frontdoor: U fails condition (i) - does not intercept X -> M -> Y" tags =
-    [:unit] begin
+    [:unit, :frontdoor] begin
     cg = cgraph(
         directed(:U, :X),
         directed(:X, :M),
@@ -104,7 +106,7 @@ end
 end
 
 @testitem "is_valid_frontdoor: condition (ii) fails when backdoor path from X to Z exists" tags =
-    [:unit] begin
+    [:unit, :frontdoor] begin
     # A -> X, A -> M, X -> M, M -> Y
     # Backdoor path from X to M: X <- A -> M is open.
     cg = cgraph(
@@ -118,7 +120,7 @@ end
 end
 
 @testitem "is_valid_frontdoor: condition (iii) fails when X does not block backdoor from Z to Y" tags =
-    [:unit] begin
+    [:unit, :frontdoor] begin
     # X --> M, M --> Y, B --> M, B --> Y
     # Backdoor path from M to Y: M <-- B --> Y is not blocked by X.
     cg = cgraph(
@@ -131,7 +133,8 @@ end
     @test !is_valid_frontdoor(cg, :X, :Y, [:M])
 end
 
-@testitem "is_valid_frontdoor: X --> Y direct edge violates condition (i)" tags = [:unit] begin
+@testitem "is_valid_frontdoor: X --> Y direct edge violates condition (i)" tags =
+    [:unit, :frontdoor] begin
     # If there is a direct edge X --> Y alongside X --> M --> Y, then M alone does
     # not intercept the direct path.
     cg = cgraph(
@@ -147,7 +150,8 @@ end
     @test !is_valid_frontdoor(cg, :X, :Y, [:U])
 end
 
-@testitem "is_valid_frontdoor: chain mediators - each singleton is valid" tags = [:unit] begin
+@testitem "is_valid_frontdoor: chain mediators - each singleton is valid" tags =
+    [:unit, :frontdoor] begin
     # U --> X --> M1 --> M2 --> Y, U --> Y
     # Both {M1} and {M2} individually intercept all directed paths.
     cg = cgraph(
@@ -163,7 +167,7 @@ end
     @test is_valid_frontdoor(cg, :X, :Y, [:M1, :M2])
 end
 
-@testitem "is_valid_frontdoor: no causal path - empty Z valid" tags = [:unit] begin
+@testitem "is_valid_frontdoor: no causal path - empty Z valid" tags = [:unit, :frontdoor] begin
     # X --> A, B --> Y: no directed path from X to Y at all.
     # Empty Z vacuously intercepts all (zero) directed paths.
     cg = cgraph(directed(:X, :A), directed(:B, :Y); class = DAG)
@@ -173,7 +177,7 @@ end
 # ── is_valid_frontdoor on G' (Fig. 1b) ───────────────────────────────────────
 
 @testitem "is_valid_frontdoor: Jeong Fig 1b - four valid sets" setup=[JeongGraphs] tags =
-    [:unit] begin
+    [:unit, :frontdoor] begin
     cg = _jeong2022_fig1b()
     @test is_valid_frontdoor(cg, :X, :Y, [:A])
     @test is_valid_frontdoor(cg, :X, :Y, [:A, :B])
@@ -182,7 +186,7 @@ end
 end
 
 @testitem "is_valid_frontdoor: Jeong Fig 1b - invalid sets" setup=[JeongGraphs] tags =
-    [:unit] begin
+    [:unit, :frontdoor] begin
     cg = _jeong2022_fig1b()
     @test !is_valid_frontdoor(cg, :X, :Y, [:B])       # condition (i): A -> C -> Y bypasses B
     @test !is_valid_frontdoor(cg, :X, :Y, [:C])       # condition (i): A -> B -> Y bypasses C
@@ -197,7 +201,7 @@ end
 
 @testitem "GETCAND2NDFDC: Jeong (2022) Example 2 - D excluded, A B C retained" setup=[
     JeongGraphs,
-] tags = [:unit] begin
+] tags = [:unit, :frontdoor] begin
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
@@ -218,7 +222,7 @@ end
 
 @testitem "GETCAND2NDFDC: Jeong (2022) Example 2 - infeasible when D ∈ I" setup=[
     JeongGraphs,
-] tags = [:unit] begin
+] tags = [:unit, :frontdoor] begin
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
@@ -241,7 +245,7 @@ end
 # because GETDEP succeeds for every v in R'.
 
 @testitem "GETCAND3RDFDC: Jeong (2022) Example 3 - all of R' retained" setup=[JeongGraphs] tags =
-    [:unit] begin
+    [:unit, :frontdoor] begin
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
@@ -267,7 +271,7 @@ end
 
 @testitem "GETCAND3RDFDC: Jeong (2022) Example 3 - infeasible when v in I fails GETDEP" setup=[
     JeongGraphs,
-] tags = [:unit] begin
+] tags = [:unit, :frontdoor] begin
     # R' = {B, C}: GETDEP returns nothing for v=B (Example 5), so if B is required
     # via I, GETCAND3RDFDC must return nothing.
     cg = _jeong2022_fig1b()
@@ -299,7 +303,8 @@ end
 #   v = B => T = {B}, GETDEP returns Z' = {A}   (Example 4 in the paper)
 #   v = C => T = {C}, GETDEP returns Z' = {A}
 
-@testitem "GETDEP: Jeong (2022) Example 4 - T={A}" setup=[JeongGraphs] tags = [:unit] begin
+@testitem "GETDEP: Jeong (2022) Example 4 - T={A}" setup=[JeongGraphs] tags =
+    [:unit, :frontdoor] begin
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
@@ -325,7 +330,8 @@ end
     @test Set(B.nodes[v] for v = 1:n if z_prime[v]) == Set{Symbol}()
 end
 
-@testitem "GETDEP: Jeong (2022) Example 4 - T={B}" setup=[JeongGraphs] tags = [:unit] begin
+@testitem "GETDEP: Jeong (2022) Example 4 - T={B}" setup=[JeongGraphs] tags =
+    [:unit, :frontdoor] begin
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
@@ -351,7 +357,8 @@ end
     @test Set(B.nodes[v] for v = 1:n if z_prime[v]) == Set([:A])
 end
 
-@testitem "GETDEP: Jeong (2022) Example 4 - T={C}" setup=[JeongGraphs] tags = [:unit] begin
+@testitem "GETDEP: Jeong (2022) Example 4 - T={C}" setup=[JeongGraphs] tags =
+    [:unit, :frontdoor] begin
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
@@ -394,7 +401,7 @@ end
 
 @testitem "GETDEP: Jeong (2022) Example 5 - R'={B,C}, T={B} returns nothing" setup=[
     JeongGraphs,
-] tags = [:unit] begin
+] tags = [:unit, :frontdoor] begin
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
@@ -426,7 +433,7 @@ end
 # CPG edges: X --> A --> {B, C, D} --> Y (incoming to X and outgoing from Y removed).
 
 @testitem "GETCAUSALPATHGRAPH: Jeong (2022) Example 7 - node set" setup=[JeongGraphs] tags =
-    [:unit] begin
+    [:unit, :frontdoor] begin
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
@@ -442,7 +449,7 @@ end
 end
 
 @testitem "GETCAUSALPATHGRAPH: Jeong (2022) Example 7 - edges" setup=[JeongGraphs] tags =
-    [:unit] begin
+    [:unit, :frontdoor] begin
     cg = _jeong2022_fig1b()
     B = cg.backend
     n = length(B.nodes)
@@ -467,7 +474,7 @@ end
 
 @testitem "FindFDSet: Jeong (2022) Example 1 - include={}, restrict={A,B,C,D}" setup=[
     JeongGraphs,
-] tags = [:unit] begin
+] tags = [:unit, :frontdoor] begin
     cg = _jeong2022_fig1b()
     z = frontdoor_set(cg, :X, :Y; restrict = [:A, :B, :C, :D])
     @test z !== nothing
@@ -475,7 +482,7 @@ end
 end
 
 @testitem "FindFDSet: Jeong (2022) Example 1 - I={C}, R={A,C}" setup=[JeongGraphs] tags =
-    [:unit] begin
+    [:unit, :frontdoor] begin
     cg = _jeong2022_fig1b()
     z = frontdoor_set(cg, :X, :Y; include = [:C], restrict = [:A, :C])
     @test z !== nothing
@@ -484,14 +491,14 @@ end
 
 @testitem "FindFDSet: Jeong (2022) Example 1 - I={D}, R={A,B,C,D} infeasible" setup=[
     JeongGraphs,
-] tags = [:unit] begin
+] tags = [:unit, :frontdoor] begin
     cg = _jeong2022_fig1b()
     @test frontdoor_set(cg, :X, :Y; include = [:D], restrict = [:A, :B, :C, :D]) === nothing
 end
 
 # ── ListFDSets ────────────────────────────────────────────────────────────────
 
-@testitem "ListFDSets: classic single mediator" tags = [:unit] begin
+@testitem "ListFDSets: classic single mediator" tags = [:unit, :frontdoor] begin
     cg = cgraph(
         directed(:U, :X),
         directed(:U, :Y),
@@ -503,7 +510,7 @@ end
 end
 
 @testitem "ListFDSets: Jeong (2022) Fig. 1b - all 4 valid sets" setup=[JeongGraphs] tags =
-    [:unit] begin
+    [:unit, :frontdoor] begin
     cg = _jeong2022_fig1b()
     zs = all_frontdoor_sets(cg, :X, :Y; restrict = [:A, :B, :C, :D])
     @test Set(zs) == Set([[:A], [:A, :B], [:A, :C], [:A, :B, :C]])
@@ -511,14 +518,14 @@ end
 
 @testitem "ListFDSets: Jeong (2022) Fig. 1b - required C restricts listing" setup=[
     JeongGraphs,
-] tags = [:unit] begin
+] tags = [:unit, :frontdoor] begin
     cg = _jeong2022_fig1b()
     zs = all_frontdoor_sets(cg, :X, :Y; include = [:C], restrict = [:A, :B, :C, :D])
     @test Set(zs) == Set([[:A, :C], [:A, :B, :C]])
 end
 
 @testitem "ListFDSets: Jeong (2022) Fig. 1b - required D returns empty" setup=[JeongGraphs] tags =
-    [:unit] begin
+    [:unit, :frontdoor] begin
     cg = _jeong2022_fig1b()
     @test isempty(
         all_frontdoor_sets(cg, :X, :Y; include = [:D], restrict = [:A, :B, :C, :D]),
@@ -530,7 +537,7 @@ end
 # {Ai,Bi}, giving 3^n valid FD sets for n parallel paths (Example 9 in the paper).
 
 @testitem "ListFDSets: Jeong (2022) Fig. 6a - 9 valid sets (3^2)" setup=[JeongGraphs] tags =
-    [:unit] begin
+    [:unit, :frontdoor] begin
     cg = _jeong2022_fig6a()
     zs = all_frontdoor_sets(cg, :X, :Y; restrict = [:A1, :B1, :A2, :B2])
     @test length(zs) == 9
@@ -549,7 +556,7 @@ end
 end
 
 @testitem "ListFDSets: Jeong (2022) Fig. 6b - 27 valid sets (3^3)" setup=[JeongGraphs] tags =
-    [:unit] begin
+    [:unit, :frontdoor] begin
     cg = _jeong2022_fig6b()
     zs = all_frontdoor_sets(cg, :X, :Y; restrict = [:A1, :B1, :A2, :B2, :A3, :B3])
     @test length(zs) == 27
@@ -558,7 +565,7 @@ end
 # ── ADMG ──────────────────────────────────────────────────────────────────────
 
 @testitem "is_valid_frontdoor (ADMG): classic front-door with bidirected confounder" tags =
-    [:unit] begin
+    [:unit, :frontdoor] begin
     # X <-> Y (hidden U), X --> M --> Y: M is the front-door set
     admg = cgraph(bidirected(:X, :Y), directed(:X, :M), directed(:M, :Y); class = ADMG)
     @test is_valid_frontdoor(admg, :X, :Y, [:M])
@@ -566,7 +573,7 @@ end
 end
 
 @testitem "is_valid_frontdoor (ADMG): M confounded with X fails condition (ii)" tags =
-    [:unit] begin
+    [:unit, :frontdoor] begin
     # X <-> Y and X <-> M: M has a backdoor path from X
     admg = cgraph(
         bidirected(:X, :Y),
@@ -578,7 +585,8 @@ end
     @test !is_valid_frontdoor(admg, :X, :Y, [:M])
 end
 
-@testitem "is_valid_frontdoor (ADMG): consistent with DAG latent projection" tags = [:unit] begin
+@testitem "is_valid_frontdoor (ADMG): consistent with DAG latent projection" tags =
+    [:unit, :frontdoor] begin
     dag = cgraph(
         directed(:U, :X),
         directed(:U, :Y),
@@ -593,14 +601,14 @@ end
 end
 
 @testitem "frontdoor_set (ADMG): classic front-door with bidirected confounder" tags =
-    [:unit] begin
+    [:unit, :frontdoor] begin
     admg = cgraph(bidirected(:X, :Y), directed(:X, :M), directed(:M, :Y); class = ADMG)
     @test frontdoor_set(admg, :X, :Y; restrict = [:M]) == [:M]
 end
 
 @testitem "frontdoor_set/all_frontdoor_sets (ADMG): consistent with DAG latent projection on Fig. 1b" setup=[
     JeongGraphs,
-] tags = [:unit] begin
+] tags = [:unit, :frontdoor] begin
     dag = _jeong2022_fig1b()
     admg = latent_project(dag, [:U1, :U2])
     restrict = [:A, :B, :C, :D]
@@ -613,7 +621,7 @@ end
 
 @testitem "frontdoor_set/all_frontdoor_sets (ADMG): consistent with DAG latent projection on Fig. 6a" setup=[
     JeongGraphs,
-] tags = [:unit] begin
+] tags = [:unit, :frontdoor] begin
     dag = _jeong2022_fig6a()
     admg = latent_project(dag, [:U])
     restrict = [:A1, :B1, :A2, :B2]
@@ -623,7 +631,7 @@ end
 end
 
 @testitem "all_frontdoor_sets (ADMG): condition 3 requires marrying a directed parent with a bidirected spouse" tags =
-    [:unit] begin
+    [:unit, :frontdoor] begin
     # X --> A --> Y, B --> Y, and a latent confounds A and B (A <-> B in the
     # projection). Zi=A has a backdoor path A <-> B --> Y that condition 3
     # requires blocking by also including B.
@@ -662,14 +670,14 @@ end
 end
 
 @testitem "is_valid_frontdoor: accepts Vector{Symbol} for x and y" setup =
-    [TwoTreatmentFrontdoorGraph] tags = [:unit] begin
+    [TwoTreatmentFrontdoorGraph] tags = [:unit, :frontdoor] begin
     cg = _two_treatment_frontdoor_graph()
     @test is_valid_frontdoor(cg, [:X1, :X2], [:Y1, :Y2], [:M])
     @test !is_valid_frontdoor(cg, [:X1, :X2], [:Y1, :Y2])
 end
 
 @testitem "frontdoor_set/all_frontdoor_sets: accepts Vector{Symbol} for x and y" setup =
-    [TwoTreatmentFrontdoorGraph] tags = [:unit] begin
+    [TwoTreatmentFrontdoorGraph] tags = [:unit, :frontdoor] begin
     cg = _two_treatment_frontdoor_graph()
     @test frontdoor_set(cg, [:X1, :X2], [:Y1, :Y2]; restrict = [:M]) == [:M]
     @test all_frontdoor_sets(cg, [:X1, :X2], [:Y1, :Y2]; restrict = [:M]) == [[:M]]

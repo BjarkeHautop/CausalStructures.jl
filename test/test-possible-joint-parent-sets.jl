@@ -1,11 +1,12 @@
-@testitem "possible_joint_parent_sets rejects duplicate or empty xs" tags = [:unit] begin
+@testitem "possible_joint_parent_sets rejects duplicate or empty xs" tags =
+    [:unit, :possible_joint_parent_sets] begin
     cpdag = cgraph("X1 --- X2"; class = CPDAG)
     @test_throws ArgumentError possible_joint_parent_sets(cpdag, Symbol[])
     @test_throws ArgumentError possible_joint_parent_sets(cpdag, [:X1, :X1])
 end
 
 @testitem "possible_joint_parent_sets reduces to possible_parent_sets for a singleton" tags =
-    [:unit] begin
+    [:unit, :possible_joint_parent_sets] begin
     cpdag = cgraph("X1 --- X2, X1 --- A, X2 --- B, A --> Y, B --> Y"; class = CPDAG)
     for x in [:X1, :X2, :A, :B]
         single = Set(Set.(possible_parent_sets(cpdag, x)))
@@ -15,14 +16,15 @@ end
 end
 
 @testitem "possible_joint_parent_sets: worked example with two intervention nodes" tags =
-    [:unit] begin
+    [:unit, :possible_joint_parent_sets] begin
     cpdag = cgraph("X1 --- X2, X1 --- A, X2 --- B, A --> Y, B --> Y"; class = CPDAG)
     result = Set(Tuple(r) for r in possible_joint_parent_sets(cpdag, [:X1, :X2]))
     expected = Set([([:X2], [:B]), ([:A], [:X1]), (Symbol[], [:X1]), ([:X2], Symbol[])])
     @test result == expected
 end
 
-@testitem "possible_joint_parent_sets rejects a new v-structure away from xs" tags = [:unit] begin
+@testitem "possible_joint_parent_sets rejects a new v-structure away from xs" tags =
+    [:unit, :possible_joint_parent_sets] begin
     # A --> X1 --> X2 <-- B would create a new v-structure at X2 (X1, B not
     # adjacent), even though X2's collision is not itself the intervention node A.
     cpdag = cgraph("X1 --- X2, X1 --- A, X2 --- B, A --> Y, B --> Y"; class = CPDAG)
@@ -32,7 +34,7 @@ end
 end
 
 @testitem "possible_joint_parent_sets rejects orientations that would create a cycle" tags =
-    [:unit] begin
+    [:unit, :possible_joint_parent_sets] begin
     # complete undirected triangle: 8 mask combinations, 6 acyclic total orders survive
     tri = cgraph("X1 --- X2, X2 --- X3, X3 --- X1"; class = CPDAG)
     result = possible_joint_parent_sets(tri, [:X1, :X2, :X3])
@@ -46,7 +48,7 @@ end
 end
 
 @testitem "possible_joint_parent_sets: entries are ordered like xs and pairwise consistent" tags =
-    [:unit] begin
+    [:unit, :possible_joint_parent_sets] begin
     cpdag = cgraph("X1 --- X2, X1 --- A, X2 --- B, A --> Y, B --> Y"; class = CPDAG)
     for r in possible_joint_parent_sets(cpdag, [:X2, :X1])
         pa_x2, pa_x1 = r

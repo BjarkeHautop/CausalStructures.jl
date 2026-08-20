@@ -1,4 +1,5 @@
-@testitem "_search_subsets_threaded matches _search_subsets_sequential" tags = [:unit] begin
+@testitem "_search_subsets_threaded matches _search_subsets_sequential" tags =
+    [:unit, :enumerate_subsets] begin
     universe = collect(1:7)
     nodes = [:A, :B, :C, :D, :E, :F, :G]
 
@@ -20,7 +21,7 @@
 end
 
 @testitem "_search_subsets_threaded: checker rejecting everything yields no sets" tags =
-    [:unit] begin
+    [:unit, :enumerate_subsets] begin
     universe = collect(1:5)
     nodes = [:A, :B, :C, :D, :E]
 
@@ -33,7 +34,8 @@ end
     @test isempty(threaded)
 end
 
-@testitem "_search_subsets_threaded: min_size restricts subset sizes" tags = [:unit] begin
+@testitem "_search_subsets_threaded: min_size restricts subset sizes" tags =
+    [:unit, :enumerate_subsets] begin
     universe = collect(1:4)
     nodes = [:A, :B, :C, :D]
 

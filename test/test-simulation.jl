@@ -2,31 +2,32 @@
 
 # ── generate_graph ────────────────────────────────────────────────────────────
 
-@testitem "generate_graph: errors on invalid n" tags = [:unit] begin
+@testitem "generate_graph: errors on invalid n" tags = [:unit, :simulation] begin
     @test_throws ErrorException generate_graph(0; m = 0)
 end
 
-@testitem "generate_graph: errors on invalid p" tags = [:unit] begin
+@testitem "generate_graph: errors on invalid p" tags = [:unit, :simulation] begin
     @test_throws ErrorException generate_graph(4; p = -0.1)
     @test_throws ErrorException generate_graph(4; p = 1.1)
 end
 
-@testitem "generate_graph: errors on invalid m" tags = [:unit] begin
+@testitem "generate_graph: errors on invalid m" tags = [:unit, :simulation] begin
     n = 4
     tot = n * (n - 1) ÷ 2
     @test_throws ErrorException generate_graph(n; m = -1)
     @test_throws ErrorException generate_graph(n; m = tot + 1)
 end
 
-@testitem "generate_graph: errors when neither m nor p supplied" tags = [:unit] begin
+@testitem "generate_graph: errors when neither m nor p supplied" tags = [:unit, :simulation] begin
     @test_throws ErrorException generate_graph(5)
 end
 
-@testitem "generate_graph: errors when both m and p supplied" tags = [:unit] begin
+@testitem "generate_graph: errors when both m and p supplied" tags = [:unit, :simulation] begin
     @test_throws ErrorException generate_graph(5; m = 2, p = 0.1)
 end
 
-@testitem "generate_graph: DAG with m=0 yields 0 edges and correct nodes" tags = [:unit] begin
+@testitem "generate_graph: DAG with m=0 yields 0 edges and correct nodes" tags =
+    [:unit, :simulation] begin
     n = 5
     dag = generate_graph(n; m = 0, class = DAG)
     @test dag isa DAG
@@ -35,12 +36,12 @@ end
     @test Set(nodes(dag)) == Set([Symbol("V$i") for i = 1:n])
 end
 
-@testitem "generate_graph: DAG with p=0 yields 0 edges" tags = [:unit] begin
+@testitem "generate_graph: DAG with p=0 yields 0 edges" tags = [:unit, :simulation] begin
     dag = generate_graph(6; p = 0.0, class = DAG)
     @test isempty(dag.edges)
 end
 
-@testitem "generate_graph: m=tot yields full tournament DAG" tags = [:unit] begin
+@testitem "generate_graph: m=tot yields full tournament DAG" tags = [:unit, :simulation] begin
     using Random
     n = 6
     tot = n * (n - 1) ÷ 2
@@ -52,7 +53,7 @@ end
     )
 end
 
-@testitem "generate_graph: reproducible with same seed" tags = [:unit] begin
+@testitem "generate_graph: reproducible with same seed" tags = [:unit, :simulation] begin
     using Random
     g1 = generate_graph(Random.Xoshiro(42), 7; m = 8, class = DAG)
     g2 = generate_graph(Random.Xoshiro(42), 7; m = 8, class = DAG)
@@ -60,18 +61,18 @@ end
     @test length(g1.edges) == length(g2.edges)
 end
 
-@testitem "generate_graph: CPDAG class returns CPDAG" tags = [:unit] begin
+@testitem "generate_graph: CPDAG class returns CPDAG" tags = [:unit, :simulation] begin
     dag = generate_graph(6; m = 5, class = CPDAG)
     @test dag isa CPDAG
     @test length(nodes(dag)) == 6
 end
 
-@testitem "generate_graph: unsupported class gives TypeError" tags = [:unit] begin
+@testitem "generate_graph: unsupported class gives TypeError" tags = [:unit, :simulation] begin
     @test_throws TypeError generate_graph(4; m = 2, class = UG)
 end
 
 @testitem "generate_graph: ADMG class returns ADMG over exactly n observed nodes" tags =
-    [:unit] begin
+    [:unit, :simulation] begin
     n = 6
     admg = generate_graph(n; m = 8, class = ADMG, latents = 3)
     @test admg isa ADMG
@@ -79,7 +80,7 @@ end
 end
 
 @testitem "generate_graph: MAG class returns a valid MAG over exactly n observed nodes" tags =
-    [:unit] begin
+    [:unit, :simulation] begin
     using Random
     n = 5
     for seed = 1:20
@@ -91,7 +92,7 @@ end
 end
 
 @testitem "generate_graph: PAG class returns a valid PAG over exactly n observed nodes" tags =
-    [:unit] begin
+    [:unit, :simulation] begin
     using Random
     n = 5
     for seed = 1:20
@@ -102,7 +103,8 @@ end
     end
 end
 
-@testitem "generate_graph: PAG and MAG agree given the same seed" tags = [:unit] begin
+@testitem "generate_graph: PAG and MAG agree given the same seed" tags =
+    [:unit, :simulation] begin
     using Random
     n = 6
     mag = generate_graph(Random.Xoshiro(7), n; p = 0.6, class = MAG, latents = 3)
@@ -110,23 +112,25 @@ end
     @test Set(mag_to_pag(mag).edges) == Set(pag.edges)
 end
 
-@testitem "generate_graph: ADMG/MAG with latents=0 has no bidirected edges" tags = [:unit] begin
+@testitem "generate_graph: ADMG/MAG with latents=0 has no bidirected edges" tags =
+    [:unit, :simulation] begin
     admg = generate_graph(5; m = 4, class = ADMG)
     @test all(e -> e.src_end == CausalStructures.Tail, admg.edges)
 end
 
-@testitem "generate_graph: latents keyword rejected for DAG/CPDAG classes" tags = [:unit] begin
+@testitem "generate_graph: latents keyword rejected for DAG/CPDAG classes" tags =
+    [:unit, :simulation] begin
     @test_throws ErrorException generate_graph(4; m = 2, class = DAG, latents = 1)
     @test_throws ErrorException generate_graph(4; m = 2, class = CPDAG, latents = 1)
 end
 
-@testitem "generate_graph: latents must be non-negative" tags = [:unit] begin
+@testitem "generate_graph: latents must be non-negative" tags = [:unit, :simulation] begin
     @test_throws ErrorException generate_graph(4; m = 2, class = ADMG, latents = -1)
 end
 
 # ── simulate_data ─────────────────────────────────────────────────────────────
 
-@testitem "simulate_data: errors on non-DAG graph class" tags = [:unit] begin
+@testitem "simulate_data: errors on non-DAG graph class" tags = [:unit, :simulation] begin
     pdag = cgraph(directed(:A, :B), undirected(:B, :C); class = PDAG)
     @test_throws MethodError simulate_data(pdag; samples = 10)
 
@@ -134,18 +138,18 @@ end
     @test_throws MethodError simulate_data(ug; samples = 10)
 end
 
-@testitem "simulate_data: errors on empty graph" tags = [:unit] begin
+@testitem "simulate_data: errors on empty graph" tags = [:unit, :simulation] begin
     empty_dag = cgraph(; class = DAG)
     @test_throws ErrorException simulate_data(empty_dag; samples = 10)
 end
 
-@testitem "simulate_data: errors on invalid samples" tags = [:unit] begin
+@testitem "simulate_data: errors on invalid samples" tags = [:unit, :simulation] begin
     dag = cgraph(directed(:A, :B); class = DAG)
     @test_throws ErrorException simulate_data(dag; samples = 0)
     @test_throws ErrorException simulate_data(dag; samples = -5)
 end
 
-@testitem "simulate_data: returns dict with correct keys" tags = [:unit] begin
+@testitem "simulate_data: returns dict with correct keys" tags = [:unit, :simulation] begin
     using Random
     dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
     data = simulate_data(Random.Xoshiro(1), dag; samples = 100)
@@ -153,14 +157,14 @@ end
     @test Set(keys(data)) == Set([:A, :B, :C])
 end
 
-@testitem "simulate_data: correct number of samples" tags = [:unit] begin
+@testitem "simulate_data: correct number of samples" tags = [:unit, :simulation] begin
     using Random
     dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
     data = simulate_data(Random.Xoshiro(1), dag; samples = 100)
     @test all(v -> length(v) == 100, values(data))
 end
 
-@testitem "simulate_data: reproducible with seed" tags = [:unit] begin
+@testitem "simulate_data: reproducible with seed" tags = [:unit, :simulation] begin
     using Random
     dag = cgraph(directed(:A, :B), directed(:B, :C), directed(:A, :C); class = DAG)
     data1 = simulate_data(Random.Xoshiro(42), dag; samples = 100)
@@ -170,7 +174,8 @@ end
     @test data1[:C] == data2[:C]
 end
 
-@testitem "simulate_data: different seeds produce different data" tags = [:unit] begin
+@testitem "simulate_data: different seeds produce different data" tags =
+    [:unit, :simulation] begin
     using Random
     dag = cgraph(directed(:A, :B); class = DAG)
     data1 = simulate_data(Random.Xoshiro(1), dag; samples = 100)
@@ -178,7 +183,8 @@ end
     @test data1[:A] != data2[:A]
 end
 
-@testitem "simulate_data: standardize=true yields mean≈0 and sd≈1" tags = [:unit] begin
+@testitem "simulate_data: standardize=true yields mean≈0 and sd≈1" tags =
+    [:unit, :simulation] begin
     using Random
     using Statistics
     dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
@@ -189,7 +195,8 @@ end
     end
 end
 
-@testitem "simulate_data: standardize=false does not standardize" tags = [:unit] begin
+@testitem "simulate_data: standardize=false does not standardize" tags =
+    [:unit, :simulation] begin
     using Random
     using Statistics
     dag = cgraph(directed(:A, :B); class = DAG)
@@ -199,7 +206,8 @@ end
     @test !(means_zero && sds_one)
 end
 
-@testitem "simulate_data: endogenous nodes correlate with parents" tags = [:unit] begin
+@testitem "simulate_data: endogenous nodes correlate with parents" tags =
+    [:unit, :simulation] begin
     using Random
     using Statistics
     dag = cgraph(directed(:A, :B); class = DAG)
@@ -208,7 +216,7 @@ end
     @test abs(r) > 0.05
 end
 
-@testitem "simulate_data: single node graph works" tags = [:unit] begin
+@testitem "simulate_data: single node graph works" tags = [:unit, :simulation] begin
     using Random
     dag = cgraph(node(:A); class = DAG)
     data = simulate_data(Random.Xoshiro(1), dag; samples = 50)
@@ -216,7 +224,7 @@ end
     @test length(data[:A]) == 50
 end
 
-@testitem "simulate_data: graph with no edges (all exogenous)" tags = [:unit] begin
+@testitem "simulate_data: graph with no edges (all exogenous)" tags = [:unit, :simulation] begin
     using Random
     using Statistics
     dag = cgraph(node(:A), node(:B), node(:C); class = DAG)
@@ -227,7 +235,7 @@ end
     @test std(data[:C]) > 0
 end
 
-@testitem "simulate_data: deep chain graph" tags = [:unit] begin
+@testitem "simulate_data: deep chain graph" tags = [:unit, :simulation] begin
     using Random
     dag = cgraph(
         directed(:A, :B),
@@ -241,7 +249,8 @@ end
     @test all(v -> length(v) == 100, values(data))
 end
 
-@testitem "simulate_data: collider structure A and B independent" tags = [:unit] begin
+@testitem "simulate_data: collider structure A and B independent" tags =
+    [:unit, :simulation] begin
     using Random
     using Statistics
     dag = cgraph(directed(:A, :C), directed(:B, :C); class = DAG)

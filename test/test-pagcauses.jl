@@ -41,7 +41,7 @@
 end
 
 @testitem "pagcauses: X not a possible ancestor of Y returns no causal effect" tags =
-    [:unit] begin
+    [:unit, :pagcauses] begin
     mag = cgraph(
         directed(:B, :X),
         bidirected(:A, :X),
@@ -54,7 +54,7 @@ end
 end
 
 @testitem "pagcauses: identifiable directly returns the single backdoor set (Proposition 1)" tags =
-    [:unit] begin
+    [:unit, :pagcauses] begin
     mag = cgraph(
         directed(:B, :X),
         bidirected(:A, :X),
@@ -67,7 +67,7 @@ end
 end
 
 @testitem "pagcauses matches Fig. 2 of Wang, Tao, Qin & Zhou (2025) end to end" tags =
-    [:unit] begin
+    [:unit, :pagcauses] begin
     pag = cgraph(
         "X o-> Y, X o-> C, X o-> A, Y o-o C, C o-o A, B o-> C, B o-> Y, B o-> A";
         class = PAG,
@@ -81,7 +81,7 @@ end
 end
 
 @testitem "pagcauses matches brute-force MAG enumeration (Theorem 4) when unidentifiable" setup =
-    [PagcausesBaseline] tags = [:unit] begin
+    [PagcausesBaseline] tags = [:unit, :pagcauses] begin
     # Only holds pre-Proposition-1: that early exit collapses equivalent sets to one representative.
     graphs = [
         mag_to_pag(
@@ -105,7 +105,7 @@ end
 end
 
 @testitem "pagcauses: every returned set is sound (a real Definition 1 adjustment set)" setup =
-    [PagcausesBaseline] tags = [:unit] begin
+    [PagcausesBaseline] tags = [:unit, :pagcauses] begin
     graphs = [
         mag_to_pag(
             cgraph(
@@ -139,7 +139,7 @@ end
 end
 
 @testitem "pagcauses: W-bar is computed on M_X, excluding X's directed-out neighbors" tags =
-    [:unit] begin
+    [:unit, :pagcauses] begin
     # Regression test: for W = empty, W-bar must be {A}, not {A, C, Y}.
     pag = cgraph(
         "X o-> Y, X o-> C, X o-> A, Y o-o C, C o-o A, B o-> C, B o-> Y, B o-> A";

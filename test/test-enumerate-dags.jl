@@ -1,7 +1,8 @@
 # Tests for enumerate_dags and count_dags
 # Tests adapted in part from caugi/src/rust/src/graph/pdag/enumerate.rs
 
-@testitem "enumerate_dags: chain A--B--C has 3 DAGs, none is A->B<-C" tags = [:unit] begin
+@testitem "enumerate_dags: chain A--B--C has 3 DAGs, none is A->B<-C" tags =
+    [:unit, :enumerate_dags] begin
     pdag = cgraph(undirected(:A, :B), undirected(:B, :C); class = PDAG)
     dags = enumerate_dags(pdag)
     @test length(dags) == 3
@@ -11,12 +12,13 @@
     end
 end
 
-@testitem "count_dags: chain A--B--C returns 3" tags = [:unit] begin
+@testitem "count_dags: chain A--B--C returns 3" tags = [:unit, :enumerate_dags] begin
     pdag = cgraph(undirected(:A, :B), undirected(:B, :C); class = PDAG)
     @test count_dags(pdag) == 3
 end
 
-@testitem "enumerate_dags: v-structure A->B<-C returns singleton" tags = [:unit] begin
+@testitem "enumerate_dags: v-structure A->B<-C returns singleton" tags =
+    [:unit, :enumerate_dags] begin
     pdag = cgraph(directed(:A, :B), directed(:C, :B); class = PDAG)
     dags = enumerate_dags(pdag)
     @test length(dags) == 1
@@ -24,13 +26,13 @@ end
     @test :C in parents(dags[1], :B)
 end
 
-@testitem "count_dags: v-structure A->B<-C returns 1" tags = [:unit] begin
+@testitem "count_dags: v-structure A->B<-C returns 1" tags = [:unit, :enumerate_dags] begin
     pdag = cgraph(directed(:A, :B), directed(:C, :B); class = PDAG)
     @test count_dags(pdag) == 1
 end
 
 @testitem "enumerate_dags: undirected triangle has 6 DAGs (all distinct)" setup=[DagHelpers] tags =
-    [:unit] begin
+    [:unit, :enumerate_dags] begin
     pdag = cgraph(undirected(:A, :B), undirected(:A, :C), undirected(:B, :C); class = PDAG)
     dags = enumerate_dags(pdag)
     @test length(dags) == 6
@@ -38,13 +40,13 @@ end
     @test length(sigs) == 6
 end
 
-@testitem "count_dags: undirected triangle returns 6" tags = [:unit] begin
+@testitem "count_dags: undirected triangle returns 6" tags = [:unit, :enumerate_dags] begin
     pdag = cgraph(undirected(:A, :B), undirected(:A, :C), undirected(:B, :C); class = PDAG)
     @test count_dags(pdag) == 6
 end
 
 @testitem "enumerate_dags: v-structure plus undirected branch forced by Meek R1" tags =
-    [:unit] begin
+    [:unit, :enumerate_dags] begin
     # A->C<-B, C--D: R1 orients C->D, so MEC has exactly 1 DAG
     pdag = cgraph(directed(:A, :C), directed(:B, :C), undirected(:C, :D); class = PDAG)
     dags = enumerate_dags(pdag)
@@ -54,36 +56,38 @@ end
     @test :C in parents(dags[1], :D)
 end
 
-@testitem "count_dags: v-structure plus undirected branch returns 1" tags = [:unit] begin
+@testitem "count_dags: v-structure plus undirected branch returns 1" tags =
+    [:unit, :enumerate_dags] begin
     pdag = cgraph(directed(:A, :C), directed(:B, :C), undirected(:C, :D); class = PDAG)
     @test count_dags(pdag) == 1
 end
 
-@testitem "enumerate_dags: two independent chains multiply" tags = [:unit] begin
+@testitem "enumerate_dags: two independent chains multiply" tags = [:unit, :enumerate_dags] begin
     # A--B (2 DAGs) and C--D--E (3 DAGs): 2 * 3 = 6
     pdag = cgraph(undirected(:A, :B), undirected(:C, :D), undirected(:D, :E); class = PDAG)
     dags = enumerate_dags(pdag)
     @test length(dags) == 6
 end
 
-@testitem "count_dags: two independent chains returns 6" tags = [:unit] begin
+@testitem "count_dags: two independent chains returns 6" tags = [:unit, :enumerate_dags] begin
     pdag = cgraph(undirected(:A, :B), undirected(:C, :D), undirected(:D, :E); class = PDAG)
     @test count_dags(pdag) == 6
 end
 
-@testitem "enumerate_dags: empty graph returns 1 DAG (the empty DAG)" tags = [:unit] begin
+@testitem "enumerate_dags: empty graph returns 1 DAG (the empty DAG)" tags =
+    [:unit, :enumerate_dags] begin
     pdag = cgraph(node(:A), node(:B); class = PDAG)
     dags = enumerate_dags(pdag)
     @test length(dags) == 1
     @test dags[1] isa DAG
 end
 
-@testitem "enumerate_dags count matches count_dags" tags = [:unit] begin
+@testitem "enumerate_dags count matches count_dags" tags = [:unit, :enumerate_dags] begin
     pdag = cgraph(undirected(:A, :B), undirected(:B, :C), undirected(:C, :D); class = PDAG)
     @test length(enumerate_dags(pdag)) == count_dags(pdag)
 end
 
-@testitem "enumerate_dags: accepts CPDAG input" tags = [:unit] begin
+@testitem "enumerate_dags: accepts CPDAG input" tags = [:unit, :enumerate_dags] begin
     dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
     cp = dag_to_cpdag(dag)
     @test cp isa CPDAG
@@ -111,7 +115,7 @@ end
 end
 
 @testitem "_enumerate_dags_threaded matches enumerate_dags" setup =
-    [DagEnumThreadedSetup, DagHelpers] tags = [:unit] begin
+    [DagEnumThreadedSetup, DagHelpers] tags = [:unit, :enumerate_dags] begin
     pdag = cgraph(undirected(:A, :B), undirected(:A, :C), undirected(:B, :C); class = PDAG)
     pa, ch, und, input_pa, skeleton, node_names, index = _dag_enum_state(pdag)
 
@@ -132,7 +136,7 @@ end
 end
 
 @testitem "_count_dags_threaded matches count_dags" setup = [DagEnumThreadedSetup] tags =
-    [:unit] begin
+    [:unit, :enumerate_dags] begin
     pdag = cgraph(undirected(:A, :B), undirected(:A, :C), undirected(:B, :C); class = PDAG)
     pa, ch, und, input_pa, skeleton, _, _ = _dag_enum_state(pdag)
 
@@ -140,7 +144,7 @@ end
 end
 
 @testitem "_dag_enum_frontier resolves the whole MEC when smaller than target" setup =
-    [DagEnumThreadedSetup] tags = [:unit] begin
+    [DagEnumThreadedSetup] tags = [:unit, :enumerate_dags] begin
     # Chain A--B--C has only 3 DAGs, fewer than a frontier target of 16, so
     # expansion must stop once the tree is exhausted rather than looping forever.
     pdag = cgraph(undirected(:A, :B), undirected(:B, :C); class = PDAG)

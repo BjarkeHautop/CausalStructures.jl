@@ -1,5 +1,5 @@
 @testitem "possible_d_sep matches the worked backdoor_set(::MAG) example, before M_X removes the visible edge" tags =
-    [:unit] begin
+    [:unit, :possible_d_sep] begin
     mag = cgraph(
         bidirected(:A, :X),
         directed(:A, :M),
@@ -13,7 +13,7 @@
     @test backdoor_set(mag, :X, :Y) == [:A]
 end
 
-@testitem "possible_d_sep accepts a set of target nodes" tags = [:unit] begin
+@testitem "possible_d_sep accepts a set of target nodes" tags = [:unit, :possible_d_sep] begin
     mag = cgraph(
         directed(:B, :X),
         bidirected(:A, :X),
@@ -26,7 +26,7 @@ end
     @test possible_d_sep(mag, :X, [:Y1, :Y2]) == [:A, :B, :Y1, :Y2]
 end
 
-@testitem "possible_d_sep works on AG" tags = [:unit] begin
+@testitem "possible_d_sep works on AG" tags = [:unit, :possible_d_sep] begin
     ag = cgraph(
         bidirected(:A, :X),
         directed(:A, :M),
@@ -38,7 +38,7 @@ end
 end
 
 @testitem "possible_d_sep excludes x itself and returns nothing when x has no collider paths" tags =
-    [:unit] begin
+    [:unit, :possible_d_sep] begin
     mag = cgraph(directed(:X, :Y); class = MAG)
     @test :X ∉ possible_d_sep(mag, :X, :Y)
     @test possible_d_sep(mag, :X, :Y) == [:Y]

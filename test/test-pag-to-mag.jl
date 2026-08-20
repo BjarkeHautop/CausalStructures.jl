@@ -5,7 +5,7 @@
 # ── Output type & skeleton ──────────────────────────────────────────────────────
 
 @testitem "mag_from_pag: returns a MAG with the PAG's skeleton" setup=[PagEdge] tags =
-    [:unit] begin
+    [:unit, :pag_to_mag] begin
     mag = cgraph(directed(:A, :C), directed(:B, :C), directed(:C, :D); class = MAG)
     pag = mag_to_pag(mag)
     out = mag_from_pag(pag)
@@ -16,7 +16,8 @@ end
 
 # ── Invariant marks are preserved ───────────────────────────────────────────────
 
-@testitem "mag_from_pag: o-> becomes --> (docstring)" setup=[PagEdge] tags = [:unit] begin
+@testitem "mag_from_pag: o-> becomes --> (docstring)" setup=[PagEdge] tags =
+    [:unit, :pag_to_mag] begin
     # A o-> B <-o C  =>  A --> B <-- C
     pag = cgraph(partially_directed(:A, :B), partially_directed(:C, :B); class = PAG)
     out = mag_from_pag(pag)
@@ -25,7 +26,7 @@ end
 end
 
 @testitem "mag_from_pag: invariant arrowheads and tails are kept" setup=[PagEdge] tags =
-    [:unit] begin
+    [:unit, :pag_to_mag] begin
     # A o-> C <-o B, C --> D (R1 made the C-->D tail invariant).
     mag = cgraph(directed(:A, :C), directed(:B, :C), directed(:C, :D); class = MAG)
     pag = mag_to_pag(mag)
@@ -36,7 +37,7 @@ end
 end
 
 @testitem "mag_from_pag: invariant bidirected edge is kept (R4 collider)" setup=[PagEdge] tags =
-    [:unit] begin
+    [:unit, :pag_to_mag] begin
     mag = cgraph(
         bidirected(:D, :A),
         bidirected(:A, :B),
@@ -52,13 +53,13 @@ end
 
 # ── Round-trip: mag_to_pag ∘ mag_from_pag == id on PAGs ──────────────────────────
 
-@testitem "mag_from_pag: round-trips on a collider PAG" tags = [:unit] begin
+@testitem "mag_from_pag: round-trips on a collider PAG" tags = [:unit, :pag_to_mag] begin
     mag = cgraph(directed(:A, :B), directed(:C, :B); class = MAG)
     pag = mag_to_pag(mag)
     @test Set(mag_to_pag(mag_from_pag(pag)).edges) == Set(pag.edges)
 end
 
-@testitem "mag_from_pag: round-trips on an all-circle chain PAG" tags = [:unit] begin
+@testitem "mag_from_pag: round-trips on an all-circle chain PAG" tags = [:unit, :pag_to_mag] begin
     # A o-o B o-o C is a whole equivalence class; mag_from_pag picks one member.
     mag = cgraph(directed(:A, :B), directed(:B, :C); class = MAG)
     pag = mag_to_pag(mag)
@@ -67,7 +68,8 @@ end
     @test Set(mag_to_pag(out).edges) == Set(pag.edges)
 end
 
-@testitem "mag_from_pag: round-trips with a discriminating path (R4)" tags = [:unit] begin
+@testitem "mag_from_pag: round-trips with a discriminating path (R4)" tags =
+    [:unit, :pag_to_mag] begin
     mag = cgraph(
         bidirected(:D, :A),
         bidirected(:A, :B),
@@ -81,7 +83,7 @@ end
     @test Set(mag_to_pag(out).edges) == Set(pag.edges)
 end
 
-@testitem "mag_from_pag: round-trips on a bidirected-only PAG" tags = [:unit] begin
+@testitem "mag_from_pag: round-trips on a bidirected-only PAG" tags = [:unit, :pag_to_mag] begin
     mag = cgraph(bidirected(:A, :B), bidirected(:B, :C); class = MAG)
     pag = mag_to_pag(mag)
     out = mag_from_pag(pag)
@@ -91,7 +93,8 @@ end
 
 # ── Circle component orientation creates no new unshielded collider ──────────────
 
-@testitem "mag_from_pag: circle chain avoids a new collider" setup=[PagEdge] tags = [:unit] begin
+@testitem "mag_from_pag: circle chain avoids a new collider" setup=[PagEdge] tags =
+    [:unit, :pag_to_mag] begin
     # A o-o B o-o C, A,C non-adjacent: the only forbidden orientation is the
     # collider A --> B <-- C. Whatever member is chosen, B is not a collider.
     pag = cgraph(partial(:A, :B), partial(:B, :C); class = PAG)
@@ -102,7 +105,7 @@ end
     @test Set(mag_to_pag(out).edges) == Set(pag.edges)
 end
 
-@testitem "mag_from_pag: shielded circle triangle stays acyclic" tags = [:unit] begin
+@testitem "mag_from_pag: shielded circle triangle stays acyclic" tags = [:unit, :pag_to_mag] begin
     # A o-o B o-o C o-o A (a triangle): every orientation is shielded, so any
     # acyclic tournament is a valid MAG in the class.
     pag = cgraph(partial(:A, :B), partial(:B, :C), partial(:A, :C); class = PAG)
@@ -113,7 +116,7 @@ end
 end
 
 @testitem "cgraph rejects a shielded triangle marked with all arrowheads as a PAG" tags =
-    [:unit] begin
+    [:unit, :pag_to_mag] begin
     # A --> B, A --> C, B --> C is a valid MAG, but the triangle is
     # shielded, so no edge's mark is invariant across the equivalence class: the
     # true invariant PAG for this skeleton is all circles (A o-o B o-o C o-o A).
@@ -131,7 +134,7 @@ end
 
 # ── Determinism ─────────────────────────────────────────────────────────────────
 
-@testitem "mag_from_pag: is deterministic" tags = [:unit] begin
+@testitem "mag_from_pag: is deterministic" tags = [:unit, :pag_to_mag] begin
     pag = cgraph(partial(:A, :B), partial(:B, :C); class = PAG)
     @test Set(mag_from_pag(pag).edges) == Set(mag_from_pag(pag).edges)
 end
@@ -139,7 +142,7 @@ end
 # ── Selection bias is supported ─────────────────────────────────────────────────
 
 @testitem "mag_from_pag: o-- becomes a directed edge (docstring)" setup=[PagEdge] tags =
-    [:unit] begin
+    [:unit, :pag_to_mag] begin
     mag = cgraph(
         undirected(:A, :B),
         undirected(:B, :C),
@@ -156,7 +159,7 @@ end
 end
 
 @testitem "mag_from_pag: keeps undirected (---) edges and round-trips" setup=[PagEdge] tags =
-    [:unit] begin
+    [:unit, :pag_to_mag] begin
     # A 4-cycle of undirected edges is a closed selection-bias PAG (forced by R5).
     mag = cgraph(
         undirected(:A, :B),
@@ -172,7 +175,8 @@ end
     @test Set(mag_to_pag(out).edges) == Set(pag.edges)
 end
 
-@testitem "mag_from_pag: round-trips a PAG with an o-- edge" setup=[PagEdge] tags = [:unit] begin
+@testitem "mag_from_pag: round-trips a PAG with an o-- edge" setup=[PagEdge] tags =
+    [:unit, :pag_to_mag] begin
     # The 4-cycle forces --- edges; the pendant B --> E surfaces as E o-- B (R6).
     mag = cgraph(
         undirected(:A, :B),
