@@ -166,7 +166,7 @@ end
 Return the interventional distribution `P(y | do(x))` as an [`Estimand`](@ref),
 or `nothing` if the effect is not identifiable.
 
-This is the ID algorithm of [shpitser2008complete](@citet).
+This is the ID algorithm of [shpitser2008complete](@cite).
 
 `x` and `y` may each be a `Symbol` or a vector of them, and must be disjoint.
 
@@ -216,8 +216,8 @@ true
 
 # References
 
-- [shpitser2008complete](@cite)
-- [tian2002general](@cite)
+- [shpitser2008complete](@citet)
+- [tian2002general](@citet)
 """
 function id(cg::ADMG, x, y)
     xs = _as_symbols(x)
@@ -236,7 +236,7 @@ id(cg::DAG, x, y) = id(reclass(cg, ADMG), x, y)
 Return the conditional interventional distribution `P(y | do(x), given)` as an
 [`Estimand`](@ref), or `nothing` if it is not identifiable.
 
-This is the IDC algorithm of [shpitser2008complete](@citet). Each variable in
+This is the IDC algorithm of [shpitser2008complete](@cite). Each variable in
 `given` that satisfies rule 2 of do-calculus is moved from the conditioning set
 into the intervention set; whatever remains is handled by [`id`](@ref) and
 normalized:
@@ -269,7 +269,7 @@ julia> idc(admg, :X, :Y; given = :M)
 
 # References
 
-- [shpitser2008complete](@cite)
+- [shpitser2008complete](@citet)
 """
 function idc(cg::ADMG, x, y; given = Symbol[])
     xs = sort(unique(_as_symbols(x)))

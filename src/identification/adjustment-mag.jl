@@ -331,7 +331,7 @@ julia> sort(adjustment_set(mag2, [:X1, :X2], [:Y]))
 
 # References
 
-- [perkovic2018complete](@cite)
+- [perkovic2018complete](@citet)
 """
 function adjustment_set(
     cg::AbstractAG,

@@ -82,8 +82,8 @@ true
 
 # References
 
-- [brito2002generalized](@cite)
-- [pearl2009causality](@cite)
+- [brito2002generalized](@citet)
+- [pearl2009causality](@citet)
 """
 function is_valid_iv(
     cg::Union{DAG,ADMG},
@@ -134,7 +134,7 @@ julia> all_iv_sets(cg2, :X, [:Y1, :Y2])
 
 # References
 
-- [brito2002generalized](@cite)
+- [brito2002generalized](@citet)
 """
 function all_iv_sets(
     cg::Union{DAG,ADMG},

@@ -34,7 +34,7 @@ julia> sort(backdoor_set(pag, :X, :Y))
 
 # References
 
-- [maathuiscolombo2015gbc](@cite)
+- [maathuiscolombo2015gbc](@citet)
 """
 function backdoor_set(cg::PAG, x::Symbol, y::Symbol)
     B = cg.backend

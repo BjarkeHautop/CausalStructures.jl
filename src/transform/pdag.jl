@@ -30,8 +30,8 @@ DAG with 3 nodes and 2 edges:
 
 # References
 
-- [dortarsi1992simple](@cite)
-- [wienobst21a](@cite)
+- [dortarsi1992simple](@citet)
+- [wienobst21a](@citet)
 """
 function dag_from_pdag(cg::AbstractPDAG)
     B = cg.backend
@@ -150,7 +150,7 @@ MPDAG with 3 nodes and 2 edges:
 
 # References
 
-- [meek1995causal](@cite)
+- [meek1995causal](@citet)
 """
 function meek_closure(cg::AbstractPDAG; check_cycles::Bool = true, r4::Bool = true)
     B = cg.backend
@@ -378,7 +378,7 @@ false
 
 # References
 
-- [vermapearl1990equivalence](@cite)
+- [vermapearl1990equivalence](@citet)
 """
 function markov_equivalent(g1::DAG, g2::DAG)
     B1, B2 = g1.backend, g2.backend
@@ -459,7 +459,7 @@ MAG with 3 nodes and 2 edges:
 
 # References
 
-- [richardsonspirtes2002ancestral](@cite)
+- [richardsonspirtes2002ancestral](@citet)
 """
 function ag_to_mag(cg::AG)
     all_nodes = Set(nodes(cg))

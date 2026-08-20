@@ -547,8 +547,8 @@ true
 
 # References
 
-- [lauritzen1990independence](@cite)
-- [hauser2012characterization](@cite)
+- [lauritzen1990independence](@citet)
+- [hauser2012characterization](@citet)
 """
 function d_separated(
     cg::DAG,
@@ -653,7 +653,7 @@ false
 
 # References
 
-- [richardsonspirtes2002ancestral](@cite)
+- [richardsonspirtes2002ancestral](@citet)
 """
 m_separated(
     cg::DAG,

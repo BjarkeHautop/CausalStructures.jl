@@ -195,7 +195,7 @@ julia> sort(minimal_separator(mag2, [:X1, :X2], :Y))
 
 # References
 
-- [vanderzander2020finding](@cite)
+- [vanderzander2020finding](@citet)
 """
 function minimal_separator(
     cg::DAG,

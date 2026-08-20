@@ -375,7 +375,7 @@ true
 
 # References
 
-- [perkovic2018complete](@cite)
+- [perkovic2018complete](@citet)
 """
 function is_valid_adjustment(
     cg::DAG,
@@ -430,7 +430,7 @@ julia> all_adjustment_sets(dag2, [:X1, :X2], [:Y])
 
 # References
 
-- [perkovic2018complete](@cite)
+- [perkovic2018complete](@citet)
 """
 function all_adjustment_sets(
     cg::DAG,
@@ -540,7 +540,7 @@ true
 
 # References
 
-- [perkovic2018complete](@cite)
+- [perkovic2018complete](@citet)
 """
 function is_valid_adjustment(
     cg::ADMG,
@@ -694,7 +694,7 @@ julia> sort(adjustment_set(admg2, [:X1, :X2], [:Y]))
 
 # References
 
-- [perkovic2018complete](@cite)
+- [perkovic2018complete](@citet)
 """
 function adjustment_set(
     cg::ADMG,

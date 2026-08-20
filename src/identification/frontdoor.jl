@@ -42,8 +42,8 @@ true
 
 # References
 
-- [pearl2009causality](@cite)
-- [jeong2022finding](@cite)
+- [pearl2009causality](@citet)
+- [jeong2022finding](@citet)
 """
 function is_valid_frontdoor(
     cg::DAG,
@@ -490,7 +490,7 @@ no such set exists.
 - `restrict`: candidate pool from which the set is drawn. Defaults to all nodes
   in `cg` except `x` and `y`.
 
-Implements Algorithm 1 of [jeong2022finding](@citet):
+Implements Algorithm 1 of [jeong2022finding](@cite):
 - Step 1 (GETCAND2NDFDC): drop candidates that have a backdoor path from X.
 - Step 2 (GETCAND3RDFDC): drop candidates for which condition 3 cannot be met.
 - Step 3: check that the remaining set blocks all directed paths X --> Y.
@@ -556,7 +556,7 @@ julia> frontdoor_set(cg2, [:X1, :X2], [:Y1, :Y2]; restrict = [:M])
 
 # References
 
-- [jeong2022finding](@cite)
+- [jeong2022finding](@citet)
 """
 function frontdoor_set(
     cg::Union{DAG,ADMG},
@@ -714,7 +714,7 @@ to (`x`, `y`) in `cg`.
 - `restrict`: candidate pool from which sets are drawn. Defaults to all nodes
   in `cg` except `x` and `y`.
 
-Implements Algorithm 2 (LISTFDSETS) of [jeong2022finding](@citet). The
+Implements Algorithm 2 (LISTFDSETS) of [jeong2022finding](@cite). The
 algorithm has polynomial-delay guarantees: it outputs the first result in
 polynomial time and takes polynomial time between consecutive results. For
 [`ADMG`](@ref), see the note on m-separation in [`frontdoor_set`](@ref).
@@ -768,7 +768,7 @@ julia> all_frontdoor_sets(cg2, [:X1, :X2], [:Y1, :Y2]; restrict = [:M])
 
 # References
 
-- [jeong2022finding](@cite)
+- [jeong2022finding](@citet)
 """
 function all_frontdoor_sets(
     cg::Union{DAG,ADMG},

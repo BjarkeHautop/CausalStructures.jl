@@ -35,7 +35,7 @@ BackgroundKnowledge with 1 required and 1 forbidden:
 
 # References
 
-- [meek1995causal](@cite)
+- [meek1995causal](@citet)
 """
 struct BackgroundKnowledge
     required::Vector{RequiredEdge}
@@ -146,7 +146,7 @@ MPDAG with 3 nodes and 2 edges:
 
 # References
 
-- [meek1995causal](@cite)
+- [meek1995causal](@citet)
 """
 function apply_background_knowledge(cg::AbstractPDAG, bk::BackgroundKnowledge)
     node_set = Set(cg.backend.nodes)
@@ -239,7 +239,7 @@ MPDAG with 3 nodes and 2 edges:
 
 # References
 
-- [meek1995causal](@cite)
+- [meek1995causal](@citet)
 """
 function dag_to_mpdag(cg::DAG, bk::BackgroundKnowledge = BackgroundKnowledge())
     dir = Set{Tuple{Symbol,Symbol}}((e.src, e.dst) for e in cg.edges)

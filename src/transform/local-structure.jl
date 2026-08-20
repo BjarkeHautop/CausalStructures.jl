@@ -243,8 +243,8 @@ papers do throughout.
 
 # References
 
-- [wang2023localbk](@cite)
-- [wang2025pagcauses](@cite)
+- [wang2023localbk](@citet)
+- [wang2025pagcauses](@citet)
 """
 function possible_local_structures(cg::PAG, x::Symbol)
     node_vec, index, adj, mark = _pag_adj_marks(cg.backend.nodes, cg.edges)
@@ -297,8 +297,8 @@ UNKNOWN with 4 nodes and 4 edges:
 
 # References
 
-- [wang2023localbk](@cite)
-- [wang2025pagcauses](@cite)
+- [wang2023localbk](@citet)
+- [wang2025pagcauses](@citet)
 """
 function maximal_local_mag(cg::PAG, x::Symbol, c::AbstractVector{Symbol})
     node_vec, index, adj, mark = _pag_adj_marks(cg.backend.nodes, cg.edges)

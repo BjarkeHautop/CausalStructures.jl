@@ -58,8 +58,8 @@ PAG with 3 nodes and 2 edges:
 
 # References
 
-- [zhang2008completeness](@cite)
-- [ali2009markov](@cite)
+- [zhang2008completeness](@citet)
+- [ali2009markov](@citet)
 """
 mag_to_pag(cg::MAG) = _pag_unchecked(cg.backend.nodes, _mag_to_pag_edges(cg))
 
@@ -646,8 +646,8 @@ MAG with 4 nodes and 4 edges:
 
 # References
 
-- [zhang2008completeness](@cite)
-- [dortarsi1992simple](@cite)
+- [zhang2008completeness](@citet)
+- [dortarsi1992simple](@citet)
 """
 mag_from_pag(cg::PAG) = _mag_from_pag(cg.backend.nodes, cg.edges)
 
@@ -772,7 +772,7 @@ false
 
 # References
 
-- [ali2009markov](@cite)
+- [ali2009markov](@citet)
 """
 function markov_equivalent(g1::MAG, g2::MAG)
     Set(g1.backend.nodes) != Set(g2.backend.nodes) && return false

@@ -172,7 +172,7 @@ invariant within the MEC.
 
 # References
 
-- [chickering2002learning](@cite)
+- [chickering2002learning](@citet)
 """
 struct CPDAG <: AbstractPDAG
     edges::Vector{CausalEdge}
@@ -188,7 +188,7 @@ when background knowledge (forced edge orientations) is present.
 
 # References
 
-- [meek1995causal](@cite)
+- [meek1995causal](@citet)
 """
 struct MPDAG <: AbstractPDAG
     edges::Vector{CausalEdge}
@@ -203,7 +203,7 @@ and no directed cycles allowed.
 
 # References
 
-- [richardson2003markov](@cite)
+- [richardson2003markov](@citet)
 """
 struct ADMG <: CausalGraph
     edges::Vector{CausalEdge}
@@ -220,7 +220,7 @@ arrowheads pointing at them on any adjacent edge (i.e., no parents or spouses).
 
 # References
 
-- [richardsonspirtes2002ancestral](@cite)
+- [richardsonspirtes2002ancestral](@citet)
 """
 struct AG <: AbstractAG
     edges::Vector{CausalEdge}
@@ -236,7 +236,7 @@ representatives of equivalence classes of DAGs with hidden variables.
 
 # References
 
-- [richardsonspirtes2002ancestral](@cite)
+- [richardsonspirtes2002ancestral](@citet)
 """
 struct MAG <: AbstractAG
     edges::Vector{CausalEdge}
@@ -271,7 +271,7 @@ and confirming the round-trip recovers the same graph.
 
 # References
 
-- [zhang2008completeness](@cite)
+- [zhang2008completeness](@citet)
 """
 struct PAG <: CausalGraph
     edges::Vector{CausalEdge}

@@ -45,7 +45,7 @@ true
 
 # References
 
-- [pearl2009causality](@cite)
+- [pearl2009causality](@citet)
 """
 function is_valid_backdoor(
     cg::DAG,
@@ -364,8 +364,8 @@ julia> sort(adjustment_set(cg2, [:X1, :X2], [:Y]; type = :optimal))
 
 # References
 
-- [henckel2022graphical](@cite)
-- [pearl2009causality](@cite)
+- [henckel2022graphical](@citet)
+- [pearl2009causality](@citet)
 """
 function adjustment_set(
     cg::DAG,
@@ -497,7 +497,7 @@ julia> sort(adjustment_set(pdag2, [:X1, :X2], [:Y]))
 
 # References
 
-- [henckel2022graphical](@cite)
+- [henckel2022graphical](@citet)
 """
 function adjustment_set(
     cg::AbstractPDAG,
@@ -590,7 +590,7 @@ true
 
 # References
 
-- [maathuiscolombo2015gbc](@cite)
+- [maathuiscolombo2015gbc](@citet)
 """
 function backdoor_set(cg::DAG, x::Symbol, y::Symbol)
     B = cg.backend

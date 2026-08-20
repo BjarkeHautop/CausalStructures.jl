@@ -212,7 +212,7 @@ DAG with 4 nodes and 4 edges:
 
 # References
 
-- [evans2016graphs](@cite)
+- [evans2016graphs](@citet)
 """
 function normalize_latent_structure(cg::DAG, latents::AbstractVector{Symbol})
     B = cg.backend

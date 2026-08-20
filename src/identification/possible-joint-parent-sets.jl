@@ -98,8 +98,8 @@ endpoint of that collision is in `xs`.
 
 # References
 
-- [maathuis2009estimating](@cite)
-- [nandy2017jointida](@cite)
+- [maathuis2009estimating](@citet)
+- [nandy2017jointida](@citet)
 """
 function possible_joint_parent_sets(cg::AbstractPDAG, xs::AbstractVector{Symbol})
     allunique(xs) || throw(ArgumentError("xs must not contain duplicate nodes"))

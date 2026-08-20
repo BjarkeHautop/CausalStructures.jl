@@ -121,7 +121,7 @@ dag = uniform_dag(6)
 
 # References
 
-- [kuipers2015uniform](@cite)
+- [kuipers2015uniform](@citet)
 """
 function uniform_dag(rng::Random.AbstractRNG, n::Integer)
     n = Int(n)

@@ -62,9 +62,9 @@ julia> possible_optimal_adjustment_sets(cpdag, :X1, :Y)
 
 # References
 
-- [maathuis2009estimating](@cite)
-- [henckel2022graphical](@cite)
-- [witte2020efficient](@cite)
+- [maathuis2009estimating](@citet)
+- [henckel2022graphical](@citet)
+- [witte2020efficient](@citet)
 """
 function possible_optimal_adjustment_sets(cg::AbstractPDAG, x::Symbol, y::Symbol)
     pa = parents(cg, x)

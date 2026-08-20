@@ -406,7 +406,7 @@ julia> length(dags)
 
 # References
 
-- [chickering2002learning](@cite)
+- [chickering2002learning](@citet)
 """
 function enumerate_dags(cg::AbstractPDAG)
     closed = meek_closure(cg)

@@ -85,7 +85,7 @@ julia> backdoor_set(mag, :X, :Y)  # M_X drops the visible edge X --> Y, excludin
 
 # References
 
-- [maathuiscolombo2015gbc](@cite)
+- [maathuiscolombo2015gbc](@citet)
 """
 function possible_d_sep(cg::AbstractAG, x::Symbol, y::Union{Symbol,AbstractVector{Symbol}})
     B = cg.backend

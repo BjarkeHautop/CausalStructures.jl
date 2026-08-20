@@ -37,7 +37,7 @@ julia> length(enumerate_mags(pag))
 
 # References
 
-- [zhang2008completeness](@cite)
+- [zhang2008completeness](@citet)
 """
 function enumerate_mags(cg::PAG)
     B = cg.backend

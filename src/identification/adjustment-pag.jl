@@ -311,7 +311,7 @@ true
 
 # References
 
-- [perkovic2018complete](@cite)
+- [perkovic2018complete](@citet)
 """
 function is_valid_adjustment(
     cg::PAG,
@@ -369,7 +369,7 @@ julia> all_adjustment_sets(pag2, [:X1, :X2], [:Y])
 
 # References
 
-- [perkovic2018complete](@cite)
+- [perkovic2018complete](@citet)
 """
 function all_adjustment_sets(
     cg::PAG,
@@ -452,7 +452,7 @@ julia> sort(adjustment_set(pag2, [:X1, :X2], [:Y]))
 
 # References
 
-- [perkovic2018complete](@cite)
+- [perkovic2018complete](@citet)
 """
 function adjustment_set(
     cg::PAG,

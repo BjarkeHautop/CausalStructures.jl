@@ -57,7 +57,7 @@ true
 
 # References
 
-- [maathuiscolombo2015gbc](@cite)
+- [maathuiscolombo2015gbc](@citet)
 """
 function backdoor_set(cg::MAG, x::Symbol, y::Symbol)
     _check_no_selection_variables(cg)

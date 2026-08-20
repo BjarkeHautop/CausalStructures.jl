@@ -26,7 +26,7 @@ julia> topological_sort(cg)
 
 # References
 
-- [kahn1962topological](@cite)
+- [kahn1962topological](@citet)
 """
 function topological_sort(cg::DAG)
     B = cg.backend
@@ -348,8 +348,8 @@ false
 
 # References
 
-- [perkovic2018complete](@cite)
-- [perkovic2017mpdag](@cite)
+- [perkovic2018complete](@citet)
+- [perkovic2017mpdag](@citet)
 """
 function possible_ancestors(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend
@@ -399,8 +399,8 @@ false
 
 # References
 
-- [perkovic2018complete](@cite)
-- [perkovic2017mpdag](@cite)
+- [perkovic2018complete](@citet)
+- [perkovic2017mpdag](@citet)
 """
 function possible_descendants(cg::AbstractPDAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend
@@ -426,7 +426,7 @@ non-adjacent to another parent in `pa(x) ∪ S`. For every locally valid `S`,
 
 Unlike [`all_adjustment_sets`](@ref), one entry is returned per locally valid
 subset `S`, not per DAG in the Markov equivalence class of `cg`. Theorem 3.2 of
-[maathuis2009estimating](@citet) shows the two collections agree when read as
+[maathuis2009estimating](@cite) shows the two collections agree when read as
 sets, but their multiplicities differ in general (Remark 3.3 therein).
 
 # Examples
@@ -446,7 +446,7 @@ julia> sort(possible_parent_sets(cpdag, :X1); by = length)
 
 # References
 
-- [maathuis2009estimating](@cite)
+- [maathuis2009estimating](@citet)
 """
 function possible_parent_sets(cg::AbstractPDAG, x::Symbol)
     pa = parents(cg, x)
@@ -518,7 +518,7 @@ Symbol[]
 
 # References
 
-- [perkovic2018complete](@cite)
+- [perkovic2018complete](@citet)
 """
 function possible_ancestors(cg::PAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend
@@ -593,7 +593,7 @@ Symbol[]
 
 # References
 
-- [perkovic2018complete](@cite)
+- [perkovic2018complete](@citet)
 """
 function possible_descendants(cg::PAG, node::Symbol; open::Bool = _OPEN_DEFAULT)
     B = cg.backend

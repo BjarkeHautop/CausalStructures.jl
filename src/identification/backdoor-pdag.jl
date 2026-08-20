@@ -40,7 +40,7 @@ true
 
 # References
 
-- [maathuiscolombo2015gbc](@cite)
+- [maathuiscolombo2015gbc](@citet)
 """
 function backdoor_set(cg::CPDAG, x::Symbol, y::Symbol)
     B = cg.backend

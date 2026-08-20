@@ -149,8 +149,8 @@ true
 
 # References
 
-- [perkovic2018complete](@cite)
-- [perkovic2017mpdag](@cite)
+- [perkovic2018complete](@citet)
+- [perkovic2017mpdag](@citet)
 """
 function is_valid_adjustment(
     cg::AbstractPDAG,
@@ -211,8 +211,8 @@ julia> all_adjustment_sets(pdag2, [:X1, :X2], [:Y])
 
 # References
 
-- [perkovic2018complete](@cite)
-- [perkovic2017mpdag](@cite)
+- [perkovic2018complete](@citet)
+- [perkovic2017mpdag](@citet)
 """
 function all_adjustment_sets(
     cg::AbstractPDAG,

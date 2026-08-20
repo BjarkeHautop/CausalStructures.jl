@@ -332,7 +332,7 @@ julia> sort(sort.(pagcauses(pag, :X, :Y)))
 
 # References
 
-- [wang2025pagcauses](@cite)
+- [wang2025pagcauses](@citet)
 """
 function pagcauses(cg::PAG, x::Symbol, y::Symbol)
     node_vec, index, adj0, mark0 = _pag_adj_marks(cg.backend.nodes, cg.edges)
