@@ -230,13 +230,13 @@ end
 """
     possible_local_structures(cg::PAG, x::Symbol) -> Vector{Vector{Symbol}}
 
-Return every valid local structure at `x` in `cg` (Proposition 2, Wang, Qin &
-Zhou 2023): each entry is a subset `C` of `x`'s circle-marked neighbors for
-which a MAG consistent with `cg` exists with `x <-> v` for every `v in C` and
-`x --> v` for every other circle-marked neighbor. This is the graph-only
-ingredient PAGcauses (Wang, Tao, Qin & Zhou 2025) enumerates local structures
-with; pair an entry with [`maximal_local_mag`](@ref) to get the corresponding
-graph.
+Return every valid local structure at `x` in `cg` (Proposition 2, Wang, Qin & Zhou 2023).
+
+Each entry is a subset `C` of `x`'s circle-marked neighbors for which a MAG
+consistent with `cg` exists with `x <-> v` for every `v in C` and `x --> v`
+for every other circle-marked neighbor. This is the graph-only ingredient
+PAGcauses (Wang, Tao, Qin & Zhou 2025) enumerates local structures with; pair
+an entry with [`maximal_local_mag`](@ref) to get the corresponding graph.
 
 Assumes `cg` has no selection bias (no undirected edges), as both source
 papers do throughout.
