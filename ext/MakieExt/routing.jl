@@ -96,16 +96,13 @@ function _route_edge_path(
     # by its proximity to the center-to-center segment.
     worst_violation = 0.0f0
     worst_side = 1.0f0
-    worst_t = 0.5f0
     found = false
 
     for (o, orad) in obstacles
-        dist, t = _point_segment_dist(o, p0, p2)
-        needed = orad + clearance
-        violation = needed - dist
+        dist, _ = _point_segment_dist(o, p0, p2)
+        violation = (orad + clearance) - dist
         if violation > worst_violation
             worst_violation = violation
-            worst_t = t
             # Signed side of the obstacle relative to the directed chord
             # p0->p2 (cross product z-component): +1 left, -1 right.
             side = sign(diff[1] * (o[2] - p0[2]) - diff[2] * (o[1] - p0[1]))
@@ -122,19 +119,31 @@ function _route_edge_path(
 
     # Placing the control handles only partway along the chord (handle_frac)
     # makes the curve leave each node at a steeper angle, so it reads as
-    # projecting from the center. h is their perpendicular offset, sized to
-    # clear worst_violation (plus a clearance margin) at worst_t, where the
-    # cubic reaches 3 * t * (1 - t) * h.
+    # projecting from the center.
     handle_frac = 0.2f0
-    tt = clamp(worst_t, 0.15f0, 0.85f0)
-    h = (worst_violation + clearance) / (3.0f0 * tt * (1.0f0 - tt))
-    # Bow at least a little so short, barely-grazing edges still curve
-    # visibly rather than looking kinked.
-    h = max(h, 0.06f0 * seg_len)
+    curve_at(h, t) = _cubic_bezier(
+        p0,
+        p0 + handle_frac * diff + h * nperp,
+        p0 + (1.0f0 - handle_frac) * diff + h * nperp,
+        p2,
+        t,
+    )
+    # Closest approach of the curve (bowed by h) to obstacle o, over a coarse
+    # sampling - accurate enough to size h and cheap enough to root-find with.
+    min_dist(h, o) = minimum(_norm2(curve_at(h, Float32(k) / 24.0f0) - o) for k = 0:24)
+
+    # For each obstacle, bisect for the smallest bow height that clears it,
+    # then bow by the largest of those.
+    h_max = 2.0f0 * seg_len
+    h = 0.06f0 * seg_len  # bow at least a little, so grazing edges still read as curved
+    for (o, orad) in obstacles
+        needed = orad + clearance
+        u = _bisect_u(u -> min_dist(u * h_max, o), needed, true)
+        h = max(h, u * h_max)
+    end
 
     p1 = p0 + handle_frac * diff + h * nperp
     p2c = p0 + (1.0f0 - handle_frac) * diff + h * nperp
-
     return _clip_and_sample_bezier(p0, p1, p2c, p2, g_from, g_to, n)
 end
 
