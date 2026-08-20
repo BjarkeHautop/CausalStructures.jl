@@ -32,6 +32,15 @@ dag = cgraph(
 plot(dag)
 ```
 
+## Edge marks
+
+`plot` supports every edge mark natively:
+
+```@example plot
+unknown = cgraph("A <-> B o-> C o-- A"; class = UNKNOWN)
+plot(unknown)
+```
+
 ## [Layouts](@id plot-layouts)
 
 The `layout` keyword controls node placement and defaults to `:stress`.
@@ -304,8 +313,8 @@ detour = cgraph("A --> X + Y, X --> Y"; class = DAG)
 plot(detour; layout = [(0, 0), (1, 0), (2, 0)])
 ```
 
-An explicit `curvature` of `0.0` forces `A --> Y` straight through `X`
-instead, overriding the automatic bow:
+An explicit `curvature` of `0.0` can be set to override the automatic
+routing:
 
 ```@example plot
 plot(detour;
@@ -327,15 +336,14 @@ pag = cgraph(
 
 plot(
     pag;
-    node_color       = Dict(:X => :lightyellow, :default => :white),
-    node_strokecolor = :gray30,
-    edge_color       = Dict(:partially_directed => :crimson, :default => :gray20),
-    circle_size      = 0.05,
-    node_radius      = 0.14,
-    label_color      = Dict(:X => :gray30, :default => :black),
+    node_color       = Dict(:X => "#dbeafe", :Y => "#fef3c7", :default => "#f8fafc"),
+    node_strokecolor = Dict(:X => "#2563eb", :Y => "#d97706", :default => "#64748b"),
+    node_linestyle   = Dict(:K => :dash, :default => nothing),
+    edge_color       = Dict(:partially_directed => "#2563eb", :default => "#334155"),
+    label_color      = Dict(:X => "#1e3a8a", :Y => "#92400e", :default => "#1e293b"),
     label_fontsize   = 16,
     title            = "A PAG",
     title_fontsize   = 18,
-    title_color      = :gray20,
+    title_color      = "#1e293b",
 )
 ```
