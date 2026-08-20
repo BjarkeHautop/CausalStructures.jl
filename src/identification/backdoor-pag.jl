@@ -50,10 +50,7 @@ function backdoor_set(cg::PAG, x::Symbol, y::Symbol)
         length(_spouses_slice(B, xi)) +
         length(_circle_parents_slice(B, xi))
 
-    visible_children = Symbol[]
-    for c in _children_slice(B, xi)
-        _is_visible_edge(B, xi, c) && push!(visible_children, B.nodes[c])
-    end
+    visible_children = _visible_children_symbols(B, xi)
     poss_de = Set(possible_descendants(cg, x))
 
     for m in enumerate_mags(cg)

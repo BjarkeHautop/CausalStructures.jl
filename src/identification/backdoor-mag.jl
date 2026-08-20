@@ -9,13 +9,20 @@ function _check_no_selection_variables(cg::CausalGraph)
     return nothing
 end
 
+# Symbols of x's children reached via a visible directed edge (Definition
+# 3.1). Kept as symbols rather than a bitmask so PAG's `backdoor_set` can
+# re-resolve them against each candidate MAG's own node indices.
+function _visible_children_symbols(B::Union{AGBackend,PAGBackend}, x::Int)
+    return [B.nodes[c] for c in _children_slice(B, x) if _is_visible_edge(B, x, c)]
+end
+
 # Directed edges out of x that are visible in cg (Definition 3.1), i.e. the
 # edges removed to form M_X (Definition 4.2).
 function _gbc_removed_children(B::AGBackend, x::Int)
     n = length(B.nodes)
     excluded = falses(n)
-    for c in _children_slice(B, x)
-        _is_visible_edge(B, x, c) && (excluded[c] = true)
+    for vs in _visible_children_symbols(B, x)
+        excluded[B.index[vs]] = true
     end
     return excluded
 end

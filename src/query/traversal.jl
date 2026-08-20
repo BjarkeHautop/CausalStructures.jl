@@ -843,11 +843,9 @@ julia> markov_blanket(cg, :C)
  :D
 ```
 """
-function markov_blanket(cg::DAG, node::Symbol)
-    B = cg.backend
-    node_idx = node_index(cg, node)
-    seen = falses(length(B.nodes))
-
+# Marks `node_idx`'s parents, children, and co-parents (other parents of its
+# children) in `seen`.
+function _mark_parents_children_coparents!(seen::BitVector, B, node_idx::Int)
     for parent_idx in _parents_slice(B, node_idx)
         seen[parent_idx] = true
     end
@@ -857,6 +855,15 @@ function markov_blanket(cg::DAG, node::Symbol)
             parent_idx != node_idx && (seen[parent_idx] = true)
         end
     end
+    return seen
+end
+
+function markov_blanket(cg::DAG, node::Symbol)
+    B = cg.backend
+    node_idx = node_index(cg, node)
+    seen = falses(length(B.nodes))
+
+    _mark_parents_children_coparents!(seen, B, node_idx)
 
     seen[node_idx] = false
     return [B.nodes[i] for i in eachindex(seen) if seen[i]]
@@ -867,15 +874,7 @@ function markov_blanket(cg::AbstractPDAG, node::Symbol)
     node_idx = node_index(cg, node)
     seen = falses(length(B.nodes))
 
-    for parent_idx in _parents_slice(B, node_idx)
-        seen[parent_idx] = true
-    end
-    for child_idx in _children_slice(B, node_idx)
-        seen[child_idx] = true
-        for parent_idx in _parents_slice(B, child_idx)
-            parent_idx != node_idx && (seen[parent_idx] = true)
-        end
-    end
+    _mark_parents_children_coparents!(seen, B, node_idx)
     for nbr_idx in _undirected_slice(B, node_idx)
         seen[nbr_idx] = true
     end
@@ -903,15 +902,7 @@ function markov_blanket(cg::AbstractAG, node::Symbol)
     node_idx = node_index(cg, node)
     seen = falses(length(B.nodes))
 
-    for parent_idx in _parents_slice(B, node_idx)
-        seen[parent_idx] = true
-    end
-    for child_idx in _children_slice(B, node_idx)
-        seen[child_idx] = true
-        for parent_idx in _parents_slice(B, child_idx)
-            parent_idx != node_idx && (seen[parent_idx] = true)
-        end
-    end
+    _mark_parents_children_coparents!(seen, B, node_idx)
     for spouse_idx in _spouses_slice(B, node_idx)
         seen[spouse_idx] = true
     end
