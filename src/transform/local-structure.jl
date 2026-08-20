@@ -284,10 +284,7 @@ papers do throughout.
 # Examples
 
 ```jldoctest
-julia> mag = cgraph(
-           bidirected(:A, :X), directed(:B, :X), bidirected(:A, :B), directed(:X, :Y);
-           class = MAG,
-       );
+julia> mag = cgraph("A <-> X, B --> X, A <-> B, X --> Y"; class = MAG);
 
 julia> pag = mag_to_pag(mag);
 

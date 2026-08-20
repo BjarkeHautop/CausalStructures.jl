@@ -51,24 +51,26 @@ construction.
 
 ## Quick Start
 
-Construct graphs by specifying edges and the desired graph class:
+Construct graphs by specifying edges and the desired graph class. The
+quickest way is to write edges directly as a string, using the markers above
+(`+` fans a marker out to, or in from, several nodes at once):
 
 ```julia
 using CausalStructures
 
+dag = cgraph("U --> X + Y, X --> Y"; class = DAG)
+```
+
+Edges can equivalently be built up from constructor calls, which is useful
+when composing edges programmatically:
+
+```julia
 dag = cgraph(
     directed(:U, :X),
     directed(:U, :Y),
     directed(:X, :Y);
     class = DAG,
 )
-```
-
-Edges can also be written directly as a string using the same markers as above
-(`+` fans a marker out to, or in from, several nodes at once):
-
-```julia
-dag = cgraph("U --> X + Y, X --> Y"; class = DAG)
 ```
 
 You can then run a variety of causal graph queries, transformations,

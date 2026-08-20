@@ -41,7 +41,7 @@ be disjoint.
 # Examples
 
 ```jldoctest
-julia> dag = cgraph(directed(:U, :X), directed(:U, :Y); class = DAG);
+julia> dag = cgraph("U --> X + Y"; class = DAG);
 
 julia> ag = condition_marginalize(dag; marg_vars = [:U])
 AG with 2 nodes and 1 edge:
@@ -51,7 +51,7 @@ AG with 2 nodes and 1 edge:
 ```
 
 ```jldoctest
-julia> admg = cgraph(directed(:U, :X), directed(:U, :Y), directed(:X, :Y); class = ADMG);
+julia> admg = cgraph("U --> X + Y, X --> Y"; class = ADMG);
 
 julia> condition_marginalize(admg; marg_vars = [:U])
 AG with 2 nodes and 1 edge:

@@ -288,10 +288,7 @@ no set satisfies the criterion, including the empty set.
 # Examples
 
 ```jldoctest
-julia> mag = cgraph(
-           directed(:B, :X), bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y);
-           class = MAG,
-       );
+julia> mag = cgraph("B --> X, A <-> X, A --> Y, X --> Y"; class = MAG);
 
 julia> pag = mag_to_pag(mag);
 
@@ -302,8 +299,7 @@ julia> is_valid_adjustment(pag, :X, :Y, [:A])
 true
 
 julia> mag2 = cgraph(
-           directed(:B1, :X1), bidirected(:A1, :X1), directed(:A1, :Y), directed(:X1, :Y),
-           directed(:B2, :X2), bidirected(:A2, :X2), directed(:A2, :Y), directed(:X2, :Y);
+           "B1 --> X1, A1 <-> X1, A1 --> Y, X1 --> Y, B2 --> X2, A2 <-> X2, A2 --> Y, X2 --> Y";
            class = MAG,
        );
 
@@ -351,10 +347,7 @@ Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 # Examples
 
 ```jldoctest
-julia> mag = cgraph(
-           directed(:B, :X), bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y);
-           class = MAG,
-       );
+julia> mag = cgraph("B --> X, A <-> X, A --> Y, X --> Y"; class = MAG);
 
 julia> pag = mag_to_pag(mag);
 
@@ -363,8 +356,7 @@ julia> all_adjustment_sets(pag, :X, :Y)
  [:A]
 
 julia> mag2 = cgraph(
-           directed(:B1, :X1), bidirected(:A1, :X1), directed(:A1, :Y), directed(:X1, :Y),
-           directed(:B2, :X2), bidirected(:A2, :X2), directed(:A2, :Y), directed(:X2, :Y);
+           "B1 --> X1, A1 <-> X1, A1 --> Y, X1 --> Y, B2 --> X2, A2 <-> X2, A2 --> Y, X2 --> Y";
            class = MAG,
        );
 
@@ -437,10 +429,7 @@ by trying sizes 0, 1, 2, ... in order and stopping at the first valid set.
 # Examples
 
 ```jldoctest
-julia> mag = cgraph(
-           directed(:B, :X), bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y);
-           class = MAG,
-       );
+julia> mag = cgraph("B --> X, A <-> X, A --> Y, X --> Y"; class = MAG);
 
 julia> pag = mag_to_pag(mag);
 
@@ -449,8 +438,7 @@ julia> adjustment_set(pag, :X, :Y)
  :A
 
 julia> mag2 = cgraph(
-           directed(:B1, :X1), bidirected(:A1, :X1), directed(:A1, :Y), directed(:X1, :Y),
-           directed(:B2, :X2), bidirected(:A2, :X2), directed(:A2, :Y), directed(:X2, :Y);
+           "B1 --> X1, A1 <-> X1, A1 --> Y, X1 --> Y, B2 --> X2, A2 <-> X2, A2 --> Y, X2 --> Y";
            class = MAG,
        );
 

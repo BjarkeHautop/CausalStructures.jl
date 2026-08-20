@@ -359,7 +359,7 @@ this criterion accepts some valid sets the backdoor criterion rejects.
 # Examples
 
 ```jldoctest
-julia> dag = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG);
+julia> dag = cgraph("A --> X --> Y, A --> Y"; class = DAG);
 
 julia> is_valid_adjustment(dag, :X, :Y)
 false
@@ -410,10 +410,7 @@ Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 # Examples
 
 ```jldoctest
-julia> dag = cgraph(
-           directed(:A, :X), directed(:B, :X), directed(:X, :Y), directed(:A, :Y);
-           class = DAG,
-       );
+julia> dag = cgraph("A --> X, B --> X, X --> Y, A --> Y"; class = DAG);
 
 julia> all_adjustment_sets(dag, :X, :Y)
 1-element Vector{Vector{Symbol}}:
@@ -515,7 +512,7 @@ of `cg`.
 # Examples
 
 ```jldoctest
-julia> admg = cgraph(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG);
+julia> admg = cgraph("L --> X --> Y, L --> Y"; class = ADMG);
 
 julia> is_valid_adjustment(admg, :X, :Y)       # empty Z does not block L --> Y
 false
@@ -525,10 +522,7 @@ true
 ```
 
 ```jldoctest
-julia> mag = cgraph(
-           bidirected(:A, :X), directed(:A, :M), directed(:M, :Y), directed(:X, :Y);
-           class = MAG,
-       );
+julia> mag = cgraph("A <-> X, A --> M --> Y, X --> Y"; class = MAG);
 
 julia> is_valid_adjustment(mag, :X, :Y)
 false
@@ -584,7 +578,7 @@ inclusion-minimal sets are returned.
 # Examples
 
 ```jldoctest
-julia> admg = cgraph(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG);
+julia> admg = cgraph("L --> X --> Y, L --> Y"; class = ADMG);
 
 julia> all_adjustment_sets(admg, :X, :Y)
 1-element Vector{Vector{Symbol}}:
@@ -592,10 +586,7 @@ julia> all_adjustment_sets(admg, :X, :Y)
 ```
 
 ```jldoctest
-julia> mag = cgraph(
-           bidirected(:A, :X), directed(:A, :M), directed(:M, :Y), directed(:X, :Y);
-           class = MAG,
-       );
+julia> mag = cgraph("A <-> X, A --> M --> Y, X --> Y"; class = MAG);
 
 julia> all_adjustment_sets(mag, :X, :Y)
 2-element Vector{Vector{Symbol}}:
@@ -605,9 +596,7 @@ julia> all_adjustment_sets(mag, :X, :Y)
 
 ```jldoctest
 julia> mpdag = cgraph(
-           directed(:A, :X), directed(:B, :X),
-           directed(:X, :Y), directed(:A, :Y),
-           undirected(:B, :K), directed(:K, :Y);
+           "A --> X, B --> X, X --> Y, A --> Y, B --- K, K --> Y";
            class = MPDAG,
        );
 
@@ -689,7 +678,7 @@ by trying sizes 0, 1, 2, ... in order and stopping at the first valid set.
 # Examples
 
 ```jldoctest
-julia> admg = cgraph(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG);
+julia> admg = cgraph("L --> X --> Y, L --> Y"; class = ADMG);
 
 julia> adjustment_set(admg, :X, :Y)
 1-element Vector{Symbol}:

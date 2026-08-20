@@ -21,7 +21,7 @@ formula, even in the presence of unmeasured confounders between `x` and `y`.
 # Examples
 
 ```jldoctest
-julia> cg = cgraph(directed(:U, :X), directed(:X, :M), directed(:M, :Y), directed(:U, :Y); class = DAG);
+julia> cg = cgraph("U --> X --> M --> Y, U --> Y"; class = DAG);
 
 julia> is_valid_frontdoor(cg, :X, :Y, [:M])  # M mediates X -> Y and satisfies all conditions
 true
@@ -33,8 +33,7 @@ julia> is_valid_frontdoor(cg, :X, :Y, [:U])   # U does not intercept X -> M -> Y
 false
 
 julia> cg2 = cgraph(
-           directed(:U1, :X1), directed(:U1, :Y1), directed(:U2, :X2), directed(:U2, :Y2),
-           directed(:X1, :M), directed(:X2, :M), directed(:M, :Y1), directed(:M, :Y2);
+           "U1 --> X1 + Y1, U2 --> X2 + Y2, X1 --> M, X2 --> M, M --> Y1 + Y2";
            class = DAG);
 
 julia> is_valid_frontdoor(cg2, [:X1, :X2], [:Y1, :Y2], [:M])  # M mediates every X --> Y path
@@ -504,7 +503,7 @@ arrowhead into a node just like a directed parent does).
 # Examples
 
 ```jldoctest
-julia> cg = cgraph(directed(:U, :X), directed(:U, :Y), directed(:X, :Z), directed(:Z, :Y); class = DAG);
+julia> cg = cgraph("U --> X + Y, X --> Z --> Y"; class = DAG);
 
 julia> frontdoor_set(cg, :X, :Y; restrict = [:Z])
 1-element Vector{Symbol}:
@@ -514,9 +513,7 @@ julia> frontdoor_set(cg, :X, :Y; restrict = [:Z])
 ```jldoctest
 julia> # Jeong (2022) Fig. 1b
        cg = cgraph(
-           directed(:U1, :X), directed(:U1, :Y), directed(:U2, :X), directed(:U2, :D),
-           directed(:X, :A), directed(:A, :B), directed(:A, :C), directed(:A, :D),
-           directed(:B, :Y), directed(:C, :Y), directed(:D, :Y);
+           "U1 --> X + Y, U2 --> X + D, X --> A, A --> B + C + D, B + C + D --> Y";
            class = DAG);
 
 julia> frontdoor_set(cg, :X, :Y; restrict = [:A, :B, :C, :D])
@@ -537,9 +534,7 @@ true
 ```jldoctest
 julia> # Fig. 1b latent-projected to an ADMG: U1 -> X <-> Y, U2 -> X <-> D
        admg = cgraph(
-           bidirected(:X, :Y), bidirected(:X, :D),
-           directed(:X, :A), directed(:A, :B), directed(:A, :C), directed(:A, :D),
-           directed(:B, :Y), directed(:C, :Y), directed(:D, :Y);
+           "X <-> Y, X <-> D, X --> A, A --> B + C + D, B + C + D --> Y";
            class = ADMG);
 
 julia> frontdoor_set(admg, :X, :Y; restrict = [:A, :B, :C, :D])
@@ -551,8 +546,7 @@ julia> frontdoor_set(admg, :X, :Y; restrict = [:A, :B, :C, :D])
 
 ```jldoctest
 julia> cg2 = cgraph(
-           directed(:U1, :X1), directed(:U1, :Y1), directed(:U2, :X2), directed(:U2, :Y2),
-           directed(:X1, :M), directed(:X2, :M), directed(:M, :Y1), directed(:M, :Y2);
+           "U1 --> X1 + Y1, U2 --> X2 + Y2, X1 --> M, X2 --> M, M --> Y1 + Y2";
            class = DAG);
 
 julia> frontdoor_set(cg2, [:X1, :X2], [:Y1, :Y2]; restrict = [:M])
@@ -728,7 +722,7 @@ polynomial time and takes polynomial time between consecutive results. For
 # Examples
 
 ```jldoctest
-julia> cg = cgraph(directed(:U, :X), directed(:U, :Y), directed(:X, :Z), directed(:Z, :Y); class = DAG);
+julia> cg = cgraph("U --> X + Y, X --> Z --> Y"; class = DAG);
 
 julia> all_frontdoor_sets(cg, :X, :Y; restrict = [:Z])
 1-element Vector{Vector{Symbol}}:
@@ -737,9 +731,7 @@ julia> all_frontdoor_sets(cg, :X, :Y; restrict = [:Z])
 
 ```jldoctest
 julia> cg = cgraph(
-           directed(:U1, :X), directed(:U1, :Y), directed(:U2, :X), directed(:U2, :D),
-           directed(:X, :A), directed(:A, :B), directed(:A, :C), directed(:A, :D),
-           directed(:B, :Y), directed(:C, :Y), directed(:D, :Y);
+           "U1 --> X + Y, U2 --> X + D, X --> A, A --> B + C + D, B + C + D --> Y";
            class = DAG);
 
 julia> sort(all_frontdoor_sets(cg, :X, :Y; restrict = [:A, :B, :C, :D]))
@@ -753,9 +745,7 @@ julia> sort(all_frontdoor_sets(cg, :X, :Y; restrict = [:A, :B, :C, :D]))
 ```jldoctest
 julia> # Fig. 1b latent-projected to an ADMG: U1 -> X <-> Y, U2 -> X <-> D
        admg = cgraph(
-           bidirected(:X, :Y), bidirected(:X, :D),
-           directed(:X, :A), directed(:A, :B), directed(:A, :C), directed(:A, :D),
-           directed(:B, :Y), directed(:C, :Y), directed(:D, :Y);
+           "X <-> Y, X <-> D, X --> A, A --> B + C + D, B + C + D --> Y";
            class = ADMG);
 
 julia> sort(all_frontdoor_sets(admg, :X, :Y; restrict = [:A, :B, :C, :D]))
@@ -768,8 +758,7 @@ julia> sort(all_frontdoor_sets(admg, :X, :Y; restrict = [:A, :B, :C, :D]))
 
 ```jldoctest
 julia> cg2 = cgraph(
-           directed(:U1, :X1), directed(:U1, :Y1), directed(:U2, :X2), directed(:U2, :Y2),
-           directed(:X1, :M), directed(:X2, :M), directed(:M, :Y1), directed(:M, :Y2);
+           "U1 --> X1 + Y1, U2 --> X2 + Y2, X1 --> M, X2 --> M, M --> Y1 + Y2";
            class = DAG);
 
 julia> all_frontdoor_sets(cg2, [:X1, :X2], [:Y1, :Y2]; restrict = [:M])

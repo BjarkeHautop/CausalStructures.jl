@@ -43,16 +43,13 @@ descendants of `x` in `cg`; when it exists, `D-SEP(x, y, M_X)` is such a set
 # Examples
 
 ```jldoctest
-julia> mag = cgraph(
-           bidirected(:A, :X), directed(:A, :M), directed(:M, :Y), directed(:X, :Y);
-           class = MAG,
-       );
+julia> mag = cgraph("A <-> X, A --> M --> Y, X --> Y"; class = MAG);
 
 julia> backdoor_set(mag, :X, :Y)
 1-element Vector{Symbol}:
  :A
 
-julia> mag2 = cgraph(directed(:X, :Y); class = MAG);
+julia> mag2 = cgraph("X --> Y"; class = MAG);
 
 julia> backdoor_set(mag2, :X, :Y) === nothing  # X --> Y is invisible here, so Y ∈ adj(X, M_X)
 true

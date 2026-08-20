@@ -512,7 +512,7 @@ traversal treating undirected edges as never forming a collider endpoint.
 # Examples
 
 ```jldoctest
-julia> cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = cgraph("A --> B --> C"; class = DAG);
 
 julia> d_separated(cg, :A, :C)        # chain A --> B --> C is open
 false
@@ -520,7 +520,7 @@ false
 julia> d_separated(cg, :A, :C, [:B]) # conditioning on B blocks the chain
 true
 
-julia> coll = cgraph(directed(:A, :C), directed(:B, :C); class = DAG);
+julia> coll = cgraph("A --> C <-- B"; class = DAG);
 
 julia> d_separated(coll, :A, :B)         # collider A --> C <-- B: blocked without conditioning
 true
@@ -528,7 +528,7 @@ true
 julia> d_separated(coll, :A, :B, [:C])  # conditioning on collider C opens the path
 false
 
-julia> mpdag = cgraph(undirected(:A, :B), directed(:B, :C); class = MPDAG);
+julia> mpdag = cgraph("A --- B --> C"; class = MPDAG);
 
 julia> d_separated(mpdag, :A, :C, [:B]) # B blocks whether A --> B or A <-- B
 true
@@ -536,7 +536,7 @@ true
 julia> d_separated(mpdag, :A, :C)       # B is possibly a non-collider: open path exists
 false
 
-julia> chain = cgraph(directed(:A, :C), directed(:B, :C), directed(:C, :D); class = DAG);
+julia> chain = cgraph("A --> C <-- B, C --> D"; class = DAG);
 
 julia> d_separated(chain, [:A, :B], :D)         # C lies on both A-->C-->D and B-->C-->D: paths open
 false
@@ -629,7 +629,7 @@ tails (as for [`possible_ancestors`](@ref)/[`possible_descendants`](@ref)).
 # Examples
 
 ```jldoctest
-julia> cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
+julia> cg = cgraph("A --> B --> C"; class = DAG);
 
 julia> m_separated(cg, :A, :C)        # equivalent to d_separated on a DAG
 false
@@ -637,7 +637,7 @@ false
 julia> m_separated(cg, :A, :C, [:B])
 true
 
-julia> admg = cgraph(directed(:A, :B), bidirected(:A, :C); class = ADMG);
+julia> admg = cgraph("A --> B, A <-> C"; class = ADMG);
 
 julia> m_separated(admg, :B, :C)        # B and C are connected via the bidirected edge at A
 false
@@ -645,7 +645,7 @@ false
 julia> m_separated(admg, :B, :C, [:A]) # conditioning on A blocks the path
 true
 
-julia> admg2 = cgraph(bidirected(:A, :C), bidirected(:B, :C); class = ADMG);
+julia> admg2 = cgraph("A <-> C <-> B"; class = ADMG);
 
 julia> m_separated(admg2, [:A, :B], :C)  # both A and B are m-connected to C
 false

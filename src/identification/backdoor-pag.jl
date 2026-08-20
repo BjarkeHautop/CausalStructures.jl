@@ -22,10 +22,7 @@ depend on which admissible `R` is used).
 # Examples
 
 ```jldoctest
-julia> mag = cgraph(
-           directed(:B, :X), bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y);
-           class = MAG,
-       );
+julia> mag = cgraph("B --> X, A <-> X, A --> Y, X --> Y"; class = MAG);
 
 julia> pag = mag_to_pag(mag);  # A o-> X, A --> Y, B o-> X, X --> Y
 

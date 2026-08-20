@@ -312,20 +312,14 @@ sizes 0, 1, 2, ... in order and stopping at the first valid set.
 # Examples
 
 ```jldoctest
-julia> mag = cgraph(
-           bidirected(:A, :X), directed(:A, :M), directed(:M, :Y), directed(:X, :Y);
-           class = MAG,
-       );
+julia> mag = cgraph("A <-> X, A --> M --> Y, X --> Y"; class = MAG);
 
 julia> adjustment_set(mag, :X, :Y)
 1-element Vector{Symbol}:
  :A
 
 julia> mag2 = cgraph(
-           bidirected(:A, :X1), bidirected(:B, :X2),
-           directed(:A, :M1), directed(:B, :M2),
-           directed(:M1, :Y), directed(:M2, :Y),
-           directed(:X1, :Y), directed(:X2, :Y);
+           "A <-> X1, B <-> X2, A --> M1 --> Y, B --> M2 --> Y, X1 --> Y, X2 --> Y";
            class = MAG,
        );
 

@@ -2,8 +2,8 @@
 
 Here we explain how to build a causal graph and briefly describe the meaning of
 each causal graph class. For a comprehensive introduction to these and the
-underlying theory, see, for instance, [pearl2009causality](@cite) or
-[peters2017elements](@cite); [richardsonspirtes2002ancestral](@citet) covers
+underlying theory, see, for instance, [pearl2009causality](@citet) or
+[peters2017elements](@citet); [richardsonspirtes2002ancestral](@citet) covers
 `AG`/`MAG` specifically, and [zhang2008completeness](@citet) covers `PAG`.
 
 ## Constructing graphs
@@ -90,7 +90,7 @@ MAG
 
 A [`PAG`](@ref) plays a role for MAGs analogous to that of a CPDAG for DAGs:
 it represents a Markov equivalence class of MAGs
-([zhang2008completeness](@cite)). PAG edges can have three endpoint marks: a
+[zhang2008completeness](@cite). PAG edges can have three endpoint marks: a
 tail, an arrowhead, or a circle. A circle indicates that the corresponding
 endpoint mark is not determined by the Markov equivalence class.
 

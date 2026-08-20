@@ -55,10 +55,7 @@ instrumental-set criterion is defined for one structural coefficient `x -> y`.
 
 ```jldoctest
 julia> # Classic IV graph: Z --> X --> Y with hidden confounder U --> X, U --> Y
-       cg = cgraph(
-           directed(:Z, :X), directed(:X, :Y),
-           directed(:U, :X), directed(:U, :Y);
-           class = DAG);
+       cg = cgraph("Z --> X --> Y, U --> X + Y"; class = DAG);
 
 julia> is_valid_iv(cg, :X, :Y, [:Z])  # Z is a valid instrument
 true
@@ -69,10 +66,7 @@ false
 
 ```jldoctest
 julia> # ADMG: X <-> Y encodes the hidden confounder directly
-       admg = cgraph(
-           bidirected(:X, :Y),
-           directed(:Z, :X), directed(:X, :Y);
-           class = ADMG);
+       admg = cgraph("X <-> Y, Z --> X --> Y"; class = ADMG);
 
 julia> is_valid_iv(admg, :X, :Y, [:Z])
 true
@@ -80,10 +74,7 @@ true
 
 ```jldoctest
 julia> # Z instruments X, which affects two outcomes Y1 and Y2
-       cg2 = cgraph(
-           directed(:Z, :X), directed(:X, :Y1), directed(:X, :Y2),
-           directed(:U, :X), directed(:U, :Y1), directed(:U, :Y2);
-           class = DAG);
+       cg2 = cgraph("Z --> X, X --> Y1 + Y2, U --> X + Y1 + Y2"; class = DAG);
 
 julia> is_valid_iv(cg2, :X, [:Y1, :Y2], [:Z])
 true
@@ -124,11 +115,7 @@ only inclusion-minimal sets are returned.
 # Examples
 
 ```jldoctest
-julia> cg = cgraph(
-           directed(:Z1, :X), directed(:Z2, :X),
-           directed(:X, :Y),
-           directed(:U, :X), directed(:U, :Y);
-           class = DAG);
+julia> cg = cgraph("Z1 --> X, Z2 --> X, X --> Y, U --> X + Y"; class = DAG);
 
 julia> all_iv_sets(cg, :X, :Y)
 2-element Vector{Vector{Symbol}}:
@@ -136,9 +123,7 @@ julia> all_iv_sets(cg, :X, :Y)
  [:Z2]
 
 julia> cg2 = cgraph(
-           directed(:Z1, :X), directed(:Z2, :X),
-           directed(:X, :Y1), directed(:X, :Y2),
-           directed(:U, :X), directed(:U, :Y1), directed(:U, :Y2);
+           "Z1 --> X, Z2 --> X, X --> Y1 + Y2, U --> X + Y1 + Y2";
            class = DAG);
 
 julia> all_iv_sets(cg2, :X, [:Y1, :Y2])
