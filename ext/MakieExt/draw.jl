@@ -93,7 +93,7 @@ function _draw_edge!(
 
     # Minimum gap (beyond an obstacle's own radius) an edge must keep from a
     # non-incident node before it is left alone.
-    clearance = 0.05f0 * (_circumradius(g_src) + _circumradius(g_dst))
+    clearance = 0.2f0 * (_circumradius(g_src) + _circumradius(g_dst))
 
     bowed =
         curvature != 0.0f0 ? _bowed_edge_path(p_src, p_dst, g_from, g_to, curvature * len) :

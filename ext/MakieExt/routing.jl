@@ -129,18 +129,22 @@ function _route_edge_path(
         t,
     )
     # Closest approach of the curve (bowed by h) to obstacle o, over a coarse
-    # sampling - accurate enough to size h and cheap enough to root-find with.
+    # sampling - accurate enough to size h and cheap to evaluate.
     min_dist(h, o) = minimum(_norm2(curve_at(h, Float32(k) / 24.0f0) - o) for k = 0:24)
+    worst_at(h) = maximum((orad + clearance) - min_dist(h, o) for (o, orad) in obstacles)
 
-    # For each obstacle, bisect for the smallest bow height that clears it,
-    # then bow by the largest of those.
     h_max = 2.0f0 * seg_len
-    h = 0.06f0 * seg_len  # bow at least a little, so grazing edges still read as curved
-    for (o, orad) in obstacles
-        needed = orad + clearance
-        u = _bisect_u(u -> min_dist(u * h_max, o), needed, true)
-        h = max(h, u * h_max)
+    best_h, best_violation = 0.0f0, worst_at(0.0f0)
+    for k = 1:60
+        h = k / 60.0f0 * h_max
+        v = worst_at(h)
+        if v < best_violation
+            best_h, best_violation = h, v
+        end
+        v <= 0.0f0 && break
     end
+    # Bow at least a little
+    h = max(best_h, 0.06f0 * seg_len)
 
     p1 = p0 + handle_frac * diff + h * nperp
     p2c = p0 + (1.0f0 - handle_frac) * diff + h * nperp
