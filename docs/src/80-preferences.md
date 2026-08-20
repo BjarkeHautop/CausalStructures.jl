@@ -44,9 +44,11 @@ the same way, e.g. `set_preferences!(CausalStructures, "plot_node_color" => "lig
 | Key | Default | Notes |
 | --- | ------- | ----- |
 | `"plot_layout"` | `:stress` | One of `:spring`, `:stress`, `:sfdp`, `:spectral`, `:shell`, `:squaregrid`; requires NetworkLayout, see [Layouts](@ref plot-layouts) |
+| `"plot_node_shape"` | `:circle` | One of `:circle`, `:square`, `:ellipse`, `:rect` |
 | `"plot_node_color"` | `"white"` | Any [Makie-compatible colour](https://docs.makie.org/stable/explanations/colors) |
 | `"plot_node_strokecolor"` | `"black"` | |
 | `"plot_node_strokewidth"` | `2.0` | |
+| `"plot_node_linestyle"` | `nothing` | `nothing` draws a solid border; set e.g. `:dash` or `:dot` |
 | `"plot_edge_color"` | `"black"` | |
 | `"plot_linewidth"` | `1.5` | |
 | `"plot_curvature"` | `nothing` | `nothing` routes each edge automatically; a number forces that curvature (including `0.0`, for a straight line) |
@@ -57,3 +59,6 @@ the same way, e.g. `set_preferences!(CausalStructures, "plot_node_color" => "lig
 | `"plot_edge_arrow_fill"` | `nothing` | `nothing` matches the edge's own color (solid arrowhead); set e.g. `"transparent"` for a hollow one |
 | `"plot_fig_size"` | `[600.0, 450.0]` | Pixels, fixed regardless of graph/layout; see [Figure size and margins](@ref) |
 | `"plot_stretch_to_fig_size"` | `false` | Stretch the layout to fill an uneven `fig_size` instead of leaving margins |
+| `"plot_outer_margin"` | `16` | Pixels between the figure edge and its contents |
+| `"plot_title_fontsize"` | `nothing` | `nothing` uses the current Makie theme's default |
+| `"plot_title_color"` | `nothing` | `nothing` uses the current Makie theme's default |
