@@ -64,7 +64,7 @@ function _edge_path(
     g_dst::_NodeGeom,
     obstacles::AbstractVector{Tuple{Point2f,Float32}},
     fan_slot::Float32,
-    curvature::Float32,
+    curvature::Union{Float32,Nothing},
     px_per_data_unit::Float32,
     linewidth::Real,
 )
@@ -92,8 +92,8 @@ function _edge_path(
     clearance = 0.2f0 * (_circumradius(g_src) + _circumradius(g_dst))
 
     bowed =
-        curvature != 0.0f0 ? _bowed_edge_path(p_src, p_dst, g_from, g_to, curvature * len) :
-        nothing
+        curvature !== nothing ?
+        _bowed_edge_path(p_src, p_dst, g_from, g_to, curvature * len) : nothing
     routed =
         bowed === nothing ?
         _route_edge_path(p_src, p_dst, g_from, g_to, obstacles, clearance) : nothing
@@ -125,7 +125,7 @@ function _draw_edge!(
     r_circle::Float32,
     obstacles::AbstractVector{Tuple{Point2f,Float32}},
     fan_slot::Float32,
-    curvature::Float32,
+    curvature::Union{Float32,Nothing},
     px_per_data_unit::Float32;
     color = :black,
     fill = color,
@@ -272,6 +272,11 @@ end
 #
 # `val` may be a scalar or a Dict{Symbol, <value>} keyed by node name.
 # Dict may also contain :default as a fallback.
+function _resolve_curvature(val, e::CausalEdge)
+    resolved = _resolve_edge(val, e, nothing)
+    return resolved === nothing ? nothing : Float32(resolved)
+end
+
 function _resolve_node(val, node::Symbol, fallback)
     val isa AbstractDict || return val
     haskey(val, node) && return val[node]
@@ -466,7 +471,7 @@ function Makie.plot(
             geoms[dst_idx],
             obstacles,
             fan_slots[i],
-            Float32(_resolve_edge(curvature, e, 0.0)),
+            _resolve_curvature(curvature, e),
             provisional_px_per_data_unit,
             Float32(_resolve_edge(linewidth, e, 1.5f0)),
         )
@@ -527,7 +532,7 @@ function Makie.plot(
             r_circle,
             obstacles,
             fan_slots[i],
-            Float32(_resolve_edge(curvature, e, 0.0)),
+            _resolve_curvature(curvature, e),
             px_per_data_unit;
             color = resolved_color,
             fill = something(_resolve_edge(arrow_fill, e, nothing), resolved_color),

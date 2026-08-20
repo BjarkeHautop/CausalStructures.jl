@@ -157,7 +157,7 @@ Each edge style argument accepts either a scalar or a `Dict` keyed by (and follo
 | `edge_color` | `:black`  | line / marker color   |
 | `arrow_fill` | `nothing` | arrowhead fill color  |
 | `linewidth`  | `1.5`     | line width            |
-| `curvature`  | `0.0`     | how far the edge bows |
+| `curvature`  | `nothing` | how far the edge bows |
 
 Color edges by type:
 
@@ -217,7 +217,9 @@ plot(dag; arrow_fill = :transparent)
 plot(admg; curvature = Dict(:bidirected => -0.3))
 ```
 
-Because the key can be a specific edge, `curvature` can also be used to manually improve the [Automatic edge routing](@ref) if needed.
+Because the key can be a specific edge, `curvature` can also be used as a
+manual override if the [Automatic edge routing](@ref) picks an awkward
+path.
 
 ## Label styling
 
@@ -278,13 +280,13 @@ plot(dag; title = "My DAG", title_fontsize = 20, title_color = :navy)
 plot(dag; fig_size = (800, 600))
 ```
 
-!!! note "Large graphs need a bigger `fig_size`"
+!!! tip "Large graphs need a bigger `fig_size`"
     The default `(600, 450)` is sized for small examples. As the number of
     nodes grows, labels and edges get cramped and can overlap; increase
     `fig_size` (and `node_radius`/`label_fontsize` if needed) to keep larger
     causal graphs readable.
 
-!!! note "Uneven `fig_size` and `stretch_to_fig_size`"
+!!! tip "Uneven `fig_size` and `stretch_to_fig_size`"
     Node positions keep the layout's own aspect ratio by default, so depending on the chosen `fig_size` you can get a lot of empty space
     in the plot. Pass `stretch_to_fig_size = true` to disable this.
 
@@ -300,6 +302,16 @@ detour = cgraph("A --> X + Y, X --> Y"; class = DAG)
 
 # A, X, Y placed in a line, so the straight A --> Y edge would cross X.
 plot(detour; layout = [(0, 0), (1, 0), (2, 0)])
+```
+
+An explicit `curvature` of `0.0` forces `A --> Y` straight through `X`
+instead, overriding the automatic bow:
+
+```@example plot
+plot(detour;
+    layout = [(0, 0), (1, 0), (2, 0)],
+    curvature = Dict(directed(:A, :Y) => 0.0),
+)
 ```
 
 ## Combining options
