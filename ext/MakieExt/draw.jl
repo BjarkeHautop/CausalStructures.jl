@@ -57,25 +57,21 @@ function _draw_arrowhead!(
     Makie.poly!(ax, pts; color = fill, strokecolor = color, strokewidth = linewidth)
 end
 
-function _draw_edge!(
-    ax,
+# The path an edge will be drawn along, in data coordinates
+function _edge_path(
     e::CausalEdge,
     g_src::_NodeGeom,
     g_dst::_NodeGeom,
-    r_arrow::Float32,
-    r_circle::Float32,
     obstacles::AbstractVector{Tuple{Point2f,Float32}},
     fan_slot::Float32,
     curvature::Float32,
-    px_per_data_unit::Float32;
-    color = :black,
-    fill = color,
-    linewidth = 1.5f0,
+    px_per_data_unit::Float32,
+    linewidth::Real,
 )
     p_src, p_dst = g_src.center, g_dst.center
     diff = p_dst - p_src
     len = _norm2(diff)
-    len < 1.0f-6 && return
+    len < 1.0f-6 && return nothing
 
     has_arrow_src = e.src_end === _Arrow
     has_arrow_dst = e.dst_end === _Arrow
@@ -105,7 +101,7 @@ function _draw_edge!(
         bowed === nothing && routed === nothing && fan_slot != 0.0f0 ?
         _bowed_edge_path(p_src, p_dst, g_from, g_to, fan_slot * 0.3f0 * len) : nothing
 
-    path = if bowed !== nothing
+    if bowed !== nothing
         bowed
     elseif routed !== nothing
         routed
@@ -118,6 +114,39 @@ function _draw_edge!(
             p_dst - _boundary_distance(g_to, dir) * dir,
         ]
     end
+end
+
+function _draw_edge!(
+    ax,
+    e::CausalEdge,
+    g_src::_NodeGeom,
+    g_dst::_NodeGeom,
+    r_arrow::Float32,
+    r_circle::Float32,
+    obstacles::AbstractVector{Tuple{Point2f,Float32}},
+    fan_slot::Float32,
+    curvature::Float32,
+    px_per_data_unit::Float32;
+    color = :black,
+    fill = color,
+    linewidth = 1.5f0,
+)
+    path = _edge_path(
+        e,
+        g_src,
+        g_dst,
+        obstacles,
+        fan_slot,
+        curvature,
+        px_per_data_unit,
+        linewidth,
+    )
+    path === nothing && return
+
+    has_arrow_src = e.src_end === _Arrow
+    has_arrow_dst = e.dst_end === _Arrow
+    has_circle_src = e.src_end === _Circle
+    has_circle_dst = e.dst_end === _Circle
 
     m = length(path)
     tan_src = _unit(path[2] - path[1])
@@ -411,13 +440,43 @@ function Makie.plot(
     node_idx = Dict{Symbol,Int}(node_names[i] => i for i in eachindex(node_names))
     fan_slots = _edge_fan_slots(cg.edges)
 
-    # Explicit axis data limits (rather than Makie's autolimits, which don't
-    # account for the nodes' rendered extent at all) so nodes at the boundary
-    # aren't clipped. DataAspect keeps x/y scale equal, so whichever of
-    # xlim/ylim is narrower than the fixed canvas is centered with slack.
     margin = 1.3f0 * maximum(radii)
+
+    # Provisional scale from the node positions alone, used only to measure
+    # edge paths below.
     xlo, xhi = minimum(xs) - margin, maximum(xs) + margin
     ylo, yhi = minimum(ys) - margin, maximum(ys) + margin
+    xlo == xhi && (xlo -= 1.0f0; xhi += 1.0f0)
+    ylo == yhi && (ylo -= 1.0f0; yhi += 1.0f0)
+    provisional_px_per_data_unit = min(avail_w / (xhi - xlo), avail_h / (yhi - ylo))
+
+    # A routed edge can bow well past the node bounding box (e.g. clearing a
+    # cluster of obstacles). Fold every edge's measured path into the axis
+    # bounds so a bow is never clipped by the canvas.
+    edge_pts = Point2f[]
+    for (i, e) in enumerate(cg.edges)
+        src_idx, dst_idx = node_idx[e.src], node_idx[e.dst]
+        obstacles = Tuple{Point2f,Float32}[
+            (positions[j], radii[j]) for
+            j in eachindex(positions) if j != src_idx && j != dst_idx
+        ]
+        path = _edge_path(
+            e,
+            geoms[src_idx],
+            geoms[dst_idx],
+            obstacles,
+            fan_slots[i],
+            Float32(_resolve_edge(curvature, e, 0.0)),
+            provisional_px_per_data_unit,
+            Float32(_resolve_edge(linewidth, e, 1.5f0)),
+        )
+        path !== nothing && append!(edge_pts, path)
+    end
+
+    all_xs = isempty(edge_pts) ? xs : vcat(xs, [p[1] for p in edge_pts])
+    all_ys = isempty(edge_pts) ? ys : vcat(ys, [p[2] for p in edge_pts])
+    xlo, xhi = minimum(all_xs) - margin, maximum(all_xs) + margin
+    ylo, yhi = minimum(all_ys) - margin, maximum(all_ys) + margin
     xlo == xhi && (xlo -= 1.0f0; xhi += 1.0f0)
     ylo == yhi && (ylo -= 1.0f0; yhi += 1.0f0)
 
