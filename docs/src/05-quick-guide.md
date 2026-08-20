@@ -30,12 +30,8 @@ plotting-guide) guide.
 Graphs are validated when you construct them. Here we make an invalid
 DAG:
 
-```@example quick
-try
-    invalid_dag = cgraph("A --> B --> C --> A"; class = DAG)  # Creates a cycle!
-catch e
-    println("Error: $(e.msg)")
-end
+```@repl quick
+invalid_dag = cgraph("A --> B --> C --> A"; class = DAG)  # Creates a cycle!
 ```
 
 Since cycles are not allowed in DAGs, an error is thrown.
