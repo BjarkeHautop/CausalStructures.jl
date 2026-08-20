@@ -268,11 +268,12 @@ plot(dag; title = "My DAG", title_fontsize = 20, title_color = :navy)
 
 ## Figure size and margins
 
-| Keyword        | Default       | Controls                                                     |
-| -------------- | ------------- | -------------------------------------------------------------- |
-| `outer_margin` | `16`          | padding (pixels) around the whole figure                       |
-| `title_gap`    | `4.0`         | gap (points) between `title` and the graph                     |
-| `fig_size`     | `(600, 450)`  | figure size in pixels (width, height)                          |
+| Keyword               | Default       | Controls                                                     |
+| --------------------- | ------------- | -------------------------------------------------------------- |
+| `outer_margin`        | `16`          | padding (pixels) around the whole figure                       |
+| `title_gap`           | `4.0`         | gap (points) between `title` and the graph                     |
+| `fig_size`            | `(600, 450)`  | figure size in pixels (width, height)                          |
+| `stretch_to_fig_size` | `false`       | stretch the layout to fill an uneven `fig_size`                |
 
 ```@example plot
 plot(dag; fig_size = (800, 600))
@@ -283,6 +284,10 @@ plot(dag; fig_size = (800, 600))
     nodes grows, labels and edges get cramped and can overlap; increase
     `fig_size` (and `node_radius`/`label_fontsize` if needed) to keep larger
     causal graphs readable.
+
+!!! note "Uneven `fig_size` and `stretch_to_fig_size`"
+    Node positions keep the layout's own aspect ratio by default, so depending on the chosen `fig_size` you can get a lot of empty space
+    in the plot. Pass `stretch_to_fig_size = true` to disable this.
 
 ### Automatic edge routing
 

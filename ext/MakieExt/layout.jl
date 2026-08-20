@@ -38,3 +38,21 @@ function _rescale_to_unit_extent(positions::Vector{Point2f})
     scale = 2.0f0 / extent
     return [Point2f(cx + (p[1] - cx) * scale, cy + (p[2] - cy) * scale) for p in positions]
 end
+
+function _stretch_to_aspect(positions::Vector{Point2f}, target_aspect::Real)
+    n = length(positions)
+    n <= 1 && return positions
+    xs = [p[1] for p in positions]
+    ys = [p[2] for p in positions]
+    cx = sum(xs) / n
+    cy = sum(ys) / n
+    bbox_w = max(maximum(xs) - minimum(xs), 1.0f-3)
+    bbox_h = max(maximum(ys) - minimum(ys), 1.0f-3)
+    current_aspect = bbox_w / bbox_h
+    sx, sy = if current_aspect < target_aspect
+        Float32(target_aspect / current_aspect), 1.0f0
+    else
+        1.0f0, Float32(current_aspect / target_aspect)
+    end
+    return [Point2f(cx + (p[1] - cx) * sx, cy + (p[2] - cy) * sy) for p in positions]
+end

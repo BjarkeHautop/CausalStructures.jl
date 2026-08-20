@@ -261,7 +261,7 @@ Keyword arguments: `layout`, `labels`, `node_shape`, `node_radius`,
 `node_strokecolor`, `node_strokewidth`, `node_linestyle`, `edge_color`,
 `arrow_fill`, `linewidth`, `curvature`, `label_color`, `label_fontsize`,
 `label_font`, `title`, `title_fontsize`, `title_color`, `title_gap`,
-`outer_margin`, `fig_size`. Style keywords accept either a scalar (applied to
+`outer_margin`, `fig_size`, `stretch_to_fig_size`. Style keywords accept either a scalar (applied to
 everything) or a `Dict` for per-node/per-edge overrides; a per-edge `Dict` may
 be keyed by a `CausalEdge`, a `(src, dst)` tuple, a node name, an edge-type
 symbol, or `:default`.
@@ -311,6 +311,7 @@ function Makie.plot(
     outer_margin::Real = 16,
     title_gap::Real = 4.0,
     fig_size::NTuple{2,Real} = CausalStructures._PLOT_FIG_SIZE_DEFAULT,
+    stretch_to_fig_size::Bool = false,
     layout_kwargs...,
 )
     node_names = cg.backend.nodes
@@ -318,6 +319,12 @@ function Makie.plot(
     n == 0 && error("Cannot plot an empty graph (0 nodes).")
 
     positions = _rescale_to_unit_extent(_positions(cg, layout, layout_kwargs))
+    if stretch_to_fig_size
+        fig_height_budget0 = Float32(fig_size[2]) - (title !== nothing ? 40.0f0 : 0.0f0)
+        avail_w0 = Float32(fig_size[1]) - 2.0f0 * Float32(outer_margin)
+        avail_h0 = fig_height_budget0 - 2.0f0 * Float32(outer_margin)
+        positions = _stretch_to_aspect(positions, avail_w0 / avail_h0)
+    end
 
     shapes = Symbol[Symbol(_resolve_node(node_shape, nd, :circle)) for nd in node_names]
     for (i, sh) in enumerate(shapes)
