@@ -206,7 +206,7 @@ function _pag_moral_adj_filtered(
 )
     n = length(B.nodes)
     adj = [Int[] for _ = 1:n]
-    return _pag_moral_adj_filtered!(adj, B, mask, removed, Int[], Int[], Int[])
+    return _pag_moral_adj_filtered!(adj, B, mask, removed, Int[], Int[])
 end
 
 function _pag_moral_adj_filtered!(
@@ -214,65 +214,43 @@ function _pag_moral_adj_filtered!(
     B::PAGBackend,
     mask::BitVector,
     removed::Set{Tuple{Int,Int}},
-    pa_buf::Vector{Int},
-    sp_buf::Vector{Int},
-    ne_buf::Vector{Int},
+    clique_buf::Vector{Int},
+    direct_buf::Vector{Int},
 )
-    n = length(mask)
-    for v = 1:n
-        empty!(adj[v])
-    end
-    for v = 1:n
-        mask[v] || continue
-        empty!(pa_buf)
-        empty!(sp_buf)
-        empty!(ne_buf)
+    function collect_clique!(buf, v)
         for p in _parents_slice(B, v)
-            (mask[p] && !((p, v) in removed)) && push!(pa_buf, p)
+            (mask[p] && !((p, v) in removed)) && push!(buf, p)
         end
         for p in _circle_parents_slice(B, v)
-            (mask[p] && !((p, v) in removed)) && push!(pa_buf, p)
+            (mask[p] && !((p, v) in removed)) && push!(buf, p)
         end
         for s in _spouses_slice(B, v)
-            mask[s] && push!(sp_buf, s)
+            mask[s] && push!(buf, s)
         end
+    end
+    function collect_direct!(buf, v)
         for w in _undirected_slice(B, v)
-            mask[w] && push!(ne_buf, w)
+            mask[w] && push!(buf, w)
         end
         for w in _circle_undirected_out_slice(B, v)
-            mask[w] && push!(ne_buf, w)
+            mask[w] && push!(buf, w)
         end
         for w in _circle_undirected_in_slice(B, v)
-            mask[w] && push!(ne_buf, w)
+            mask[w] && push!(buf, w)
         end
         for w in _circle_circle_slice(B, v)
-            mask[w] && push!(ne_buf, w)
-        end
-        for p in pa_buf
-            push!(adj[v], p)
-            push!(adj[p], v)
-        end
-        for s in sp_buf
-            push!(adj[v], s)
-        end
-        for w in ne_buf
-            push!(adj[v], w)
-        end
-        # `ne_buf` is no longer needed this iteration; reuse it as the
-        # parents∪spouses head list for cliquing.
-        empty!(ne_buf)
-        append!(ne_buf, pa_buf)
-        append!(ne_buf, sp_buf)
-        heads = sort!(unique!(ne_buf))
-        for i in eachindex(heads), j = (i+1):lastindex(heads)
-            push!(adj[heads[i]], heads[j])
-            push!(adj[heads[j]], heads[i])
+            mask[w] && push!(buf, w)
         end
     end
-    for v = 1:n
-        sort!(unique!(adj[v]))
-    end
-    return adj
+
+    return _moral_adj_filtered!(
+        adj,
+        mask,
+        clique_buf,
+        direct_buf,
+        collect_clique!,
+        collect_direct!,
+    )
 end
 
 # BFS m-sep check in the PAG PBG (precomputed removed edges).
@@ -427,13 +405,12 @@ function all_adjustment_sets(
         anc_mask = falses(n)
         anc_stack = Int[]
         adj = [Int[] for _ = 1:n]
-        pa_buf = Int[]
-        sp_buf = Int[]
-        ne_buf = Int[]
+        clique_buf = Int[]
+        direct_buf = Int[]
 
         function recompute!(seeds_buf)
             _pag_anterior_bitmask_filtered!(anc_mask, anc_stack, B, seeds_buf, removed)
-            _pag_moral_adj_filtered!(adj, B, anc_mask, removed, pa_buf, sp_buf, ne_buf)
+            _pag_moral_adj_filtered!(adj, B, anc_mask, removed, clique_buf, direct_buf)
             return anc_mask, adj
         end
 

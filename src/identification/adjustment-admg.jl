@@ -89,6 +89,49 @@ function _ancestors_bitmask_filtered!(
     return mask
 end
 
+# Shared moralized-PBG-adjacency builder for ADMG/PAG/PDAG.
+# For each masked node v, `collect_clique!(buf, v)` fills `buf` with
+# the (masked, non-removed) neighbors that must be pairwise cliqued together
+# with v (e.g. parents and spouses), and `collect_direct!(buf, v)` fills `buf`
+# with masked neighbors that get a direct edge to v only, without cliquing
+# (e.g. undirected neighbors).
+function _moral_adj_filtered!(
+    adj::Vector{Vector{Int}},
+    mask::BitVector,
+    clique_buf::Vector{Int},
+    direct_buf::Vector{Int},
+    collect_clique!::Function,
+    collect_direct!::Function,
+)
+    n = length(mask)
+    for v = 1:n
+        empty!(adj[v])
+    end
+    for v = 1:n
+        mask[v] || continue
+        empty!(clique_buf)
+        empty!(direct_buf)
+        collect_clique!(clique_buf, v)
+        collect_direct!(direct_buf, v)
+        for p in clique_buf
+            push!(adj[v], p)
+            push!(adj[p], v)
+        end
+        for w in direct_buf
+            push!(adj[v], w)
+        end
+        sort!(unique!(clique_buf))
+        for i in eachindex(clique_buf), j = (i+1):lastindex(clique_buf)
+            push!(adj[clique_buf[i]], clique_buf[j])
+            push!(adj[clique_buf[j]], clique_buf[i])
+        end
+    end
+    for v = 1:n
+        sort!(unique!(adj[v]))
+    end
+    return adj
+end
+
 # ADMG moralization with removed directed edges (PBG variant).
 function _admg_moral_adj_filtered(
     B::ADMGBackend,
@@ -97,7 +140,7 @@ function _admg_moral_adj_filtered(
 )
     n = length(B.nodes)
     adj = [Int[] for _ = 1:n]
-    return _admg_moral_adj_filtered!(adj, B, mask, removed, Int[], Int[], Int[])
+    return _admg_moral_adj_filtered!(adj, B, mask, removed, Int[], Int[])
 end
 
 function _admg_moral_adj_filtered!(
@@ -105,44 +148,27 @@ function _admg_moral_adj_filtered!(
     B::ADMGBackend,
     mask::BitVector,
     removed::Set{Tuple{Int,Int}},
-    pa_buf::Vector{Int},
-    sp_buf::Vector{Int},
-    heads_buf::Vector{Int},
+    clique_buf::Vector{Int},
+    direct_buf::Vector{Int},
 )
-    n = length(mask)
-    for v = 1:n
-        empty!(adj[v])
-    end
-    for v = 1:n
-        mask[v] || continue
-        empty!(pa_buf)
-        empty!(sp_buf)
+    function collect_clique!(buf, v)
         for p in _parents_slice(B, v)
-            (mask[p] && !((p, v) in removed)) && push!(pa_buf, p)
+            (mask[p] && !((p, v) in removed)) && push!(buf, p)
         end
         for s in _spouses_slice(B, v)
-            mask[s] && push!(sp_buf, s)
-        end
-        for p in pa_buf
-            push!(adj[v], p)
-            push!(adj[p], v)
-        end
-        for s in sp_buf
-            push!(adj[v], s)
-        end
-        empty!(heads_buf)
-        append!(heads_buf, pa_buf)
-        append!(heads_buf, sp_buf)
-        sort!(unique!(heads_buf))
-        for i in eachindex(heads_buf), j = (i+1):lastindex(heads_buf)
-            push!(adj[heads_buf[i]], heads_buf[j])
-            push!(adj[heads_buf[j]], heads_buf[i])
+            mask[s] && push!(buf, s)
         end
     end
-    for v = 1:n
-        sort!(unique!(adj[v]))
-    end
-    return adj
+    collect_direct!(buf, v) = nothing
+
+    return _moral_adj_filtered!(
+        adj,
+        mask,
+        clique_buf,
+        direct_buf,
+        collect_clique!,
+        collect_direct!,
+    )
 end
 
 # Compute PBG removed edges: x --> v with x ∈ X, v ∉ X, v ∈ An(Y).
@@ -631,13 +657,12 @@ function all_adjustment_sets(
         anc_mask = falses(n)
         anc_stack = Int[]
         adj = [Int[] for _ = 1:n]
-        pa_buf = Int[]
-        sp_buf = Int[]
-        heads_buf = Int[]
+        clique_buf = Int[]
+        direct_buf = Int[]
 
         function recompute!(seeds_buf)
             _ancestors_bitmask_filtered!(anc_mask, anc_stack, B, seeds_buf, removed)
-            _admg_moral_adj_filtered!(adj, B, anc_mask, removed, pa_buf, sp_buf, heads_buf)
+            _admg_moral_adj_filtered!(adj, B, anc_mask, removed, clique_buf, direct_buf)
             return anc_mask, adj
         end
 

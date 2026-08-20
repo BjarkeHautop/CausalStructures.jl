@@ -79,39 +79,28 @@ function _pdag_moral_adj_filtered!(
     B::PDAGBackend,
     mask::BitVector,
     removed::Set{Tuple{Int,Int}},
-    pa_buf::Vector{Int},
-    ne_buf::Vector{Int},
+    clique_buf::Vector{Int},
+    direct_buf::Vector{Int},
 )
-    n = length(mask)
-    for v = 1:n
-        empty!(adj[v])
-    end
-    for v = 1:n
-        mask[v] || continue
-        empty!(pa_buf)
-        empty!(ne_buf)
+    function collect_clique!(buf, v)
         for p in _parents_slice(B, v)
-            (mask[p] && !((p, v) in removed)) && push!(pa_buf, p)
+            (mask[p] && !((p, v) in removed)) && push!(buf, p)
         end
+    end
+    function collect_direct!(buf, v)
         for w in _undirected_slice(B, v)
-            mask[w] && push!(ne_buf, w)
-        end
-        for p in pa_buf
-            push!(adj[v], p)
-            push!(adj[p], v)
-        end
-        for w in ne_buf
-            push!(adj[v], w)
-        end
-        for i in eachindex(pa_buf), j = (i+1):lastindex(pa_buf)
-            push!(adj[pa_buf[i]], pa_buf[j])
-            push!(adj[pa_buf[j]], pa_buf[i])
+            mask[w] && push!(buf, w)
         end
     end
-    for v = 1:n
-        sort!(unique!(adj[v]))
-    end
-    return adj
+
+    return _moral_adj_filtered!(
+        adj,
+        mask,
+        clique_buf,
+        direct_buf,
+        collect_clique!,
+        collect_direct!,
+    )
 end
 
 # BFS d-sep check in PDAG PBG (moralization-based).
@@ -253,12 +242,12 @@ function all_adjustment_sets(
         anc_mask = falses(n)
         anc_stack = Int[]
         adj = [Int[] for _ = 1:n]
-        pa_buf = Int[]
-        ne_buf = Int[]
+        clique_buf = Int[]
+        direct_buf = Int[]
 
         function recompute!(seeds_buf)
             _anterior_bitmask_filtered!(anc_mask, anc_stack, B, seeds_buf, removed)
-            _pdag_moral_adj_filtered!(adj, B, anc_mask, removed, pa_buf, ne_buf)
+            _pdag_moral_adj_filtered!(adj, B, anc_mask, removed, clique_buf, direct_buf)
             return anc_mask, adj
         end
 
