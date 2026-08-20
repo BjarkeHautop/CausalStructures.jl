@@ -18,6 +18,7 @@ const titles = Dict(
     "05-quick-guide.md" => "Getting Started",
     "15-equivalence-classes.md" => "Equivalence Classes",
     "20-causal-identification.md" => "Causal Identification",
+    "25-pag-causal-effects.md" => "PAG Causal Effects",
     "40-plotting.md" => "Plotting",
     "70-benchmarks.md" => "Benchmarks",
     "80-preferences.md" => "Preferences",
@@ -96,6 +97,7 @@ makedocs(;
         size_threshold_ignore = [
             "15-equivalence-classes.md",
             "20-causal-identification.md",
+            "25-pag-causal-effects.md",
             "40-plotting.md",
             "70-benchmarks.md",
         ],
