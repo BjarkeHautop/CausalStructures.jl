@@ -20,7 +20,14 @@ using NetworkLayout
 
 ## Basic usage
 
-Pass any `CausalGraph` to `plot`. Consider Figure 6.5 of
+Pass any `CausalGraph` to `plot`. Every edge mark is supported natively:
+
+```@example plot
+unknown = UNKNOWN("A <-> B o-> C o-- A")
+plot(unknown)
+```
+
+Let us plot the DAG from Figure 6.5 of
 [peters2017elements](@citet):
 
 ```@example plot
@@ -29,16 +36,14 @@ dag = DAG(
 plot(dag)
 ```
 
-## Edge marks
+Styling breaks down into four areas, covered below:
 
-`plot` supports every edge mark natively:
+- **[Layout](@ref plot-layouts)** — where nodes are placed
+- **[Styling nodes](@ref)** — node appearance
+- **[Styling edges](@ref)** — edge appearance
+- **[Labels and titles](@ref)** — text and annotations
 
-```@example plot
-unknown = UNKNOWN("A <-> B o-> C o-- A")
-plot(unknown)
-```
-
-## [Layouts](@id plot-layouts)
+## [Layout](@id plot-layouts)
 
 The `layout` keyword controls node placement and defaults to `:stress`.
 
@@ -48,20 +53,14 @@ plot(dag; layout = :spring)
 
 We provide these short-hand names for convenience:
 
-| `layout`      | Algorithm                                                   |
-| ------------- | ------------------------------------------------------------ |
-| `:spring`     | Fruchterman-Reingold force-directed                          |
-| `:stress`     | Stress majorization (the default)                            |
-| `:sfdp`       | Scalable Force-Directed Placement                            |
-| `:spectral`   | Spectral layout                                               |
-| `:shell`      | Concentric shells                                             |
-| `:squaregrid` | Square grid                                                    |
-
-Extra keyword arguments are forwarded to the underlying NetworkLayout algorithm:
-
-```@example plot
-plot(dag; layout = :spring, seed = 1405, iterations = 500)
-```
+| `layout`      | Algorithm                            |
+| ------------- | ------------------------------------- |
+| `:spring`     | Fruchterman-Reingold force-directed   |
+| `:stress`     | Stress majorization (the default)     |
+| `:sfdp`       | Scalable Force-Directed Placement     |
+| `:spectral`   | Spectral layout                       |
+| `:shell`      | Concentric shells                     |
+| `:squaregrid` | Square grid                           |
 
 `layout` also accepts explicit positions instead of a `Symbol`: either a
 `Dict` of `(x, y)` pairs keyed by node name, or a `Vector` of them in the
@@ -84,7 +83,7 @@ plot(dag; layout = Dict(
     plot(dag; layout = positions)
     ```
 
-## Node styling
+## Styling nodes
 
 Each node style argument accepts either a scalar (applied to all nodes) or a `Dict{Symbol, <value>}` keyed by node name, with `:default` as a fallback.
 
@@ -100,35 +99,24 @@ Each node style argument accepts either a scalar (applied to all nodes) or a `Di
 | `arrow_size`        | `0.4 ×` node-count-based reference   | length of arrowhead triangles   |
 | `circle_size`       | `0.28 ×` node-count-based reference  | radius of open-circle endpoints |
 
-Global styling:
-
-```@example plot
-plot(dag; node_color = :lightblue, node_strokecolor = :navy)
-```
-
-Highlight individual nodes:
+Combine color, border, and shape to highlight a node:
 
 ```@example plot
 plot(dag;
-    node_color = Dict(:A => :salmon, :default => :white),
-    node_strokecolor = Dict(:A => :crimson, :default => :black),
+    node_color = Dict(:A => :salmon, :default => :lightblue),
+    node_strokecolor = Dict(:A => :crimson, :default => :navy),
+    node_shape = Dict(:K => :square, :default => :circle),
 )
 ```
 
-### Node shapes
-
-`node_shape` is one of `:circle` (the default), `:square`, `:ellipse`, or `:rect`. Main use of `:ellipse`/`:rect` is to fit an oblong label.
-
-```@example plot
-plot(dag; node_shape = Dict(:K => :square, :default => :circle))
-```
-
-`node_linestyle` can be used to style the border:
+`node_shape` is one of `:circle` (the default), `:square`, `:ellipse`, or `:rect`; the
+latter two mainly exist to fit an oblong label. `node_linestyle` styles the border, e.g.
+to mark a latent variable:
 
 ```@example plot
-plot(DAG("U --> X + Y, X --> Y");
-    node_linestyle = Dict(:U => :dash),
-    node_strokecolor = Dict(:U => :gray50, :default => :black),
+plot(dag;
+    node_linestyle = Dict(:X => :dash),
+    node_strokecolor = Dict(:X => :gray50, :default => :black),
 )
 ```
 
@@ -139,33 +127,33 @@ own label:
 
 ```@example plot
 longlabels = DAG("Exposure --> Mediator --> Y_outcome")
-plot(longlabels)
+plot(longlabels; node_shape = Dict(:Exposure => :ellipse))
 ```
 
-Pass `node_radius` explicitly to size every node uniformly instead
+Alternatively, you can pass `node_radius` explicitly to control the size yourself:
 
 ```@example plot
-plot(dag; node_radius = 0.18, arrow_size = 0.07)
+plot(dag; node_radius = 0.18)
 ```
 
-## Edge styling
+## Styling edges
 
 Each edge style argument accepts either a scalar or a `Dict` keyed by (and follows this precedence):
 
-1. a `CausalEdge` for one exact edge, e.g. `bidirected(:X, :Y)`
-2. a `(src, dst)` tuple for the node pair, in either order
-3. a node name (`Symbol`), applying to every edge touching that node
-4. an edge-type symbol (`:directed`, `:undirected`, `:bidirected`, `:partially_directed`, `:partially_undirected`, `:partial`)
-5. `:default` as a fallback
+ 1. a `CausalEdge` for one exact edge, e.g. `bidirected(:X, :Y)`
+ 2. a `(src, dst)` tuple for the node pair, in either order
+ 3. a node name (`Symbol`), applying to every edge touching that node
+ 4. an edge-type symbol (`:directed`, `:undirected`, `:bidirected`, `:partially_directed`, `:partially_undirected`, `:partial`)
+ 5. `:default` as a fallback
 
-| Keyword      | Default   | Controls             |
-| ------------ | --------- | --------------------- |
-| `edge_color` | `:black`  | line / marker color   |
-| `arrow_fill` | `nothing` | arrowhead fill color  |
-| `linewidth`  | `1.5`     | line width            |
-| `curvature`  | `nothing` | how far the edge bows |
+| Keyword      | Default   | Controls               |
+| ------------ | --------- | ----------------------- |
+| `edge_color` | `:black`  | line / marker color     |
+| `arrow_fill` | `nothing` | arrowhead fill color    |
+| `linewidth`  | `1.5`     | line width              |
+| `curvature`  | `nothing` | how far the edge bows   |
 
-Color edges by type:
+Let's style some edges by type:
 
 ```@example plot
 admg = ADMG("X --> Y, X <-> Z, Z --> Y")
@@ -176,7 +164,18 @@ plot(admg;
 )
 ```
 
-Highlight a specific edge using a tuple key:
+`arrow_fill` is the arrowhead's fill color; `nothing` (the default) matches
+the edge's own resolved `edge_color`, so arrowheads render solid. Pass a
+transparent color for a hollow, outline-only arrowhead:
+
+```@example plot
+plot(dag; arrow_fill = :transparent)
+```
+
+### Targeting specific edges
+
+A tuple key highlights a single edge, and a node-name key highlights every edge touching
+that node — both use the same `Dict` mechanism as node styling:
 
 ```@example plot
 plot(dag;
@@ -199,35 +198,41 @@ plot(shared;
 Symmetric edges are stored in a canonical order, so `bidirected(:Y, :X)` is
 the same key as `bidirected(:X, :Y)`.
 
-Highlight every edge touching a node:
+### Curvature and automatic routing
 
-```@example plot
-plot(dag;
-    edge_color = Dict(:A => :red, :default => :black),
-)
-```
-
-`arrow_fill` is the arrowhead's fill color; `nothing` (the default) matches
-the edge's own resolved `edge_color`, so arrowheads render solid. Pass a
-transparent color for a hollow, outline-only arrowhead:
-
-```@example plot
-plot(dag; arrow_fill = :transparent)
-```
-
-### Curved edges
-
-`curvature` bows an edge into an arc instead of drawing it straight. Positive values bow to the left as seen travelling from `src` to `dst`, negative to the right.
+`curvature` bows an edge into an arc instead of drawing it straight. Positive values bow
+to the left as seen travelling from `src` to `dst`, negative to the right.
 
 ```@example plot
 plot(admg; curvature = Dict(:bidirected => -0.3))
 ```
 
-Because the key can be a specific edge, `curvature` can also be used as a
-manual override if the [Automatic edge routing](@ref) picks an awkward
-path.
+An edge whose straight `src --> dst` line would pass too close to a
+non-incident node is automatically bent around it as a Bezier curve, rather
+than being drawn straight through it. Edges with nothing in their way are
+always drawn straight.
 
-## Label styling
+```@example plot
+detour = DAG("A --> X + Y, X --> Y")
+
+# A, X, Y placed in a line, so the straight A --> Y edge would cross X.
+plot(detour; layout = [(0, 0), (1, 0), (2, 0)])
+```
+
+Because the key can be a specific edge, `curvature` can also be used as a
+manual override if the automatic routing picks an awkward path — an explicit
+`curvature` of `0.0` forces a straight line:
+
+```@example plot
+plot(detour;
+    layout = [(0, 0), (1, 0), (2, 0)],
+    curvature = Dict(directed(:A, :Y) => 0.0),
+)
+```
+
+## Labels and titles
+
+### Labels
 
 Each label style argument accepts either a scalar or a `Dict{Symbol, <value>}` keyed by node name,
 with `:default` as a fallback (same resolution rules as node styling).
@@ -240,7 +245,8 @@ with `:default` as a fallback (same resolution rules as node styling).
 | `label_font`     | `:regular` | node label font           |
 
 By default each node is labelled with its own name. `labels` can be
-used to overwrite this:
+used to overwrite this; node sizing accounts for multi-line labels, so the
+nodes grow to fit:
 
 ```@example plot
 plot(DAG("A0 --> L1 --> A1 --> Y, A0 --> Y + A1");
@@ -252,17 +258,16 @@ plot(DAG("A0 --> L1 --> A1 --> Y, A0 --> Y + A1");
 )
 ```
 
-Node sizing accounts for multi-line labels, so the nodes grow to fit.
+`label_color` and `label_fontsize` style the label text itself:
 
 ```@example plot
-plot(dag; label_fontsize = 18, label_color = :navy)
+plot(dag;
+    label_color = Dict(:A => :crimson, :default => :black),
+    label_fontsize = 18,
+)
 ```
 
-```@example plot
-plot(dag; label_color = Dict(:A => :crimson, :default => :black))
-```
-
-## Title
+### Titles
 
 Pass `title` to add a plot title (`nothing` by default, i.e. no title).
 `title_fontsize` and `title_color` style it; left as `nothing`, they fall back
@@ -275,12 +280,12 @@ plot(dag; title = "My DAG", title_fontsize = 20, title_color = :navy)
 
 ## Figure size and margins
 
-| Keyword               | Default       | Controls                                                     |
-| --------------------- | ------------- | -------------------------------------------------------------- |
-| `outer_margin`        | `16`          | padding (pixels) around the whole figure                       |
-| `title_gap`           | `4.0`         | gap (points) between `title` and the graph                     |
-| `fig_size`            | `(600, 450)`  | figure size in pixels (width, height)                          |
-| `stretch_to_fig_size` | `false`       | stretch the layout to fill an uneven `fig_size`                |
+| Keyword               | Default       | Controls                                          |
+| ---------------------- | ------------- | -------------------------------------------------- |
+| `outer_margin`        | `16`          | padding (pixels) around the whole figure           |
+| `title_gap`           | `4.0`         | gap (points) between `title` and the graph         |
+| `fig_size`            | `(600, 450)`  | figure size in pixels (width, height)              |
+| `stretch_to_fig_size` | `false`       | stretch the layout to fill an uneven `fig_size`    |
 
 ```@example plot
 plot(dag; fig_size = (800, 600))
@@ -295,30 +300,6 @@ plot(dag; fig_size = (800, 600))
 !!! tip "Uneven `fig_size` and `stretch_to_fig_size`"
     Node positions keep the layout's own aspect ratio by default, so depending on the chosen `fig_size` you can get a lot of empty space
     in the plot. Pass `stretch_to_fig_size = true` to disable this.
-
-### Automatic edge routing
-
-An edge whose straight `src --> dst` line would pass too close to a
-non-incident node automatically bends around it as a Bezier curve, rather
-than being drawn straight through it. Edges with nothing in their way are
-always drawn straight.
-
-```@example plot
-detour = DAG("A --> X + Y, X --> Y")
-
-# A, X, Y placed in a line, so the straight A --> Y edge would cross X.
-plot(detour; layout = [(0, 0), (1, 0), (2, 0)])
-```
-
-An explicit `curvature` of `0.0` can be set to override the automatic
-routing:
-
-```@example plot
-plot(detour;
-    layout = [(0, 0), (1, 0), (2, 0)],
-    curvature = Dict(directed(:A, :Y) => 0.0),
-)
-```
 
 ## Combining options
 
