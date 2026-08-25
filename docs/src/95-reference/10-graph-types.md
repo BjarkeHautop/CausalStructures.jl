@@ -6,17 +6,38 @@ underlying theory, see, for instance, [pearl2009causality](@citet) or
 [peters2017elements](@citet); [richardsonspirtes2002ancestral](@citet) covers
 `AG`/`MAG` specifically, and [zhang2008completeness](@citet) covers `PAG`.
 
-## Constructing graphs
+## [Constructing graphs](@id constructing-graphs)
 
 Each graph type is its own constructor: call [`DAG`](@ref), [`ADMG`](@ref),
-[`PAG`](@ref), etc. directly with some edges (and, if you have isolated
-nodes, some [`node`](@ref)s), or with a compact string, and it builds and
-validates the graph for you. See [`DAG`](@ref) for the full constructor
-syntax, shared by every graph type.
+[`PAG`](@ref), etc. with some edges (and, if you have isolated
+nodes, some [`node`](@ref)s).
 
 ```@docs
 node
 ```
+
+### String syntax
+
+The string form uses a compact syntax instead of composing [`CausalEdge`](@ref)
+values by hand. Statements are separated by commas (or newlines); each connects
+node names with an edge marker built from `<`, `-`, `o`, `>`:
+
+| Marker | Equivalent constructor              |
+|:------:|:------------------------------------|
+| `-->`  | `directed(src, dst)`                |
+| `<--`  | `directed(dst, src)`                |
+| `---`  | `undirected(src, dst)`              |
+| `<->`  | `bidirected(src, dst)`              |
+| `o->`  | `partially_directed(src, dst)`      |
+| `<-o`  | `partially_directed(dst, src)`      |
+| `o--`  | `partially_undirected(src, dst)`    |
+| `--o`  | `partially_undirected(dst, src)`    |
+| `o-o`  | `partial(src, dst)`                 |
+
+`+` fans a marker out to (or in from) several nodes at once, and chaining
+markers connects consecutive node groups pairwise, so `"A --> B --> C"` yields
+two edges (`A-->B`, `B-->C`) while `"A --> B + C"` yields `A-->B` and `A-->C`.
+A statement with no marker (e.g. `"F"`) declares isolated node(s).
 
 ## Graph classes
 
@@ -108,7 +129,7 @@ it. Only undirected (`---`) edges are allowed.
 UG
 ```
 
-### The escape hatch
+### Unknown Graphs
 
 [`UNKNOWN`](@ref) imposes no structural constraints on the graph. It accepts
 all supported edge types, including self-loops and parallel edges. Use it when
