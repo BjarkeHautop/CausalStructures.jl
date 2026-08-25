@@ -308,7 +308,7 @@ styling precedence rules, and examples.
 ```julia
 using CausalStructures, CairoMakie
 
-dag = cgraph(directed(:A, :X), directed(:A, :Y), directed(:X, :Y); class = DAG)
+dag = DAG(directed(:A, :X), directed(:A, :Y), directed(:X, :Y))
 
 Makie.plot(dag; node_color = :lightblue, edge_color = :gray40)
 Makie.plot(dag; edge_color = Dict((:A, :X) => :red, :default => :black))

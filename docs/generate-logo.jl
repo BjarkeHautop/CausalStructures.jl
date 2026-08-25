@@ -8,7 +8,7 @@ jl_red = "#CB3C33"
 jl_green = "#389826"
 node_color = Dict(:A => jl_purple, :B => jl_red, :C => jl_green)
 
-cg = cgraph(directed(:A, :B), directed(:A, :C), directed(:B, :C); class = DAG)
+cg = DAG(directed(:A, :B), directed(:A, :C), directed(:B, :C))
 layout_positions = [pos[n] for n in nodes(cg)]
 
 function make_logo(filename, ink)
