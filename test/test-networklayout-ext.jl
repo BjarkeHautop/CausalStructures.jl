@@ -2,7 +2,7 @@
     [:unit, :layout] begin
     using NetworkLayout
 
-    dag = cgraph(directed(:A, :B), directed(:B, :C), directed(:A, :C); class = DAG)
+    dag = DAG(directed(:A, :B), directed(:B, :C), directed(:A, :C))
 
     for method in (:spring, :stress, :sfdp, :spectral, :shell, :squaregrid)
         pos = layout(dag, method)
@@ -14,14 +14,14 @@ end
 @testitem "NetworkLayoutExt: :spring is reproducible with a seed" tags = [:unit, :layout] begin
     using NetworkLayout
 
-    dag = cgraph(directed(:A, :B), directed(:B, :C), directed(:C, :D); class = DAG)
+    dag = DAG(directed(:A, :B), directed(:B, :C), directed(:C, :D))
     @test layout(dag, :spring; seed = 42) == layout(dag, :spring; seed = 42)
 end
 
 @testitem "NetworkLayoutExt: handles a graph with no edges" tags = [:unit, :layout] begin
     using NetworkLayout
 
-    dag = cgraph(node(:A), node(:B), node(:C); class = DAG)
+    dag = DAG(node(:A), node(:B), node(:C))
     pos = layout(dag, :spring)
     @test issetequal(keys(pos), [:A, :B, :C])
 end
@@ -31,7 +31,7 @@ end
     using Makie
     using NetworkLayout
 
-    dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+    dag = DAG(directed(:A, :B), directed(:B, :C))
     positions = layout(dag, :spring; seed = 1405)
     positions[:A] = (0.0, 2.0)
 
@@ -44,6 +44,6 @@ end
 
     @test CausalStructures._default_layout_method() == :stress
 
-    dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+    dag = DAG(directed(:A, :B), directed(:B, :C))
     @test layout(dag) == layout(dag, :stress)
 end

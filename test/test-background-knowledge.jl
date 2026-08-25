@@ -43,15 +43,15 @@ end
     @test_throws ArgumentError BackgroundKnowledge("A --> B, A !--> B")
 end
 
-@testitem "cgraph rejects forbidden edges" tags = [:unit, :background_knowledge] begin
-    @test_throws ArgumentError cgraph(forbidden_directed(:A, :B); class = DAG)
-    @test_throws ArgumentError cgraph(required_directed(:A, :B); class = DAG)
-    @test_throws ArgumentError cgraph("A !--> B"; class = DAG)
+@testitem "DAG rejects forbidden edges" tags = [:unit, :background_knowledge] begin
+    @test_throws ArgumentError DAG(forbidden_directed(:A, :B))
+    @test_throws ArgumentError DAG(required_directed(:A, :B))
+    @test_throws ArgumentError DAG("A !--> B")
 end
 
 @testitem "dag_to_mpdag: empty background knowledge matches dag_to_cpdag" tags =
     [:unit, :background_knowledge] begin
-    dag = cgraph("A --> B --> C, A --> D")
+    dag = DAG("A --> B --> C, A --> D")
     mpdag = dag_to_mpdag(dag)
     cpdag = dag_to_cpdag(dag)
     @test mpdag isa MPDAG
@@ -61,7 +61,7 @@ end
 
 @testitem "dag_to_mpdag: required edge propagates via Meek R1" tags =
     [:unit, :background_knowledge] begin
-    dag = cgraph("A --> B --> C")
+    dag = DAG("A --> B --> C")
     # CPDAG is fully undirected; requiring A --> B compels B --> C by R1
     mpdag = dag_to_mpdag(dag, BackgroundKnowledge(required_directed(:A, :B)))
     @test mpdag isa MPDAG
@@ -74,7 +74,7 @@ end
 
 @testitem "dag_to_mpdag: forbidden edge orients the reverse direction" tags =
     [:unit, :background_knowledge] begin
-    dag = cgraph("A --> B --> C")
+    dag = DAG("A --> B --> C")
     # forbidding B --> A orients A --> B, and R1 then compels B --> C
     mpdag = dag_to_mpdag(dag, "B !--> A")
     @test Set(edges(mpdag)) == Set([directed(:A, :B), directed(:B, :C)])
@@ -82,7 +82,7 @@ end
 
 @testitem "dag_to_mpdag: partial knowledge leaves other edges undirected" tags =
     [:unit, :background_knowledge] begin
-    dag = cgraph("A --> B, A --> C")
+    dag = DAG("A --> B, A --> C")
     # requiring B --> A leaves A --- C undirected (no rule applies)
     mpdag = dag_to_mpdag(dag, "B !--> A")
 
@@ -92,7 +92,7 @@ end
 
 @testitem "dag_to_mpdag: background knowledge inconsistent with DAG errors" tags =
     [:unit, :background_knowledge] begin
-    dag = cgraph("A --> B --> C")
+    dag = DAG("A --> B --> C")
     # DAG has B --> C, so requiring C --> B / forbidding B --> C contradicts it
     @test_throws ErrorException dag_to_mpdag(dag, "C --> B")
     @test_throws ErrorException dag_to_mpdag(dag, "B !--> C")
@@ -102,7 +102,7 @@ end
 
 @testitem "dag_to_mpdag: enumerate_dags respects background knowledge" tags =
     [:unit, :background_knowledge] begin
-    dag = cgraph("A --> B --> C, B --> D")
+    dag = DAG("A --> B --> C, B --> D")
     bk = BackgroundKnowledge("A --> B, C !--> B")
     mpdag = dag_to_mpdag(dag, bk)
 
@@ -123,7 +123,7 @@ end
 
 @testitem "apply_background_knowledge: on a CPDAG directly" tags =
     [:unit, :background_knowledge] begin
-    cpdag = dag_to_cpdag(cgraph("A --> B --> C"))
+    cpdag = dag_to_cpdag(DAG("A --> B --> C"))
     mpdag = apply_background_knowledge(cpdag, "C --> B")
     @test mpdag isa MPDAG
     @test Set(edges(mpdag)) == Set([directed(:C, :B), directed(:B, :A)])
@@ -131,7 +131,7 @@ end
 
 @testitem "apply_background_knowledge: no-op and error cases" tags =
     [:unit, :background_knowledge] begin
-    cpdag = dag_to_cpdag(cgraph("A --> C, B --> C"))  # v-structure: fully compelled
+    cpdag = dag_to_cpdag(DAG("A --> C, B --> C"))  # v-structure: fully compelled
 
     # required edge already directed: no-op
     mpdag = apply_background_knowledge(cpdag, "A --> C")
@@ -152,7 +152,7 @@ end
 
 @testitem "apply_background_knowledge: incremental refinement of an MPDAG" tags =
     [:unit, :background_knowledge] begin
-    dag = cgraph("A --> B, A --> C")
+    dag = DAG("A --> B, A --> C")
     m1 = dag_to_mpdag(dag, "B !--> A")
     @test undirected(:A, :C) in edges(m1)
     m2 = apply_background_knowledge(m1, "A --> C")

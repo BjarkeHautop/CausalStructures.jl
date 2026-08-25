@@ -18,7 +18,7 @@ sets, `x`/`y` in the criterion below refer to the whole set.
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("A --> X --> Y, A --> Y"; class = DAG);
+julia> cg = DAG("A --> X --> Y, A --> Y");
 
 julia> is_valid_backdoor(cg, :X, :Y)       # empty Z leaves the backdoor path A --> Y open
 false
@@ -26,7 +26,7 @@ false
 julia> is_valid_backdoor(cg, :X, :Y, [:A]) # conditioning on A blocks the backdoor path
 true
 
-julia> admg = cgraph("A --> X --> Y, A <-> Y"; class = ADMG);
+julia> admg = ADMG("A --> X --> Y, A <-> Y");
 
 julia> is_valid_backdoor(admg, :X, :Y)       # A <-> Y is an unobserved confounder of the path
 false
@@ -34,7 +34,7 @@ false
 julia> is_valid_backdoor(admg, :X, :Y, [:A]) # conditioning on A still blocks it
 true
 
-julia> cg2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = DAG);
+julia> cg2 = DAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
 julia> is_valid_backdoor(cg2, [:X1, :X2], [:Y])              # both confounding paths are open
 false
@@ -130,19 +130,19 @@ bidirected edges and are never candidates.
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("A --> X --> Y, A --> Y"; class = DAG);
+julia> cg = DAG("A --> X --> Y, A --> Y");
 
 julia> all_backdoor_sets(cg, :X, :Y)
 1-element Vector{Vector{Symbol}}:
  [:A]
 
-julia> admg = cgraph("A --> X --> Y, A <-> Y"; class = ADMG);
+julia> admg = ADMG("A --> X --> Y, A <-> Y");
 
 julia> all_backdoor_sets(admg, :X, :Y)
 1-element Vector{Vector{Symbol}}:
  [:A]
 
-julia> cg2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = DAG);
+julia> cg2 = DAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
 julia> all_backdoor_sets(cg2, [:X1, :X2], [:Y])
 1-element Vector{Vector{Symbol}}:
@@ -335,11 +335,9 @@ Three types are supported:
 # Examples
 
 ```jldoctest
-julia> cg = cgraph(
+julia> cg = DAG(
            "C --> X, X --> F, X --> D --> Y, A --> X,
-           A --> K --> Y, D --> G, Y --> H";
-           class = DAG,
-       );
+           A --> K --> Y, D --> G, Y --> H");
 
 julia> sort(adjustment_set(cg, :X, :Y; type = :parents))
 2-element Vector{Symbol}:
@@ -354,7 +352,7 @@ julia> adjustment_set(cg, :X, :Y; type = :optimal)
 1-element Vector{Symbol}:
  :K
 
-julia> cg2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = DAG);
+julia> cg2 = DAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
 julia> sort(adjustment_set(cg2, [:X1, :X2], [:Y]; type = :optimal))
 2-element Vector{Symbol}:
@@ -478,7 +476,7 @@ Returns an empty vector if `x` has no causal path to `y`.
 # Examples
 
 ```jldoctest
-julia> pdag = cgraph("A --> X --> Y, A --> Y"; class = PDAG);
+julia> pdag = PDAG("A --> X --> Y, A --> Y");
 
 julia> adjustment_set(pdag, :X, :Y)
 1-element Vector{Symbol}:
@@ -487,7 +485,7 @@ julia> adjustment_set(pdag, :X, :Y)
 julia> is_valid_adjustment(pdag, :X, :Y, [:A])
 true
 
-julia> pdag2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = PDAG);
+julia> pdag2 = PDAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
 julia> sort(adjustment_set(pdag2, [:X1, :X2], [:Y]))
 2-element Vector{Symbol}:
@@ -578,7 +576,7 @@ exists if and only if `y` is not a parent of `x`, and when it exists,
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("A --> X --> Y, A --> Y"; class = DAG);
+julia> cg = DAG("A --> X --> Y, A --> Y");
 
 julia> backdoor_set(cg, :X, :Y)
 1-element Vector{Symbol}:

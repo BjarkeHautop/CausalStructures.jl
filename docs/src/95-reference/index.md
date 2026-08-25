@@ -3,7 +3,7 @@
 The API reference is split by topic:
 
 - [Graph & Edge Types](@ref graph-types-reference) -- graph classes, edge
-  constructors, `cgraph`, background knowledge
+  constructors, background knowledge
 - [Queries](@ref queries-reference) -- traversal, membership, and predicate
   functions
 - [Operations](@ref operations-reference) -- graph-to-graph transformations

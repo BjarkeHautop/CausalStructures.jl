@@ -152,43 +152,8 @@ function _parse_graph_string(s::AbstractString)
     return items
 end
 
-"""
-    cgraph(s::AbstractString; class::Type{<:CausalGraph}=DAG) -> CausalGraph
-
-Construct a causal graph from a compact string description, instead of composing
-[`CausalEdge`](@ref) values by hand.
-
-Statements are separated by commas (or newlines); each connects node names with an
-edge marker built from `<`, `-`, `o`, `>`:
-
-| Marker | Equivalent constructor              |
-|:------:|:------------------------------------|
-| `-->`  | `directed(src, dst)`                |
-| `<--`  | `directed(dst, src)`                |
-| `---`  | `undirected(src, dst)`              |
-| `<->`  | `bidirected(src, dst)`              |
-| `o->`  | `partially_directed(src, dst)`      |
-| `<-o`  | `partially_directed(dst, src)`      |
-| `o--`  | `partially_undirected(src, dst)`    |
-| `--o`  | `partially_undirected(dst, src)`    |
-| `o-o`  | `partial(src, dst)`                 |
-
-`+` fans a marker out to (or in from) several nodes at once, and chaining markers
-connects consecutive node groups pairwise, so `"A --> B --> C"` yields two edges
-(`A-->B`, `B-->C`) while `"A --> B + C"` yields `A-->B` and `A-->C`. A statement
-with no marker (e.g. `"F"`) declares isolated node(s).
-
-# Examples
-
-```jldoctest
-julia> cg = cgraph("A --> B + C, D o-> E"; class = UNKNOWN)
-UNKNOWN with 5 nodes and 3 edges:
-  nodes: A, B, C, D, E
-  edges:
-    A --> B, A --> C, D o-> E
-```
-"""
-function cgraph(s::AbstractString; class::Type{<:CausalGraph} = DAG)
-    items = _parse_graph_string(s)
-    return cgraph(items...; class = class)
+for T in (:DAG, :UG, :PDAG, :CPDAG, :MPDAG, :ADMG, :AG, :MAG, :UNKNOWN, :PAG)
+    @eval function $T(s::AbstractString)
+        return $T(_parse_graph_string(s)...)
+    end
 end

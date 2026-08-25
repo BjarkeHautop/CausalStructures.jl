@@ -22,7 +22,7 @@
                 push!(edges, directed(l, e.src), directed(l, e.dst))
             end
         end
-        return cgraph(edges...; class = DAG)
+        return DAG(edges...)
     end
 
     # The Sec. 3.4 brute-force baseline: D-SEP(X,Y,M_X) per MAG, kept if disjoint from De(X,M) and not containing Y.
@@ -42,36 +42,21 @@ end
 
 @testitem "pagcauses: X not a possible ancestor of Y returns no causal effect" tags =
     [:unit, :pagcauses] begin
-    mag = cgraph(
-        directed(:B, :X),
-        bidirected(:A, :X),
-        directed(:A, :Y),
-        directed(:X, :Y);
-        class = MAG,
-    )
+    mag = MAG(directed(:B, :X), bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y))
     pag = mag_to_pag(mag)   # X --> Y is definite, so Y is never an ancestor of X
     @test pagcauses(pag, :Y, :X) == Vector{Symbol}[]
 end
 
 @testitem "pagcauses: identifiable directly returns the single backdoor set (Proposition 1)" tags =
     [:unit, :pagcauses] begin
-    mag = cgraph(
-        directed(:B, :X),
-        bidirected(:A, :X),
-        directed(:A, :Y),
-        directed(:X, :Y);
-        class = MAG,
-    )
+    mag = MAG(directed(:B, :X), bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y))
     pag = mag_to_pag(mag)
     @test pagcauses(pag, :X, :Y) == [sort(backdoor_set(pag, :X, :Y))]
 end
 
 @testitem "pagcauses matches Fig. 2 of Wang, Tao, Qin & Zhou (2025) end to end" tags =
     [:unit, :pagcauses] begin
-    pag = cgraph(
-        "X o-> Y, X o-> C, X o-> A, Y o-o C, C o-o A, B o-> C, B o-> Y, B o-> A";
-        class = PAG,
-    )
+    pag = PAG("X o-> Y, X o-> C, X o-> A, Y o-o C, C o-o A, B o-> C, B o-> Y, B o-> A")
     result = Set(Set.(pagcauses(pag, :X, :Y)))
 
     # {}, {A, B}: local structure C = {A} (Fig. 2(c)/2(d)). {C}, {B, C}, {A, B, C}: C = {A, C}.
@@ -85,18 +70,9 @@ end
     # Only holds pre-Proposition-1: that early exit collapses equivalent sets to one representative.
     graphs = [
         mag_to_pag(
-            cgraph(
-                bidirected(:A, :X),
-                directed(:B, :X),
-                bidirected(:A, :B),
-                directed(:X, :Y);
-                class = MAG,
-            ),
+            MAG(bidirected(:A, :X), directed(:B, :X), bidirected(:A, :B), directed(:X, :Y)),
         ),
-        cgraph(
-            "X o-> Y, X o-> C, X o-> A, Y o-o C, C o-o A, B o-> C, B o-> Y, B o-> A";
-            class = PAG,
-        ),
+        PAG("X o-> Y, X o-> C, X o-> A, Y o-o C, C o-o A, B o-> C, B o-> Y, B o-> A"),
     ]
     for pag in graphs
         @test backdoor_set(pag, :X, :Y) === nothing   # confirms this exercises the search, not Prop. 1
@@ -108,27 +84,12 @@ end
     [PagcausesBaseline] tags = [:unit, :pagcauses] begin
     graphs = [
         mag_to_pag(
-            cgraph(
-                directed(:B, :X),
-                bidirected(:A, :X),
-                directed(:A, :Y),
-                directed(:X, :Y);
-                class = MAG,
-            ),
+            MAG(directed(:B, :X), bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y)),
         ),
         mag_to_pag(
-            cgraph(
-                bidirected(:A, :X),
-                directed(:B, :X),
-                bidirected(:A, :B),
-                directed(:X, :Y);
-                class = MAG,
-            ),
+            MAG(bidirected(:A, :X), directed(:B, :X), bidirected(:A, :B), directed(:X, :Y)),
         ),
-        cgraph(
-            "X o-> Y, X o-> C, X o-> A, Y o-o C, C o-o A, B o-> C, B o-> Y, B o-> A";
-            class = PAG,
-        ),
+        PAG("X o-> Y, X o-> C, X o-> A, Y o-o C, C o-o A, B o-> C, B o-> Y, B o-> A"),
     ]
     for pag in graphs
         mags = classical_mags(pag)
@@ -141,10 +102,7 @@ end
 @testitem "pagcauses: W-bar is computed on M_X, excluding X's directed-out neighbors" tags =
     [:unit, :pagcauses] begin
     # Regression test: for W = empty, W-bar must be {A}, not {A, C, Y}.
-    pag = cgraph(
-        "X o-> Y, X o-> C, X o-> A, Y o-o C, C o-o A, B o-> C, B o-> Y, B o-> A";
-        class = PAG,
-    )
+    pag = PAG("X o-> Y, X o-> C, X o-> A, Y o-o C, C o-o A, B o-> C, B o-> Y, B o-> A")
     node_vec, index, adj, mark =
         CausalStructures._pag_adj_marks(pag.backend.nodes, pag.edges)
     n = length(node_vec)
@@ -159,12 +117,7 @@ end
 
 @testitem "pagcauses: rejects graphs with undirected (selection-variable) edges" tags =
     [:unit, :pagcauses] begin
-    pag = cgraph(
-        undirected(:A, :B),
-        undirected(:B, :C),
-        undirected(:C, :D),
-        undirected(:A, :D);
-        class = PAG,
-    )
+    pag =
+        PAG(undirected(:A, :B), undirected(:B, :C), undirected(:C, :D), undirected(:A, :D))
     @test_throws ArgumentError pagcauses(pag, :A, :B)
 end

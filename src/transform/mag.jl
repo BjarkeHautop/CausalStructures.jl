@@ -47,7 +47,7 @@ orientation rules R1-R10 until no further mark is implied.
 # Examples
 
 ```jldoctest
-julia> mag = cgraph("A --> B <-- C"; class = MAG);
+julia> mag = MAG("A --> B <-- C");
 
 julia> mag_to_pag(mag)
 PAG with 3 nodes and 2 edges:
@@ -625,7 +625,7 @@ construction (2008, Theorem 2):
 # Examples
 
 ```jldoctest
-julia> pag = cgraph("A o-> B <-o C"; class = PAG);
+julia> pag = PAG("A o-> B <-o C");
 
 julia> mag_from_pag(pag)
 MAG with 3 nodes and 2 edges:
@@ -635,7 +635,7 @@ MAG with 3 nodes and 2 edges:
 ```
 
 ```jldoctest
-julia> mag = cgraph("A --- B --- C --- D --- A"; class = MAG);
+julia> mag = MAG("A --- B --- C --- D --- A");
 
 julia> mag_from_pag(mag_to_pag(mag))
 MAG with 4 nodes and 4 edges:
@@ -757,14 +757,14 @@ they share the PAG `A o-> B <-o C` and are Markov equivalent. Replacing one
 bidirected edge with `B --> C` removes the collider, changing the class:
 
 ```jldoctest
-julia> m1 = cgraph("A <-> B <-> C"; class = MAG);
+julia> m1 = MAG("A <-> B <-> C");
 
-julia> m2 = cgraph("A --> B <-- C"; class = MAG);
+julia> m2 = MAG("A --> B <-- C");
 
 julia> markov_equivalent(m1, m2)
 true
 
-julia> m3 = cgraph("A <-> B --> C"; class = MAG);
+julia> m3 = MAG("A <-> B --> C");
 
 julia> markov_equivalent(m1, m3)
 false

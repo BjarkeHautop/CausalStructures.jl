@@ -8,12 +8,13 @@ underlying theory, see, for instance, [pearl2009causality](@citet) or
 
 ## Constructing graphs
 
-[`cgraph`](@ref) is the entry point for building any graph. Give it some edges
-(and, if you have isolated nodes, some [`node`](@ref)s), tell it which
-`class` you want, and it builds and validates the graph for you.
+Each graph type is its own constructor: call [`DAG`](@ref), [`ADMG`](@ref),
+[`PAG`](@ref), etc. directly with some edges (and, if you have isolated
+nodes, some [`node`](@ref)s), or with a compact string, and it builds and
+validates the graph for you. See [`DAG`](@ref) for the full constructor
+syntax, shared by every graph type.
 
 ```@docs
-cgraph
 node
 ```
 

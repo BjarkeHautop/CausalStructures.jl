@@ -17,7 +17,7 @@ Consider the MAG from [Equivalence Classes](@ref equivalence-classes-guide), whe
 `A` and `B` share a hidden common cause, and `C` and `B` each cause their successor:
 
 ```@example pc
-mag = cgraph("A <-> B, C --> B --> D"; class = MAG)
+mag = MAG("A <-> B, C --> B --> D")
 pag = mag_to_pag(mag)
 plot(pag)
 ```
@@ -76,10 +76,8 @@ This is consistent with [`possible_ancestors`](@ref).
     if `cg` has one:
 
     ```@repl pc
-    selection_pag = cgraph(
-        undirected(:A, :B), undirected(:B, :C), undirected(:C, :D), undirected(:A, :D);
-        class = PAG,
-    )
+    selection_pag = PAG(
+        undirected(:A, :B), undirected(:B, :C), undirected(:C, :D), undirected(:A, :D))
     pagcauses(selection_pag, :A, :B)
     ```
 

@@ -130,38 +130,129 @@ Abstract supertype for ancestral graphs. Concrete subtypes: [`AG`](@ref) and [`M
 abstract type AbstractAG <: CausalGraph end
 
 """
-    DAG <: CausalGraph
+    DAG(items...) -> DAG
+    DAG(s::AbstractString) -> DAG
 
 A Directed Acyclic Graph. Directed edges only, and no directed cycles allowed.
+
+Every concrete [`CausalGraph`](@ref) subtype (`DAG`, `UG`, `PDAG`, `CPDAG`, `MPDAG`,
+`ADMG`, `AG`, `MAG`, `PAG`, `UNKNOWN`) is constructed the same way, shown here for
+`DAG`: from a set of items, or from a compact string. Whichever type you call is
+validated on construction, so which edge types are allowed and what structural
+invariants are enforced depends on the type you pick.
+
+`items` may be any combination of:
+- [`CausalEdge`](@ref) values from edge constructors (`directed`, `undirected`,
+  `bidirected`, `partially_directed`, `partially_undirected`, `partial`)
+- Values from [`node`](@ref) (to include isolated nodes)
+- `AbstractVector{<:CausalEdge}` (a pre-collected vector of edges)
+
+The string form uses a compact syntax instead of composing [`CausalEdge`](@ref) values
+by hand. Statements are separated by commas (or newlines); each connects node names
+with an edge marker built from `<`, `-`, `o`, `>`:
+
+| Marker | Equivalent constructor              |
+|:------:|:------------------------------------|
+| `-->`  | `directed(src, dst)`                |
+| `<--`  | `directed(dst, src)`                |
+| `---`  | `undirected(src, dst)`              |
+| `<->`  | `bidirected(src, dst)`              |
+| `o->`  | `partially_directed(src, dst)`      |
+| `<-o`  | `partially_directed(dst, src)`      |
+| `o--`  | `partially_undirected(src, dst)`    |
+| `--o`  | `partially_undirected(dst, src)`    |
+| `o-o`  | `partial(src, dst)`                 |
+
+`+` fans a marker out to (or in from) several nodes at once, and chaining markers
+connects consecutive node groups pairwise, so `"A --> B --> C"` yields two edges
+(`A-->B`, `B-->C`) while `"A --> B + C"` yields `A-->B` and `A-->C`. A statement
+with no marker (e.g. `"F"`) declares isolated node(s).
+
+[`UNKNOWN`](@ref) graphs additionally allow multiple edges between the same pair
+of nodes.
+
+# Examples
+
+```jldoctest
+julia> cg = DAG(directed(:A, :B), directed(:B, :C));
+
+julia> nodes(cg)
+3-element Vector{Symbol}:
+ :A
+ :B
+ :C
+
+julia> admg = ADMG(directed(:X, :Y), bidirected(:X, :Y));
+
+julia> nodes(admg)
+2-element Vector{Symbol}:
+ :X
+ :Y
+
+julia> dag_iso = DAG(directed(:A, :B), node(:C));
+
+julia> nodes(dag_iso)
+3-element Vector{Symbol}:
+ :A
+ :B
+ :C
+
+julia> ug = UG(undirected(:A, :B), undirected(:B, :C));
+
+julia> nodes(ug)
+3-element Vector{Symbol}:
+ :A
+ :B
+ :C
+
+julia> cg2 = UNKNOWN("A --> B + C, D o-> E")
+UNKNOWN with 5 nodes and 3 edges:
+  nodes: A, B, C, D, E
+  edges:
+    A --> B, A --> C, D o-> E
+```
 """
 struct DAG <: CausalGraph
     edges::Vector{CausalEdge}
     backend::DAGBackend
+
+    DAG(edges::Vector{CausalEdge}, backend::DAGBackend) = new(edges, backend)
 end
 
 """
-    UG <: CausalGraph
+    UG(items...) -> UG
+    UG(s::AbstractString) -> UG
 
 An Undirected Graph. Undirected edges only.
+
+See [`DAG`](@ref) for the full `items`/string constructor syntax.
 """
 struct UG <: CausalGraph
     edges::Vector{CausalEdge}
     backend::UGBackend
+
+    UG(edges::Vector{CausalEdge}, backend::UGBackend) = new(edges, backend)
 end
 
 """
-    PDAG <: AbstractPDAG
+    PDAG(items...) -> PDAG
+    PDAG(s::AbstractString) -> PDAG
 
 A Partially Directed Acyclic Graph.
 Directed and undirected edges only, and no directed cycles allowed.
+
+See [`DAG`](@ref) for the full `items`/string constructor syntax.
 """
 struct PDAG <: AbstractPDAG
     edges::Vector{CausalEdge}
     backend::PDAGBackend
+
+    PDAG(edges::Vector{CausalEdge}, backend::PDAGBackend) = new(edges, backend)
 end
 
 """
-    CPDAG <: AbstractPDAG
+    CPDAG(items...) -> CPDAG
+    CPDAG(s::AbstractString) -> CPDAG
 
 A Completed Partially Directed Acyclic Graph. The unique graph representing a Markov
 equivalence class (MEC) of DAGs. Directed edges represent compelled orientations shared
@@ -170,6 +261,8 @@ differs across DAGs in the class.
 Consequently, every edge is directed exactly when its orientation is
 invariant within the MEC.
 
+See [`DAG`](@ref) for the full `items`/string constructor syntax.
+
 # References
 
 - [chickering2002learning](@citet)
@@ -177,14 +270,19 @@ invariant within the MEC.
 struct CPDAG <: AbstractPDAG
     edges::Vector{CausalEdge}
     backend::PDAGBackend
+
+    CPDAG(edges::Vector{CausalEdge}, backend::PDAGBackend) = new(edges, backend)
 end
 
 """
-    MPDAG <: AbstractPDAG
+    MPDAG(items...) -> MPDAG
+    MPDAG(s::AbstractString) -> MPDAG
 
 A Maximally Partially Directed Acyclic Graph. A PDAG that is closed under Meek's
 orientation rules R1-R4: no further edge orientation can be implied. MPDAGs arise
 when background knowledge (forced edge orientations) is present.
+
+See [`DAG`](@ref) for the full `items`/string constructor syntax.
 
 # References
 
@@ -193,13 +291,18 @@ when background knowledge (forced edge orientations) is present.
 struct MPDAG <: AbstractPDAG
     edges::Vector{CausalEdge}
     backend::PDAGBackend
+
+    MPDAG(edges::Vector{CausalEdge}, backend::PDAGBackend) = new(edges, backend)
 end
 
 """
-    ADMG <: CausalGraph
+    ADMG(items...) -> ADMG
+    ADMG(s::AbstractString) -> ADMG
 
 An Acyclic Directed Mixed Graph. Directed and bidirected edges only,
 and no directed cycles allowed.
+
+See [`DAG`](@ref) for the full `items`/string constructor syntax.
 
 # References
 
@@ -208,15 +311,20 @@ and no directed cycles allowed.
 struct ADMG <: CausalGraph
     edges::Vector{CausalEdge}
     backend::ADMGBackend
+
+    ADMG(edges::Vector{CausalEdge}, backend::ADMGBackend) = new(edges, backend)
 end
 
 """
-    AG <: AbstractAG
+    AG(items...) -> AG
+    AG(s::AbstractString) -> AG
 
 An Ancestral Graph. Directed, undirected, and bidirected edges only.
 It contains no directed cycles, and if `X <-> Y` then neither `X` is an ancestor of
 `Y` nor `Y` of `X`. Additionally, nodes incident to an undirected edge have no
 arrowheads pointing at them on any adjacent edge (i.e., no parents or spouses).
+
+See [`DAG`](@ref) for the full `items`/string constructor syntax.
 
 # References
 
@@ -225,14 +333,19 @@ arrowheads pointing at them on any adjacent edge (i.e., no parents or spouses).
 struct AG <: AbstractAG
     edges::Vector{CausalEdge}
     backend::AGBackend
+
+    AG(edges::Vector{CausalEdge}, backend::AGBackend) = new(edges, backend)
 end
 
 """
-    MAG <: AbstractAG
+    MAG(items...) -> MAG
+    MAG(s::AbstractString) -> MAG
 
 A Maximal Ancestral Graph. An [`AG`](@ref) in which every pair of non-adjacent nodes
 is m-separated by some subset of the remaining nodes. MAGs are the canonical
 representatives of equivalence classes of DAGs with hidden variables.
+
+See [`DAG`](@ref) for the full `items`/string constructor syntax.
 
 # References
 
@@ -241,22 +354,30 @@ representatives of equivalence classes of DAGs with hidden variables.
 struct MAG <: AbstractAG
     edges::Vector{CausalEdge}
     backend::AGBackend
+
+    MAG(edges::Vector{CausalEdge}, backend::AGBackend) = new(edges, backend)
 end
 
 """
-    UNKNOWN <: CausalGraph
+    UNKNOWN(items...) -> UNKNOWN
+    UNKNOWN(s::AbstractString) -> UNKNOWN
 
 A graph with no structural constraints enforced. Accepts all edge types, including
 self-loops and multiple edges between the same pair of nodes. Intended as a fallback
 for graph classes not yet natively supported.
+
+See [`DAG`](@ref) for the full `items`/string constructor syntax.
 """
 struct UNKNOWN <: CausalGraph
     edges::Vector{CausalEdge}
     backend::UNKNOWNBackend
+
+    UNKNOWN(edges::Vector{CausalEdge}, backend::UNKNOWNBackend) = new(edges, backend)
 end
 
 """
-    PAG <: CausalGraph
+    PAG(items...) -> PAG
+    PAG(s::AbstractString) -> PAG
 
 A Partial Ancestral Graph. The graph representing a Markov equivalence class of
 [`MAG`](@ref)s (and thus of DAGs with latent confounders and selection bias). It
@@ -269,6 +390,8 @@ A `PAG` is validated on construction: it must be the image of some MAG under
 [`mag_to_pag`](@ref), checked by resolving it to a MAG with [`mag_from_pag`](@ref)
 and confirming the round-trip recovers the same graph.
 
+See [`DAG`](@ref) for the full `items`/string constructor syntax.
+
 # References
 
 - [zhang2008completeness](@citet)
@@ -276,6 +399,8 @@ and confirming the round-trip recovers the same graph.
 struct PAG <: CausalGraph
     edges::Vector{CausalEdge}
     backend::PAGBackend
+
+    PAG(edges::Vector{CausalEdge}, backend::PAGBackend) = new(edges, backend)
 end
 
 function _build_graph(
@@ -337,11 +462,12 @@ end
 """
     node(name::Symbol) -> GraphNode
 
-Wrap a symbol as an isolated node for inclusion in [`cgraph`](@ref).
+Wrap a symbol as an isolated node for inclusion in a graph constructor such as
+[`DAG`](@ref).
 
 # Examples
 ```jldoctest
-julia> cgraph(node(:A), node(:B), node(:C); class = DAG)
+julia> DAG(node(:A), node(:B), node(:C))
 DAG with 3 nodes and 0 edges:
   nodes: A, B, C
   edges:

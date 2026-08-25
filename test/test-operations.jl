@@ -4,14 +4,13 @@
 # ── skeleton ──────────────────────────────────────────────────────────────────
 
 @testitem "skeleton on DAG produces UG with same skeleton" tags = [:unit, :operations] begin
-    cg = cgraph(
+    cg = DAG(
         directed(:A, :B),
         directed(:B, :C),
         directed(:C, :D),
         directed(:D, :E),
         node(:F),
-        node(:G);
-        class = DAG,
+        node(:G),
     )
     skel = skeleton(cg)
     @test skel isa UG
@@ -23,14 +22,13 @@
 end
 
 @testitem "skeleton on PDAG produces UG with same skeleton" tags = [:unit, :operations] begin
-    cg = cgraph(
+    cg = PDAG(
         directed(:A, :B),
         directed(:B, :C),
         undirected(:C, :D),
         directed(:D, :E),
         node(:F),
-        node(:G);
-        class = PDAG,
+        node(:G),
     )
     skel = skeleton(cg)
     @test skel isa UG
@@ -44,7 +42,7 @@ end
 # ── subgraph ──────────────────────────────────────────────────────────────────
 
 @testitem "subgraph on DAG returns DAG" tags = [:unit, :operations] begin
-    cg = cgraph(directed(:A, :B), directed(:B, :C), directed(:A, :C); class = DAG)
+    cg = DAG(directed(:A, :B), directed(:B, :C), directed(:A, :C))
     sg = subgraph(cg, [:A, :B])
     @test sg isa DAG
     @test Set(nodes(sg)) == Set([:A, :B])
@@ -58,7 +56,7 @@ end
     # C-->B is protected by VS (A-->B, A not adj C).
     # After removing C, A-->B has no strong protection, so it is not a valid
     # CPDAG. It is still Meek-closed, so it downgrades to a valid MPDAG.
-    cpdag = cgraph(directed(:A, :B), directed(:C, :B); class = CPDAG)
+    cpdag = CPDAG(directed(:A, :B), directed(:C, :B))
     sg = subgraph(cpdag, [:A, :B])
     @test sg isa MPDAG
     @test !(sg isa CPDAG)
@@ -71,8 +69,7 @@ end
     [:unit, :operations] begin
     # Undirected triangle is a valid CPDAG; the induced subgraph on two of its
     # nodes is a single undirected edge, a valid MPDAG.
-    cpdag =
-        cgraph(undirected(:A, :B), undirected(:B, :C), undirected(:A, :C); class = CPDAG)
+    cpdag = CPDAG(undirected(:A, :B), undirected(:B, :C), undirected(:A, :C))
     sg = subgraph(cpdag, [:A, :B])
     @test sg isa MPDAG
     @test is_mpdag(sg)
@@ -82,7 +79,7 @@ end
 @testitem "subgraph on MPDAG preserves MPDAG class" tags = [:unit, :operations] begin
     # Meek rules fire on edge-presence conditions; removing nodes only removes
     # edges, so no new violation can appear.
-    mpdag = cgraph(directed(:A, :B), directed(:B, :C); class = MPDAG)
+    mpdag = MPDAG(directed(:A, :B), directed(:B, :C))
     sg = subgraph(mpdag, [:A, :B])
     @test sg isa MPDAG
 end
@@ -92,7 +89,7 @@ end
     # inducing path between non-adjacent vertices in the subgraph would also be
     # one in the original -- impossible in a maximal graph. So the subgraph is
     # itself maximal and stays a MAG.
-    mag = cgraph(directed(:A, :M), bidirected(:M, :B), directed(:A, :B); class = MAG)
+    mag = MAG(directed(:A, :M), bidirected(:M, :B), directed(:A, :B))
     sg = subgraph(mag, [:A, :B])
     @test sg isa MAG
     @test is_mag(sg)
@@ -101,7 +98,7 @@ end
 end
 
 @testitem "subgraph on MAG with bidirected edges stays a MAG" tags = [:unit, :operations] begin
-    mag = cgraph(bidirected(:A, :M), bidirected(:M, :B), bidirected(:A, :B); class = MAG)
+    mag = MAG(bidirected(:A, :M), bidirected(:M, :B), bidirected(:A, :B))
     sg = subgraph(mag, [:A, :B])
     @test sg isa MAG
     @test is_mag(sg)
@@ -112,7 +109,7 @@ end
     # A o-> B, C o-> B is a valid PAG. Dropping C leaves the lone edge A o-> B,
     # whose marks are not the invariant marks of any equivalence class, so it is
     # not a realizable PAG. It is returned as UNKNOWN, preserving the marks.
-    pag = cgraph(partially_directed(:A, :B), partially_directed(:C, :B); class = PAG)
+    pag = PAG(partially_directed(:A, :B), partially_directed(:C, :B))
     sg = subgraph(pag, [:A, :B])
     @test sg isa UNKNOWN
     @test !(sg isa PAG)
@@ -124,7 +121,7 @@ end
     [:unit, :operations] begin
     # A o-o B o-o C is a valid PAG; the induced subgraph keeps the circle marks
     # but is returned as UNKNOWN rather than re-validated as a PAG.
-    pag = cgraph(partial(:A, :B), partial(:B, :C); class = PAG)
+    pag = PAG(partial(:A, :B), partial(:B, :C))
     sg = subgraph(pag, [:A, :B])
     @test sg isa UNKNOWN
     @test has_edge(sg, :A, :B)
@@ -133,15 +130,14 @@ end
 # ── moralize ──────────────────────────────────────────────────────────────────
 
 @testitem "moralize works on DAGs" tags = [:unit, :operations] begin
-    cg = cgraph(
+    cg = DAG(
         directed(:A, :B),
         directed(:B, :C),
         directed(:D, :C),
         directed(:E, :C),
         directed(:D, :B),
         node(:F),
-        node(:G);
-        class = DAG,
+        node(:G),
     )
     mg = moralize(cg)
     @test mg isa UG
@@ -165,14 +161,13 @@ end
 # https://github.com/networkx/networkx/blob/main/networkx/algorithms/tests/test_moral.py
 
 @testitem "NetworkX moralize test 1" tags = [:unit, :operations] begin
-    cg = cgraph(
+    cg = DAG(
         directed(:A, :B),
         directed(:C, :B),
         directed(:D, :A),
         directed(:D, :E),
         directed(:F, :E),
-        directed(:G, :E);
-        class = DAG,
+        directed(:G, :E),
     )
     mg = moralize(cg)
     @test mg isa UG
@@ -188,7 +183,7 @@ end
 # ── latent_project ───────────────────────────────────────────────────────────
 
 @testitem "latent_project basic confounding" tags = [:unit, :operations] begin
-    dag = cgraph(directed(:U, :X), directed(:U, :Y), directed(:X, :Y); class = DAG)
+    dag = DAG(directed(:U, :X), directed(:U, :Y), directed(:X, :Y))
     admg = latent_project(dag, [:U])
     @test admg isa ADMG
     @test length(nodes(admg)) == 2
@@ -196,7 +191,7 @@ end
 end
 
 @testitem "latent_project with no latents" tags = [:unit, :operations] begin
-    dag = cgraph(directed(:X, :Y), directed(:Y, :Z); class = DAG)
+    dag = DAG(directed(:X, :Y), directed(:Y, :Z))
     admg = latent_project(dag, Symbol[])
     @test admg isa ADMG
     @test length(nodes(admg)) == 3
@@ -205,14 +200,13 @@ end
 end
 
 @testitem "latent_project with multiple latents" tags = [:unit, :operations] begin
-    dag = cgraph(
+    dag = DAG(
         directed(:L1, :X),
         directed(:L1, :Y),
         directed(:L2, :Y),
         directed(:L2, :Z),
         directed(:X, :Y),
-        directed(:Y, :Z);
-        class = DAG,
+        directed(:Y, :Z),
     )
     admg = latent_project(dag, [:L1, :L2])
     @test admg isa ADMG
@@ -221,7 +215,7 @@ end
 end
 
 @testitem "latent_project all nodes latent returns empty" tags = [:unit, :operations] begin
-    dag = cgraph(directed(:L1, :L2); class = DAG)
+    dag = DAG(directed(:L1, :L2))
     admg = latent_project(dag, [:L1, :L2])
     @test admg isa ADMG
     @test length(nodes(admg)) == 0
@@ -230,12 +224,12 @@ end
 # ── latent_project edge cases ────────────────────────────────────────────────
 
 @testitem "latent_project rejects unknown node name" tags = [:unit, :operations] begin
-    dag = cgraph(directed(:X, :Y); class = DAG)
+    dag = DAG(directed(:X, :Y))
     @test_throws ErrorException latent_project(dag, [:Z])
 end
 
 @testitem "latent_project rejects non-DAG graph" tags = [:unit, :operations] begin
-    g_pdag = cgraph(undirected(:A, :B); class = PDAG)
+    g_pdag = PDAG(undirected(:A, :B))
     @test_throws MethodError latent_project(g_pdag, [:A])
 end
 
@@ -243,7 +237,7 @@ end
 
 @testitem "exogenize makes node exogenous, adds parent-to-child edges" tags =
     [:unit, :operations] begin
-    cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+    cg = DAG(directed(:A, :B), directed(:B, :C))
     g2 = exogenize(cg, [:B])
     @test isempty(parents(g2, :B))
     @test :C in children(g2, :B)  # B-->C preserved
@@ -251,7 +245,7 @@ end
 end
 
 @testitem "exogenize is idempotent for repeated nodes" tags = [:unit, :operations] begin
-    cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+    cg = DAG(directed(:A, :B), directed(:B, :C))
     g_once = exogenize(cg, [:B])
     g_twice = exogenize(cg, [:B, :B])
     @test Set(nodes(g_once)) == Set(nodes(g_twice))
@@ -259,12 +253,12 @@ end
 end
 
 @testitem "exogenize rejects unknown node" tags = [:unit, :operations] begin
-    cg = cgraph(directed(:A, :B); class = DAG)
+    cg = DAG(directed(:A, :B))
     @test_throws ErrorException exogenize(cg, [:Z])
 end
 
 @testitem "exogenize multiple nodes" tags = [:unit, :operations] begin
-    cg = cgraph(directed(:A, :B), directed(:B, :C), directed(:C, :D); class = DAG)
+    cg = DAG(directed(:A, :B), directed(:B, :C), directed(:C, :D))
     g2 = exogenize(cg, [:B, :C])
     @test isempty(parents(g2, :B))
     @test isempty(parents(g2, :C))
@@ -274,7 +268,7 @@ end
 # ── dag_from_pdag ───────────────────────────────────────
 
 @testitem "dag_from_pdag converts a valid PDAG to a DAG" tags = [:unit, :operations] begin
-    pdag = cgraph(undirected(:A, :B), undirected(:B, :C); class = PDAG)
+    pdag = PDAG(undirected(:A, :B), undirected(:B, :C))
     dag = dag_from_pdag(pdag)
     @test dag isa DAG
     @test all(
@@ -287,25 +281,14 @@ end
 
 @testitem "dag_from_pdag errors on non-extendable PDAG" tags = [:unit, :operations] begin
     # 4-cycle A-B-C-D-A: cannot be oriented into a DAG
-    pdag = cgraph(
-        undirected(:A, :B),
-        undirected(:A, :D),
-        undirected(:B, :C),
-        undirected(:C, :D);
-        class = PDAG,
-    )
+    pdag =
+        PDAG(undirected(:A, :B), undirected(:A, :D), undirected(:B, :C), undirected(:C, :D))
     @test_throws ErrorException dag_from_pdag(pdag)
 end
 
 @testitem "dag_from_pdag preserves directed edges in mixed graph" tags =
     [:unit, :operations] begin
-    pdag = cgraph(
-        directed(:A, :B),
-        directed(:C, :B),
-        undirected(:C, :D),
-        undirected(:D, :A);
-        class = PDAG,
-    )
+    pdag = PDAG(directed(:A, :B), directed(:C, :B), undirected(:C, :D), undirected(:D, :A))
     dag = dag_from_pdag(pdag)
     @test dag isa DAG
     has_dir(cg, u, v) = any(e -> e.src == u && e.dst == v, cg.edges)
@@ -318,7 +301,7 @@ end
 
 @testitem "dag_from_pdag orients each undirected edge exactly once" tags =
     [:unit, :operations] begin
-    pdag = cgraph(directed(:A, :C), directed(:B, :C), undirected(:A, :D); class = PDAG)
+    pdag = PDAG(directed(:A, :C), directed(:B, :C), undirected(:A, :D))
     dag = dag_from_pdag(pdag)
     @test dag isa DAG
     has_dir(cg, u, v) = any(e -> e.src == u && e.dst == v, cg.edges)
@@ -337,7 +320,7 @@ end
     # extension is V2 --> V3: orienting V3 --> V2 would give V2 two parents
     # (V1 and V3) that are not adjacent to each other, i.e. a new unshielded
     # collider V1 --> V2 <-- V3 not present in the input PDAG.
-    pdag = cgraph(directed(:V1, :V2), undirected(:V2, :V3); class = PDAG)
+    pdag = PDAG(directed(:V1, :V2), undirected(:V2, :V3))
     dag = dag_from_pdag(pdag)
     has_dir(cg, u, v) = any(e -> e.src == u && e.dst == v, cg.edges)
     @test has_dir(dag, :V1, :V2)
@@ -349,13 +332,7 @@ end
 
 @testitem "meek_closure R1: orient compelled edge" tags = [:unit, :operations] begin
     # C --> B --- D, C not adjacent to D --> orient B --> D
-    cg = cgraph(
-        directed(:A, :B),
-        directed(:C, :B),
-        undirected(:B, :D),
-        undirected(:A, :D);
-        class = PDAG,
-    )
+    cg = PDAG(directed(:A, :B), directed(:C, :B), undirected(:B, :D), undirected(:A, :D))
     closed = meek_closure(cg)
     @test closed isa MPDAG
     @test :D in children(closed, :B)
@@ -369,7 +346,7 @@ end
     [:unit, :operations] begin
     # A --> B, D --> C, B --- C: R1 would fire (A not adj C), but orienting B --> C
     # would create unshielded collider D --> C <-- B (D not adj B) - guard blocks it.
-    pdag = cgraph(directed(:A, :B), directed(:D, :C), undirected(:B, :C); class = PDAG)
+    pdag = PDAG(directed(:A, :B), directed(:D, :C), undirected(:B, :C))
     closed = meek_closure(pdag)
     @test closed isa MPDAG
     @test has_edge(closed, :B, :C) || has_edge(closed, :C, :B)  # some edge exists
@@ -378,7 +355,7 @@ end
 
 @testitem "meek_closure R2: orient along directed path" tags = [:unit, :operations] begin
     # A --> C --> B and A --- B --> orient A --> B
-    cg = cgraph(undirected(:A, :B), directed(:A, :C), directed(:C, :B); class = PDAG)
+    cg = PDAG(undirected(:A, :B), directed(:A, :C), directed(:C, :B))
     closed = meek_closure(cg)
     @test closed isa MPDAG
     @test :B in children(closed, :A)
@@ -389,15 +366,14 @@ end
     # R3 fires: B --> D (B is undirected nbr of A,C ∈ pa[D], A-C not adjacent)
     # R1 fires: D --> E (parent A of D not adjacent to E)
     # R2 fires: C --> E (C --> D --> E and C --- E)
-    cg = cgraph(
+    cg = PDAG(
         undirected(:A, :B),
         undirected(:B, :C),
         directed(:A, :D),
         directed(:C, :D),
         undirected(:B, :D),
         undirected(:D, :E),
-        undirected(:C, :E);
-        class = PDAG,
+        undirected(:C, :E),
     )
     closed = meek_closure(cg)
     @test closed isa MPDAG
@@ -417,7 +393,7 @@ end
 
 @testitem "normalize_latent_structure drops singleton latent" tags = [:unit, :operations] begin
     # U-->X only: U has ≤1 child --> removed
-    dag = cgraph(directed(:U, :X); class = DAG)
+    dag = DAG(directed(:U, :X))
     norm = normalize_latent_structure(dag, [:U])
     @test :U ∉ nodes(norm)
     @test :X in nodes(norm)
@@ -426,7 +402,7 @@ end
 @testitem "normalize_latent_structure exogenizes then keeps latent with 2+ children" tags =
     [:unit, :operations] begin
     # A-->U-->X, U-->Y: U has 2 children --> kept; A-->X, A-->Y added by exogenize
-    dag = cgraph(directed(:A, :U), directed(:U, :X), directed(:U, :Y); class = DAG)
+    dag = DAG(directed(:A, :U), directed(:U, :X), directed(:U, :Y))
     norm = normalize_latent_structure(dag, [:U])
     @test :U in nodes(norm)
     @test isempty(parents(norm, :U))   # exogenized
@@ -436,13 +412,12 @@ end
 
 @testitem "normalize_latent_structure removes nested child set" tags = [:unit, :operations] begin
     # U-->{X,Y,Z}, W-->{X,Y}: W's child set ⊂ U's --> W dropped
-    dag = cgraph(
+    dag = DAG(
         directed(:U, :X),
         directed(:U, :Y),
         directed(:U, :Z),
         directed(:W, :X),
-        directed(:W, :Y);
-        class = DAG,
+        directed(:W, :Y),
     )
     norm = normalize_latent_structure(dag, [:U, :W])
     @test :U in nodes(norm)
@@ -450,13 +425,13 @@ end
 end
 
 @testitem "normalize_latent_structure rejects unknown latent" tags = [:unit, :operations] begin
-    dag = cgraph(directed(:X, :Y); class = DAG)
+    dag = DAG(directed(:X, :Y))
     @test_throws ErrorException normalize_latent_structure(dag, [:Z])
 end
 
 @testitem "normalize_latent_structure empty latent list returns same graph" tags =
     [:unit, :operations] begin
-    dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+    dag = DAG(directed(:A, :B), directed(:B, :C))
     norm = normalize_latent_structure(dag, Symbol[])
     @test Set(nodes(norm)) == Set(nodes(dag))
 end
@@ -464,7 +439,7 @@ end
 @testitem "normalize_latent_structure preserves latent_project equivalence" tags =
     [:unit, :operations] begin
     # latent_project on dag and norm should give same ADMG
-    dag = cgraph(directed(:A, :U), directed(:U, :X), directed(:U, :Y); class = DAG)
+    dag = DAG(directed(:A, :U), directed(:U, :X), directed(:U, :Y))
     norm = normalize_latent_structure(dag, [:U])
     admg1 = latent_project(dag, [:U])
     admg2 = latent_project(norm, [:U])
@@ -480,13 +455,7 @@ end
     [:unit, :operations] begin
     # Figure 10 (Richardson & Spirtes 2002): U-->X, U-->Y, A-->X, B-->Y
     # Marginalizing U: X<->Y added, A-->X and B-->Y preserved
-    cg = cgraph(
-        directed(:U, :X),
-        directed(:U, :Y),
-        directed(:A, :X),
-        directed(:B, :Y);
-        class = DAG,
-    )
+    cg = DAG(directed(:U, :X), directed(:U, :Y), directed(:A, :X), directed(:B, :Y))
     mg = condition_marginalize(cg; marg_vars = [:U])
     @test mg isa AG
     @test Set(nodes(mg)) == Set([:A, :B, :X, :Y])
@@ -502,13 +471,7 @@ end
 @testitem "condition_marginalize: conditioning removes node, keeps structure" tags =
     [:unit, :operations] begin
     # Conditioning on U: removes U from graph, remaining nodes A,B,X,Y
-    cg = cgraph(
-        directed(:U, :X),
-        directed(:U, :Y),
-        directed(:A, :X),
-        directed(:B, :Y);
-        class = DAG,
-    )
+    cg = DAG(directed(:U, :X), directed(:U, :Y), directed(:A, :X), directed(:B, :Y))
     mg = condition_marginalize(cg; cond_vars = [:U])
     @test mg isa AG
     @test Set(nodes(mg)) == Set([:A, :B, :X, :Y])
@@ -519,15 +482,14 @@ end
     # Richardson & Spirtes Figure 11:
     # A-->L1-->B, L2-->B, L2-->C, B-->S, S-->D, D-->C (DAG)
     # Condition on S --> edges become undirected for nodes sharing S in anterior
-    f11 = cgraph(
+    f11 = DAG(
         directed(:A, :L1),
         directed(:L1, :B),
         directed(:L2, :B),
         directed(:L2, :C),
         directed(:B, :S),
         directed(:S, :D),
-        directed(:D, :C);
-        class = DAG,
+        directed(:D, :C),
     )
     result = condition_marginalize(f11; cond_vars = [:S])
     @test result isa AG
@@ -543,15 +505,14 @@ end
 end
 
 @testitem "condition_marginalize: Figure 11 marginalizing L1,L2" tags = [:unit, :operations] begin
-    f11 = cgraph(
+    f11 = DAG(
         directed(:A, :L1),
         directed(:L1, :B),
         directed(:L2, :B),
         directed(:L2, :C),
         directed(:B, :S),
         directed(:S, :D),
-        directed(:D, :C);
-        class = DAG,
+        directed(:D, :C),
     )
     result = condition_marginalize(f11; marg_vars = [:L1, :L2])
     @test result isa AG
@@ -565,13 +526,13 @@ end
 end
 
 @testitem "condition_marginalize: errors on empty cond/marg" tags = [:unit, :operations] begin
-    cg = cgraph(directed(:A, :B); class = DAG)
+    cg = DAG(directed(:A, :B))
     @test_throws ErrorException condition_marginalize(cg)
 end
 
 @testitem "condition_marginalize: errors on overlapping cond/marg" tags =
     [:unit, :operations] begin
-    cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+    cg = DAG(directed(:A, :B), directed(:B, :C))
     @test_throws ErrorException condition_marginalize(
         cg;
         cond_vars = [:B],
@@ -581,20 +542,19 @@ end
 
 @testitem "condition_marginalize: single remaining node returns empty AG" tags =
     [:unit, :operations] begin
-    cg = cgraph(directed(:A, :B); class = DAG)
+    cg = DAG(directed(:A, :B))
     result = condition_marginalize(cg; marg_vars = [:B])
     @test result isa AG
     @test length(nodes(result)) <= 1
 end
 
 @testitem "condition_marginalize: accepts AG input" tags = [:unit, :operations] begin
-    cg = cgraph(
+    cg = AG(
         directed(:U, :X),
         directed(:U, :Y),
         directed(:A, :X),
         directed(:B, :Y),
-        bidirected(:X, :Z);
-        class = AG,
+        bidirected(:X, :Z),
     )
     mg = condition_marginalize(cg; cond_vars = [:U])
     @test mg isa AG
@@ -602,7 +562,7 @@ end
 end
 
 @testitem "condition_marginalize: accepts MAG input" tags = [:unit, :operations] begin
-    mag = cgraph(directed(:X, :Y), directed(:X, :Z), bidirected(:Y, :Z); class = MAG)
+    mag = MAG(directed(:X, :Y), directed(:X, :Z), bidirected(:Y, :Z))
     result = condition_marginalize(mag; marg_vars = [:Z])
     @test result isa AG
     @test :Z ∉ nodes(result)
@@ -610,7 +570,7 @@ end
 end
 
 @testitem "condition_marginalize: accepts ADMG input" tags = [:unit, :operations] begin
-    admg = cgraph(directed(:U, :X), directed(:U, :Y), directed(:X, :Y); class = ADMG)
+    admg = ADMG(directed(:U, :X), directed(:U, :Y), directed(:X, :Y))
     result = condition_marginalize(admg; marg_vars = [:U])
     @test result isa AG
     @test Set(nodes(result)) == Set([:X, :Y])
@@ -621,22 +581,22 @@ end
 # ── markov_equivalent ─────────────────────────────────────────────────────
 
 @testitem "markov_equivalent: identical DAGs are equivalent" tags = [:unit, :operations] begin
-    g1 = cgraph(directed(:A, :B), directed(:C, :B); class = DAG)
-    g2 = cgraph(directed(:A, :B), directed(:C, :B); class = DAG)
+    g1 = DAG(directed(:A, :B), directed(:C, :B))
+    g2 = DAG(directed(:A, :B), directed(:C, :B))
     @test markov_equivalent(g1, g2)
 end
 
 @testitem "markov_equivalent: reversed chain is equivalent" tags = [:unit, :operations] begin
     # A --> B --> C and C --> B --> A have the same skeleton and no v-structures
-    g1 = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
-    g2 = cgraph(directed(:C, :B), directed(:B, :A); class = DAG)
+    g1 = DAG(directed(:A, :B), directed(:B, :C))
+    g2 = DAG(directed(:C, :B), directed(:B, :A))
     @test markov_equivalent(g1, g2)
 end
 
 @testitem "markov_equivalent: fork equivalent to chain" tags = [:unit, :operations] begin
     # B --> A, B --> C (fork) vs A --> B --> C (chain) -- same skeleton, no v-structures
-    fork = cgraph(directed(:B, :A), directed(:B, :C); class = DAG)
-    chain = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+    fork = DAG(directed(:B, :A), directed(:B, :C))
+    chain = DAG(directed(:A, :B), directed(:B, :C))
     @test markov_equivalent(fork, chain)
 end
 
@@ -644,28 +604,28 @@ end
     [:unit, :operations] begin
     # A --> B <-- C (v-structure, A-C not adjacent)
     # vs A --> B --> C (chain, no v-structure)
-    vstr = cgraph(directed(:A, :B), directed(:C, :B); class = DAG)
-    chain = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+    vstr = DAG(directed(:A, :B), directed(:C, :B))
+    chain = DAG(directed(:A, :B), directed(:B, :C))
     @test !markov_equivalent(vstr, chain)
 end
 
 @testitem "markov_equivalent: different skeletons are not equivalent" tags =
     [:unit, :operations] begin
-    g1 = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
-    g2 = cgraph(directed(:A, :B), directed(:A, :C); class = DAG)
+    g1 = DAG(directed(:A, :B), directed(:B, :C))
+    g2 = DAG(directed(:A, :B), directed(:A, :C))
     @test !markov_equivalent(g1, g2)
 end
 
 @testitem "markov_equivalent: different node sets are not equivalent" tags =
     [:unit, :operations] begin
-    g1 = cgraph(directed(:A, :B); class = DAG)
-    g2 = cgraph(directed(:A, :C); class = DAG)
+    g1 = DAG(directed(:A, :B))
+    g2 = DAG(directed(:A, :C))
     @test !markov_equivalent(g1, g2)
 end
 
 @testitem "markov_equivalent: single-node DAGs are equivalent" tags = [:unit, :operations] begin
-    g1 = cgraph(node(:A); class = DAG)
-    g2 = cgraph(node(:A); class = DAG)
+    g1 = DAG(node(:A))
+    g2 = DAG(node(:A))
     @test markov_equivalent(g1, g2)
 end
 
@@ -673,8 +633,8 @@ end
     [:unit, :operations] begin
     # A --> B <-- C with A-C adjacent is shielded -- all orientations of this
     # triangle are equivalent (no v-structure distinguishes them).
-    triangle_v = cgraph(directed(:A, :B), directed(:C, :B), directed(:A, :C); class = DAG)
-    triangle_c = cgraph(directed(:A, :B), directed(:C, :B), directed(:C, :A); class = DAG)
+    triangle_v = DAG(directed(:A, :B), directed(:C, :B), directed(:A, :C))
+    triangle_c = DAG(directed(:A, :B), directed(:C, :B), directed(:C, :A))
     @test markov_equivalent(triangle_v, triangle_c)
 end
 
@@ -704,7 +664,7 @@ end
     for mask = 0:(2^6-1)
         selected = [all_edges[i] for i = 1:6 if (mask >> (i-1)) & 1 == 1]
         try
-            g = cgraph(selected..., node(:X), node(:Y), node(:Z); class = DAG)
+            g = DAG(selected..., node(:X), node(:Y), node(:Z))
             push!(dags, g)
         catch
         end
@@ -719,23 +679,23 @@ end
 @testitem "markov_equivalent (MAG): identical MAGs are equivalent" tags =
     [:unit, :operations] begin
     # A <-> B <- C: latent confounding on A-B plus a collider at B.
-    m1 = cgraph(bidirected(:A, :B), directed(:C, :B); class = MAG)
-    m2 = cgraph(bidirected(:A, :B), directed(:C, :B); class = MAG)
+    m1 = MAG(bidirected(:A, :B), directed(:C, :B))
+    m2 = MAG(bidirected(:A, :B), directed(:C, :B))
     @test markov_equivalent(m1, m2)
 end
 
 @testitem "markov_equivalent (MAG): collider vs non-collider not equivalent" tags =
     [:unit, :operations] begin
     # A <-> B <-> C (collider at B, A _||_ C) vs A <-> B --> C (no collider).
-    collider = cgraph(bidirected(:A, :B), bidirected(:B, :C); class = MAG)
-    noncollider = cgraph(bidirected(:A, :B), directed(:B, :C); class = MAG)
+    collider = MAG(bidirected(:A, :B), bidirected(:B, :C))
+    noncollider = MAG(bidirected(:A, :B), directed(:B, :C))
     @test !markov_equivalent(collider, noncollider)
 end
 
 @testitem "markov_equivalent (MAG): different node sets not equivalent" tags =
     [:unit, :operations] begin
-    m1 = cgraph(bidirected(:A, :B); class = MAG)
-    m2 = cgraph(bidirected(:A, :C); class = MAG)
+    m1 = MAG(bidirected(:A, :B))
+    m2 = MAG(bidirected(:A, :C))
     @test !markov_equivalent(m1, m2)
 end
 
@@ -743,10 +703,7 @@ end
     [:unit, :operations] begin
     # A single edge imposes no independence constraint, so A --> B and A <-> B
     # are in the same class (both have PAG A o-o B).
-    @test markov_equivalent(
-        cgraph(directed(:A, :B); class = MAG),
-        cgraph(bidirected(:A, :B); class = MAG),
-    )
+    @test markov_equivalent(MAG(directed(:A, :B)), MAG(bidirected(:A, :B)))
 end
 
 @testitem "markov_equivalent (MAG): same collider via different edge marks" tags =
@@ -754,8 +711,8 @@ end
     # A <-> B <-> C and A --> B <-- C both have an unshielded collider at B with
     # A, C non-adjacent. The marks at A and C are not invariant, so both map to
     # the PAG A o-> B <-o C and are Markov equivalent.
-    m1 = cgraph(bidirected(:A, :B), bidirected(:B, :C); class = MAG)
-    m2 = cgraph(directed(:A, :B), directed(:C, :B); class = MAG)
+    m1 = MAG(bidirected(:A, :B), bidirected(:B, :C))
+    m2 = MAG(directed(:A, :B), directed(:C, :B))
     @test markov_equivalent(m1, m2)
 end
 
@@ -763,13 +720,13 @@ end
     [:unit, :operations] begin
     # Every MAG enumerate_mags returns for a PAG is in that PAG's class, so all
     # pairs must be Markov equivalent; a MAG from a different class must not be.
-    pag = cgraph(partial(:A, :B), partial(:B, :C); class = PAG)
+    pag = PAG(partial(:A, :B), partial(:B, :C))
     mags = enumerate_mags(pag)
     @test length(mags) > 1
     for i in eachindex(mags), j in eachindex(mags)
         @test markov_equivalent(mags[i], mags[j])
     end
-    other = cgraph(bidirected(:A, :B), bidirected(:C, :B); class = MAG)  # collider at B
+    other = MAG(bidirected(:A, :B), bidirected(:C, :B))  # collider at B
     @test !markov_equivalent(mags[1], other)
 end
 
@@ -795,25 +752,25 @@ end
     @test directed(:Z, :X) != directed(:X, :Z)
 
     # The canonical order also shows up in what a graph reports back.
-    g = cgraph("Z <-> X"; class = ADMG)
+    g = ADMG("Z <-> X")
     @test edges(g) == [bidirected(:X, :Z)]
 end
 
-@testitem "cgraph: parallel edges are rejected" tags = [:unit, :operations] begin
-    @test_throws ErrorException cgraph("X --> Y, X --> Y"; class = DAG)
-    @test_throws ErrorException cgraph("X --- Y, Y --- X"; class = UG)
-    @test_throws ErrorException cgraph("X <-> Z, Z <-> X"; class = ADMG)
-    @test_throws ErrorException cgraph("X --> Y, X --- Y"; class = PDAG)
-    @test_throws ErrorException cgraph("X o-o Y, Y o-o X"; class = PAG)
+@testitem "DAG: parallel edges are rejected" tags = [:unit, :operations] begin
+    @test_throws ErrorException DAG("X --> Y, X --> Y")
+    @test_throws ErrorException UG("X --- Y, Y --- X")
+    @test_throws ErrorException ADMG("X <-> Z, Z <-> X")
+    @test_throws ErrorException PDAG("X --> Y, X --- Y")
+    @test_throws ErrorException PAG("X o-o Y, Y o-o X")
 
     # An ADMG may carry a directed and a bidirected edge on the same pair.
-    admg = cgraph("X --> Y, X <-> Y"; class = ADMG)
+    admg = ADMG("X --> Y, X <-> Y")
     @test length(edges(admg)) == 2
 
     # Two directed edges in opposite directions stay a cycle error, not a
     # parallel-edge one.
     err = try
-        cgraph("X --> Y, Y --> X"; class = DAG)
+        DAG("X --> Y, Y --> X")
     catch e
         sprint(showerror, e)
     end
@@ -821,12 +778,12 @@ end
     @test !occursin("parallel edges", err)
 
     # UNKNOWN stays permissive; `is_simple` is how you ask.
-    unk = cgraph("X <-> Z, Z <-> X"; class = UNKNOWN)
+    unk = UNKNOWN("X <-> Z, Z <-> X")
     @test length(edges(unk)) == 2
     @test !is_simple(unk)
 
     # Re-adding an existing edge is rejected too, in either spelling.
-    g = cgraph("X <-> Z"; class = ADMG)
+    g = ADMG("X <-> Z")
     @test_throws ErrorException add_edges(g, bidirected(:X, :Z))
     @test_throws ErrorException add_edges(g, bidirected(:Z, :X))
 end

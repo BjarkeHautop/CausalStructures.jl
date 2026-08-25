@@ -4,14 +4,13 @@
     using Makie
     using NetworkLayout
 
-    g = cgraph(
+    g = UNKNOWN(
         directed(:A, :B),
         undirected(:B, :C),
         bidirected(:C, :D),
         partially_directed(:D, :E),
         partially_undirected(:E, :F),
-        partial(:F, :A);
-        class = UNKNOWN,
+        partial(:F, :A),
     )
     fig = Makie.plot(g; layout = :stress)
     @test fig isa Makie.Figure
@@ -22,7 +21,7 @@ end
     using NetworkLayout
 
     # B sits on the straight A--C chord, forcing _route_edge_path to bend it.
-    g = cgraph(directed(:A, :C), node(:B); class = DAG)
+    g = DAG(directed(:A, :C), node(:B))
     fig = Makie.plot(g; layout = [(0.0, 0.0), (1.0, 0.0), (2.0, 0.0)])
     @test fig isa Makie.Figure
 end
@@ -31,7 +30,7 @@ end
     using Makie
     using NetworkLayout
 
-    admg = cgraph(directed(:X, :Y), bidirected(:X, :Y); class = ADMG)
+    admg = ADMG(directed(:X, :Y), bidirected(:X, :Y))
     fig = Makie.plot(admg; layout = :stress)
     @test fig isa Makie.Figure
 end
@@ -40,7 +39,7 @@ end
     using Makie
     using NetworkLayout
 
-    admg = cgraph(directed(:X, :Y), bidirected(:X, :Y); class = ADMG)
+    admg = ADMG(directed(:X, :Y), bidirected(:X, :Y))
 
     fig = Makie.plot(
         admg;
@@ -65,7 +64,7 @@ end
     using Makie
     using NetworkLayout
 
-    dag = cgraph(directed(:A, :B); class = DAG)
+    dag = DAG(directed(:A, :B))
     fig_no_title = Makie.plot(dag; layout = :stress)
     @test fig_no_title isa Makie.Figure
 
@@ -84,7 +83,7 @@ end
     using Makie
     using NetworkLayout
 
-    dag = cgraph(directed(:A, :B); class = DAG)
+    dag = DAG(directed(:A, :B))
     fig = Makie.plot(dag; layout = [(0.0, 0.0), (1.0, 1.0)])
     @test fig isa Makie.Figure
 
@@ -95,7 +94,7 @@ end
     using Makie
     using NetworkLayout
 
-    empty_g = cgraph(class = DAG)
+    empty_g = DAG()
     @test_throws ErrorException Makie.plot(empty_g)
 end
 
@@ -103,7 +102,7 @@ end
     using Makie
     using NetworkLayout
 
-    dag = cgraph(directed(:A, :B); class = DAG)
+    dag = DAG(directed(:A, :B))
     fig = Makie.plot(
         dag;
         layout = :stress,
@@ -125,7 +124,7 @@ end
 
     # Default (node_radius = nothing): a graph with long labels plots without
     # error, with node circles sized per label instead of uniformly.
-    dag = cgraph(directed(:Exposure, :Y_outcome); class = DAG)
+    dag = DAG(directed(:Exposure, :Y_outcome))
     fig = Makie.plot(dag; layout = :stress)
     @test fig isa Makie.Figure
 
@@ -212,7 +211,7 @@ end
     val_type = Dict(:directed => :green, :default => :black)
     @test ext._resolve_edge(val_type, e_ax, :fallback) == :green
 
-    dag = cgraph(e_ax, e_ay, e_xy; class = DAG)
+    dag = DAG(e_ax, e_ay, e_xy)
     fig = Makie.plot(dag; layout = :stress, edge_color = val)
     @test fig isa Makie.Figure
 end
@@ -222,7 +221,7 @@ end
     using Makie
     using NetworkLayout
 
-    dag = cgraph(directed(:A, :B); class = DAG)
+    dag = DAG(directed(:A, :B))
     fig_default = Makie.plot(dag; layout = :stress)
     @test fig_default isa Makie.Figure
 
@@ -247,14 +246,7 @@ end
     # up placed far from the connected component, making the raw layout's
     # coordinate scale wildly inconsistent with the connected component's
     # actual node spacing.
-    g = cgraph(
-        directed(:A, :B),
-        directed(:B, :C),
-        directed(:A, :C),
-        node(:ISO1),
-        node(:ISO2);
-        class = DAG,
-    )
+    g = DAG(directed(:A, :B), directed(:B, :C), directed(:A, :C), node(:ISO1), node(:ISO2))
     fig = Makie.plot(g; layout = :stress, seed = 1)
     @test fig isa Makie.Figure
     w, h = Makie.widths(fig.scene.viewport[])
@@ -265,7 +257,7 @@ end
     using Makie
     using NetworkLayout
 
-    dag = cgraph(directed(:A, :B); class = DAG)
+    dag = DAG(directed(:A, :B))
     fig = Makie.plot(dag; layout = :stress, outer_margin = 30, title_gap = 10.0)
     @test fig isa Makie.Figure
 
@@ -277,7 +269,7 @@ end
     using Makie
     using NetworkLayout
 
-    dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+    dag = DAG(directed(:A, :B), directed(:B, :C))
 
     for shape in (:circle, :square)
         @test Makie.plot(dag; layout = :stress, node_shape = shape) isa Makie.Figure
@@ -346,7 +338,7 @@ end
         ext._text_fit_pixel_size("Exposure\nat baseline", :square, 14.0f0, :regular, 4.0f0)[2]
     @test h2 > h1
 
-    dag = cgraph(directed(:A0, :L1), directed(:L1, :Y); class = DAG)
+    dag = DAG(directed(:A0, :L1), directed(:L1, :Y))
     fig = Makie.plot(
         dag;
         layout = :stress,
@@ -364,7 +356,7 @@ end
     using Makie
     using NetworkLayout
 
-    dag = cgraph(directed(:U, :X), directed(:U, :Y), directed(:X, :Y); class = DAG)
+    dag = DAG(directed(:U, :X), directed(:U, :Y), directed(:X, :Y))
     @test Makie.plot(dag; layout = :stress, node_linestyle = :dash) isa Makie.Figure
     fig = Makie.plot(
         dag;
@@ -379,7 +371,7 @@ end
     using Makie
     using NetworkLayout
 
-    dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+    dag = DAG(directed(:A, :B), directed(:B, :C))
     fig =
         Makie.plot(dag; layout = Dict(:A => (0.0, 0.0), :B => (1.0, 0.0), :C => (2.0, 1.0)))
     @test fig isa Makie.Figure
@@ -392,11 +384,11 @@ end
     using NetworkLayout
 
     # The routed A --> C curve has to clip against B's box, not a circle.
-    g = cgraph(directed(:A, :C), node(:B); class = DAG)
+    g = DAG(directed(:A, :C), node(:B))
     fig = Makie.plot(g; layout = [(0.0, 0.0), (1.0, 0.0), (2.0, 0.0)], node_shape = :square)
     @test fig isa Makie.Figure
 
-    admg = cgraph(directed(:X, :Y), bidirected(:X, :Y); class = ADMG)
+    admg = ADMG(directed(:X, :Y), bidirected(:X, :Y))
     @test Makie.plot(admg; layout = :stress, node_shape = :square) isa Makie.Figure
 end
 
@@ -429,7 +421,7 @@ end
     using Makie
     using NetworkLayout
 
-    admg = cgraph(directed(:X, :Y), bidirected(:X, :Z), directed(:Z, :Y); class = ADMG)
+    admg = ADMG(directed(:X, :Y), bidirected(:X, :Z), directed(:Z, :Y))
 
     @test Makie.plot(admg; layout = :stress, curvature = 0.3) isa Makie.Figure
     @test Makie.plot(admg; layout = :stress, curvature = Dict(:bidirected => 0.3)) isa
@@ -450,7 +442,7 @@ end
 
     # B sits on the straight A--C chord, so A --> C would normally be routed
     # around it; an explicit curvature takes precedence instead.
-    g = cgraph(directed(:A, :C), node(:B); class = DAG)
+    g = DAG(directed(:A, :C), node(:B))
     positions = [(0.0, 0.0), (1.0, 0.0), (2.0, 0.0)]
     @test Makie.plot(g; layout = positions, curvature = 0.3) isa Makie.Figure
 

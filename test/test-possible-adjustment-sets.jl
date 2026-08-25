@@ -1,6 +1,6 @@
 @testitem "possible_optimal_adjustment_sets matches the worked example (Maathuis, Kalisch & Bühlmann 2009, Fig. 2)" tags =
     [:unit, :possible_adjustment_sets] begin
-    cpdag = cgraph("X1 --- X2 + X3 + X4, X3 + X4 --> Y"; class = CPDAG)
+    cpdag = CPDAG("X1 --- X2 + X3 + X4, X3 + X4 --> Y")
     pas = possible_parent_sets(cpdag, :X1)
     opts = possible_optimal_adjustment_sets(cpdag, :X1, :Y)
 
@@ -20,7 +20,7 @@ end
 
 @testitem "possible_optimal_adjustment_sets: O-set can be a strict subset of the parent set" tags =
     [:unit, :possible_adjustment_sets] begin
-    cpdag = cgraph("X1 --- X2 + X3 + X4, X3 + X4 --> Y"; class = CPDAG)
+    cpdag = CPDAG("X1 --- X2 + X3 + X4, X3 + X4 --> Y")
     pas = possible_parent_sets(cpdag, :X1)
     opts = possible_optimal_adjustment_sets(cpdag, :X1, :Y)
     idx = findfirst(==([:X2]), pas)
@@ -31,7 +31,7 @@ end
 
 @testitem "possible_optimal_adjustment_sets: nothing when y is a parent of x for that orientation" tags =
     [:unit, :possible_adjustment_sets] begin
-    cpdag = cgraph("X --- Y"; class = CPDAG)
+    cpdag = CPDAG("X --- Y")
     pas = possible_parent_sets(cpdag, :X)
     opts = possible_optimal_adjustment_sets(cpdag, :X, :Y)
     @test length(opts) == length(pas)
@@ -46,7 +46,7 @@ end
 @testitem "possible_optimal_adjustment_sets: single valid orientation when x has no undirected neighbors" tags =
     [:unit, :possible_adjustment_sets] begin
     # A --> X <-- B protects both edges into X, so the CPDAG leaves X fully resolved
-    dag = cgraph(directed(:A, :X), directed(:B, :X), directed(:X, :Y); class = DAG)
+    dag = DAG(directed(:A, :X), directed(:B, :X), directed(:X, :Y))
     cpdag = dag_to_cpdag(dag)
     @test possible_parent_sets(cpdag, :X) == [[:A, :B]]
     # A and B only affect Y through X, so neither confounds X -> Y: O-set is empty
@@ -55,7 +55,7 @@ end
 
 @testitem "possible_optimal_adjustment_sets: agrees with adjustment_set(:optimal) on the oriented MPDAG" tags =
     [:unit, :possible_adjustment_sets] begin
-    cpdag = cgraph("X1 --- X2 + X3 + X4, X3 + X4 --> Y"; class = CPDAG)
+    cpdag = CPDAG("X1 --- X2 + X3 + X4, X3 + X4 --> Y")
     pas = possible_parent_sets(cpdag, :X1)
     opts = possible_optimal_adjustment_sets(cpdag, :X1, :Y)
     sibs = [:X2, :X3, :X4]
@@ -73,7 +73,7 @@ end
 
 @testitem "possible_optimal_adjustment_sets works on MPDAG" tags =
     [:unit, :possible_adjustment_sets] begin
-    cpdag = cgraph("X1 --- X2 + X3 + X4, X3 + X4 --> Y"; class = CPDAG)
+    cpdag = CPDAG("X1 --- X2 + X3 + X4, X3 + X4 --> Y")
     # background knowledge resolves the rest of X1's neighborhood via Meek closure
     mpdag = apply_background_knowledge(cpdag, "X3 --> X1")
     @test possible_parent_sets(mpdag, :X1) == [[:X3]]

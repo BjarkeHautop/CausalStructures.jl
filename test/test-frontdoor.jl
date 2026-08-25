@@ -17,7 +17,7 @@
 
     # Fig. 1b as a DAG with explicit latents.
     function _jeong2022_fig1b()
-        cgraph(
+        DAG(
             directed(:U1, :X),
             directed(:U1, :Y),
             directed(:U2, :X),
@@ -28,15 +28,14 @@
             directed(:A, :D),
             directed(:B, :Y),
             directed(:C, :Y),
-            directed(:D, :Y);
-            class = DAG,
+            directed(:D, :Y),
         )
     end
 
     # Fig. 6a: G with two parallel mediating paths and one latent confounder.
     # 9 valid FD adjustment sets (3^2): each path i can be intercepted by Ai, Bi, or {Ai,Bi}.
     function _jeong2022_fig6a()
-        cgraph(
+        DAG(
             directed(:U, :X),
             directed(:U, :Y),
             directed(:X, :A1),
@@ -44,15 +43,14 @@
             directed(:B1, :Y),
             directed(:X, :A2),
             directed(:A2, :B2),
-            directed(:B2, :Y);
-            class = DAG,
+            directed(:B2, :Y),
         )
     end
 
     # Fig. 6b: G' = G with a third parallel mediating path added.
     # 27 valid FD adjustment sets (3^3).
     function _jeong2022_fig6b()
-        cgraph(
+        DAG(
             directed(:U, :X),
             directed(:U, :Y),
             directed(:X, :A1),
@@ -63,45 +61,26 @@
             directed(:B2, :Y),
             directed(:X, :A3),
             directed(:A3, :B3),
-            directed(:B3, :Y);
-            class = DAG,
+            directed(:B3, :Y),
         )
     end
 end
 
 @testitem "is_valid_frontdoor: M satisfies criterion on classic graph" tags =
     [:unit, :frontdoor] begin
-    cg = cgraph(
-        directed(:U, :X),
-        directed(:X, :M),
-        directed(:M, :Y),
-        directed(:U, :Y);
-        class = DAG,
-    )
+    cg = DAG(directed(:U, :X), directed(:X, :M), directed(:M, :Y), directed(:U, :Y))
     @test is_valid_frontdoor(cg, :X, :Y, [:M])
 end
 
 @testitem "is_valid_frontdoor: empty Z fails when directed path exists" tags =
     [:unit, :frontdoor] begin
-    cg = cgraph(
-        directed(:U, :X),
-        directed(:X, :M),
-        directed(:M, :Y),
-        directed(:U, :Y);
-        class = DAG,
-    )
+    cg = DAG(directed(:U, :X), directed(:X, :M), directed(:M, :Y), directed(:U, :Y))
     @test !is_valid_frontdoor(cg, :X, :Y)
 end
 
 @testitem "is_valid_frontdoor: U fails condition (i) - does not intercept X -> M -> Y" tags =
     [:unit, :frontdoor] begin
-    cg = cgraph(
-        directed(:U, :X),
-        directed(:X, :M),
-        directed(:M, :Y),
-        directed(:U, :Y);
-        class = DAG,
-    )
+    cg = DAG(directed(:U, :X), directed(:X, :M), directed(:M, :Y), directed(:U, :Y))
     @test !is_valid_frontdoor(cg, :X, :Y, [:U])
 end
 
@@ -109,13 +88,7 @@ end
     [:unit, :frontdoor] begin
     # A -> X, A -> M, X -> M, M -> Y
     # Backdoor path from X to M: X <- A -> M is open.
-    cg = cgraph(
-        directed(:A, :X),
-        directed(:A, :M),
-        directed(:X, :M),
-        directed(:M, :Y);
-        class = DAG,
-    )
+    cg = DAG(directed(:A, :X), directed(:A, :M), directed(:X, :M), directed(:M, :Y))
     @test !is_valid_frontdoor(cg, :X, :Y, [:M])
 end
 
@@ -123,13 +96,7 @@ end
     [:unit, :frontdoor] begin
     # X --> M, M --> Y, B --> M, B --> Y
     # Backdoor path from M to Y: M <-- B --> Y is not blocked by X.
-    cg = cgraph(
-        directed(:X, :M),
-        directed(:M, :Y),
-        directed(:B, :M),
-        directed(:B, :Y);
-        class = DAG,
-    )
+    cg = DAG(directed(:X, :M), directed(:M, :Y), directed(:B, :M), directed(:B, :Y))
     @test !is_valid_frontdoor(cg, :X, :Y, [:M])
 end
 
@@ -137,13 +104,12 @@ end
     [:unit, :frontdoor] begin
     # If there is a direct edge X --> Y alongside X --> M --> Y, then M alone does
     # not intercept the direct path.
-    cg = cgraph(
+    cg = DAG(
         directed(:U, :X),
         directed(:X, :M),
         directed(:M, :Y),
         directed(:X, :Y),
-        directed(:U, :Y);
-        class = DAG,
+        directed(:U, :Y),
     )
     @test !is_valid_frontdoor(cg, :X, :Y, [:M])
     # Both M and the direct path must be intercepted - no single node suffices.
@@ -154,13 +120,12 @@ end
     [:unit, :frontdoor] begin
     # U --> X --> M1 --> M2 --> Y, U --> Y
     # Both {M1} and {M2} individually intercept all directed paths.
-    cg = cgraph(
+    cg = DAG(
         directed(:U, :X),
         directed(:X, :M1),
         directed(:M1, :M2),
         directed(:M2, :Y),
-        directed(:U, :Y);
-        class = DAG,
+        directed(:U, :Y),
     )
     @test is_valid_frontdoor(cg, :X, :Y, [:M1])
     @test is_valid_frontdoor(cg, :X, :Y, [:M2])
@@ -170,7 +135,7 @@ end
 @testitem "is_valid_frontdoor: no causal path - empty Z valid" tags = [:unit, :frontdoor] begin
     # X --> A, B --> Y: no directed path from X to Y at all.
     # Empty Z vacuously intercepts all (zero) directed paths.
-    cg = cgraph(directed(:X, :A), directed(:B, :Y); class = DAG)
+    cg = DAG(directed(:X, :A), directed(:B, :Y))
     @test is_valid_frontdoor(cg, :X, :Y)
 end
 
@@ -499,13 +464,7 @@ end
 # ── ListFDSets ────────────────────────────────────────────────────────────────
 
 @testitem "ListFDSets: classic single mediator" tags = [:unit, :frontdoor] begin
-    cg = cgraph(
-        directed(:U, :X),
-        directed(:U, :Y),
-        directed(:X, :Z),
-        directed(:Z, :Y);
-        class = DAG,
-    )
+    cg = DAG(directed(:U, :X), directed(:U, :Y), directed(:X, :Z), directed(:Z, :Y))
     @test all_frontdoor_sets(cg, :X, :Y; restrict = [:Z]) == [[:Z]]
 end
 
@@ -567,7 +526,7 @@ end
 @testitem "is_valid_frontdoor (ADMG): classic front-door with bidirected confounder" tags =
     [:unit, :frontdoor] begin
     # X <-> Y (hidden U), X --> M --> Y: M is the front-door set
-    admg = cgraph(bidirected(:X, :Y), directed(:X, :M), directed(:M, :Y); class = ADMG)
+    admg = ADMG(bidirected(:X, :Y), directed(:X, :M), directed(:M, :Y))
     @test is_valid_frontdoor(admg, :X, :Y, [:M])
     @test !is_valid_frontdoor(admg, :X, :Y)
 end
@@ -575,25 +534,13 @@ end
 @testitem "is_valid_frontdoor (ADMG): M confounded with X fails condition (ii)" tags =
     [:unit, :frontdoor] begin
     # X <-> Y and X <-> M: M has a backdoor path from X
-    admg = cgraph(
-        bidirected(:X, :Y),
-        bidirected(:X, :M),
-        directed(:X, :M),
-        directed(:M, :Y);
-        class = ADMG,
-    )
+    admg = ADMG(bidirected(:X, :Y), bidirected(:X, :M), directed(:X, :M), directed(:M, :Y))
     @test !is_valid_frontdoor(admg, :X, :Y, [:M])
 end
 
 @testitem "is_valid_frontdoor (ADMG): consistent with DAG latent projection" tags =
     [:unit, :frontdoor] begin
-    dag = cgraph(
-        directed(:U, :X),
-        directed(:U, :Y),
-        directed(:X, :M),
-        directed(:M, :Y);
-        class = DAG,
-    )
+    dag = DAG(directed(:U, :X), directed(:U, :Y), directed(:X, :M), directed(:M, :Y))
     admg = latent_project(dag, [:U])
     @test is_valid_frontdoor(dag, :X, :Y, [:M]) == is_valid_frontdoor(admg, :X, :Y, [:M])
     @test is_valid_frontdoor(dag, :X, :Y, Symbol[]) ==
@@ -602,7 +549,7 @@ end
 
 @testitem "frontdoor_set (ADMG): classic front-door with bidirected confounder" tags =
     [:unit, :frontdoor] begin
-    admg = cgraph(bidirected(:X, :Y), directed(:X, :M), directed(:M, :Y); class = ADMG)
+    admg = ADMG(bidirected(:X, :Y), directed(:X, :M), directed(:M, :Y))
     @test frontdoor_set(admg, :X, :Y; restrict = [:M]) == [:M]
 end
 
@@ -635,13 +582,12 @@ end
     # X --> A --> Y, B --> Y, and a latent confounds A and B (A <-> B in the
     # projection). Zi=A has a backdoor path A <-> B --> Y that condition 3
     # requires blocking by also including B.
-    dag = cgraph(
+    dag = DAG(
         directed(:U, :A),
         directed(:U, :B),
         directed(:X, :A),
         directed(:A, :Y),
-        directed(:B, :Y);
-        class = DAG,
+        directed(:B, :Y),
     )
     admg = latent_project(dag, [:U])
     restrict = [:A, :B]
@@ -655,7 +601,7 @@ end
 @testsnippet TwoTreatmentFrontdoorGraph begin
     # Two confounded treatments X1, X2 sharing a mediator M that causes two outcomes Y1, Y2.
     function _two_treatment_frontdoor_graph()
-        cgraph(
+        DAG(
             directed(:U1, :X1),
             directed(:U1, :Y1),
             directed(:U2, :X2),
@@ -663,8 +609,7 @@ end
             directed(:X1, :M),
             directed(:X2, :M),
             directed(:M, :Y1),
-            directed(:M, :Y2);
-            class = DAG,
+            directed(:M, :Y2),
         )
     end
 end

@@ -279,7 +279,7 @@ both source papers assume none throughout.
 # Examples
 
 ```jldoctest
-julia> mag = cgraph("A <-> X, B --> X, A <-> B, X --> Y"; class = MAG);
+julia> mag = MAG("A <-> X, B --> X, A <-> B, X --> Y");
 
 julia> pag = mag_to_pag(mag);
 

@@ -185,7 +185,7 @@ Bidirected edges represent latent confounders. To identify an effect in a
 Back-door adjustment is recovered as the g-formula:
 
 ```jldoctest
-julia> dag = cgraph("Z --> X + Y, X --> Y"; class = DAG);
+julia> dag = DAG("Z --> X + Y, X --> Y");
 
 julia> id(dag, :X, :Y)
 Σ_{Z} P(Y | X, Z) P(Z)
@@ -195,7 +195,7 @@ The front-door graph, where `X` and `Y` are confounded but the effect is still
 identifiable through the mediator `M`:
 
 ```jldoctest
-julia> admg = cgraph("X --> M, M --> Y, X <-> Y"; class = ADMG);
+julia> admg = ADMG("X --> M, M --> Y, X <-> Y");
 
 julia> id(admg, :X, :Y)
 Σ_{M} P(M | X) (Σ_{X'} P(X') P(Y | M, X'))
@@ -208,7 +208,7 @@ from the variables of the query.
 The bow arc, the canonical unidentifiable effect:
 
 ```jldoctest
-julia> bow = cgraph("X --> Y, X <-> Y"; class = ADMG);
+julia> bow = ADMG("X --> Y, X <-> Y");
 
 julia> id(bow, :X, :Y) === nothing
 true
@@ -251,7 +251,7 @@ P(y | do(x), z) = ID(y ∪ z, x) / Σ_y ID(y ∪ z, x)
 # Examples
 
 ```jldoctest
-julia> dag = cgraph("Z --> X + Y, X --> Y"; class = DAG);
+julia> dag = DAG("Z --> X + Y, X --> Y");
 
 julia> idc(dag, :X, :Y; given = :Z)
 P(Y | X, Z)
@@ -261,7 +261,7 @@ Conditioning on the mediator of the front-door graph leaves an effect that no
 longer depends on the intervened value at all:
 
 ```jldoctest
-julia> admg = cgraph("X --> M, M --> Y, X <-> Y"; class = ADMG);
+julia> admg = ADMG("X --> M, M --> Y, X <-> Y");
 
 julia> idc(admg, :X, :Y; given = :M)
 Σ_{X'} P(X') P(Y | M, X')

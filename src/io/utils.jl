@@ -9,7 +9,7 @@ Check whether `cg` satisfies the structural constraints of a [`DAG`](@ref)
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("A --> B --> C"; class = PDAG);
+julia> cg = PDAG("A --> B --> C");
 
 julia> is_dag(cg)
 true
@@ -26,7 +26,7 @@ Check whether `cg` satisfies the structural constraints of a [`PDAG`](@ref)
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("A --> B --- C"; class = UNKNOWN);
+julia> cg = UNKNOWN("A --> B --- C");
 
 julia> is_pdag(cg)
 true
@@ -43,7 +43,7 @@ Check whether `cg` satisfies the structural constraints of a [`CPDAG`](@ref)
 # Examples
 
 ```jldoctest
-julia> dag = cgraph("A --> B"; class = DAG);
+julia> dag = DAG("A --> B");
 
 julia> is_cpdag(dag)
 false
@@ -61,12 +61,12 @@ declared graph class.
 # Examples
 
 ```jldoctest
-julia> dag = cgraph("A --> B --> C"; class = DAG);
+julia> dag = DAG("A --> B --> C");
 
 julia> is_mpdag(dag)
 true
 
-julia> pdag = cgraph("A --> B --- C"; class = PDAG);
+julia> pdag = PDAG("A --> B --- C");
 
 julia> is_mpdag(pdag)
 false
@@ -83,7 +83,7 @@ Check whether `cg` satisfies the structural constraints of a [`UG`](@ref)
 # Examples
 
 ```jldoctest
-julia> pdag = cgraph("A --- B"; class = PDAG);
+julia> pdag = PDAG("A --- B");
 
 julia> is_ug(pdag)
 true
@@ -100,7 +100,7 @@ Check whether `cg` satisfies the structural constraints of a [`ADMG`](@ref)
 # Examples
 
 ```jldoctest
-julia> pdag = cgraph("A <-> B"; class = UNKNOWN);
+julia> pdag = UNKNOWN("A <-> B");
 
 julia> is_admg(pdag)
 true
@@ -117,7 +117,7 @@ Check whether `cg` satisfies the structural constraints of a [`AG`](@ref)
 # Examples
 
 ```jldoctest
-julia> pdag = cgraph("A <-> B"; class = UNKNOWN);
+julia> pdag = UNKNOWN("A <-> B");
 
 julia> is_ag(pdag)
 true
@@ -134,12 +134,12 @@ Check whether `cg` satisfies the structural constraints of a [`MAG`](@ref)
 # Examples
 
 ```jldoctest
-julia> ag = cgraph("A --> B --> C"; class = AG);
+julia> ag = AG("A --> B --> C");
 
 julia> is_mag(ag)
 true
 
-julia> ag = cgraph("Z <-> X <-> Y, Z <-> W, X --> W, Z --> Y"; class = AG);
+julia> ag = AG("Z <-> X <-> Y, Z <-> W, X --> W, Z --> Y");
 
 julia> is_mag(ag)
 false
@@ -158,12 +158,12 @@ independent of `cg`'s declared graph class. Verified by resolving `cg` to a MAG 
 # Examples
 
 ```jldoctest
-julia> pag = mag_to_pag(cgraph("A --> B <-- C"; class = MAG));
+julia> pag = mag_to_pag(MAG("A --> B <-- C"));
 
 julia> is_pag(pag)
 true
 
-julia> is_pag(cgraph("A --> B"; class = UNKNOWN))
+julia> is_pag(UNKNOWN("A --> B"))
 false
 ```
 """
@@ -177,7 +177,7 @@ Return the nodes of `cg` in alphabetical order.
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("B --> A --> C"; class = DAG);
+julia> cg = DAG("B --> A --> C");
 
 julia> nodes(cg)
 3-element Vector{Symbol}:
@@ -202,12 +202,12 @@ construction.
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("A --> B"; class = DAG);
+julia> cg = DAG("A --> B");
 
 julia> is_simple(cg)
 true
 
-julia> unk = cgraph("A --> B, A --> B"; class = UNKNOWN);
+julia> unk = UNKNOWN("A --> B, A --> B");
 
 julia> is_simple(unk)
 false
@@ -247,12 +247,12 @@ construction.
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("A --> B --> C"; class = DAG);
+julia> cg = DAG("A --> B --> C");
 
 julia> is_acyclic(cg)
 true
 
-julia> unk = cgraph("A --> B, B --> A"; class = UNKNOWN);
+julia> unk = UNKNOWN("A --> B, B --> A");
 
 julia> is_acyclic(unk)
 false
@@ -459,7 +459,7 @@ Returns a `Dict` mapping each node name to a length-`samples` vector.
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("A --> B --> C"; class = DAG);
+julia> cg = DAG("A --> B --> C");
 
 julia> data = simulate_data(cg; samples = 100);
 
@@ -539,7 +539,7 @@ Return the edges of `cg`.
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("A --> B --> C"; class = DAG);
+julia> cg = DAG("A --> B --> C");
 
 julia> edges(cg)
 2-element Vector{CausalEdge}:

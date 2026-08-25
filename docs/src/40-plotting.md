@@ -24,10 +24,8 @@ Pass any `CausalGraph` to `plot`. Consider Figure 6.5 of
 [peters2017elements](@citet):
 
 ```@example plot
-dag = cgraph(
-    "C --> X, A --> X + K, X --> F + D, K --> Y, D --> Y + G, Y --> H";
-    class = DAG,
-)
+dag = DAG(
+    "C --> X, A --> X + K, X --> F + D, K --> Y, D --> Y + G, Y --> H")
 plot(dag)
 ```
 
@@ -36,7 +34,7 @@ plot(dag)
 `plot` supports every edge mark natively:
 
 ```@example plot
-unknown = cgraph("A <-> B o-> C o-- A"; class = UNKNOWN)
+unknown = UNKNOWN("A <-> B o-> C o-- A")
 plot(unknown)
 ```
 
@@ -128,7 +126,7 @@ plot(dag; node_shape = Dict(:K => :square, :default => :circle))
 `node_linestyle` can be used to style the border:
 
 ```@example plot
-plot(cgraph("U --> X + Y, X --> Y"; class = DAG);
+plot(DAG("U --> X + Y, X --> Y");
     node_linestyle = Dict(:U => :dash),
     node_strokecolor = Dict(:U => :gray50, :default => :black),
 )
@@ -140,7 +138,7 @@ By default (`node_radius = nothing`), each node is sized to fit its
 own label:
 
 ```@example plot
-longlabels = cgraph("Exposure --> Mediator --> Y_outcome"; class = DAG)
+longlabels = DAG("Exposure --> Mediator --> Y_outcome")
 plot(longlabels)
 ```
 
@@ -170,7 +168,7 @@ Each edge style argument accepts either a scalar or a `Dict` keyed by (and follo
 Color edges by type:
 
 ```@example plot
-admg = cgraph("X --> Y, X <-> Z, Z --> Y"; class = ADMG)
+admg = ADMG("X --> Y, X <-> Z, Z --> Y")
 
 plot(admg;
     edge_color = Dict(:directed => :steelblue, :bidirected => :crimson),
@@ -191,7 +189,7 @@ may carry both `X --> Y` and `X <-> Y`, and a tuple key would then
 apply to both of them. To distinguish them a `CausalEdge` can be used:
 
 ```@example plot
-shared = cgraph("X --> Y, X <-> Y"; class = ADMG)
+shared = ADMG("X --> Y, X <-> Y")
 
 plot(shared;
     edge_color = Dict(bidirected(:X, :Y) => :crimson, :default => :steelblue),
@@ -245,7 +243,7 @@ By default each node is labelled with its own name. `labels` can be
 used to overwrite this:
 
 ```@example plot
-plot(cgraph("A0 --> L1 --> A1 --> Y, A0 --> Y + A1"; class = DAG);
+plot(DAG("A0 --> L1 --> A1 --> Y, A0 --> Y + A1");
     labels = Dict(
         :A0 => "Treatment\nat baseline",
         :L1 => "Confounder\nat time 1",
@@ -306,7 +304,7 @@ than being drawn straight through it. Edges with nothing in their way are
 always drawn straight.
 
 ```@example plot
-detour = cgraph("A --> X + Y, X --> Y"; class = DAG)
+detour = DAG("A --> X + Y, X --> Y")
 
 # A, X, Y placed in a line, so the straight A --> Y edge would cross X.
 plot(detour; layout = [(0, 0), (1, 0), (2, 0)])
@@ -328,10 +326,8 @@ Here we plot a PAG where we combine a bunch of different
 styling options:
 
 ```@example plot
-pag = cgraph(
-    "C o-> X, D --> G + Y, X --> D + F, Y --> H, K o-> X, K --> Y";
-    class = PAG,
-)
+pag = PAG(
+    "C o-> X, D --> G + Y, X --> D + F, Y --> H, K o-> X, K --> Y")
 
 plot(
     pag;

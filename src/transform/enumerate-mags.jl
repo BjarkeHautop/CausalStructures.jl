@@ -29,7 +29,7 @@ worth splitting across tasks.
 # Examples
 
 ```jldoctest
-julia> pag = cgraph("A o-o B o-o C"; class = PAG);
+julia> pag = PAG("A o-o B o-o C");
 
 julia> length(enumerate_mags(pag))
 8

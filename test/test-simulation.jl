@@ -131,27 +131,27 @@ end
 # ── simulate_data ─────────────────────────────────────────────────────────────
 
 @testitem "simulate_data: errors on non-DAG graph class" tags = [:unit, :simulation] begin
-    pdag = cgraph(directed(:A, :B), undirected(:B, :C); class = PDAG)
+    pdag = PDAG(directed(:A, :B), undirected(:B, :C))
     @test_throws MethodError simulate_data(pdag; samples = 10)
 
-    ug = cgraph(undirected(:A, :B); class = UG)
+    ug = UG(undirected(:A, :B))
     @test_throws MethodError simulate_data(ug; samples = 10)
 end
 
 @testitem "simulate_data: errors on empty graph" tags = [:unit, :simulation] begin
-    empty_dag = cgraph(; class = DAG)
+    empty_dag = DAG()
     @test_throws ErrorException simulate_data(empty_dag; samples = 10)
 end
 
 @testitem "simulate_data: errors on invalid samples" tags = [:unit, :simulation] begin
-    dag = cgraph(directed(:A, :B); class = DAG)
+    dag = DAG(directed(:A, :B))
     @test_throws ErrorException simulate_data(dag; samples = 0)
     @test_throws ErrorException simulate_data(dag; samples = -5)
 end
 
 @testitem "simulate_data: returns dict with correct keys" tags = [:unit, :simulation] begin
     using Random
-    dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+    dag = DAG(directed(:A, :B), directed(:B, :C))
     data = simulate_data(Random.Xoshiro(1), dag; samples = 100)
     @test data isa Dict
     @test Set(keys(data)) == Set([:A, :B, :C])
@@ -159,14 +159,14 @@ end
 
 @testitem "simulate_data: correct number of samples" tags = [:unit, :simulation] begin
     using Random
-    dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+    dag = DAG(directed(:A, :B), directed(:B, :C))
     data = simulate_data(Random.Xoshiro(1), dag; samples = 100)
     @test all(v -> length(v) == 100, values(data))
 end
 
 @testitem "simulate_data: reproducible with seed" tags = [:unit, :simulation] begin
     using Random
-    dag = cgraph(directed(:A, :B), directed(:B, :C), directed(:A, :C); class = DAG)
+    dag = DAG(directed(:A, :B), directed(:B, :C), directed(:A, :C))
     data1 = simulate_data(Random.Xoshiro(42), dag; samples = 100)
     data2 = simulate_data(Random.Xoshiro(42), dag; samples = 100)
     @test data1[:A] == data2[:A]
@@ -177,7 +177,7 @@ end
 @testitem "simulate_data: different seeds produce different data" tags =
     [:unit, :simulation] begin
     using Random
-    dag = cgraph(directed(:A, :B); class = DAG)
+    dag = DAG(directed(:A, :B))
     data1 = simulate_data(Random.Xoshiro(1), dag; samples = 100)
     data2 = simulate_data(Random.Xoshiro(2), dag; samples = 100)
     @test data1[:A] != data2[:A]
@@ -187,7 +187,7 @@ end
     [:unit, :simulation] begin
     using Random
     using Statistics
-    dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+    dag = DAG(directed(:A, :B), directed(:B, :C))
     data = simulate_data(Random.Xoshiro(123), dag; samples = 1000, standardize = true)
     for (_, v) in data
         @test abs(mean(v)) < 1e-10
@@ -199,7 +199,7 @@ end
     [:unit, :simulation] begin
     using Random
     using Statistics
-    dag = cgraph(directed(:A, :B); class = DAG)
+    dag = DAG(directed(:A, :B))
     data = simulate_data(Random.Xoshiro(42), dag; samples = 1000, standardize = false)
     means_zero = all(abs(mean(v)) < 0.01 for (_, v) in data)
     sds_one = all(abs(std(v) - 1.0) < 0.01 for (_, v) in data)
@@ -210,7 +210,7 @@ end
     [:unit, :simulation] begin
     using Random
     using Statistics
-    dag = cgraph(directed(:A, :B); class = DAG)
+    dag = DAG(directed(:A, :B))
     data = simulate_data(Random.Xoshiro(1), dag; samples = 10_000, standardize = false)
     r = cor(data[:A], data[:B])
     @test abs(r) > 0.05
@@ -218,7 +218,7 @@ end
 
 @testitem "simulate_data: single node graph works" tags = [:unit, :simulation] begin
     using Random
-    dag = cgraph(node(:A); class = DAG)
+    dag = DAG(node(:A))
     data = simulate_data(Random.Xoshiro(1), dag; samples = 50)
     @test haskey(data, :A)
     @test length(data[:A]) == 50
@@ -227,7 +227,7 @@ end
 @testitem "simulate_data: graph with no edges (all exogenous)" tags = [:unit, :simulation] begin
     using Random
     using Statistics
-    dag = cgraph(node(:A), node(:B), node(:C); class = DAG)
+    dag = DAG(node(:A), node(:B), node(:C))
     data = simulate_data(Random.Xoshiro(1), dag; samples = 100, standardize = false)
     @test length(keys(data)) == 3
     @test std(data[:A]) > 0
@@ -237,13 +237,7 @@ end
 
 @testitem "simulate_data: deep chain graph" tags = [:unit, :simulation] begin
     using Random
-    dag = cgraph(
-        directed(:A, :B),
-        directed(:B, :C),
-        directed(:C, :D),
-        directed(:D, :E);
-        class = DAG,
-    )
+    dag = DAG(directed(:A, :B), directed(:B, :C), directed(:C, :D), directed(:D, :E))
     data = simulate_data(Random.Xoshiro(1), dag; samples = 100)
     @test Set(keys(data)) == Set([:A, :B, :C, :D, :E])
     @test all(v -> length(v) == 100, values(data))
@@ -253,7 +247,7 @@ end
     [:unit, :simulation] begin
     using Random
     using Statistics
-    dag = cgraph(directed(:A, :C), directed(:B, :C); class = DAG)
+    dag = DAG(directed(:A, :C), directed(:B, :C))
     data = simulate_data(Random.Xoshiro(1), dag; samples = 10_000, standardize = false)
     r_ab = cor(data[:A], data[:B])
     @test abs(r_ab) < 0.05

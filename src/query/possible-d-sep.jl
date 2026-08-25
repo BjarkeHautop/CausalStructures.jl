@@ -70,7 +70,7 @@ the visible-edge removal that turns `cg` into `M_X` for that specific use.
 # Examples
 
 ```jldoctest
-julia> mag = cgraph("A <-> X, A --> M --> Y, X --> Y"; class = MAG);
+julia> mag = MAG("A <-> X, A --> M --> Y, X --> Y");
 
 julia> possible_d_sep(mag, :X, :Y)
 3-element Vector{Symbol}:

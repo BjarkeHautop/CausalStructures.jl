@@ -8,61 +8,11 @@ function build_graph(
     return T(nodes, edges)
 end
 
-"""
-    cgraph(items...; class::Type{<:CausalGraph}=DAG) -> CausalGraph
-
-Construct a causal graph from edges and optionally isolated nodes.
-
-`items` may be any combination of:
-- [`CausalEdge`](@ref) values from edge constructors (`directed`, `undirected`,
-  `bidirected`, `partially_directed`, `partially_undirected`, `partial`)
-- Values from [`node`](@ref) (to include isolated nodes)
-- `AbstractVector{<:CausalEdge}` (a pre-collected vector of edges)
-
-The `class` keyword selects the graph type, which determines which edge types are
-valid and what structural invariants are enforced on construction. Defaults to `DAG`.
-
-[`UNKNOWN`](@ref) graphs additionally allow multiple edges between the same pair
-of nodes.
-
-# Examples
-
-```jldoctest
-julia> cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG);
-
-julia> nodes(cg)
-3-element Vector{Symbol}:
- :A
- :B
- :C
-
-julia> admg = cgraph(directed(:X, :Y), bidirected(:X, :Y); class = ADMG);
-
-julia> nodes(admg)
-2-element Vector{Symbol}:
- :X
- :Y
-
-julia> dag_iso = cgraph(directed(:A, :B), node(:C); class = DAG);
-
-julia> nodes(dag_iso)
-3-element Vector{Symbol}:
- :A
- :B
- :C
-
-julia> ug = cgraph(undirected(:A, :B), undirected(:B, :C); class = UG);
-
-julia> nodes(ug)
-3-element Vector{Symbol}:
- :A
- :B
- :C
-```
-"""
-function cgraph(items...; class::Type{<:CausalGraph} = DAG)
-    nodes, edges = _cgraph_collect(items...)
-    return build_graph(class, nodes, edges)
+for T in (:DAG, :UG, :PDAG, :CPDAG, :MPDAG, :ADMG, :AG, :MAG, :UNKNOWN, :PAG)
+    @eval function $T(items...)
+        nodes, edges = _cgraph_collect(items...)
+        return build_graph($T, nodes, edges)
+    end
 end
 
 function _cgraph_collect(items...)

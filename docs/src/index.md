@@ -41,7 +41,8 @@ The following edge types exists:
 - `partially_undirected(:A, :B)` for `A o-- B`
 - `partial(:A, :B)` for `A o-o B`
 
-These same markers can alternatively be used as a string in `cgraph`, see below.
+These same markers can alternatively be used as a string, passed directly to a
+graph type's constructor, see below.
 
 ## Quick Start
 
@@ -52,19 +53,17 @@ quickest way is to write edges directly as a string, using the markers above
 ```@example example
 using CausalStructures
 
-dag = cgraph("U --> X + Y, X --> Y"; class = DAG)
+dag = DAG("U --> X + Y, X --> Y")
 ```
 
 Edges can equivalently be built up from constructor calls, which is useful
 when composing edges programmatically:
 
 ```@example example
-dag = cgraph(
+dag = DAG(
     directed(:U, :X),
     directed(:U, :Y),
-    directed(:X, :Y);
-    class = DAG,
-)
+    directed(:X, :Y))
 ```
 
 You can then run a variety of causal graph queries, transformations,

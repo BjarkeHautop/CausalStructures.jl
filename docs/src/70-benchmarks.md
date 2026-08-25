@@ -105,7 +105,7 @@ quickly:
 for k in (5, 7, 9)
     names = [Symbol("V$i") for i = 1:k]
     clique_edges = [undirected(names[i], names[j]) for i = 1:k for j = (i+1):k]
-    pdag = cgraph(clique_edges...; class = PDAG)
+    pdag = PDAG(clique_edges...)
     c = count_dags(pdag)
     t = @benchmark count_dags($pdag) samples = 5 evals = 1
     println("k=$k  DAGs=$c  ", median(t))
@@ -129,7 +129,7 @@ considerably more expensive than [`count_dags`](@ref)/[`enumerate_dags`](@ref):
 for k in (3, 4, 5)
     names = [Symbol("V$i") for i = 1:k]
     circle_edges = [partial(names[i], names[j]) for i = 1:k for j = (i+1):k]
-    pag = cgraph(circle_edges...; class = PAG)
+    pag = PAG(circle_edges...)
     m = length(enumerate_mags(pag))
     t = @benchmark enumerate_mags($pag) samples = 5 evals = 1
     println("k=$k  MAGs=$m  ", median(t))

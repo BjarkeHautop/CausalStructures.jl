@@ -35,7 +35,7 @@ Extra `kwargs` are forwarded to the NetworkLayout algorithm (e.g. `seed`,
 ```julia
 using CausalStructures, NetworkLayout
 
-dag = cgraph(directed(:A, :X), directed(:X, :Y); class = DAG)
+dag = DAG(directed(:A, :X), directed(:X, :Y))
 
 layout(dag)                # :stress (the default)
 layout(dag, :spring)

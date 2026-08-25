@@ -8,7 +8,7 @@ end
 # Examples
 
 ```jldoctest
-julia> cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+julia> DAG(directed(:A, :B), directed(:B, :C))
 DAG with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
@@ -22,7 +22,7 @@ directed(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Tail, Arrow)
 # Examples
 
 ```jldoctest
-julia> cgraph(undirected(:A, :B), undirected(:B, :C); class = UG)
+julia> UG(undirected(:A, :B), undirected(:B, :C))
 UG with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
@@ -36,7 +36,7 @@ undirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Tail, Tail)
 # Examples
 
 ```jldoctest
-julia> cgraph(bidirected(:A, :B), bidirected(:B, :C); class = ADMG)
+julia> ADMG(bidirected(:A, :B), bidirected(:B, :C))
 ADMG with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
@@ -50,7 +50,7 @@ bidirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Arrow, Arrow)
 # Examples
 
 ```jldoctest
-julia> cgraph(partially_directed(:A, :B), partially_directed(:B, :C); class = UNKNOWN)
+julia> UNKNOWN(partially_directed(:A, :B), partially_directed(:B, :C))
 UNKNOWN with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
@@ -64,7 +64,7 @@ partially_directed(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Circle, Arro
 # Examples
 
 ```jldoctest
-julia> cgraph(partially_undirected(:A, :B), partially_undirected(:B, :C); class = UNKNOWN)
+julia> UNKNOWN(partially_undirected(:A, :B), partially_undirected(:B, :C))
 UNKNOWN with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
@@ -78,7 +78,7 @@ partially_undirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Circle, Ta
 # Examples
 
 ```jldoctest
-julia> cgraph(partial(:A, :B), partial(:B, :C); class = UNKNOWN)
+julia> UNKNOWN(partial(:A, :B), partial(:B, :C))
 UNKNOWN with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
@@ -92,8 +92,8 @@ partial(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Circle, Circle)
 
 A background-knowledge constraint stating that the directed edge `src --> dst` must
 not be present, displayed as `src !--> dst`. It is not a graph edge: it only carries
-meaning inside [`BackgroundKnowledge`](@ref) and is rejected by [`cgraph`](@ref).
-Use [`forbidden_directed`](@ref) to construct one.
+meaning inside [`BackgroundKnowledge`](@ref) and is rejected by graph constructors
+such as [`DAG`](@ref). Use [`forbidden_directed`](@ref) to construct one.
 """
 struct ForbiddenEdge
     src::Symbol
@@ -106,8 +106,8 @@ end
 A background-knowledge constraint stating that the directed edge `src --> dst` must be
 present, displayed as `src --> dst`. It is not a graph edge (unlike the
 [`CausalEdge`](@ref) from [`directed`](@ref)): it only carries meaning inside
-[`BackgroundKnowledge`](@ref) and is rejected by [`cgraph`](@ref).
-Use [`required_directed`](@ref) to construct one.
+[`BackgroundKnowledge`](@ref) and is rejected by graph constructors such as
+[`DAG`](@ref). Use [`required_directed`](@ref) to construct one.
 """
 struct RequiredEdge
     src::Symbol

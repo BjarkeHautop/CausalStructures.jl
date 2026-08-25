@@ -58,18 +58,17 @@ quickest way is to write edges directly as a string, using the markers above
 ```julia
 using CausalStructures
 
-dag = cgraph("U --> X + Y, X --> Y"; class = DAG)
+dag = DAG("U --> X + Y, X --> Y")
 ```
 
 Edges can equivalently be built up from constructor calls, which is useful
 when composing edges programmatically:
 
 ```julia
-dag = cgraph(
+dag = DAG(
     directed(:U, :X),
     directed(:U, :Y),
-    directed(:X, :Y);
-    class = DAG,
+    directed(:X, :Y),
 )
 ```
 

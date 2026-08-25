@@ -3,7 +3,7 @@
 
 @testitem "topological_sort on simple chain DAG" setup=[DagHelpers] tags =
     [:unit, :topological_sort] begin
-    dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+    dag = DAG(directed(:A, :B), directed(:B, :C))
     order = topological_sort(dag)
     @test length(order) == 3
     @test Set(order) == Set([:A, :B, :C])
@@ -12,13 +12,7 @@ end
 
 @testitem "topological_sort on diamond DAG" setup=[DagHelpers] tags =
     [:unit, :topological_sort] begin
-    cg = cgraph(
-        directed(:A, :B),
-        directed(:A, :C),
-        directed(:B, :D),
-        directed(:C, :D);
-        class = DAG,
-    )
+    cg = DAG(directed(:A, :B), directed(:A, :C), directed(:B, :D), directed(:C, :D))
     order = topological_sort(cg)
     @test length(order) == 4
     @test Set(order) == Set([:A, :B, :C, :D])
@@ -27,7 +21,7 @@ end
 
 @testitem "topological_sort with isolated nodes" setup=[DagHelpers] tags =
     [:unit, :topological_sort] begin
-    dag = cgraph(directed(:A, :B), node(:C); class = DAG)
+    dag = DAG(directed(:A, :B), node(:C))
     order = topological_sort(dag)
     @test length(order) == 3
     @test Set(order) == Set([:A, :B, :C])
@@ -36,42 +30,41 @@ end
 
 @testitem "topological_sort on empty DAG (only nodes, no edges)" tags =
     [:unit, :topological_sort] begin
-    dag = cgraph(node(:A), node(:B), node(:C); class = DAG)
+    dag = DAG(node(:A), node(:B), node(:C))
     order = topological_sort(dag)
     @test length(order) == 3
     @test Set(order) == Set([:A, :B, :C])
 end
 
 @testitem "topological_sort on single node DAG" tags = [:unit, :topological_sort] begin
-    dag = cgraph(node(:A); class = DAG)
+    dag = DAG(node(:A))
     order = topological_sort(dag)
     @test order == [:A]
 end
 
 @testitem "topological_sort errors on ADMG" tags = [:unit, :topological_sort] begin
-    admg = cgraph(directed(:L, :X), directed(:X, :Y), directed(:L, :Y); class = ADMG)
+    admg = ADMG(directed(:L, :X), directed(:X, :Y), directed(:L, :Y))
     @test_throws MethodError topological_sort(admg)
 end
 
 @testitem "topological_sort errors on PDAG" tags = [:unit, :topological_sort] begin
-    pdag = cgraph(directed(:A, :B), undirected(:B, :C), directed(:C, :D); class = PDAG)
+    pdag = PDAG(directed(:A, :B), undirected(:B, :C), directed(:C, :D))
     @test_throws MethodError topological_sort(pdag)
 end
 
 @testitem "topological_sort errors on UG" tags = [:unit, :topological_sort] begin
-    ug = cgraph(undirected(:A, :B), undirected(:B, :C); class = UG)
+    ug = UG(undirected(:A, :B), undirected(:B, :C))
     @test_throws MethodError topological_sort(ug)
 end
 
 @testitem "topological_sort returns all nodes exactly once" setup=[DagHelpers] tags =
     [:unit, :topological_sort] begin
-    cg = cgraph(
+    cg = DAG(
         directed(:A, :B),
         directed(:A, :C),
         directed(:B, :D),
         directed(:C, :D),
-        node(:E);
-        class = DAG,
+        node(:E),
     )
     order = topological_sort(cg)
     @test Set(order) == Set([:A, :B, :C, :D, :E])
@@ -85,13 +78,13 @@ end
 @testitem "topological_sort NetworkX 1 test" setup=[DagHelpers] tags =
     [:unit, :topological_sort] begin
     # A -> B, A -> C, B -> C
-    dag = cgraph(directed(:A, :B), directed(:A, :C), directed(:B, :C); class = DAG)
+    dag = DAG(directed(:A, :B), directed(:A, :C), directed(:B, :C))
     order = topological_sort(dag)
     @test order == [:A, :B, :C]
     @test verify_topo_order(dag, order)
 
     # A -> B, A -> C, C -> B
-    g2 = cgraph(directed(:A, :B), directed(:A, :C), directed(:C, :B); class = DAG)
+    g2 = DAG(directed(:A, :B), directed(:A, :C), directed(:C, :B))
     order2 = topological_sort(g2)
     @test order2 == [:A, :C, :B]
     @test verify_topo_order(g2, order2)
@@ -99,13 +92,7 @@ end
 
 @testitem "topological_sort NetworkX 2 test" setup=[DagHelpers] tags =
     [:unit, :topological_sort] begin
-    cg = cgraph(
-        directed(:A, :B),
-        directed(:B, :C),
-        directed(:C, :D),
-        directed(:D, :E);
-        class = DAG,
-    )
+    cg = DAG(directed(:A, :B), directed(:B, :C), directed(:C, :D), directed(:D, :E))
     order = topological_sort(cg)
     @test order == [:A, :B, :C, :D, :E]
     @test verify_topo_order(cg, order)

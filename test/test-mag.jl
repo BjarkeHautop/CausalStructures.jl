@@ -1,28 +1,23 @@
 # ── Construction & validation ──────────────────────────────────────────────────
 
 @testitem "MAG: directed chain constructs" tags = [:unit, :mag] begin
-    mag = cgraph(directed(:A, :B), directed(:B, :C); class = MAG)
+    mag = MAG(directed(:A, :B), directed(:B, :C))
     @test mag isa MAG
     @test mag isa AbstractAG
     @test Set(nodes(mag)) == Set([:A, :B, :C])
 end
 
 @testitem "MAG: bidirected-only constructs" tags = [:unit, :mag] begin
-    mag = cgraph(bidirected(:A, :B); class = MAG)
+    mag = MAG(bidirected(:A, :B))
     @test mag isa MAG
 end
 
 @testitem "MAG: rejects directed cycle" tags = [:unit, :mag] begin
-    @test_throws Exception cgraph(directed(:A, :B), directed(:B, :A); class = MAG)
+    @test_throws Exception MAG(directed(:A, :B), directed(:B, :A))
 end
 
 @testitem "MAG: rejects AG anterior constraint violation" tags = [:unit, :mag] begin
-    @test_throws Exception cgraph(
-        directed(:A, :B),
-        directed(:B, :C),
-        bidirected(:A, :C);
-        class = MAG,
-    )
+    @test_throws Exception MAG(directed(:A, :B), directed(:B, :C), bidirected(:A, :C))
 end
 
 @testitem "MAG: rejects non-maximal AG (inducing path between non-adjacent nodes)" tags =
@@ -32,13 +27,12 @@ end
     # the canonical non-MAG from the reference:
     # Z <-> X, Z <-> W, X <-> Y, X --> W, Z --> Y
     # Y and W are non-adjacent and cannot be m-separated
-    @test_throws Exception cgraph(
+    @test_throws Exception MAG(
         bidirected(:Z, :X),
         bidirected(:Z, :W),
         bidirected(:X, :Y),
         directed(:X, :W),
-        directed(:Z, :Y);
-        class = MAG,
+        directed(:Z, :Y),
     )
 end
 
@@ -47,27 +41,25 @@ end
 # https://ccc.inaoep.mx/~esucar/Causalidad/MAGs_part1_fundamentals.pdf
 @testitem "is_mag: canonical MAG example" tags = [:unit, :mag] begin
     # Z <-> X, Z <-> W, Y <-> W, X <-> Y, X --> W, Z --> Y
-    ag = cgraph(
+    ag = AG(
         bidirected(:Z, :X),
         bidirected(:Z, :W),
         bidirected(:Y, :W),
         bidirected(:X, :Y),
         directed(:X, :W),
-        directed(:Z, :Y);
-        class = AG,
+        directed(:Z, :Y),
     )
     @test is_mag(ag)
 end
 
 @testitem "is_mag: canonical non-MAG example (inducing path Y-W)" tags = [:unit, :mag] begin
     # Same graph but without Y <-> W; Y and W become non-adjacent with no m-sep set
-    ag = cgraph(
+    ag = AG(
         bidirected(:Z, :X),
         bidirected(:Z, :W),
         bidirected(:X, :Y),
         directed(:X, :W),
-        directed(:Z, :Y);
-        class = AG,
+        directed(:Z, :Y),
     )
     @test !is_mag(ag)
 end
@@ -75,36 +67,36 @@ end
 # ── AbstractAG dispatch: MAG inherits AG algorithms ───────────────────────────
 
 @testitem "MAG: m_separated works via AbstractAG dispatch" tags = [:unit, :mag] begin
-    mag = cgraph(directed(:A, :B), directed(:B, :C); class = MAG)
+    mag = MAG(directed(:A, :B), directed(:B, :C))
     @test !m_separated(mag, :A, :C)
     @test m_separated(mag, :A, :C, [:B])
 end
 
 @testitem "MAG: ancestors and descendants work" tags = [:unit, :mag] begin
-    mag = cgraph(directed(:A, :B), directed(:B, :C); class = MAG)
+    mag = MAG(directed(:A, :B), directed(:B, :C))
     @test Set(ancestors(mag, :C)) == Set([:A, :B])
     @test Set(descendants(mag, :A)) == Set([:B, :C])
 end
 
 @testitem "MAG: markov_blanket works" tags = [:unit, :mag] begin
-    mag = cgraph(directed(:A, :C), directed(:B, :C), bidirected(:A, :D); class = MAG)
+    mag = MAG(directed(:A, :C), directed(:B, :C), bidirected(:A, :D))
     @test Set(markov_blanket(mag, :A)) == Set([:B, :C, :D])
 end
 
 @testitem "MAG: minimal_separator works" tags = [:unit, :mag] begin
-    mag = cgraph(directed(:A, :B), directed(:B, :C); class = MAG)
+    mag = MAG(directed(:A, :B), directed(:B, :C))
     sep = minimal_separator(mag, :A, :C)
     @test sep !== nothing && :B in sep
 end
 
 @testitem "MAG: parents and children work" tags = [:unit, :mag] begin
-    mag = cgraph(directed(:A, :B), directed(:A, :C); class = MAG)
+    mag = MAG(directed(:A, :B), directed(:A, :C))
     @test Set(parents(mag, :B)) == Set([:A])
     @test Set(children(mag, :A)) == Set([:B, :C])
 end
 
 @testitem "MAG: spouses and exogenous_nodes work" tags = [:unit, :mag] begin
-    mag = cgraph(directed(:A, :B), bidirected(:B, :C); class = MAG)
+    mag = MAG(directed(:A, :B), bidirected(:B, :C))
     @test Set(spouses(mag, :B)) == Set([:C])
     @test Set(exogenous_nodes(mag)) == Set([:A, :C])
 end
@@ -112,28 +104,27 @@ end
 # ── is_mag ────────────────────────────────────────────────────────────────────
 
 @testitem "is_mag: MAG is always a MAG" tags = [:unit, :mag] begin
-    mag = cgraph(directed(:A, :B); class = MAG)
+    mag = MAG(directed(:A, :B))
     @test is_mag(mag)
 end
 
 @testitem "is_mag: DAG is a MAG" tags = [:unit, :mag] begin
-    dag = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+    dag = DAG(directed(:A, :B), directed(:B, :C))
     @test is_mag(dag)
 end
 
 @testitem "is_mag: AG that satisfies maximality is a MAG" tags = [:unit, :mag] begin
-    ag = cgraph(directed(:A, :B), directed(:B, :C); class = AG)
+    ag = AG(directed(:A, :B), directed(:B, :C))
     @test is_mag(ag)
 end
 
 @testitem "is_mag: AG that violates maximality is not a MAG" tags = [:unit, :mag] begin
-    ag = cgraph(
+    ag = AG(
         bidirected(:Z, :X),
         bidirected(:Z, :W),
         bidirected(:X, :Y),
         directed(:X, :W),
-        directed(:Z, :Y);
-        class = AG,
+        directed(:Z, :Y),
     )
     @test !is_mag(ag)
 end
@@ -141,7 +132,7 @@ end
 # ── ag_to_mag ──────────────────────────────────────────────────────────────────
 
 @testitem "ag_to_mag: already-maximal AG is returned unchanged" tags = [:unit, :mag] begin
-    ag = cgraph(directed(:A, :B), directed(:B, :C); class = AG)
+    ag = AG(directed(:A, :B), directed(:B, :C))
     mag = ag_to_mag(ag)
     @test mag isa MAG
     @test Set(nodes(mag)) == Set([:A, :B, :C])
@@ -150,13 +141,12 @@ end
 
 @testitem "ag_to_mag: canonical non-maximal adds Y <-> W" tags = [:unit, :mag] begin
     # Z <-> X, Z <-> W, X <-> Y, X --> W, Z --> Y: Y and W non-adjacent, no m-sep set
-    ag = cgraph(
+    ag = AG(
         bidirected(:Z, :X),
         bidirected(:Z, :W),
         bidirected(:X, :Y),
         directed(:X, :W),
-        directed(:Z, :Y);
-        class = AG,
+        directed(:Z, :Y),
     )
     @test !is_mag(ag)
     mag = ag_to_mag(ag)
@@ -166,14 +156,13 @@ end
 end
 
 @testitem "ag_to_mag: AG that is MAG returns itself" tags = [:unit, :mag] begin
-    original = cgraph(
+    original = AG(
         bidirected(:Z, :X),
         bidirected(:Z, :W),
         bidirected(:Y, :W),
         bidirected(:X, :Y),
         directed(:X, :W),
-        directed(:Z, :Y);
-        class = AG,
+        directed(:Z, :Y),
     )
     mag = ag_to_mag(original)
     @test mag isa MAG
@@ -187,7 +176,7 @@ end
     # A --> B, A --> C with B and C non-adjacent and no m-sep for B,C:
     # B and C have common cause A; they are d-separated by {A}, so this is a MAG already.
     # Instead use: A --> B --> C --> D, with A,C non-adjacent (sep by B) and B,D non-adjacent (sep by C)
-    ag = cgraph(directed(:A, :B), directed(:B, :C), directed(:C, :D); class = AG)
+    ag = AG(directed(:A, :B), directed(:B, :C), directed(:C, :D))
     mag = ag_to_mag(ag)
     @test mag isa MAG
     # All non-adjacent pairs have m-sep sets in a chain, so no edges added

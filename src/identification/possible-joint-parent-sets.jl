@@ -80,7 +80,7 @@ that orientation, as either relative order is valid.
 # Examples
 
 ```jldoctest
-julia> cpdag = cgraph("X1 --- X2, X1 --- A, X2 --- B, A --> Y, B --> Y"; class = CPDAG);
+julia> cpdag = CPDAG("X1 --- X2, X1 --- A, X2 --- B, A --> Y, B --> Y");
 
 julia> for pa in possible_joint_parent_sets(cpdag, [:X1, :X2])
            println(pa)

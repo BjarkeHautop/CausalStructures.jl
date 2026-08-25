@@ -19,7 +19,7 @@ exactly the same v-structures as `cg`.
 # Examples
 
 ```jldoctest
-julia> pdag = cgraph("A --- B --- C"; class = PDAG);
+julia> pdag = PDAG("A --- B --- C");
 
 julia> dag = dag_from_pdag(pdag)
 DAG with 3 nodes and 2 edges:
@@ -139,7 +139,7 @@ The four rules are:
 # Examples
 
 ```jldoctest
-julia> pdag = cgraph("A --> B --- C"; class = PDAG);
+julia> pdag = PDAG("A --> B --- C");
 
 julia> result = meek_closure(pdag)
 MPDAG with 3 nodes and 2 edges:
@@ -285,7 +285,7 @@ applies [`meek_closure`](@ref) to propagate all implied orientations.
 # Examples
 
 ```jldoctest
-julia> dag = cgraph("A --> B"; class = DAG);
+julia> dag = DAG("A --> B");
 
 julia> cpdag = dag_to_cpdag(dag)
 CPDAG with 2 nodes and 1 edge:
@@ -363,14 +363,14 @@ characterization (Verma & Pearl, 1990).
 # Examples
 
 ```jldoctest
-julia> g1 = cgraph("A --> B <-- C"; class = DAG);
+julia> g1 = DAG("A --> B <-- C");
 
-julia> g2 = cgraph("A --> B <-- C"; class = DAG);
+julia> g2 = DAG("A --> B <-- C");
 
 julia> markov_equivalent(g1, g2)
 true
 
-julia> g3 = cgraph("A --> B --> C"; class = DAG);
+julia> g3 = DAG("A --> B --> C");
 
 julia> markov_equivalent(g1, g3)
 false
@@ -448,7 +448,7 @@ since each new edge can change m-separation and ancestor relationships.
 # Examples
 
 ```jldoctest
-julia> ag = cgraph("A --> B --> C"; class = AG);
+julia> ag = AG("A --> B --> C");
 
 julia> ag_to_mag(ag)
 MAG with 3 nodes and 2 edges:

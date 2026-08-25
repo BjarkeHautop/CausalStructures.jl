@@ -5,26 +5,20 @@
 # ── Output type & skeleton ──────────────────────────────────────────────────────
 
 @testitem "mag_to_pag: returns an UNKNOWN graph" tags = [:unit, :mag_to_pag] begin
-    mag = cgraph(directed(:A, :B), directed(:C, :B); class = MAG)
+    mag = MAG(directed(:A, :B), directed(:C, :B))
     pag = mag_to_pag(mag)
     @test pag isa PAG
     @test Set(nodes(pag)) == Set([:A, :B, :C])
 end
 
 @testitem "mag_to_pag: preserves the skeleton" setup=[PagEdge] tags = [:unit, :mag_to_pag] begin
-    mag = cgraph(
-        directed(:A, :C),
-        directed(:B, :C),
-        directed(:C, :D),
-        bidirected(:D, :E);
-        class = MAG,
-    )
+    mag = MAG(directed(:A, :C), directed(:B, :C), directed(:C, :D), bidirected(:D, :E))
     pag = mag_to_pag(mag)
     @test adjacency_pairs(pag) == adjacency_pairs(mag)
 end
 
 @testitem "mag_to_pag: edge count matches the MAG" tags = [:unit, :mag_to_pag] begin
-    mag = cgraph(directed(:A, :B), directed(:C, :B); class = MAG)
+    mag = MAG(directed(:A, :B), directed(:C, :B))
     pag = mag_to_pag(mag)
     @test length(pag.edges) == length(mag.edges)
 end
@@ -35,7 +29,7 @@ end
     PagEdge,
 ] tags = [:unit, :mag_to_pag] begin
     # A --> B <-- C, A and C non-adjacent => A o-> B <-o C in the PAG.
-    mag = cgraph(directed(:A, :B), directed(:C, :B); class = MAG)
+    mag = MAG(directed(:A, :B), directed(:C, :B))
     pag = mag_to_pag(mag)
     @test pag_edge(pag, :A, :B) == "o->"
     @test pag_edge(pag, :C, :B) == "o->"
@@ -44,7 +38,7 @@ end
 @testitem "mag_to_pag: collider from a latent-free DAG" setup=[PagEdge] tags =
     [:unit, :mag_to_pag] begin
     # A --> B --> D <-- C, with A,C and A,D and B,C non-adjacent.
-    mag = cgraph(directed(:A, :B), directed(:B, :D), directed(:C, :D); class = MAG)
+    mag = MAG(directed(:A, :B), directed(:B, :D), directed(:C, :D))
     pag = mag_to_pag(mag)
     @test pag_edge(pag, :A, :B) == "o-o"   # reversible: no collider at B
     @test pag_edge(pag, :B, :D) == "o->"   # collider at D
@@ -56,7 +50,7 @@ end
 @testitem "mag_to_pag: directed chain has no invariant marks" setup=[PagEdge] tags =
     [:unit, :mag_to_pag] begin
     # A --> B --> C: no unshielded collider, so the PAG is all circles.
-    mag = cgraph(directed(:A, :B), directed(:B, :C); class = MAG)
+    mag = MAG(directed(:A, :B), directed(:B, :C))
     pag = mag_to_pag(mag)
     @test pag_edge(pag, :A, :B) == "o-o"
     @test pag_edge(pag, :B, :C) == "o-o"
@@ -65,7 +59,7 @@ end
 @testitem "mag_to_pag: fork is equivalent to the chain" setup=[PagEdge] tags =
     [:unit, :mag_to_pag] begin
     # B --> A, B --> C is Markov equivalent to the chain: same all-circle PAG.
-    mag = cgraph(directed(:B, :A), directed(:B, :C); class = MAG)
+    mag = MAG(directed(:B, :A), directed(:B, :C))
     pag = mag_to_pag(mag)
     @test pag_edge(pag, :A, :B) == "o-o"
     @test pag_edge(pag, :B, :C) == "o-o"
@@ -73,7 +67,7 @@ end
 
 @testitem "mag_to_pag: single directed edge has no invariant marks" setup=[PagEdge] tags =
     [:unit, :mag_to_pag] begin
-    mag = cgraph(directed(:A, :B); class = MAG)
+    mag = MAG(directed(:A, :B))
     pag = mag_to_pag(mag)
     @test pag_edge(pag, :A, :B) == "o-o"
 end
@@ -81,7 +75,7 @@ end
 @testitem "mag_to_pag: single bidirected edge has no invariant marks" setup=[PagEdge] tags =
     [:unit, :mag_to_pag] begin
     # With only two adjacent vertices, no endpoint is invariant.
-    mag = cgraph(bidirected(:A, :B); class = MAG)
+    mag = MAG(bidirected(:A, :B))
     pag = mag_to_pag(mag)
     @test pag_edge(pag, :A, :B) == "o-o"
 end
@@ -92,7 +86,7 @@ end
     [:unit, :mag_to_pag] begin
     # A --> C <-- B (collider at C), C --> D with A,D and B,D non-adjacent.
     # The collider gives A o-> C <-o B; R1 then orients C --> D.
-    mag = cgraph(directed(:A, :C), directed(:B, :C), directed(:C, :D); class = MAG)
+    mag = MAG(directed(:A, :C), directed(:B, :C), directed(:C, :D))
     pag = mag_to_pag(mag)
     @test pag_edge(pag, :A, :C) == "o->"
     @test pag_edge(pag, :B, :C) == "o->"
@@ -102,7 +96,7 @@ end
 # ── Determinism ─────────────────────────────────────────────────────────────────
 
 @testitem "mag_to_pag: is deterministic" tags = [:unit, :mag_to_pag] begin
-    mag = cgraph(directed(:A, :C), directed(:B, :C), directed(:C, :D); class = MAG)
+    mag = MAG(directed(:A, :C), directed(:B, :C), directed(:C, :D))
     @test Set(mag_to_pag(mag).edges) == Set(mag_to_pag(mag).edges)
 end
 
@@ -113,13 +107,7 @@ end
     # Discriminating path <D, A, B, C> for B: D <-> A <-> B with A --> C and D
     # not adjacent to C. Here B <-> C, so B is a collider on the path and R4
     # orients B <-> C with both arrowheads invariant.
-    mag = cgraph(
-        bidirected(:D, :A),
-        bidirected(:A, :B),
-        directed(:A, :C),
-        bidirected(:B, :C);
-        class = MAG,
-    )
+    mag = MAG(bidirected(:D, :A), bidirected(:A, :B), directed(:A, :C), bidirected(:B, :C))
     pag = mag_to_pag(mag)
     @test pag_edge(pag, :B, :C) == "<->"   # R4: collider => B <-> C
     @test pag_edge(pag, :A, :C) == "-->"
@@ -129,13 +117,7 @@ end
     [:unit, :mag_to_pag] begin
     # Same configuration but with B --> C, so B is a non-collider on the
     # discriminating path and R4 orients B --> C (tail at B invariant).
-    mag = cgraph(
-        bidirected(:D, :A),
-        bidirected(:A, :B),
-        directed(:A, :C),
-        directed(:B, :C);
-        class = MAG,
-    )
+    mag = MAG(bidirected(:D, :A), bidirected(:A, :B), directed(:A, :C), directed(:B, :C))
     pag = mag_to_pag(mag)
     @test pag_edge(pag, :B, :C) == "-->"   # R4: non-collider => B --> C
     @test pag_edge(pag, :A, :C) == "-->"
@@ -144,20 +126,10 @@ end
 @testitem "mag_to_pag: R4 distinguishes non-equivalent MAGs" tags = [:unit, :mag_to_pag] begin
     # The two MAGs above share their skeleton and unshielded collider but differ
     # only in the discriminating-path triple at B.
-    m_collider = cgraph(
-        bidirected(:D, :A),
-        bidirected(:A, :B),
-        directed(:A, :C),
-        bidirected(:B, :C);
-        class = MAG,
-    )
-    m_noncollider = cgraph(
-        bidirected(:D, :A),
-        bidirected(:A, :B),
-        directed(:A, :C),
-        directed(:B, :C);
-        class = MAG,
-    )
+    m_collider =
+        MAG(bidirected(:D, :A), bidirected(:A, :B), directed(:A, :C), bidirected(:B, :C))
+    m_noncollider =
+        MAG(bidirected(:D, :A), bidirected(:A, :B), directed(:A, :C), directed(:B, :C))
     @test m_separated(m_collider, :D, :C, [:A]) != m_separated(m_noncollider, :D, :C, [:A])
     @test Set(mag_to_pag(m_collider).edges) != Set(mag_to_pag(m_noncollider).edges)
 end
@@ -167,14 +139,13 @@ end
 ] tags = [:unit, :mag_to_pag] begin
     # Discriminating path <D, X, A, B, C> for B: D <-> X <-> A <-> B, with X
     # and A both parents of C and D not adjacent to C.
-    mag = cgraph(
+    mag = MAG(
         bidirected(:D, :X),
         bidirected(:X, :A),
         bidirected(:A, :B),
         directed(:X, :C),
         directed(:A, :C),
-        bidirected(:B, :C);
-        class = MAG,
+        bidirected(:B, :C),
     )
     pag = mag_to_pag(mag)
     @test pag_edge(pag, :B, :C) == "<->"   # R4: collider => B <-> C
@@ -185,14 +156,13 @@ end
 ] tags = [:unit, :mag_to_pag] begin
     # Same configuration as above but with B --> C, so B is a non-collider on
     # the discriminating path and R4 orients B --> C (tail at B invariant).
-    mag = cgraph(
+    mag = MAG(
         bidirected(:D, :X),
         bidirected(:X, :A),
         bidirected(:A, :B),
         directed(:X, :C),
         directed(:A, :C),
-        directed(:B, :C);
-        class = MAG,
+        directed(:B, :C),
     )
     pag = mag_to_pag(mag)
     @test pag_edge(pag, :B, :C) == "-->"   # R4: non-collider => B --> C

@@ -132,23 +132,23 @@ restricted to the first result, and the outputs are intersected.
 # Examples
 
 ```jldoctest
-julia> dag = cgraph("A --> B --> C"; class = DAG);
+julia> dag = DAG("A --> B --> C");
 
 julia> minimal_separator(dag, :A, :C)  # chain A --> B --> C: separator is {B}
 1-element Vector{Symbol}:
  :B
 
-julia> dag_coll = cgraph("A --> C <-- B"; class = DAG);
+julia> dag_coll = DAG("A --> C <-- B");
 
 julia> minimal_separator(dag_coll, :A, :B)  # collider A --> C <-- B: already d-separated
 Symbol[]
 
-julia> dag_edge = cgraph("A --> B"; class = DAG);
+julia> dag_edge = DAG("A --> B");
 
 julia> minimal_separator(dag_edge, :A, :B) === nothing  # direct edge: no separator exists
 true
 
-julia> dag4 = cgraph("A --> X --> M --> Y, A --> Y"; class = DAG);
+julia> dag4 = DAG("A --> X --> M --> Y, A --> Y");
 
 julia> minimal_separator(dag4, :X, :Y)  # two paths require both A and M
 2-element Vector{Symbol}:
@@ -163,29 +163,27 @@ julia> minimal_separator(dag4, :X, :Y, include = [:M])  # force M in; A still ne
 julia> minimal_separator(dag4, :X, :Y, restrict = [:M]) === nothing  # M alone cannot block X <-- A --> Y
 true
 
-julia> dag5 = cgraph("A --> M1 --> Y, B --> M2 --> Y"; class = DAG);
+julia> dag5 = DAG("A --> M1 --> Y, B --> M2 --> Y");
 
 julia> minimal_separator(dag5, [:A, :B], :Y)  # both mediators are needed to block both sources
 2-element Vector{Symbol}:
  :M1
  :M2
 
-julia> admg = cgraph("A --> B --> C"; class = ADMG);
+julia> admg = ADMG("A --> B --> C");
 
 julia> minimal_separator(admg, :A, :C)
 1-element Vector{Symbol}:
  :B
 
-julia> pag = mag_to_pag(cgraph("A --> X --> M --> Y, A --> Y"; class = MAG));
+julia> pag = mag_to_pag(MAG("A --> X --> M --> Y, A --> Y"));
 
 julia> minimal_separator(pag, :A, :M)
 1-element Vector{Symbol}:
  :X
 
-julia> mag2 = cgraph(
-           "A <-> X1, B <-> X2, A --> M1 --> Y, B --> M2 --> Y";
-           class = MAG,
-       );
+julia> mag2 = MAG(
+           "A <-> X1, B <-> X2, A --> M1 --> Y, B --> M2 --> Y");
 
 julia> sort(minimal_separator(mag2, [:X1, :X2], :Y))
 2-element Vector{Symbol}:

@@ -4,7 +4,7 @@
     # Figure 6.5 from Elements of Causal Inference
     # C-->X, X-->F, X-->D, A-->X, A-->K, K-->Y, D-->Y, D-->G, Y-->H
     function _eci_graph()
-        cgraph(
+        DAG(
             directed(:C, :X),
             directed(:X, :F),
             directed(:X, :D),
@@ -13,8 +13,7 @@
             directed(:K, :Y),
             directed(:D, :Y),
             directed(:D, :G),
-            directed(:Y, :H);
-            class = DAG,
+            directed(:Y, :H),
         )
     end
 end
@@ -54,7 +53,7 @@ end
 @testitem "all_backdoor_sets: empty set valid when v-structure blocks backdoor" tags =
     [:unit, :backdoor] begin
     # A-->L, K-->L forms a collider on L, blocking A-->X backdoor path
-    cg = cgraph(
+    cg = DAG(
         directed(:C, :X),
         directed(:X, :F),
         directed(:X, :D),
@@ -64,8 +63,7 @@ end
         directed(:K, :Y),
         directed(:D, :Y),
         directed(:D, :G),
-        directed(:Y, :H);
-        class = DAG,
+        directed(:Y, :H),
     )
     @test is_valid_backdoor(cg, :X, :Y)
 
@@ -76,27 +74,21 @@ end
 end
 
 @testitem "is_valid_backdoor: mediator graph" tags = [:unit, :backdoor] begin
-    cg = cgraph(directed(:X, :M), directed(:M, :Y), directed(:Y, :S); class = DAG)
+    cg = DAG(directed(:X, :M), directed(:M, :Y), directed(:Y, :S))
     @test is_valid_backdoor(cg, :X, :Y)
     @test !is_valid_backdoor(cg, :X, :Y, [:M])   # M is a descendant of X
 end
 
 @testitem "all_backdoor_sets: mediator graph returns only empty set" tags =
     [:unit, :backdoor] begin
-    cg = cgraph(directed(:X, :M), directed(:M, :Y), directed(:Y, :S); class = DAG)
+    cg = DAG(directed(:X, :M), directed(:M, :Y), directed(:Y, :S))
     sets = all_backdoor_sets(cg, :X, :Y; minimal = true, max_size = 1)
     @test length(sets) == 1
     @test sets[1] == Symbol[]
 end
 
 @testitem "is_valid_backdoor: collider-driven candidates" tags = [:unit, :backdoor] begin
-    cg = cgraph(
-        directed(:A, :Z),
-        directed(:B, :Z),
-        directed(:A, :X),
-        directed(:B, :Y);
-        class = DAG,
-    )
+    cg = DAG(directed(:A, :Z), directed(:B, :Z), directed(:A, :X), directed(:B, :Y))
     @test !is_valid_backdoor(cg, :X, :Y, [:Z])        # Z is a collider; conditioning opens path
     @test is_valid_backdoor(cg, :X, :Y, [:A])
     @test is_valid_backdoor(cg, :X, :Y, [:A, :Z])
@@ -104,13 +96,7 @@ end
 end
 
 @testitem "all_backdoor_sets: collider graph non-minimal" tags = [:unit, :backdoor] begin
-    cg = cgraph(
-        directed(:A, :Z),
-        directed(:B, :Z),
-        directed(:A, :X),
-        directed(:B, :Y);
-        class = DAG,
-    )
+    cg = DAG(directed(:A, :Z), directed(:B, :Z), directed(:A, :X), directed(:B, :Y))
     sets = all_backdoor_sets(cg, :X, :Y; minimal = false, max_size = 2)
     set_strings = Set(join(sort(s), ",") for s in sets)
     @test "" in set_strings
@@ -119,7 +105,7 @@ end
 end
 
 @testitem "is_valid_backdoor: chain graph empty set valid" tags = [:unit, :backdoor] begin
-    cg = cgraph(directed(:A, :B), directed(:B, :C); class = DAG)
+    cg = DAG(directed(:A, :B), directed(:B, :C))
     @test is_valid_backdoor(cg, :A, :C)
     @test !is_valid_backdoor(cg, :A, :C, [:B])  # B is a descendant of A
 end
@@ -157,7 +143,7 @@ end
     # leaves a direct edge Y --> X into X that no conditioning set can block.
     # minimal_separator therefore finds no valid separator, and adjustment_set
     # falls back to returning Pa(X) \ {X, Y}.
-    cg = cgraph(directed(:Y, :X), directed(:A, :X); class = DAG)
+    cg = DAG(directed(:Y, :X), directed(:A, :X))
     @test adjustment_set(cg, :X, :Y; type = :backdoor) == [:A]
 end
 
@@ -167,7 +153,7 @@ end
     # B is a parent of X but NOT an ancestor of Y.
     # Backdoor path: X <-- B <-- C --> Y must be
     # blocked by including B (or C).
-    cg = cgraph(directed(:C, :B), directed(:B, :X), directed(:C, :Y); class = DAG)
+    cg = DAG(directed(:C, :B), directed(:B, :X), directed(:C, :Y))
     z = adjustment_set(cg, :X, :Y; type = :backdoor)
     @test is_valid_backdoor(cg, :X, :Y, z)
     @test :B ∈ z || :C ∈ z
@@ -183,7 +169,7 @@ end
 
 @testitem "adjustment_set: optimal default on simple confounder" tags = [:unit, :backdoor] begin
     # A-->X, X-->Y, A-->Y: optimal set should be {A}
-    cg = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG)
+    cg = DAG(directed(:A, :X), directed(:X, :Y), directed(:A, :Y))
     z = adjustment_set(cg, :X, :Y)  # default :optimal
     @test is_valid_backdoor(cg, :X, :Y, z)
     @test Set(z) == Set([:A])
@@ -191,39 +177,33 @@ end
 
 @testitem "adjustment_set: optimal empty on chain" tags = [:unit, :backdoor] begin
     # X-->Y: no confounders, optimal set is empty
-    cg = cgraph(directed(:X, :Y); class = DAG)
+    cg = DAG(directed(:X, :Y))
     @test adjustment_set(cg, :X, :Y; type = :optimal) == Symbol[]
     @test adjustment_set(cg, :X, :Y; type = :parents) == Symbol[]
     @test adjustment_set(cg, :X, :Y; type = :backdoor) == Symbol[]
 end
 
 @testitem "adjustment_set: unknown type throws ArgumentError" tags = [:unit, :backdoor] begin
-    cg = cgraph(directed(:X, :Y); class = DAG)
+    cg = DAG(directed(:X, :Y))
     @test_throws ArgumentError adjustment_set(cg, :X, :Y; type = :unknown)
 end
 
 # ── DAG adjustment (is_valid_adjustment / all_adjustment_sets, GAC) ────────
 
 @testitem "is_valid_adjustment DAG: simple confounder" tags = [:unit, :backdoor] begin
-    dag = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG)
+    dag = DAG(directed(:A, :X), directed(:X, :Y), directed(:A, :Y))
     @test !is_valid_adjustment(dag, :X, :Y)       # open path X <-- A --> Y
     @test is_valid_adjustment(dag, :X, :Y, [:A])
 end
 
 @testitem "is_valid_adjustment DAG: chain has valid empty set" tags = [:unit, :backdoor] begin
-    dag = cgraph(directed(:X, :Y); class = DAG)
+    dag = DAG(directed(:X, :Y))
     @test is_valid_adjustment(dag, :X, :Y)
 end
 
 @testitem "is_valid_adjustment DAG: descendant of X is forbidden" tags = [:unit, :backdoor] begin
     # A --> X --> M --> Y: M is a descendant of X, invalid adjustment
-    dag = cgraph(
-        directed(:A, :X),
-        directed(:X, :M),
-        directed(:M, :Y),
-        directed(:A, :Y);
-        class = DAG,
-    )
+    dag = DAG(directed(:A, :X), directed(:X, :M), directed(:M, :Y), directed(:A, :Y))
     @test !is_valid_adjustment(dag, :X, :Y, [:M])  # M is forbidden (descendant of X)
     @test is_valid_adjustment(dag, :X, :Y, [:A])
 end
@@ -239,12 +219,12 @@ end
 
 @testitem "all_adjustment_sets DAG: finds {A} for simple confounder" tags =
     [:unit, :backdoor] begin
-    dag = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = DAG)
+    dag = DAG(directed(:A, :X), directed(:X, :Y), directed(:A, :Y))
     @test all_adjustment_sets(dag, :X, :Y) == [[:A]]
 end
 
 @testitem "all_adjustment_sets DAG: chain returns empty set" tags = [:unit, :backdoor] begin
-    dag = cgraph(directed(:X, :Y); class = DAG)
+    dag = DAG(directed(:X, :Y))
     sets = all_adjustment_sets(dag, :X, :Y)
     @test length(sets) == 1
     @test sets[1] == Symbol[]
@@ -252,13 +232,7 @@ end
 
 @testitem "all_adjustment_sets DAG: consistent with is_valid_adjustment" tags =
     [:unit, :backdoor] begin
-    dag = cgraph(
-        directed(:A, :X),
-        directed(:B, :X),
-        directed(:X, :Y),
-        directed(:A, :Y);
-        class = DAG,
-    )
+    dag = DAG(directed(:A, :X), directed(:B, :X), directed(:X, :Y), directed(:A, :Y))
     sets = all_adjustment_sets(dag, :X, :Y; minimal = false, max_size = 2)
     for z in sets
         @test is_valid_adjustment(dag, :X, :Y, z)
@@ -275,7 +249,7 @@ end
     # the same shape as their MAG M1, which they note is not amenable, unlike
     # its DAG interpretation). The graph is therefore not amenable relative to
     # (X, Y): no adjustment set exists, not even the empty set.
-    mag = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = MAG)
+    mag = MAG(directed(:A, :X), directed(:X, :Y), directed(:A, :Y))
     @test !is_valid_adjustment(mag, :X, :Y, [:A])
     @test !is_valid_adjustment(mag, :X, :Y)
 end
@@ -286,13 +260,7 @@ end
     # Y. B witnesses that X --> Y is visible (Perković et al. 2018, Example 3,
     # MAG M2), so the graph is amenable and conditioning on A blocks the
     # backdoor path X <-- A --> Y.
-    mag = cgraph(
-        directed(:A, :X),
-        directed(:B, :X),
-        directed(:X, :Y),
-        directed(:A, :Y);
-        class = MAG,
-    )
+    mag = MAG(directed(:A, :X), directed(:B, :X), directed(:X, :Y), directed(:A, :Y))
     @test is_valid_adjustment(mag, :X, :Y, [:A])
     @test !is_valid_adjustment(mag, :X, :Y)
 end
@@ -302,13 +270,7 @@ end
     # X --> Y is visible: A is a spouse of X and A is not adjacent to Y
     # (witness case of Perković et al. 2018, Definition/Figure 2). The open
     # non-causal path X <-> A --> M --> Y is blocked by conditioning on A.
-    mag = cgraph(
-        bidirected(:A, :X),
-        directed(:A, :M),
-        directed(:M, :Y),
-        directed(:X, :Y);
-        class = MAG,
-    )
+    mag = MAG(bidirected(:A, :X), directed(:A, :M), directed(:M, :Y), directed(:X, :Y))
     @test is_valid_adjustment(mag, :X, :Y, [:A])
     @test !is_valid_adjustment(mag, :X, :Y)
 end
@@ -320,26 +282,14 @@ end
     # to A and Y, witnessing that X --> Y is visible. The empty set is valid
     # because A naturally blocks the non-causal path. Conditioning on A would
     # OPEN the collider path.
-    mag = cgraph(
-        bidirected(:A, :X),
-        bidirected(:A, :Y),
-        bidirected(:B, :X),
-        directed(:X, :Y);
-        class = MAG,
-    )
+    mag = MAG(bidirected(:A, :X), bidirected(:A, :Y), bidirected(:B, :X), directed(:X, :Y))
     @test is_valid_adjustment(mag, :X, :Y)         # empty set valid
     @test !is_valid_adjustment(mag, :X, :Y, [:A])  # conditioning on A opens path
 end
 
 @testitem "is_valid_adjustment: descendant of X is forbidden" tags = [:unit, :backdoor] begin
     # A --> X --> M --> Y: M is a descendant of X, invalid adjustment
-    mag = cgraph(
-        directed(:A, :X),
-        directed(:X, :M),
-        directed(:M, :Y),
-        directed(:A, :Y);
-        class = MAG,
-    )
+    mag = MAG(directed(:A, :X), directed(:X, :M), directed(:M, :Y), directed(:A, :Y))
     @test !is_valid_adjustment(mag, :X, :Y, [:M])  # M is forbidden (descendant of X)
     @test is_valid_adjustment(mag, :X, :Y, [:A])
 end
@@ -349,19 +299,13 @@ end
     # X --> Y alone: X has no other neighbor at all, so no witness can ever
     # show the edge is confounding-free. The graph is not amenable relative to
     # (X, Y), so not even the empty set is a valid adjustment set.
-    mag = cgraph(directed(:X, :Y); class = MAG)
+    mag = MAG(directed(:X, :Y))
     @test !is_valid_adjustment(mag, :X, :Y)
 end
 
 @testitem "all_adjustment_sets: bidirected confounder returns {A} and {M}" tags =
     [:unit, :backdoor] begin
-    mag = cgraph(
-        bidirected(:A, :X),
-        directed(:A, :M),
-        directed(:M, :Y),
-        directed(:X, :Y);
-        class = MAG,
-    )
+    mag = MAG(bidirected(:A, :X), directed(:A, :M), directed(:M, :Y), directed(:X, :Y))
     sets = all_adjustment_sets(mag, :X, :Y)
     @test sort(sets) == [[:A], [:M]]
 end
@@ -371,20 +315,14 @@ end
     # Collider A blocks non-causal paths; only the empty adjustment set is valid.
     # B <-> X witnesses that X --> Y is visible (see the analogous
     # is_valid_adjustment test above).
-    mag = cgraph(
-        bidirected(:A, :X),
-        bidirected(:A, :Y),
-        bidirected(:B, :X),
-        directed(:X, :Y);
-        class = MAG,
-    )
+    mag = MAG(bidirected(:A, :X), bidirected(:A, :Y), bidirected(:B, :X), directed(:X, :Y))
     sets = all_adjustment_sets(mag, :X, :Y)
     @test length(sets) == 1
     @test sets[1] == Symbol[]
 end
 
 @testitem "all_adjustment_sets: bare edge has no valid set" tags = [:unit, :backdoor] begin
-    mag = cgraph(directed(:X, :Y); class = MAG)
+    mag = MAG(directed(:X, :Y))
     sets = all_adjustment_sets(mag, :X, :Y)
     @test isempty(sets)
 end
@@ -393,13 +331,7 @@ end
     [:unit, :backdoor] begin
     # Verify that every set returned is valid and all valid sets (up to size) are found.
     # A --> X, B --> X, X --> Y, A --> Y: pure directed MAG (= DAG); A and B confound X.
-    mag = cgraph(
-        directed(:A, :X),
-        directed(:B, :X),
-        directed(:X, :Y),
-        directed(:A, :Y);
-        class = MAG,
-    )
+    mag = MAG(directed(:A, :X), directed(:B, :X), directed(:X, :Y), directed(:A, :Y))
     sets = all_adjustment_sets(mag, :X, :Y; minimal = false, max_size = 2)
     for z in sets
         @test is_valid_adjustment(mag, :X, :Y, z)
@@ -407,13 +339,7 @@ end
 end
 
 @testitem "proper backdoor graph removes causal edges" begin
-    mag = cgraph(
-        directed(:X, :M),
-        directed(:M, :Y),
-        directed(:A, :X),
-        directed(:A, :Y);
-        class = MAG,
-    )
+    mag = MAG(directed(:X, :M), directed(:M, :Y), directed(:A, :X), directed(:A, :Y))
 
     @test is_valid_adjustment(mag, :X, :Y, [:A])
     @test !is_valid_adjustment(mag, :X, :Y)
@@ -421,26 +347,14 @@ end
 
 @testitem "adjustment_set AbstractAG: returns valid set, prefers smaller" tags =
     [:unit, :backdoor] begin
-    mag = cgraph(
-        bidirected(:A, :X),
-        directed(:A, :M),
-        directed(:M, :Y),
-        directed(:X, :Y);
-        class = MAG,
-    )
+    mag = MAG(bidirected(:A, :X), directed(:A, :M), directed(:M, :Y), directed(:X, :Y))
     z = adjustment_set(mag, :X, :Y)
     @test is_valid_adjustment(mag, :X, :Y, z)
     @test z == [:A]
 end
 
 @testitem "adjustment_set AbstractAG: empty set valid" tags = [:unit, :backdoor] begin
-    mag = cgraph(
-        bidirected(:A, :X),
-        bidirected(:A, :Y),
-        bidirected(:B, :X),
-        directed(:X, :Y);
-        class = MAG,
-    )
+    mag = MAG(bidirected(:A, :X), bidirected(:A, :Y), bidirected(:B, :X), directed(:X, :Y))
     z = adjustment_set(mag, :X, :Y)
     @test is_valid_adjustment(mag, :X, :Y, z)
     @test z == Symbol[]
@@ -451,39 +365,27 @@ end
 @testitem "is_valid_backdoor (ADMG): confounder A blocks backdoor" tags = [:unit, :backdoor] begin
     # A --> X --> Y with bidirected A <-> Y (hidden cause of A and Y)
     # A --> X is a backdoor path; conditioning on A blocks it.
-    admg = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = ADMG)
+    admg = ADMG(directed(:A, :X), directed(:X, :Y), directed(:A, :Y))
     @test is_valid_backdoor(admg, :X, :Y, [:A])
     @test !is_valid_backdoor(admg, :X, :Y)
 end
 
 @testitem "is_valid_backdoor (ADMG): descendant of X rejected" tags = [:unit, :backdoor] begin
     # X --> M --> Y with A --> X and A --> Y
-    admg = cgraph(
-        directed(:A, :X),
-        directed(:X, :M),
-        directed(:M, :Y),
-        directed(:A, :Y);
-        class = ADMG,
-    )
+    admg = ADMG(directed(:A, :X), directed(:X, :M), directed(:M, :Y), directed(:A, :Y))
     @test !is_valid_backdoor(admg, :X, :Y, [:M])  # M is a descendant of X
 end
 
 @testitem "is_valid_backdoor (ADMG): bidirected confounder requires adjustment" tags =
     [:unit, :backdoor] begin
     # X <-> Y: bidirected edge means hidden common cause; empty Z invalid
-    admg = cgraph(bidirected(:X, :Y), directed(:X, :Y); class = ADMG)
+    admg = ADMG(bidirected(:X, :Y), directed(:X, :Y))
     @test !is_valid_backdoor(admg, :X, :Y)
 end
 
 @testitem "is_valid_backdoor (ADMG): consistent with DAG latent projection" tags =
     [:unit, :backdoor] begin
-    dag = cgraph(
-        directed(:U, :X),
-        directed(:U, :Y),
-        directed(:A, :X),
-        directed(:X, :Y);
-        class = DAG,
-    )
+    dag = DAG(directed(:U, :X), directed(:U, :Y), directed(:A, :X), directed(:X, :Y))
     admg = latent_project(dag, [:U])
     @test is_valid_backdoor(dag, :X, :Y, [:A]) == is_valid_backdoor(admg, :X, :Y, [:A])
     @test is_valid_backdoor(dag, :X, :Y, Symbol[]) ==
@@ -491,7 +393,7 @@ end
 end
 
 @testitem "all_backdoor_sets (ADMG): finds valid adjustment sets" tags = [:unit, :backdoor] begin
-    admg = cgraph(directed(:A, :X), directed(:X, :Y), directed(:A, :Y); class = ADMG)
+    admg = ADMG(directed(:A, :X), directed(:X, :Y), directed(:A, :Y))
     sets = all_backdoor_sets(admg, :X, :Y)
     @test !isempty(sets)
     @test any(s -> s == [:A], sets)
@@ -502,13 +404,12 @@ end
 
 @testitem "all_backdoor_sets (ADMG): consistent with DAG latent projection" tags =
     [:unit, :backdoor] begin
-    dag = cgraph(
+    dag = DAG(
         directed(:W, :A),
         directed(:W, :B),
         directed(:A, :X),
         directed(:A, :Y),
-        directed(:X, :Y);
-        class = DAG,
+        directed(:X, :Y),
     )
     admg = latent_project(dag, [:W])
     dag_sets = all_backdoor_sets(dag, :X, :Y)
@@ -518,13 +419,7 @@ end
 
 @testitem "all_backdoor_sets (ADMG): latent X-Y confounder is not identifiable" tags =
     [:unit, :backdoor] begin
-    dag = cgraph(
-        directed(:U, :X),
-        directed(:U, :Y),
-        directed(:A, :X),
-        directed(:X, :Y);
-        class = DAG,
-    )
+    dag = DAG(directed(:U, :X), directed(:U, :Y), directed(:A, :X), directed(:X, :Y))
     admg = latent_project(dag, [:U])
     @test isempty(all_backdoor_sets(admg, :X, :Y))
 end
@@ -534,10 +429,7 @@ end
 @testsnippet TwoConfounderGraph begin
     # Two independent confounded treatments: L1-->X1-->Y, L1-->Y, L2-->X2-->Y, L2-->Y
     function _two_confounder_graph(class)
-        cgraph(
-            "L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y";
-            class = class,
-        )
+        class("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y")
     end
 end
 
@@ -595,7 +487,7 @@ end
 
 @testitem "is_valid_adjustment MAG: accepts Vector{Symbol} for x and y" tags =
     [:unit, :backdoor] begin
-    mag = cgraph(
+    mag = MAG(
         bidirected(:A, :X1),
         bidirected(:B, :X2),
         directed(:A, :M1),
@@ -603,8 +495,7 @@ end
         directed(:M1, :Y),
         directed(:M2, :Y),
         directed(:X1, :Y),
-        directed(:X2, :Y);
-        class = MAG,
+        directed(:X2, :Y),
     )
     @test is_valid_adjustment(mag, [:X1, :X2], [:Y], [:A, :B])
     @test !is_valid_adjustment(mag, [:X1, :X2], [:Y])

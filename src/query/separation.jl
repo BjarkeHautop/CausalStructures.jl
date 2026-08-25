@@ -512,7 +512,7 @@ traversal treating undirected edges as never forming a collider endpoint.
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("A --> B --> C"; class = DAG);
+julia> cg = DAG("A --> B --> C");
 
 julia> d_separated(cg, :A, :C)        # chain A --> B --> C is open
 false
@@ -520,7 +520,7 @@ false
 julia> d_separated(cg, :A, :C, [:B]) # conditioning on B blocks the chain
 true
 
-julia> coll = cgraph("A --> C <-- B"; class = DAG);
+julia> coll = DAG("A --> C <-- B");
 
 julia> d_separated(coll, :A, :B)         # collider A --> C <-- B: blocked without conditioning
 true
@@ -528,7 +528,7 @@ true
 julia> d_separated(coll, :A, :B, [:C])  # conditioning on collider C opens the path
 false
 
-julia> mpdag = cgraph("A --- B --> C"; class = MPDAG);
+julia> mpdag = MPDAG("A --- B --> C");
 
 julia> d_separated(mpdag, :A, :C, [:B]) # B blocks whether A --> B or A <-- B
 true
@@ -536,7 +536,7 @@ true
 julia> d_separated(mpdag, :A, :C)       # B is possibly a non-collider: open path exists
 false
 
-julia> chain = cgraph("A --> C <-- B, C --> D"; class = DAG);
+julia> chain = DAG("A --> C <-- B, C --> D");
 
 julia> d_separated(chain, [:A, :B], :D)         # C lies on both A-->C-->D and B-->C-->D: paths open
 false
@@ -629,7 +629,7 @@ tails (as for [`possible_ancestors`](@ref)/[`possible_descendants`](@ref)).
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("A --> B --> C"; class = DAG);
+julia> cg = DAG("A --> B --> C");
 
 julia> m_separated(cg, :A, :C)        # equivalent to d_separated on a DAG
 false
@@ -637,7 +637,7 @@ false
 julia> m_separated(cg, :A, :C, [:B])
 true
 
-julia> admg = cgraph("A --> B, A <-> C"; class = ADMG);
+julia> admg = ADMG("A --> B, A <-> C");
 
 julia> m_separated(admg, :B, :C)        # B and C are connected via the bidirected edge at A
 false
@@ -645,7 +645,7 @@ false
 julia> m_separated(admg, :B, :C, [:A]) # conditioning on A blocks the path
 true
 
-julia> admg2 = cgraph("A <-> C <-> B"; class = ADMG);
+julia> admg2 = ADMG("A <-> C <-> B");
 
 julia> m_separated(admg2, [:A, :B], :C)  # both A and B are m-connected to C
 false

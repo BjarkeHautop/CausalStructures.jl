@@ -1,15 +1,15 @@
 @testitem "id: no confounding gives the conditional" tags = [:unit, :id] begin
-    cg = cgraph("X --> Y"; class = DAG)
+    cg = DAG("X --> Y")
     @test id(cg, :X, :Y) == prob(:Y; given = [:X])
 end
 
 @testitem "id: back-door graph gives the g-formula" tags = [:unit, :id] begin
-    cg = cgraph("Z --> X + Y, X --> Y"; class = DAG)
+    cg = DAG("Z --> X + Y, X --> Y")
     @test string(id(cg, :X, :Y)) == "Σ_{Z} P(Y | X, Z) P(Z)"
 end
 
 @testitem "id: front-door graph" tags = [:unit, :id] begin
-    cg = cgraph("X --> M, M --> Y, X <-> Y"; class = ADMG)
+    cg = ADMG("X --> M, M --> Y, X <-> Y")
 
     # The inner sum ranges over a value of X distinct from the intervened one,
     # so it must be printed under a fresh name.
@@ -17,46 +17,46 @@ end
 end
 
 @testitem "id: bow arc is not identifiable" tags = [:unit, :id] begin
-    cg = cgraph("X --> Y, X <-> Y"; class = ADMG)
+    cg = ADMG("X --> Y, X <-> Y")
     @test id(cg, :X, :Y) === nothing
 end
 
 @testitem "id: instrument does not identify nonparametrically" tags = [:unit, :id] begin
-    cg = cgraph("Z --> X, X --> Y, X <-> Y"; class = ADMG)
+    cg = ADMG("Z --> X, X --> Y, X <-> Y")
     @test id(cg, :X, :Y) === nothing
 end
 
 @testitem "id: latent projection of a confounded DAG reproduces the bow arc" tags =
     [:unit, :id] begin
-    dag = cgraph("U --> X + Y, X --> Y"; class = DAG)
+    dag = DAG("U --> X + Y, X --> Y")
     admg = latent_project(dag, [:U])
 
     @test id(admg, :X, :Y) === nothing
 end
 
 @testitem "id: a DAG argument is treated as an ADMG" tags = [:unit, :id] begin
-    dag = cgraph("Z --> X + Y, X --> Y"; class = DAG)
+    dag = DAG("Z --> X + Y, X --> Y")
     admg = reclass(dag, ADMG)
 
     @test id(dag, :X, :Y) == id(admg, :X, :Y)
 end
 
 @testitem "id: joint outcomes and multiple interventions" tags = [:unit, :id] begin
-    cg = cgraph("Z --> X + Y, X --> Y"; class = DAG)
+    cg = DAG("Z --> X + Y, X --> Y")
     @test string(id(cg, [:X], [:Y, :Z])) == "P(Y | X, Z) P(Z)"
 
-    fork = cgraph("X --> Y, Z --> Y"; class = DAG)
+    fork = DAG("X --> Y, Z --> Y")
     @test id(fork, [:X, :Z], :Y) == prob(:Y; given = [:X, :Z])
 end
 
 @testitem "id: effect on a non-descendant is the marginal" tags = [:unit, :id] begin
-    cg = cgraph("X --> Y"; class = DAG)
+    cg = DAG("X --> Y")
     # Y has no effect on X, so P(X | do(Y)) = P(X).
     @test id(cg, :Y, :X) == prob(:X)
 end
 
 @testitem "id: identifiable effect in a graph with two districts" tags = [:unit, :id] begin
-    cg = cgraph("A --> B, B --> C, C --> D, A <-> C, B <-> D"; class = ADMG)
+    cg = ADMG("A --> B, B --> C, C --> D, A <-> C, B <-> D")
     result = id(cg, :B, :D)
 
     @test result !== nothing
@@ -68,10 +68,7 @@ end
 @testitem "id: reproduces the worked example of Shpitser & Pearl (2008)" tags = [:unit, :id] begin
     # Figure 3(a) of the paper, whose structure is pinned down by the four
     # intermediate results quoted in the walkthrough on p. 1953.
-    cg = cgraph(
-        "W1 --> X, X --> Y1, W2 --> Y2, W1 <-> Y1, W1 <-> W2, W2 <-> Y2";
-        class = ADMG,
-    )
+    cg = ADMG("W1 --> X, X --> Y1, W2 --> Y2, W1 <-> Y1, W1 <-> W2, W2 <-> Y2")
 
     # The paper's intermediate steps: C(G \ X) is a single district, and
     # removing W1 as well splits it into {Y1} and {W2, Y2}.
@@ -89,10 +86,9 @@ end
     # line 6 again, so the conditionals there cannot be read off the original
     # joint and are emitted as ratios instead. This is the only branch of
     # `_conditional` that produces a Quotient.
-    cg = cgraph(
+    cg = ADMG(
         "A --> B, A --> D, B --> C, B --> D, C --> E, " *
-        "A <-> C, A <-> E, B <-> D, D <-> E";
-        class = ADMG,
+        "A <-> C, A <-> E, B <-> D, D <-> E",
     )
     result = id(cg, :C, :E)
 
@@ -104,7 +100,7 @@ end
 end
 
 @testitem "id: rejects malformed queries" tags = [:unit, :id] begin
-    cg = cgraph("Z --> X + Y, X --> Y"; class = DAG)
+    cg = DAG("Z --> X + Y, X --> Y")
 
     @test_throws ErrorException id(cg, :X, :X)
     @test_throws ErrorException id(cg, :Q, :Y)
@@ -115,7 +111,7 @@ end
 
 @testitem "idc: rule 2 moves the conditioning variable into the intervention" tags =
     [:unit, :id] begin
-    cg = cgraph("Z --> X + Y, X --> Y"; class = DAG)
+    cg = DAG("Z --> X + Y, X --> Y")
 
     # Z is a non-descendant of X, so conditioning on it is the same as
     # intervening on it and the g-formula collapses to a single conditional.
@@ -123,22 +119,22 @@ end
 end
 
 @testitem "idc: with an empty conditioning set it reduces to id" tags = [:unit, :id] begin
-    cg = cgraph("Z --> X + Y, X --> Y"; class = DAG)
+    cg = DAG("Z --> X + Y, X --> Y")
     @test idc(cg, :X, :Y) == id(cg, :X, :Y)
 end
 
 @testitem "idc: front-door graph conditioned on the mediator" tags = [:unit, :id] begin
-    cg = cgraph("X --> M, M --> Y, X <-> Y"; class = ADMG)
+    cg = ADMG("X --> M, M --> Y, X <-> Y")
     @test string(idc(cg, :X, :Y; given = :M)) == "Σ_{X'} P(X') P(Y | M, X')"
 end
 
 @testitem "idc: inherits unidentifiability from id" tags = [:unit, :id] begin
-    cg = cgraph("X --> Y, X <-> Y, W --> Y"; class = ADMG)
+    cg = ADMG("X --> Y, X <-> Y, W --> Y")
     @test idc(cg, :X, :Y; given = :W) === nothing
 end
 
 @testitem "idc: rejects overlapping argument sets" tags = [:unit, :id] begin
-    cg = cgraph("Z --> X + Y, X --> Y"; class = DAG)
+    cg = DAG("Z --> X + Y, X --> Y")
 
     @test_throws ErrorException idc(cg, :X, :Y; given = :X)
     @test_throws ErrorException idc(cg, :X, :Y; given = :Y)

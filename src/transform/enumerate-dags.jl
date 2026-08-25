@@ -396,7 +396,7 @@ can be very large.
 # Examples
 
 ```jldoctest
-julia> pdag = cgraph("A --- B --- C"; class = PDAG);
+julia> pdag = PDAG("A --- B --- C");
 
 julia> dags = enumerate_dags(pdag);
 
@@ -443,7 +443,7 @@ leaf of the search, only incrementing a counter instead.
 # Examples
 
 ```jldoctest
-julia> pdag = cgraph("A --- B --- C"; class = PDAG);
+julia> pdag = PDAG("A --- B --- C");
 
 julia> count_dags(pdag)
 3

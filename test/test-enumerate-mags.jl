@@ -19,19 +19,19 @@ end
 # ── Basic counts ────────────────────────────────────────────────────────────────
 
 @testitem "enumerate_mags: all-circle 2-path has 8 members" tags = [:unit, :enumerate_mags] begin
-    pag = cgraph(partial(:A, :B), partial(:B, :C); class = PAG)
+    pag = PAG(partial(:A, :B), partial(:B, :C))
     @test length(enumerate_mags(pag)) == 8
 end
 
 @testitem "enumerate_mags: collider PAG has 4 members" tags = [:unit, :enumerate_mags] begin
-    pag = cgraph(partially_directed(:A, :B), partially_directed(:C, :B); class = PAG)
+    pag = PAG(partially_directed(:A, :B), partially_directed(:C, :B))
     @test length(enumerate_mags(pag)) == 4
 end
 
 @testitem "enumerate_mags: an edgeless PAG has a single member" tags =
     [:unit, :enumerate_mags] begin
     # No adjacencies => the empty MAG is the only graph in the class.
-    pag = cgraph(node(:A), node(:B); class = PAG)
+    pag = PAG(node(:A), node(:B))
     @test length(enumerate_mags(pag)) == 1
 end
 
@@ -41,13 +41,8 @@ end
     [:unit, :enumerate_mags] begin
     # A --- B --- C --- D --- A is a closed selection-bias PAG; only the 4-cycle
     # itself is in the class.
-    mag = cgraph(
-        undirected(:A, :B),
-        undirected(:B, :C),
-        undirected(:C, :D),
-        undirected(:A, :D);
-        class = MAG,
-    )
+    mag =
+        MAG(undirected(:A, :B), undirected(:B, :C), undirected(:C, :D), undirected(:A, :D))
     pag = mag_to_pag(mag)
     mags = enumerate_mags(pag)
     @test length(mags) == 1
@@ -58,13 +53,12 @@ end
     [:unit, :enumerate_mags] begin
     # The pendant B --> E surfaces as E o-- B; both resolutions of the circle at E
     # (the directed edge and the undirected edge) are valid members of the class.
-    mag = cgraph(
+    mag = MAG(
         undirected(:A, :B),
         undirected(:B, :C),
         undirected(:C, :D),
         undirected(:A, :D),
-        directed(:B, :E);
-        class = MAG,
+        directed(:B, :E),
     )
     pag = mag_to_pag(mag)
     mags = enumerate_mags(pag)
@@ -77,7 +71,7 @@ end
 
 @testitem "enumerate_mags: every member maps back to the PAG" setup=[MagSig] tags =
     [:unit, :enumerate_mags] begin
-    mag = cgraph(directed(:A, :C), directed(:B, :C), directed(:C, :D); class = MAG)
+    mag = MAG(directed(:A, :C), directed(:B, :C), directed(:C, :D))
     pag = mag_to_pag(mag)
     target = mag_sig(pag)
     for m in enumerate_mags(pag)
@@ -87,20 +81,14 @@ end
 
 @testitem "enumerate_mags: contains the originating MAG" setup=[MagSig] tags =
     [:unit, :enumerate_mags] begin
-    mag = cgraph(
-        bidirected(:D, :A),
-        bidirected(:A, :B),
-        directed(:A, :C),
-        directed(:B, :C);
-        class = MAG,
-    )
+    mag = MAG(bidirected(:D, :A), bidirected(:A, :B), directed(:A, :C), directed(:B, :C))
     pag = mag_to_pag(mag)
     @test any(m -> mag_sig(m) == mag_sig(mag), enumerate_mags(pag))
 end
 
 @testitem "enumerate_mags: contains the mag_from_pag representative" setup=[MagSig] tags =
     [:unit, :enumerate_mags] begin
-    pag = cgraph(partial(:A, :B), partial(:B, :C); class = PAG)
+    pag = PAG(partial(:A, :B), partial(:B, :C))
     rep = mag_from_pag(pag)
     @test any(m -> mag_sig(m) == mag_sig(rep), enumerate_mags(pag))
 end
@@ -109,7 +97,7 @@ end
 
 @testitem "enumerate_mags: members are pairwise distinct" setup=[MagSig] tags =
     [:unit, :enumerate_mags] begin
-    pag = cgraph(partial(:A, :B), partial(:B, :C); class = PAG)
+    pag = PAG(partial(:A, :B), partial(:B, :C))
     mags = enumerate_mags(pag)
     sigs = Set(mag_sig(m) for m in mags)
     @test length(sigs) == length(mags)
@@ -119,7 +107,7 @@ end
 
 @testitem "_enumerate_mags_threaded matches the sequential result" setup = [MagSig] tags =
     [:unit, :enumerate_mags] begin
-    pag = cgraph(partial(:A, :B), partial(:B, :C), partial(:C, :D); class = PAG)
+    pag = PAG(partial(:A, :B), partial(:B, :C), partial(:C, :D))
     B = pag.backend
     n = length(B.nodes)
 

@@ -316,10 +316,8 @@ the paper assumes none throughout.
 # Examples
 
 ```jldoctest
-julia> pag = cgraph(
-           "X o-> Y, X o-> C, X o-> A, Y o-o C, C o-o A, B o-> C, B o-> Y, B o-> A";
-           class = PAG,
-       );
+julia> pag = PAG(
+           "X o-> Y, X o-> C, X o-> A, Y o-o C, C o-o A, B o-> C, B o-> Y, B o-> A");
 
 julia> sort(sort.(pagcauses(pag, :X, :Y)))
 5-element Vector{Vector{Symbol}}:

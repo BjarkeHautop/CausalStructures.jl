@@ -359,7 +359,7 @@ this criterion accepts some valid sets the backdoor criterion rejects.
 # Examples
 
 ```jldoctest
-julia> dag = cgraph("A --> X --> Y, A --> Y"; class = DAG);
+julia> dag = DAG("A --> X --> Y, A --> Y");
 
 julia> is_valid_adjustment(dag, :X, :Y)
 false
@@ -367,7 +367,7 @@ false
 julia> is_valid_adjustment(dag, :X, :Y, [:A])
 true
 
-julia> dag2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = DAG);
+julia> dag2 = DAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
 julia> is_valid_adjustment(dag2, [:X1, :X2], [:Y], [:L1, :L2])
 true
@@ -410,7 +410,7 @@ Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 # Examples
 
 ```jldoctest
-julia> dag = cgraph("A --> X, B --> X, X --> Y, A --> Y"; class = DAG);
+julia> dag = DAG("A --> X, B --> X, X --> Y, A --> Y");
 
 julia> all_adjustment_sets(dag, :X, :Y)
 1-element Vector{Vector{Symbol}}:
@@ -421,7 +421,7 @@ julia> all_adjustment_sets(dag, :X, :Y; minimal=false)
  [:A]
  [:A, :B]
 
-julia> dag2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = DAG);
+julia> dag2 = DAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
 julia> all_adjustment_sets(dag2, [:X1, :X2], [:Y])
 1-element Vector{Vector{Symbol}}:
@@ -512,7 +512,7 @@ of `cg`.
 # Examples
 
 ```jldoctest
-julia> admg = cgraph("L --> X --> Y, L --> Y"; class = ADMG);
+julia> admg = ADMG("L --> X --> Y, L --> Y");
 
 julia> is_valid_adjustment(admg, :X, :Y)       # empty Z does not block L --> Y
 false
@@ -522,7 +522,7 @@ true
 ```
 
 ```jldoctest
-julia> mag = cgraph("A <-> X, A --> M --> Y, X --> Y"; class = MAG);
+julia> mag = MAG("A <-> X, A --> M --> Y, X --> Y");
 
 julia> is_valid_adjustment(mag, :X, :Y)
 false
@@ -532,7 +532,7 @@ true
 ```
 
 ```jldoctest
-julia> admg2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = ADMG);
+julia> admg2 = ADMG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
 julia> is_valid_adjustment(admg2, [:X1, :X2], [:Y], [:L1, :L2])
 true
@@ -578,7 +578,7 @@ inclusion-minimal sets are returned.
 # Examples
 
 ```jldoctest
-julia> admg = cgraph("L --> X --> Y, L --> Y"; class = ADMG);
+julia> admg = ADMG("L --> X --> Y, L --> Y");
 
 julia> all_adjustment_sets(admg, :X, :Y)
 1-element Vector{Vector{Symbol}}:
@@ -586,7 +586,7 @@ julia> all_adjustment_sets(admg, :X, :Y)
 ```
 
 ```jldoctest
-julia> mag = cgraph("A <-> X, A --> M --> Y, X --> Y"; class = MAG);
+julia> mag = MAG("A <-> X, A --> M --> Y, X --> Y");
 
 julia> all_adjustment_sets(mag, :X, :Y)
 2-element Vector{Vector{Symbol}}:
@@ -595,10 +595,8 @@ julia> all_adjustment_sets(mag, :X, :Y)
 ```
 
 ```jldoctest
-julia> mpdag = cgraph(
-           "A --> X, B --> X, X --> Y, A --> Y, B --- K, K --> Y";
-           class = MPDAG,
-       );
+julia> mpdag = MPDAG(
+           "A --> X, B --> X, X --> Y, A --> Y, B --- K, K --> Y");
 
 julia> all_adjustment_sets(mpdag, :X, :Y)
 2-element Vector{Vector{Symbol}}:
@@ -613,7 +611,7 @@ julia> all_adjustment_sets(mpdag, :X, :Y, minimal = false)
 ```
 
 ```jldoctest
-julia> admg2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = ADMG);
+julia> admg2 = ADMG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
 julia> all_adjustment_sets(admg2, [:X1, :X2], [:Y])
 1-element Vector{Vector{Symbol}}:
@@ -678,13 +676,13 @@ by trying sizes 0, 1, 2, ... in order and stopping at the first valid set.
 # Examples
 
 ```jldoctest
-julia> admg = cgraph("L --> X --> Y, L --> Y"; class = ADMG);
+julia> admg = ADMG("L --> X --> Y, L --> Y");
 
 julia> adjustment_set(admg, :X, :Y)
 1-element Vector{Symbol}:
  :L
 
-julia> admg2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = ADMG);
+julia> admg2 = ADMG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
 julia> sort(adjustment_set(admg2, [:X1, :X2], [:Y]))
 2-element Vector{Symbol}:

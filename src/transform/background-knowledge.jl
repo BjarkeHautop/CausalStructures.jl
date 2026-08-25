@@ -11,7 +11,7 @@ present) and *forbidden* direct causes (`C --> D` must be absent).
 `items` may be any combination of [`RequiredEdge`](@ref) values from
 [`required_directed`](@ref) and [`ForbiddenEdge`](@ref) values from
 [`forbidden_directed`](@ref).
-The string form uses the [`cgraph`](@ref) string syntax restricted to the markers
+The string form uses the [`DAG`](@ref) string syntax restricted to the markers
 `-->`, `<--`, `!-->`, and `!<--`.
 
 Locally contradictory knowledge (the same edge both required and forbidden, or both
@@ -129,7 +129,7 @@ orient existing edges.
 # Examples
 
 ```jldoctest
-julia> cpdag = cgraph("A --- B --- C"; class = CPDAG);
+julia> cpdag = CPDAG("A --- B --- C");
 
 julia> apply_background_knowledge(cpdag, "C --> B")
 MPDAG with 3 nodes and 2 edges:
@@ -222,7 +222,7 @@ equivalence class is non-empty, since it contains `cg`.
 # Examples
 
 ```jldoctest
-julia> dag = cgraph("A --> B --> C");
+julia> dag = DAG("A --> B --> C");
 
 julia> dag_to_cpdag(dag)
 CPDAG with 3 nodes and 2 edges:

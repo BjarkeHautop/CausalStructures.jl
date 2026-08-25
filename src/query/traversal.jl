@@ -15,7 +15,7 @@ returned vector.
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("A --> B --> C"; class = DAG);
+julia> cg = DAG("A --> B --> C");
 
 julia> topological_sort(cg)
 3-element Vector{Symbol}:
@@ -74,7 +74,7 @@ default can be changed project-wide via Preferences.jl:
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("A --> B --> C"; class = DAG);
+julia> cg = DAG("A --> B --> C");
 
 julia> ancestors(cg, :A)
 Symbol[]
@@ -135,7 +135,7 @@ default can be changed project-wide via Preferences.jl:
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("A --> B --> C"; class = DAG);
+julia> cg = DAG("A --> B --> C");
 
 julia> descendants(cg, :A)
 2-element Vector{Symbol}:
@@ -201,19 +201,19 @@ undirected edge is not considered exogenous.
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("A --> B --> C"; class = DAG);
+julia> cg = DAG("A --> B --> C");
 
 julia> exogenous_nodes(cg)
 1-element Vector{Symbol}:
  :A
 
-julia> ug = cgraph("A --- B, C"; class = UG);
+julia> ug = UG("A --- B, C");
 
 julia> exogenous_nodes(ug)  # only the isolated node C
 1-element Vector{Symbol}:
  :C
 
-julia> pdag = cgraph("A --> B --- C"; class = PDAG);
+julia> pdag = PDAG("A --> B --- C");
 
 julia> exogenous_nodes(pdag)
 2-element Vector{Symbol}:
@@ -330,7 +330,7 @@ Preferences.jl: `set_preferences!(CausalStructures, "open" => false)`.
 # Examples
 
 ```jldoctest
-julia> cpdag = cgraph("A --- B --- C"; class = CPDAG);
+julia> cpdag = CPDAG("A --- B --- C");
 
 julia> ancestors(cpdag, :C)
 Symbol[]
@@ -340,7 +340,7 @@ julia> possible_ancestors(cpdag, :C)
  :A
  :B
 
-julia> mpdag = cgraph("A --- B --- C --- D --- A, D --> B"; class = MPDAG);
+julia> mpdag = MPDAG("A --- B --- C --- D --- A, D --> B");
 
 julia> :B in possible_ancestors(mpdag, :D)  # B --> ... --> D would create a cycle with D --> B
 false
@@ -381,7 +381,7 @@ Preferences.jl: `set_preferences!(CausalStructures, "open" => false)`.
 # Examples
 
 ```jldoctest
-julia> cpdag = cgraph("A --- B --- C"; class = CPDAG);
+julia> cpdag = CPDAG("A --- B --- C");
 
 julia> descendants(cpdag, :A)
 Symbol[]
@@ -391,7 +391,7 @@ julia> possible_descendants(cpdag, :A)
  :B
  :C
 
-julia> mpdag = cgraph("A --- B --- C --- D --- A, D --> B"; class = MPDAG);
+julia> mpdag = MPDAG("A --- B --- C --- D --- A, D --> B");
 
 julia> :D in possible_descendants(mpdag, :B)  # B --> ... --> D would create a cycle with D --> B
 false
@@ -434,7 +434,7 @@ sets, but their multiplicities differ in general (Remark 3.3 therein).
 ```jldoctest
 julia> using CausalStructures
 
-julia> cpdag = cgraph("X1 --- X2 + X3 + X4, X3 + X4 --> Y"; class = CPDAG);
+julia> cpdag = CPDAG("X1 --- X2 + X3 + X4, X3 + X4 --> Y");
 
 julia> sort(possible_parent_sets(cpdag, :X1); by = length)
 4-element Vector{Vector{Symbol}}:
@@ -505,7 +505,7 @@ Preferences.jl: `set_preferences!(CausalStructures, "open" => false)`.
 ```jldoctest
 julia> using CausalStructures
 
-julia> pag = cgraph("A o-> B <-o C"; class = PAG);
+julia> pag = PAG("A o-> B <-o C");
 
 julia> sort(possible_ancestors(pag, :B))
 2-element Vector{Symbol}:
@@ -581,7 +581,7 @@ Preferences.jl: `set_preferences!(CausalStructures, "open" => false)`.
 ```jldoctest
 julia> using CausalStructures
 
-julia> pag = cgraph("A o-> B <-o C"; class = PAG);
+julia> pag = PAG("A o-> B <-o C");
 
 julia> possible_descendants(pag, :A)
 1-element Vector{Symbol}:
@@ -648,14 +648,14 @@ default can be changed project-wide via Preferences.jl:
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("A --> B --> C"; class = DAG);
+julia> cg = DAG("A --> B --> C");
 
 julia> anteriors(cg, :C)  # same as ancestors for a DAG
 2-element Vector{Symbol}:
  :A
  :B
 
-julia> pdag = cgraph("A --> B --- C"; class = PDAG);
+julia> pdag = PDAG("A --> B --- C");
 
 julia> anteriors(pdag, :A)
 Symbol[]
@@ -735,14 +735,14 @@ default can be changed project-wide via Preferences.jl:
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("A --> B --> C"; class = DAG);
+julia> cg = DAG("A --> B --> C");
 
 julia> posteriors(cg, :A)  # same as descendants for a DAG
 2-element Vector{Symbol}:
  :B
  :C
 
-julia> pdag = cgraph("A --> B --- C"; class = PDAG);
+julia> pdag = PDAG("A --> B --- C");
 
 julia> posteriors(pdag, :A)  # B via directed edge, C via undirected edge from B
 2-element Vector{Symbol}:
@@ -836,7 +836,7 @@ co-parents, spouses, and undirected neighbors.
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("A --> B --> C, D --> C"; class = DAG);
+julia> cg = DAG("A --> B --> C, D --> C");
 
 julia> markov_blanket(cg, :B)
 3-element Vector{Symbol}:
@@ -915,7 +915,7 @@ bidirected edge (`node <-> spouse`).
 # Examples
 
 ```jldoctest
-julia> admg = cgraph("A --> B, A <-> C"; class = ADMG);
+julia> admg = ADMG("A --> B, A <-> C");
 
 julia> spouses(admg, :A)
 1-element Vector{Symbol}:
@@ -958,7 +958,7 @@ nodes with no bidirected edges each form their own district.
 # Examples
 
 ```jldoctest
-julia> admg = cgraph("A --> B, A <-> C, D <-> E"; class = ADMG);
+julia> admg = ADMG("A --> B, A <-> C, D <-> E");
 
 julia> districts(admg)
 3-element Vector{Vector{Symbol}}:

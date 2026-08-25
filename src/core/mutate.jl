@@ -11,7 +11,7 @@ any edge are added automatically if not already present.
 # Examples
 
 ```jldoctest
-julia> dag = cgraph("A --> B"; class = DAG);
+julia> dag = DAG("A --> B");
 
 julia> add_edges(dag, directed(:B, :C))
 DAG with 3 nodes and 2 edges:
@@ -47,7 +47,7 @@ isolated are retained. Throws `ArgumentError` if any edge in `es` is not present
 # Examples
 
 ```jldoctest
-julia> dag = cgraph("A --> B --> C"; class = DAG);
+julia> dag = DAG("A --> B --> C");
 
 julia> remove_edges(dag, directed(:A, :B), directed(:B, :C))
 DAG with 3 nodes and 0 edges:
@@ -77,7 +77,7 @@ Nodes already present are ignored.
 # Examples
 
 ```jldoctest
-julia> g = cgraph("A --> B"; class = DAG);
+julia> g = DAG("A --> B");
 
 julia> add_nodes(g, :C, :D)
 DAG with 4 nodes and 1 edge:
@@ -111,7 +111,7 @@ Throws `ArgumentError` if any node in `ns` is not present.
 # Examples
 
 ```jldoctest
-julia> g = cgraph("A --> B --> C"; class = DAG);
+julia> g = DAG("A --> B --> C");
 
 julia> remove_nodes(g, :B)
 DAG with 2 nodes and 0 edges:
@@ -145,7 +145,7 @@ Throws if the edges violate the structural constraints of `T`.
 # Examples
 
 ```jldoctest
-julia> dag = cgraph("A --> B --> C"; class = DAG);
+julia> dag = DAG("A --> B --> C");
 
 julia> pdag = reclass(dag, PDAG)
 PDAG with 3 nodes and 2 edges:

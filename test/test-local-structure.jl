@@ -5,9 +5,8 @@
 @testitem "maximal_local_mag matches Fig. 1 of Wang, Qin & Zhou (2023) end to end" tags =
     [:unit, :local_structure] begin
     # Fig. 1(a); not a valid PAG
-    fig1a = cgraph(
-        "V1 o-o V2 + V5, V2 o-o V3 + V5, V5 o-o V3, V5 o-> V4, V1 o-> V4, V3 o-> V4";
-        class = UNKNOWN,
+    fig1a = UNKNOWN(
+        "V1 o-o V2 + V5, V2 o-o V3 + V5, V5 o-o V3, V5 o-> V4, V1 o-> V4, V3 o-> V4",
     )
     node_vec, index, adj, mark =
         CausalStructures._pag_adj_marks(fig1a.backend.nodes, fig1a.edges)
@@ -21,10 +20,8 @@
     )
 
     # Fig. 1(d) plus one further R8 step beyond what the figure illustrates.
-    expected = cgraph(
-        "V1 --> V4 + V5, V2 o-> V1, V2 --> V3 + V5, V5 --> V3 + V4, V3 --> V4";
-        class = UNKNOWN,
-    )
+    expected =
+        UNKNOWN("V1 --> V4 + V5, V2 o-> V1, V2 --> V3 + V5, V5 --> V3 + V4, V3 --> V4")
     expected_set = Set((e.src, e.dst, e.src_end, e.dst_end) for e in expected.edges)
     @test result == expected_set
 end
@@ -33,13 +30,7 @@ end
     [:unit, :local_structure] begin
     # X has circles to A, B, Y; Y isn't adjacent to A or B, so any C
     # containing Y with A or B fails Prop. 2's completeness condition.
-    mag = cgraph(
-        bidirected(:A, :X),
-        directed(:B, :X),
-        bidirected(:A, :B),
-        directed(:X, :Y);
-        class = MAG,
-    )
+    mag = MAG(bidirected(:A, :X), directed(:B, :X), bidirected(:A, :B), directed(:X, :Y))
     pag = mag_to_pag(mag)
     result = Set(Set.(possible_local_structures(pag, :X)))
     expected = Set([Set{Symbol}(), Set([:A]), Set([:B]), Set([:A, :B]), Set([:Y])])
@@ -50,38 +41,26 @@ end
 
 @testitem "maximal_local_mag: empty local structure directs all circles away from x" tags =
     [:unit, :local_structure] begin
-    mag = cgraph(
-        bidirected(:A, :X),
-        directed(:B, :X),
-        bidirected(:A, :B),
-        directed(:X, :Y);
-        class = MAG,
-    )
+    mag = MAG(bidirected(:A, :X), directed(:B, :X), bidirected(:A, :B), directed(:X, :Y))
     pag = mag_to_pag(mag)
     result = maximal_local_mag(pag, :X, Symbol[])
     edges_set = Set((e.src, e.dst, e.src_end, e.dst_end) for e in result.edges)
-    expected = cgraph("A o-o B, X --> A + B + Y"; class = UNKNOWN)
+    expected = UNKNOWN("A o-o B, X --> A + B + Y")
     @test edges_set == Set((e.src, e.dst, e.src_end, e.dst_end) for e in expected.edges)
 end
 
 @testitem "maximal_local_mag: c = {A} orients X's arrow at the A end only" tags =
     [:unit, :local_structure] begin
-    mag = cgraph(
-        bidirected(:A, :X),
-        directed(:B, :X),
-        bidirected(:A, :B),
-        directed(:X, :Y);
-        class = MAG,
-    )
+    mag = MAG(bidirected(:A, :X), directed(:B, :X), bidirected(:A, :B), directed(:X, :Y))
     pag = mag_to_pag(mag)
     result = maximal_local_mag(pag, :X, [:A])
     edges_set = Set((e.src, e.dst, e.src_end, e.dst_end) for e in result.edges)
-    expected = cgraph("A --> B, A o-> X, X --> B + Y"; class = UNKNOWN)
+    expected = UNKNOWN("A --> B, A o-> X, X --> B + Y")
     @test edges_set == Set((e.src, e.dst, e.src_end, e.dst_end) for e in expected.edges)
 end
 
 @testitem "_pa_mask returns parents, not children" tags = [:unit, :local_structure] begin
-    mag = cgraph(directed(:P, :T); class = MAG)
+    mag = MAG(directed(:P, :T))
     node_vec, index, adj, mark =
         CausalStructures._pag_adj_marks(mag.backend.nodes, mag.edges)
     n = length(node_vec)
@@ -93,13 +72,8 @@ end
 
 @testitem "possible_local_structures and maximal_local_mag reject graphs with undirected (selection-variable) edges" tags =
     [:unit, :local_structure] begin
-    pag = cgraph(
-        undirected(:A, :B),
-        undirected(:B, :C),
-        undirected(:C, :D),
-        undirected(:A, :D);
-        class = PAG,
-    )
+    pag =
+        PAG(undirected(:A, :B), undirected(:B, :C), undirected(:C, :D), undirected(:A, :D))
     @test_throws ArgumentError possible_local_structures(pag, :A)
     @test_throws ArgumentError maximal_local_mag(pag, :A, Symbol[])
 end

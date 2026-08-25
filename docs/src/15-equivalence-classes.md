@@ -20,7 +20,7 @@ In CausalStructures, all PDAG types are encoded as subtypes of [`AbstractPDAG`](
 Given a DAG, [`dag_to_cpdag`](@ref) computes its CPDAG:
 
 ```@example ec
-dag = cgraph("C --> X, A --> X + Y, Y --> Z"; class = DAG)
+dag = DAG("C --> X, A --> X + Y, Y --> Z")
 cpdag = dag_to_cpdag(dag)
 plot(cpdag)
 ```
@@ -54,7 +54,7 @@ An [`MPDAG`](@ref) (maximally oriented partially directed acyclic graph) can, fo
 [`meek_closure`](@ref) propagates all further orientations implied by Meek's rules on a PDAG to obtain an MPDAG:
 
 ```@example ec
-pdag = cgraph("C --- X, A --> X, A --- Y, Y --> Z"; class = PDAG)
+pdag = PDAG("C --- X, A --> X, A --- Y, Y --> Z")
 cpdag = meek_closure(pdag)
 ```
 
@@ -77,7 +77,7 @@ all_adjustment_sets(cpdag, :X, :Z)
     into a DAG without introducing a new v-structure:
 
     ```@repl ec
-    cg = cgraph("A --- B --- C --- D --- A"; class = PDAG)
+    cg = PDAG("A --- B --- C --- D --- A")
     is_cpdag(cg)
     is_mpdag(cg)
     dag_from_pdag(cg)
@@ -95,7 +95,7 @@ Each Markov equivalence class of MAGs has a unique [`PAG`](@ref) (Partial Ancest
 Consider a MAG where `A` and `B` share a hidden common cause, `C` directly causes `B`, and `B` directly causes `D`:
 
 ```@example ec
-mag = cgraph("A <-> B, C --> B --> D"; class = MAG)
+mag = MAG("A <-> B, C --> B --> D")
 ```
 
 [`mag_to_pag`](@ref) computes the PAG representing the Markov equivalence class of this MAG, so all MAGs that encode the same conditional independences:

@@ -133,7 +133,7 @@ proper backdoor graph.
 # Examples
 
 ```jldoctest
-julia> pdag = cgraph("A --> X --> Y, A --> Y"; class = PDAG);
+julia> pdag = PDAG("A --> X --> Y, A --> Y");
 
 julia> is_valid_adjustment(pdag, :X, :Y)
 false
@@ -141,7 +141,7 @@ false
 julia> is_valid_adjustment(pdag, :X, :Y, [:A])
 true
 
-julia> pdag2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = PDAG);
+julia> pdag2 = PDAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
 julia> is_valid_adjustment(pdag2, [:X1, :X2], [:Y], [:L1, :L2])
 true
@@ -186,10 +186,8 @@ Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 # Examples
 
 ```jldoctest
-julia> mpdag = cgraph(
-           "A --> X, B --> X, X --> Y, A --> Y, B --- K, K --> Y";
-           class = MPDAG,
-       );
+julia> mpdag = MPDAG(
+           "A --> X, B --> X, X --> Y, A --> Y, B --- K, K --> Y");
 
 julia> all_adjustment_sets(mpdag, :X, :Y)
 2-element Vector{Vector{Symbol}}:
@@ -202,7 +200,7 @@ julia> all_adjustment_sets(mpdag, :X, :Y, minimal = false)
  [:A, :K]
  [:A, :B, :K]
 
-julia> pdag2 = cgraph("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y"; class = PDAG);
+julia> pdag2 = PDAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
 julia> all_adjustment_sets(pdag2, [:X1, :X2], [:Y])
 1-element Vector{Vector{Symbol}}:

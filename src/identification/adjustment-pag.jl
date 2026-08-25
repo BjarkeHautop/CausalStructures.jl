@@ -288,7 +288,7 @@ no set satisfies the criterion, including the empty set.
 # Examples
 
 ```jldoctest
-julia> mag = cgraph("B --> X, A <-> X, A --> Y, X --> Y"; class = MAG);
+julia> mag = MAG("B --> X, A <-> X, A --> Y, X --> Y");
 
 julia> pag = mag_to_pag(mag);
 
@@ -298,10 +298,8 @@ false
 julia> is_valid_adjustment(pag, :X, :Y, [:A])
 true
 
-julia> mag2 = cgraph(
-           "B1 --> X1, A1 <-> X1, A1 --> Y, X1 --> Y, B2 --> X2, A2 <-> X2, A2 --> Y, X2 --> Y";
-           class = MAG,
-       );
+julia> mag2 = MAG(
+           "B1 --> X1, A1 <-> X1, A1 --> Y, X1 --> Y, B2 --> X2, A2 <-> X2, A2 --> Y, X2 --> Y");
 
 julia> pag2 = mag_to_pag(mag2);
 
@@ -347,7 +345,7 @@ Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 # Examples
 
 ```jldoctest
-julia> mag = cgraph("B --> X, A <-> X, A --> Y, X --> Y"; class = MAG);
+julia> mag = MAG("B --> X, A <-> X, A --> Y, X --> Y");
 
 julia> pag = mag_to_pag(mag);
 
@@ -355,10 +353,8 @@ julia> all_adjustment_sets(pag, :X, :Y)
 1-element Vector{Vector{Symbol}}:
  [:A]
 
-julia> mag2 = cgraph(
-           "B1 --> X1, A1 <-> X1, A1 --> Y, X1 --> Y, B2 --> X2, A2 <-> X2, A2 --> Y, X2 --> Y";
-           class = MAG,
-       );
+julia> mag2 = MAG(
+           "B1 --> X1, A1 <-> X1, A1 --> Y, X1 --> Y, B2 --> X2, A2 <-> X2, A2 --> Y, X2 --> Y");
 
 julia> pag2 = mag_to_pag(mag2);
 
@@ -429,7 +425,7 @@ by trying sizes 0, 1, 2, ... in order and stopping at the first valid set.
 # Examples
 
 ```jldoctest
-julia> mag = cgraph("B --> X, A <-> X, A --> Y, X --> Y"; class = MAG);
+julia> mag = MAG("B --> X, A <-> X, A --> Y, X --> Y");
 
 julia> pag = mag_to_pag(mag);
 
@@ -437,10 +433,8 @@ julia> adjustment_set(pag, :X, :Y)
 1-element Vector{Symbol}:
  :A
 
-julia> mag2 = cgraph(
-           "B1 --> X1, A1 <-> X1, A1 --> Y, X1 --> Y, B2 --> X2, A2 <-> X2, A2 --> Y, X2 --> Y";
-           class = MAG,
-       );
+julia> mag2 = MAG(
+           "B1 --> X1, A1 <-> X1, A1 --> Y, X1 --> Y, B2 --> X2, A2 <-> X2, A2 --> Y, X2 --> Y");
 
 julia> pag2 = mag_to_pag(mag2);
 

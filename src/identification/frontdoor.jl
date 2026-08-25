@@ -21,7 +21,7 @@ formula, even in the presence of unmeasured confounders between `x` and `y`.
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("U --> X --> M --> Y, U --> Y"; class = DAG);
+julia> cg = DAG("U --> X --> M --> Y, U --> Y");
 
 julia> is_valid_frontdoor(cg, :X, :Y, [:M])  # M mediates X -> Y and satisfies all conditions
 true
@@ -32,9 +32,8 @@ false
 julia> is_valid_frontdoor(cg, :X, :Y, [:U])   # U does not intercept X -> M -> Y
 false
 
-julia> cg2 = cgraph(
-           "U1 --> X1 + Y1, U2 --> X2 + Y2, X1 --> M, X2 --> M, M --> Y1 + Y2";
-           class = DAG);
+julia> cg2 = DAG(
+           "U1 --> X1 + Y1, U2 --> X2 + Y2, X1 --> M, X2 --> M, M --> Y1 + Y2");
 
 julia> is_valid_frontdoor(cg2, [:X1, :X2], [:Y1, :Y2], [:M])  # M mediates every X --> Y path
 true
@@ -503,7 +502,7 @@ arrowhead into a node just like a directed parent does).
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("U --> X + Y, X --> Z --> Y"; class = DAG);
+julia> cg = DAG("U --> X + Y, X --> Z --> Y");
 
 julia> frontdoor_set(cg, :X, :Y; restrict = [:Z])
 1-element Vector{Symbol}:
@@ -512,9 +511,8 @@ julia> frontdoor_set(cg, :X, :Y; restrict = [:Z])
 
 ```jldoctest
 julia> # Jeong (2022) Fig. 1b
-       cg = cgraph(
-           "U1 --> X + Y, U2 --> X + D, X --> A, A --> B + C + D, B + C + D --> Y";
-           class = DAG);
+       cg = DAG(
+           "U1 --> X + Y, U2 --> X + D, X --> A, A --> B + C + D, B + C + D --> Y");
 
 julia> frontdoor_set(cg, :X, :Y; restrict = [:A, :B, :C, :D])
 3-element Vector{Symbol}:
@@ -533,9 +531,8 @@ true
 
 ```jldoctest
 julia> # Fig. 1b latent-projected to an ADMG: U1 -> X <-> Y, U2 -> X <-> D
-       admg = cgraph(
-           "X <-> Y, X <-> D, X --> A, A --> B + C + D, B + C + D --> Y";
-           class = ADMG);
+       admg = ADMG(
+           "X <-> Y, X <-> D, X --> A, A --> B + C + D, B + C + D --> Y");
 
 julia> frontdoor_set(admg, :X, :Y; restrict = [:A, :B, :C, :D])
 3-element Vector{Symbol}:
@@ -545,9 +542,8 @@ julia> frontdoor_set(admg, :X, :Y; restrict = [:A, :B, :C, :D])
 ```
 
 ```jldoctest
-julia> cg2 = cgraph(
-           "U1 --> X1 + Y1, U2 --> X2 + Y2, X1 --> M, X2 --> M, M --> Y1 + Y2";
-           class = DAG);
+julia> cg2 = DAG(
+           "U1 --> X1 + Y1, U2 --> X2 + Y2, X1 --> M, X2 --> M, M --> Y1 + Y2");
 
 julia> frontdoor_set(cg2, [:X1, :X2], [:Y1, :Y2]; restrict = [:M])
 1-element Vector{Symbol}:
@@ -722,7 +718,7 @@ polynomial time and takes polynomial time between consecutive results. For
 # Examples
 
 ```jldoctest
-julia> cg = cgraph("U --> X + Y, X --> Z --> Y"; class = DAG);
+julia> cg = DAG("U --> X + Y, X --> Z --> Y");
 
 julia> all_frontdoor_sets(cg, :X, :Y; restrict = [:Z])
 1-element Vector{Vector{Symbol}}:
@@ -730,9 +726,8 @@ julia> all_frontdoor_sets(cg, :X, :Y; restrict = [:Z])
 ```
 
 ```jldoctest
-julia> cg = cgraph(
-           "U1 --> X + Y, U2 --> X + D, X --> A, A --> B + C + D, B + C + D --> Y";
-           class = DAG);
+julia> cg = DAG(
+           "U1 --> X + Y, U2 --> X + D, X --> A, A --> B + C + D, B + C + D --> Y");
 
 julia> sort(all_frontdoor_sets(cg, :X, :Y; restrict = [:A, :B, :C, :D]))
 4-element Vector{Vector{Symbol}}:
@@ -744,9 +739,8 @@ julia> sort(all_frontdoor_sets(cg, :X, :Y; restrict = [:A, :B, :C, :D]))
 
 ```jldoctest
 julia> # Fig. 1b latent-projected to an ADMG: U1 -> X <-> Y, U2 -> X <-> D
-       admg = cgraph(
-           "X <-> Y, X <-> D, X --> A, A --> B + C + D, B + C + D --> Y";
-           class = ADMG);
+       admg = ADMG(
+           "X <-> Y, X <-> D, X --> A, A --> B + C + D, B + C + D --> Y");
 
 julia> sort(all_frontdoor_sets(admg, :X, :Y; restrict = [:A, :B, :C, :D]))
 4-element Vector{Vector{Symbol}}:
@@ -757,9 +751,8 @@ julia> sort(all_frontdoor_sets(admg, :X, :Y; restrict = [:A, :B, :C, :D]))
 ```
 
 ```jldoctest
-julia> cg2 = cgraph(
-           "U1 --> X1 + Y1, U2 --> X2 + Y2, X1 --> M, X2 --> M, M --> Y1 + Y2";
-           class = DAG);
+julia> cg2 = DAG(
+           "U1 --> X1 + Y1, U2 --> X2 + Y2, X1 --> M, X2 --> M, M --> Y1 + Y2");
 
 julia> all_frontdoor_sets(cg2, [:X1, :X2], [:Y1, :Y2]; restrict = [:M])
 1-element Vector{Vector{Symbol}}:

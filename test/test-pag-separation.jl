@@ -13,20 +13,14 @@ end
 
 @testitem "m_separated PAG: direct edge is never separated" setup = [PagSeparationHelpers] tags =
     [:unit, :pag_separation] begin
-    mag = cgraph(directed(:X, :Y); class = MAG)
+    mag = MAG(directed(:X, :Y))
     pag = mag_to_pag(mag)
     @test !m_separated(pag, :X, :Y)
 end
 
 @testitem "m_separated PAG: chain with confounder" setup = [PagSeparationHelpers] tags =
     [:unit, :pag_separation] begin
-    mag = cgraph(
-        directed(:A, :X),
-        directed(:X, :M),
-        directed(:M, :Y),
-        directed(:A, :Y);
-        class = MAG,
-    )
+    mag = MAG(directed(:A, :X), directed(:X, :M), directed(:M, :Y), directed(:A, :Y))
     pag = mag_to_pag(mag)
     @test !m_separated(pag, :A, :Y)
     @test !m_separated(pag, :X, :Y)
@@ -39,7 +33,7 @@ end
     [PagSeparationHelpers] tags = [:unit, :pag_separation] begin
     # X <-> A <-> Y with no direct X-Y edge: A is a collider blocking the only
     # path between X and Y. Conditioning on A opens it.
-    mag = cgraph(bidirected(:A, :X), bidirected(:A, :Y); class = MAG)
+    mag = MAG(bidirected(:A, :X), bidirected(:A, :Y))
     pag = mag_to_pag(mag)
     @test m_separated(pag, :X, :Y)
     @test !m_separated(pag, :X, :Y, [:A])
@@ -48,7 +42,7 @@ end
 end
 
 @testitem "m_separated PAG: conditioning on x returns true" tags = [:unit, :pag_separation] begin
-    mag = cgraph(directed(:A, :B); class = MAG)
+    mag = MAG(directed(:A, :B))
     pag = mag_to_pag(mag)
     @test m_separated(pag, :A, :B, [:A])
 end
@@ -56,53 +50,35 @@ end
 # ── minimal_separator ─────────────────────────────────────────────────────
 
 @testitem "minimal_separator PAG: chain returns middle node" tags = [:unit, :pag_separation] begin
-    mag = cgraph(directed(:A, :B), directed(:B, :C); class = MAG)
+    mag = MAG(directed(:A, :B), directed(:B, :C))
     pag = mag_to_pag(mag)
     @test minimal_separator(pag, :A, :C) == [:B]
 end
 
 @testitem "minimal_separator PAG: direct edge returns nothing" tags =
     [:unit, :pag_separation] begin
-    mag = cgraph(directed(:A, :B); class = MAG)
+    mag = MAG(directed(:A, :B))
     pag = mag_to_pag(mag)
     @test minimal_separator(pag, :A, :B) === nothing
 end
 
 @testitem "minimal_separator PAG: two paths require both confounders" tags =
     [:unit, :pag_separation] begin
-    mag = cgraph(
-        directed(:A, :X),
-        directed(:X, :M),
-        directed(:M, :Y),
-        directed(:A, :Y);
-        class = MAG,
-    )
+    mag = MAG(directed(:A, :X), directed(:X, :M), directed(:M, :Y), directed(:A, :Y))
     pag = mag_to_pag(mag)
     @test sort(minimal_separator(pag, :X, :Y)) == [:A, :M]
 end
 
 @testitem "minimal_separator PAG: restrict excludes required node" tags =
     [:unit, :pag_separation] begin
-    mag = cgraph(
-        directed(:A, :X),
-        directed(:X, :M),
-        directed(:M, :Y),
-        directed(:A, :Y);
-        class = MAG,
-    )
+    mag = MAG(directed(:A, :X), directed(:X, :M), directed(:M, :Y), directed(:A, :Y))
     pag = mag_to_pag(mag)
     @test minimal_separator(pag, :X, :Y; restrict = [:M]) === nothing
 end
 
 @testitem "minimal_separator PAG: result is a valid separator" setup =
     [PagSeparationHelpers] tags = [:unit, :pag_separation] begin
-    mag = cgraph(
-        directed(:A, :X),
-        directed(:X, :M),
-        directed(:M, :Y),
-        directed(:A, :Y);
-        class = MAG,
-    )
+    mag = MAG(directed(:A, :X), directed(:X, :M), directed(:M, :Y), directed(:A, :Y))
     pag = mag_to_pag(mag)
     z = minimal_separator(pag, :X, :Y)
     @test z !== nothing
@@ -112,14 +88,13 @@ end
 
 @testitem "minimal_separator PAG: accepts Vector{Symbol} for x and y" tags =
     [:unit, :pag_separation] begin
-    mag = cgraph(
+    mag = MAG(
         bidirected(:A, :X1),
         bidirected(:B, :X2),
         directed(:A, :M1),
         directed(:B, :M2),
         directed(:M1, :Y),
-        directed(:M2, :Y);
-        class = MAG,
+        directed(:M2, :Y),
     )
     pag = mag_to_pag(mag)
     z = minimal_separator(pag, [:X1, :X2], :Y)

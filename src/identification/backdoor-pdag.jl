@@ -25,14 +25,14 @@ a partially directed cycle.
 # Examples
 
 ```jldoctest
-julia> cpdag = cgraph("A --> X <-- C, X --> Y"; class = CPDAG);  # A --> X <-- C protects both edges into X
+julia> cpdag = CPDAG("A --> X <-- C, X --> Y");  # A --> X <-- C protects both edges into X
 
 julia> sort(backdoor_set(cpdag, :X, :Y))
 2-element Vector{Symbol}:
  :A
  :C
 
-julia> cpdag2 = cgraph("X --- Y"; class = CPDAG);
+julia> cpdag2 = CPDAG("X --- Y");
 
 julia> backdoor_set(cpdag2, :X, :Y) === nothing  # Y is a possible descendant of X in C_X
 true

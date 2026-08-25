@@ -13,7 +13,7 @@ using CausalStructures
 using CairoMakie
 using NetworkLayout
 
-dag = cgraph("A --> X + Y, X --> M --> Y"; class = DAG)
+dag = DAG("A --> X + Y, X --> M --> Y")
 ```
 
 and visualize it:
@@ -31,7 +31,7 @@ Graphs are validated when you construct them. Here we make an invalid
 DAG:
 
 ```@repl quick
-invalid_dag = cgraph("A --> B --> C --> A"; class = DAG)  # Creates a cycle!
+invalid_dag = DAG("A --> B --> C --> A")  # Creates a cycle!
 ```
 
 Since cycles are not allowed in DAGs, an error is thrown.

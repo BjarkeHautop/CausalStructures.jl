@@ -43,7 +43,7 @@ applies.
 # Examples
 
 ```jldoctest
-julia> cpdag = cgraph("X1 --- X2 + X3 + X4, X3 + X4 --> Y"; class = CPDAG);
+julia> cpdag = CPDAG("X1 --- X2 + X3 + X4, X3 + X4 --> Y");
 
 julia> possible_parent_sets(cpdag, :X1)
 4-element Vector{Vector{Symbol}}:

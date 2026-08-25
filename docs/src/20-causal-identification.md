@@ -15,10 +15,8 @@ finding adjustment sets. Let's build a DAG with multiple confounders and
 mediators -- Figure 6.5 of [peters2017elements](@citet):
 
 ```@example id
-dag = cgraph(
-    "C --> X, A --> X + K, X --> F + D, K --> Y, D --> Y + G, Y --> H";
-    class = DAG,
-)
+dag = DAG(
+    "C --> X, A --> X + K, X --> F + D, K --> Y, D --> Y + G, Y --> H")
 plot(dag)
 ```
 
@@ -76,7 +74,7 @@ a graph where an unobserved confounder `U` affects both the treatment `X` and
 outcome `Y`:
 
 ```@example id
-dag2 = cgraph("U --> X + Y, X --> M --> Y"; class = DAG)
+dag2 = DAG("U --> X + Y, X --> M --> Y")
 plot(dag2; layout = :stress)
 ```
 
@@ -107,7 +105,7 @@ outcome `Y` through `X` (exclusion restriction).
 Consider a graph where `U` is an unobserved confounder and `Z` is an available instrument, but there is no mediator on the path from `X` to `Y`:
 
 ```@example id
-dag3 = cgraph("U --> X + Y, Z --> X --> Y"; class = DAG)
+dag3 = DAG("U --> X + Y, Z --> X --> Y")
 plot(dag3; layout = :stress)
 ```
 
@@ -152,7 +150,7 @@ estimand as an [`Estimand`](@ref).
 On a graph with an observed confounder, it recovers the familiar g-formula:
 
 ```@example id
-dag4 = cgraph("Z --> X + Y, X --> Y"; class = DAG)
+dag4 = DAG("Z --> X + Y, X --> Y")
 id(dag4, :X, :Y)
 ```
 
