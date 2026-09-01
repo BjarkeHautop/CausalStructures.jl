@@ -177,6 +177,40 @@ function _bowed_edge_path(
     return _clip_and_sample_bezier(p0, p1, p2c, p2, g_from, g_to, n)
 end
 
+# Clip an externally supplied polyline to both node boundaries, the way a
+# routed/bowed Bezier path already is by `_clip_and_sample_bezier`.
+function _clip_edge_path(pts::AbstractVector{Point2f}, g_from::_NodeGeom, g_to::_NodeGeom)
+    n = length(pts)
+    n >= 2 || return nothing
+
+    start_i, start_pt = 0, pts[1]
+    for i = 1:(n-1)
+        a, b = pts[i], pts[i+1]
+        _radial_fraction(g_from, b) < 1.0f0 && continue
+        t =
+            _radial_fraction(g_from, a) >= 1.0f0 ? 0.0f0 :
+            _bisect_u(u -> _radial_fraction(g_from, a + u * (b - a)), 1.0f0, true)
+        start_i, start_pt = i, a + t * (b - a)
+        break
+    end
+    start_i == 0 && return nothing
+
+    end_i, end_pt = 0, pts[n]
+    for i = n:-1:2
+        a, b = pts[i-1], pts[i]
+        _radial_fraction(g_to, a) < 1.0f0 && continue
+        t =
+            _radial_fraction(g_to, b) >= 1.0f0 ? 1.0f0 :
+            _bisect_u(u -> _radial_fraction(g_to, a + u * (b - a)), 1.0f0, false)
+        end_i, end_pt = i - 1, a + t * (b - a)
+        break
+    end
+    end_i == 0 && return nothing
+
+    start_i > end_i && return [start_pt, end_pt]
+    return vcat([start_pt], pts[(start_i+1):end_i], [end_pt])
+end
+
 # Shortens a sampled polyline by trim_start/trim_end of arc length at each
 # end (interpolating a new endpoint rather than just dropping sample
 # points), so a shaft can be trimmed back from an arrowhead's base the same

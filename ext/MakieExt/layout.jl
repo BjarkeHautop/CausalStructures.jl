@@ -27,21 +27,34 @@ end
 # Layout methods each produce coordinates on their own arbitrary scale, so
 # rescale to a common bounding-box extent (diameter 2) before Makie.plot sizes
 # the figure from it.
-function _rescale_to_unit_extent(positions::Vector{Point2f})
+#
+# Split into params + apply (rather than one function) so that `Makie.plot`
+# can compute the transform once from node positions and then apply the
+# identical affine map to `edge_paths` waypoints too, keeping them aligned
+# with the (rescaled/stretched) node positions they were computed alongside.
+function _unit_extent_params(positions::AbstractVector{Point2f})
     n = length(positions)
-    n <= 1 && return positions
+    n <= 1 && return (0.0f0, 0.0f0, 1.0f0)
     xs = [p[1] for p in positions]
     ys = [p[2] for p in positions]
     cx = sum(xs) / n
     cy = sum(ys) / n
     extent = max(maximum(xs) - minimum(xs), maximum(ys) - minimum(ys), 1.0f-3)
-    scale = 2.0f0 / extent
-    return [Point2f(cx + (p[1] - cx) * scale, cy + (p[2] - cy) * scale) for p in positions]
+    return (cx, cy, 2.0f0 / extent)
 end
 
-function _stretch_to_aspect(positions::Vector{Point2f}, target_aspect::Real)
+_apply_unit_extent(p::Point2f, cx, cy, scale) =
+    Point2f(cx + (p[1] - cx) * scale, cy + (p[2] - cy) * scale)
+
+function _rescale_to_unit_extent(positions::Vector{Point2f})
+    length(positions) <= 1 && return positions
+    cx, cy, scale = _unit_extent_params(positions)
+    return [_apply_unit_extent(p, cx, cy, scale) for p in positions]
+end
+
+function _aspect_stretch_params(positions::AbstractVector{Point2f}, target_aspect::Real)
     n = length(positions)
-    n <= 1 && return positions
+    n <= 1 && return (0.0f0, 0.0f0, 1.0f0, 1.0f0)
     xs = [p[1] for p in positions]
     ys = [p[2] for p in positions]
     cx = sum(xs) / n
@@ -54,5 +67,14 @@ function _stretch_to_aspect(positions::Vector{Point2f}, target_aspect::Real)
     else
         1.0f0, Float32(current_aspect / target_aspect)
     end
-    return [Point2f(cx + (p[1] - cx) * sx, cy + (p[2] - cy) * sy) for p in positions]
+    return (cx, cy, sx, sy)
+end
+
+_apply_aspect_stretch(p::Point2f, cx, cy, sx, sy) =
+    Point2f(cx + (p[1] - cx) * sx, cy + (p[2] - cy) * sy)
+
+function _stretch_to_aspect(positions::Vector{Point2f}, target_aspect::Real)
+    length(positions) <= 1 && return positions
+    cx, cy, sx, sy = _aspect_stretch_params(positions, target_aspect)
+    return [_apply_aspect_stretch(p, cx, cy, sx, sy) for p in positions]
 end

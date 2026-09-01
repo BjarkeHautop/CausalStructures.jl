@@ -458,6 +458,102 @@ end
     @test bowed[length(bowed)÷2][2] > 0
 end
 
+@testitem "MakieExt: _clip_edge_path clips a polyline to node boundaries" tags =
+    [:unit, :plot] begin
+    using Makie
+
+    ext = Base.get_extension(CausalStructures, :MakieExt)
+    P = Makie.Point2f
+    geom(p) = ext._NodeGeom(p, :circle, 0.1f0, 0.1f0)
+
+    # A bent 3-point path from src center to dst center: clipped to just
+    # past each node's boundary, the bend point itself is kept as-is.
+    pts = P[P(0, 0), P(1, 1), P(2, 0)]
+    clipped = ext._clip_edge_path(pts, geom(pts[1]), geom(pts[end]))
+    @test clipped !== nothing
+    @test length(clipped) == 3
+    @test clipped[2] == pts[2]
+    @test clipped[1] != pts[1] && clipped[end] != pts[end] # pulled in from the centers
+
+    # A path with fewer than 2 points, or one that never actually leaves the
+    # source node's boundary, can't be clipped: `nothing` signals "fall back".
+    @test ext._clip_edge_path(P[P(0, 0)], geom(P(0, 0)), geom(P(2, 0))) === nothing
+    tiny = P[P(0, 0), P(0.01, 0)]
+    @test ext._clip_edge_path(tiny, geom(P(0, 0)), geom(P(2, 0))) === nothing
+end
+
+@testitem "Makie.plot: edge_paths overrides an edge's drawn route" tags = [:unit, :plot] begin
+    using Makie
+
+    ext = Base.get_extension(CausalStructures, :MakieExt)
+
+    # B sits on the straight A--C chord, so A --> C would normally be routed
+    # around it; edge_paths takes precedence over both routing and curvature.
+    g = DAG(directed(:A, :C), node(:B))
+    positions = [(0.0, 0.0), (1.0, 0.0), (2.0, 0.0)]
+    custom = [(0.0, 0.0), (1.0, -0.6), (2.0, 0.0)]
+
+    @test Makie.plot(g; layout = positions, edge_paths = Dict((:A, :C) => custom)) isa
+          Makie.Figure
+    @test Makie.plot(
+        g;
+        layout = positions,
+        curvature = 0.3,
+        edge_paths = Dict((:A, :C) => custom),
+    ) isa Makie.Figure
+
+    # Same precedence check as for curvature, but directly on the geometry:
+    # the auto-router bends away from B (below the chord); the override
+    # explicitly bends the other way and must win.
+    routed = ext._route_edge_path(
+        Makie.Point2f(0, 0),
+        Makie.Point2f(2, 0),
+        ext._NodeGeom(Makie.Point2f(0, 0), :circle, 0.1f0, 0.1f0),
+        ext._NodeGeom(Makie.Point2f(2, 0), :circle, 0.1f0, 0.1f0),
+        [(Makie.Point2f(1, 0.05), 0.1f0)],
+        0.05f0,
+    )
+    @test routed[length(routed)÷2][2] < 0
+
+    e = only(g.edges)
+    overridden = ext._edge_path(
+        e,
+        ext._NodeGeom(Makie.Point2f(0, 0), :circle, 0.1f0, 0.1f0),
+        ext._NodeGeom(Makie.Point2f(2, 0), :circle, 0.1f0, 0.1f0),
+        [(Makie.Point2f(1, 0.05), 0.1f0)],
+        0.0f0,
+        nothing,
+        100.0f0,
+        1.5,
+        Makie.Point2f[Makie.Point2f(0, 0), Makie.Point2f(1, -0.6), Makie.Point2f(2, 0)],
+    )
+    @test overridden[2][2] < 0 # follows the override's own bend, not the router's
+end
+
+@testitem "Makie.plot: edge_paths falls back for edges with no override, or a degenerate one" tags =
+    [:unit, :plot] begin
+    using Makie
+
+    # Only A --> C gets an override; B --> C still uses normal routing.
+    g = DAG(directed(:A, :C), directed(:B, :C))
+    fig = Makie.plot(
+        g;
+        layout = [(0.0, 0.0), (0.0, 2.0), (2.0, 1.0)],
+        edge_paths = Dict((:A, :C) => [(0.0, 0.0), (2.0, 1.0)]),
+    )
+    @test fig isa Makie.Figure
+
+    # An override that never clears the node boundary is degenerate and
+    # falls back too, rather than erroring.
+    dag = DAG(directed(:A, :B))
+    fig2 = Makie.plot(
+        dag;
+        layout = [(0.0, 0.0), (2.0, 0.0)],
+        edge_paths = Dict((:A, :B) => [(0.0, 0.0), (0.001, 0.0)]),
+    )
+    @test fig2 isa Makie.Figure
+end
+
 @testitem "MakieExt: a CausalEdge key names one exact edge" tags = [:unit, :plot] begin
     using Makie
 

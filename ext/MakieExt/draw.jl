@@ -67,6 +67,7 @@ function _edge_path(
     curvature::Union{Float32,Nothing},
     px_per_data_unit::Float32,
     linewidth::Real,
+    explicit_path::Union{AbstractVector{Point2f},Nothing} = nothing,
 )
     p_src, p_dst = g_src.center, g_dst.center
     diff = p_dst - p_src
@@ -86,6 +87,10 @@ function _edge_path(
     gap_to = (has_arrow_dst || has_circle_dst) ? half_lw_data : 0.0f0
     g_from = _inflate(g_src, gap_from)
     g_to = _inflate(g_dst, gap_to)
+
+    explicit =
+        explicit_path === nothing ? nothing : _clip_edge_path(explicit_path, g_from, g_to)
+    explicit !== nothing && return explicit
 
     # Minimum gap (beyond an obstacle's own radius) an edge must keep from a
     # non-incident node before it is left alone.
@@ -126,7 +131,8 @@ function _draw_edge!(
     obstacles::AbstractVector{Tuple{Point2f,Float32}},
     fan_slot::Float32,
     curvature::Union{Float32,Nothing},
-    px_per_data_unit::Float32;
+    px_per_data_unit::Float32,
+    explicit_path::Union{AbstractVector{Point2f},Nothing} = nothing;
     color = :black,
     fill = color,
     linewidth = 1.5f0,
@@ -140,6 +146,7 @@ function _draw_edge!(
         curvature,
         px_per_data_unit,
         linewidth,
+        explicit_path,
     )
     path === nothing && return
 
@@ -277,6 +284,20 @@ function _resolve_curvature(val, e::CausalEdge)
     return resolved === nothing ? nothing : Float32(resolved)
 end
 
+# Look up an `edge_paths` override for `e` (via the same precedence as
+# `_resolve_edge`) and, if present, carry it through the identical
+# rescale/stretch affine transform already applied to the node `positions`
+# it was computed alongside - so it stays aligned once transformed here.
+function _resolve_edge_path(edge_paths, e::CausalEdge, cx1, cy1, scale1, stretch_params)
+    edge_paths === nothing && return nothing
+    raw = _resolve_edge(edge_paths, e, nothing)
+    raw === nothing && return nothing
+    pts = Point2f[_apply_unit_extent(Point2f(p[1], p[2]), cx1, cy1, scale1) for p in raw]
+    stretch_params === nothing && return pts
+    cx2, cy2, sx2, sy2 = stretch_params
+    return Point2f[_apply_aspect_stretch(p, cx2, cy2, sx2, sy2) for p in pts]
+end
+
 function _resolve_node(val, node::Symbol, fallback)
     val isa AbstractDict || return val
     haskey(val, node) && return val[node]
@@ -293,12 +314,18 @@ backend (e.g. `using CairoMakie`) before calling.
 Keyword arguments: `layout`, `labels`, `node_shape`, `node_radius`,
 `node_padding`, `arrow_size`, `circle_size`, `node_color`,
 `node_strokecolor`, `node_strokewidth`, `node_linestyle`, `edge_color`,
-`arrow_fill`, `linewidth`, `curvature`, `label_color`, `label_fontsize`,
-`label_font`, `title`, `title_fontsize`, `title_color`, `title_gap`,
-`outer_margin`, `fig_size`, `stretch_to_fig_size`. Style keywords accept either a scalar (applied to
-everything) or a `Dict` for per-node/per-edge overrides; a per-edge `Dict` may
-be keyed by a `CausalEdge`, a `(src, dst)` tuple, a node name, an edge-type
-symbol, or `:default`.
+`arrow_fill`, `linewidth`, `curvature`, `edge_paths`, `label_color`,
+`label_fontsize`, `label_font`, `title`, `title_fontsize`, `title_color`,
+`title_gap`, `outer_margin`, `fig_size`, `stretch_to_fig_size`. Style
+keywords accept either a scalar (applied to everything) or a `Dict` for
+per-node/per-edge overrides; a per-edge `Dict` may be keyed by a
+`CausalEdge`, a `(src, dst)` tuple, a node name, an edge-type symbol, or
+`:default`.
+
+`edge_paths` can be used to override an edge's drawn route directly: a
+`Dict` (same keying as other per-edge overrides) from an edge to a vector
+of waypoints running from its source node's position to its destination
+node's position, in the same coordinates as `layout`.
 
 See the [Plotting](@ref plotting-guide) page for the full keyword reference,
 styling precedence rules, and examples.
@@ -336,6 +363,7 @@ function Makie.plot(
     arrow_fill = CausalStructures._PLOT_EDGE_ARROW_FILL_DEFAULT,
     linewidth = CausalStructures._PLOT_LINEWIDTH_DEFAULT,
     curvature = CausalStructures._PLOT_CURVATURE_DEFAULT,
+    edge_paths::Union{AbstractDict,Nothing} = nothing,
     label_color = CausalStructures._PLOT_LABEL_COLOR_DEFAULT,
     label_fontsize = CausalStructures._PLOT_LABEL_FONTSIZE_DEFAULT,
     label_font = CausalStructures._PLOT_LABEL_FONT_DEFAULT,
@@ -352,12 +380,19 @@ function Makie.plot(
     n = length(node_names)
     n == 0 && error("Cannot plot an empty graph (0 nodes).")
 
-    positions = _rescale_to_unit_extent(_positions(cg, layout, layout_kwargs))
+    raw_positions = _positions(cg, layout, layout_kwargs)
+    cx1, cy1, scale1 = _unit_extent_params(raw_positions)
+    positions = Point2f[_apply_unit_extent(p, cx1, cy1, scale1) for p in raw_positions]
+
+    # Tracked (rather than folded into `positions` alone) so `edge_paths`
+    # waypoints can be carried through the identical transform below.
+    stretch_params = nothing
     if stretch_to_fig_size
         fig_height_budget0 = Float32(fig_size[2]) - (title !== nothing ? 40.0f0 : 0.0f0)
         avail_w0 = Float32(fig_size[1]) - 2.0f0 * Float32(outer_margin)
         avail_h0 = fig_height_budget0 - 2.0f0 * Float32(outer_margin)
-        positions = _stretch_to_aspect(positions, avail_w0 / avail_h0)
+        stretch_params = _aspect_stretch_params(positions, avail_w0 / avail_h0)
+        positions = Point2f[_apply_aspect_stretch(p, stretch_params...) for p in positions]
     end
 
     shapes = Symbol[Symbol(_resolve_node(node_shape, nd, :circle)) for nd in node_names]
@@ -474,6 +509,7 @@ function Makie.plot(
             _resolve_curvature(curvature, e),
             provisional_px_per_data_unit,
             Float32(_resolve_edge(linewidth, e, 1.5f0)),
+            _resolve_edge_path(edge_paths, e, cx1, cy1, scale1, stretch_params),
         )
         path !== nothing && append!(edge_pts, path)
     end
@@ -533,7 +569,8 @@ function Makie.plot(
             obstacles,
             fan_slots[i],
             _resolve_curvature(curvature, e),
-            px_per_data_unit;
+            px_per_data_unit,
+            _resolve_edge_path(edge_paths, e, cx1, cy1, scale1, stretch_params);
             color = resolved_color,
             fill = something(_resolve_edge(arrow_fill, e, nothing), resolved_color),
             linewidth = Float32(_resolve_edge(linewidth, e, 1.5f0)),
