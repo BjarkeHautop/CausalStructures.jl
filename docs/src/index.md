@@ -32,7 +32,7 @@ CausalGraph
 each class imposes are validated on construction, and an error is thrown if the
 graph is invalid.
 
-The following edge types exists:
+The following edge types exist:
 
 - `directed(:A, :B)` for `A --> B`
 - `undirected(:A, :B)` for `A --- B`

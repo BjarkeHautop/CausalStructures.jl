@@ -1,12 +1,11 @@
 # Getting Started
 
-This tutorial introduces the basic workflow using a simple directed acyclic
-graph (DAG).
+We will show the basic usage of this package via directed acyclic
+graphs (DAGs).
 
 ## Constructing a graph
 
-Let's build a DAG with a confounder `A` that affects both `X` and `Y`, and a
-mediator `M` between `X` and `Y`:
+Let's build a DAG with a confounder `A` that affects both `X` and `Y`, and a mediator `M` between `X` and `Y`:
 
 ```@example quick
 using CausalStructures
@@ -16,7 +15,18 @@ using NetworkLayout
 dag = DAG("A --> X + Y, X --> M --> Y")
 ```
 
-and visualize it:
+!!! note "Validation on construction"
+
+    All graphs you construct are validated on construction to be a valid graph according to your graph class. For a DAG this means all edges are directed edges (`-->`), and there are no cycles. Let's try to create a DAG with a cycle:
+
+    ```@repl quick
+    invalid_dag = DAG("A --> B --> C --> A")  # Creates a cycle!
+    ```
+
+Since, [a picture is worth a thousand words](https://en.wikipedia.org/wiki/A_picture_is_worth_a_thousand_words)[^1]
+let's plot our DAG:
+
+[^1]: Especially with causal graphs
 
 ```@example quick
 plot(dag)
@@ -24,17 +34,6 @@ plot(dag)
 
 For more plotting details and customization options, see the [Plotting](@ref
 plotting-guide) guide.
-
-## Validation on construction
-
-Graphs are validated when you construct them. Here we make an invalid
-DAG:
-
-```@repl quick
-invalid_dag = DAG("A --> B --> C --> A")  # Creates a cycle!
-```
-
-Since cycles are not allowed in DAGs, an error is thrown.
 
 ## Testing conditional independence
 
@@ -90,3 +89,14 @@ all_adjustment_sets(dag, :X, :Y)
 ```
 
 In this case, `{A}` is the only minimal set that blocks the confounding.
+
+## Next steps
+
+This small quick guide barely scratched the surface of what you can do with this package:
+
+- For more on working with DAGs in the context of causal identification, see
+  [Causal Identification](@ref causal-identification-guide).
+- To learn more about the different graph classes, see
+  [Equivalence Classes](@ref equivalence-classes-guide) or the
+  [Graph & Edge Types reference](@ref graph-types-reference).
+- If you're already familiar with causal graphs, you might instead be interested in [Plotting](@ref plotting-guide) or [Benchmarks](@ref benchmarks).

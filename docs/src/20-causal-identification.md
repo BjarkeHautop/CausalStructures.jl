@@ -86,7 +86,7 @@ is_valid_backdoor(dag2, :X, :Y, [:M])
 ```
 
 However, `M` intercepts every causal path from `X` to `Y` and is itself
-unconfounded, this is exactly the *frontdoor criterion*:
+unconfounded; this is exactly the *frontdoor criterion*:
 
 ```@example id
 is_valid_frontdoor(dag2, :X, :Y, [:M])
@@ -134,7 +134,7 @@ DAG via [`latent_project`](@ref). Let's project `U` out of `dag3`:
 admg = latent_project(dag3, [:U])
 ```
 
-Removing `U` introduces `X <-> Y`, which captures its confounding effect. The functions discussed here above also
+Removing `U` introduces `X <-> Y`, which captures its confounding effect. The functions discussed above also
 work on ADMGs, e.g.:
 
 ```@example id
@@ -143,7 +143,7 @@ is_valid_iv(admg, :X, :Y, [:Z])
 
 ## General identification
 
-The methods discussed above are each sufficient, not necesary. CausalStructures
+The methods discussed above are each sufficient, not necessary. CausalStructures
 also implements the ID algorithm of [shpitser2008complete](@citet) and returns the
 estimand as an [`Estimand`](@ref).
 
@@ -165,7 +165,7 @@ id(admg2, :X, :Y)
 which is the standard front-door adjustment formula. The primed `X'` is a summation
 index distinct from the intervened value of `X`, following the usual convention.
 
-In the following graph the causal effect can not be identified:
+In the following graph the causal effect cannot be identified:
 
 ```@example id
 admg
