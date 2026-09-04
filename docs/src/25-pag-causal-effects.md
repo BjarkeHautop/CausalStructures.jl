@@ -2,7 +2,7 @@
 
 This guide builds on [Equivalence Classes](@ref equivalence-classes-guide) and
 [Causal Identification](@ref causal-identification-guide) and covers causal
-adjustment when the graph is known only as a [PAG](@ref), i.e. when the underlying
+adjustment when the graph is known only as a [`PAG`](@ref), i.e. when the underlying
 MAG is identified only up to Markov equivalence.
 
 ```@example pc
