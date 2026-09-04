@@ -16,7 +16,7 @@ directly instead, e.g. `DAG("A --> B")`, `ADMG("A --> B, A <-> B)`.
 
 - `plot` now supports `edge_paths`, a `Dict` overriding an edge's drawn route with an explicit polyline instead of `curvature`/automatic routing.
 
-## [0.4.0] - 2026-09-25
+## [0.4.0] - 2026-08-24
 
 ### Breaking changes
 
@@ -35,7 +35,7 @@ instead of following the aspect of the layout.
 - Fixed `plot` clipping a curved edge at the canvas edge.
 - Fixed `plot`'s `curvature` being unable to force a straight edge to override the automatic routing. `curvature` now defaults to `nothing` (auto-route) so any explicit value now works correctly.
 
-## [0.3.1] - 2026-09-18
+## [0.3.1] - 2026-08-18
 
 ### New features
 
