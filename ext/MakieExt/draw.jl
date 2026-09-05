@@ -348,7 +348,9 @@ Makie.plot(dag; title = "My DAG", layout = :spring)
 """
 function Makie.plot(
     cg::CausalGraph;
-    layout::Union{Symbol,AbstractVector,AbstractDict} = CausalStructures._default_layout_method(),
+    layout::Union{Symbol,AbstractVector,AbstractDict} = CausalStructures._default_layout_method(
+        cg,
+    ),
     labels = nothing,
     node_shape = CausalStructures._PLOT_NODE_SHAPE_DEFAULT,
     node_radius::Union{Real,Nothing} = nothing,
@@ -380,7 +382,9 @@ function Makie.plot(
     n = length(node_names)
     n == 0 && error("Cannot plot an empty graph (0 nodes).")
 
-    raw_positions = _positions(cg, layout, layout_kwargs)
+    raw_positions, auto_edge_paths =
+        _positions_and_auto_edge_paths(cg, layout, layout_kwargs)
+    edge_paths = edge_paths === nothing ? auto_edge_paths : edge_paths
     cx1, cy1, scale1 = _unit_extent_params(raw_positions)
     positions = Point2f[_apply_unit_extent(p, cx1, cy1, scale1) for p in raw_positions]
 

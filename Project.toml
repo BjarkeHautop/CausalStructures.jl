@@ -14,10 +14,12 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 [weakdeps]
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 NetworkLayout = "46757867-2c16-5918-afeb-47bfcb05e46a"
+Sugiyama = "a85cd6b6-3810-52a0-aaf7-38a6bd88fd85"
 
 [extensions]
 MakieExt = "Makie"
 NetworkLayoutExt = "NetworkLayout"
+SugiyamaExt = "Sugiyama"
 
 [compat]
 Makie = "0.24.11"
@@ -25,4 +27,5 @@ NetworkLayout = "0.4.10"
 Preferences = "1"
 Random = "1"
 Statistics = "1"
+Sugiyama = "1"
 julia = "1.10"

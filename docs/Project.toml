@@ -8,6 +8,7 @@ DocumenterCodeBlocks = "b6400b83-267f-4b55-9fd8-bffc853bdfd8"
 LiveServer = "16fef848-5104-11e9-1b77-fb7a48bbb589"
 NetworkLayout = "46757867-2c16-5918-afeb-47bfcb05e46a"
 Preferences = "21216c6a-2e73-6563-6e65-726566657250"
+Sugiyama = "a85cd6b6-3810-52a0-aaf7-38a6bd88fd85"
 
 [sources]
 CausalStructures = {path = ".."}
@@ -21,3 +22,4 @@ DocumenterCodeBlocks = "1"
 LiveServer = "1"
 NetworkLayout = "0.4"
 Preferences = "1"
+Sugiyama = "1"

@@ -2,12 +2,14 @@
 
 Plotting requires loading a [Makie](https://docs.makie.org/stable/) backend before use.
 Node placement requires [NetworkLayout.jl](https://github.com/JuliaGraphs/NetworkLayout.jl)
-(or bring your own layout). Below we use CairoMakie:
+or [Sugiyama.jl](https://github.com/BjarkeHautop/Sugiyama.jl) (or bring your own layout).
+Below we use CairoMakie:
 
 ```@example plot
 using CausalStructures
 using CairoMakie
 using NetworkLayout
+using Sugiyama
 ```
 
 !!! note "General-purpose by design"
@@ -45,26 +47,26 @@ Styling breaks down into four areas, covered below:
 
 ## [Layout](@id plot-layouts)
 
-The `layout` keyword controls node placement and defaults to `:stress`.
+The `layout` keyword controls node placement and defaults to `:sugiyama:` for a DAG if Sugiyama.jl is loaded, else `:stress`.
 
 ```@example plot
 plot(dag; layout = :spring)
 ```
 
-We provide these short-hand names for convenience:
+We provide these short-hand names for convenience. All except `:sugiyama` come from [NetworkLayout.jl](https://github.com/JuliaGraphs/NetworkLayout.jl), while `:sugiyama` comes from [Sugiyama.jl](https://github.com/BjarkeHautop/Sugiyama.jl):
 
 | `layout`      | Algorithm                            |
 | ------------- | ------------------------------------- |
 | `:spring`     | Fruchterman-Reingold force-directed   |
-| `:stress`     | Stress majorization (the default)     |
+| `:stress`     | Stress majorization                   |
 | `:sfdp`       | Scalable Force-Directed Placement     |
 | `:spectral`   | Spectral layout                       |
 | `:shell`      | Concentric shells                     |
 | `:squaregrid` | Square grid                           |
+| `:sugiyama`   | Sugiyama layout (DAGs only)           |
 
 `layout` also accepts explicit positions instead of a `Symbol`: either a
-`Dict` of `(x, y)` pairs keyed by node name, or a `Vector` of them in the
-order returned by `nodes(cg)`:
+`Dict` of `(x, y)` pairs keyed by node name, or a `Vector` of them in the order returned by `nodes(cg)`:
 
 ```@example plot
 plot(dag; layout = Dict(
@@ -81,6 +83,16 @@ plot(dag; layout = Dict(
     positions = layout(dag, :spring)
     positions[:A] = (0.0, 2.0)
     plot(dag; layout = positions)
+    ```
+
+!!! tip "Sugiyama positions without Sugiyama routing"
+    Sugiyama.jl implements it's own routing via dummy nodes. If you
+    prefer the automatic routing with Bezier curves, you can
+    pass `layout = layout(dag_layered, :sugiyama)` in `plot`:
+
+    ```@example plot
+    dag_layered = DAG("A --> X, A --> B, X --> Y, B --> Y, A --> Y")
+    plot(dag_layered; layout = layout(dag_layered, :sugiyama))
     ```
 
 ## Styling nodes
@@ -227,6 +239,19 @@ manual override if the automatic routing picks an awkward path — an explicit
 plot(detour;
     layout = [(0, 0), (1, 0), (2, 0)],
     curvature = Dict(directed(:A, :Y) => 0.0),
+)
+```
+
+### Explicit edge paths
+
+`edge_paths` can be used to override an edge's drawn route:
+
+```@example plot
+positions = layout(dag, :spring)
+
+plot(dag;
+    layout = positions,
+    edge_paths = Dict((:K, :Y) => [positions[:K], (1.5, 2.0), positions[:Y]]),
 )
 ```
 

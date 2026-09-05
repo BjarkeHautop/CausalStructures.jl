@@ -15,6 +15,8 @@ directly instead, e.g. `DAG("A --> B")`, `ADMG("A --> B, A <-> B)`.
 ### New features
 
 - `plot` now supports `edge_paths`, a `Dict` overriding an edge's drawn route with an explicit polyline instead of `curvature`/automatic routing.
+- Added a `:sugiyama` layout method for DAGs. Requries `using Sugiyama`,
+and if loaded is the default for DAGs.
 
 ## [0.4.0] - 2026-08-24
 

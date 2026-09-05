@@ -42,8 +42,7 @@ end
     [:unit, :layout] begin
     using NetworkLayout
 
-    @test CausalStructures._default_layout_method() == :stress
-
-    dag = DAG(directed(:A, :B), directed(:B, :C))
-    @test layout(dag) == layout(dag, :stress)
+    admg = ADMG(directed(:A, :B), bidirected(:B, :C))
+    @test CausalStructures._default_layout_method(admg) == :stress
+    @test layout(admg) == layout(admg, :stress)
 end

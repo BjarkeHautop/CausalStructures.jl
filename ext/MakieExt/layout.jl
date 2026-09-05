@@ -4,6 +4,19 @@ function _positions(cg::CausalGraph, method::Symbol, kwargs)
     return _positions(cg, CausalStructures.layout(cg, method; kwargs...), nothing)
 end
 
+function _positions_and_auto_edge_paths(cg::CausalGraph, method::Symbol, kwargs)
+    result = CausalStructures._layout_edge_paths_impl(cg, Val(method); kwargs...)
+    result === nothing && return _positions(cg, method, kwargs), nothing
+    coords, edge_paths = result
+    positions = Dict{Symbol,NTuple{2,Float64}}(
+        nd => (Float64(p[1]), Float64(p[2])) for (nd, p) in zip(cg.backend.nodes, coords)
+    )
+    return _positions(cg, positions, nothing), edge_paths
+end
+
+_positions_and_auto_edge_paths(cg::CausalGraph, positions, ::Any) =
+    (_positions(cg, positions, nothing), nothing)
+
 # Accept a pre-computed positions vector (e.g. from layout() after manual tweaks).
 function _positions(cg::CausalGraph, positions::AbstractVector, ::Any)
     n = length(cg.backend.nodes)
