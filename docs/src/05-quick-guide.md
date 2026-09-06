@@ -10,7 +10,7 @@ Let's build a DAG with a confounder `A` that affects both `X` and `Y`, and a med
 ```@example quick
 using CausalStructures
 using CairoMakie
-using NetworkLayout
+using Sugiyama
 
 dag = DAG("A --> X + Y, X --> M --> Y")
 ```

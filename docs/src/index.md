@@ -61,9 +61,10 @@ when composing edges programmatically:
 
 ```@example example
 dag = DAG(
-    directed(:U, :X),
-    directed(:U, :Y),
-    directed(:X, :Y))
+        directed(:U, :X),
+        directed(:U, :Y),
+        directed(:X, :Y)
+    )
 ```
 
 You can then run a variety of causal graph queries, transformations,

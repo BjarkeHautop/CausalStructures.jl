@@ -36,10 +36,18 @@ backdoor_set(pag, :A, :D) === nothing
 In particular, whether `B` needs to be included in an adjustment set depends on how
 the circle at `A` is resolved.
 
+Not every effect here is uncertain. For the effect of `B` on `D`, the PAG admits
+an adjustment set that is valid for every MAG in the equivalence class. The
+generalized adjustment criterion (GAC) can therefore be applied directly to the
+PAG with [`all_adjustment_sets`](@ref):
+
+```@example pc
+all_adjustment_sets(pag, :B, :D)
+```
+
 ## Adjustment sets
 
-[`pagcauses`](@ref) considers the MAGs compatible with the PAG and returns adjustment
-sets that are valid for at least one of them [wang2025pagcauses](@cite):
+[`pagcauses`](@ref) considers MAGs compatible with the PAG and returns adjustment sets that are valid in at least one such MAG [wang2025pagcauses](@cite):
 
 ```@example pc
 pagcauses(pag, :A, :D)
@@ -47,9 +55,7 @@ pagcauses(pag, :A, :D)
 
 For this example, the empty set is valid when `A --> B`, since there is then no
 backdoor path from `A` to `D` through `B`. When `A <-> B`, `B` must instead be
-included to block the path through the hidden common cause. If the ambiguity in the
-graph also requires adjustment for `C`, `{B, C}` is returned as another possible
-adjustment set.
+included to block the path through the hidden common cause. Thus `{B}` is a valid adjustment set in that case; nonminimal supersets such as `{B, C}` may also be returned when they are valid.
 
 The same procedure applies when the ambiguity occurs elsewhere in the graph. For
 example:

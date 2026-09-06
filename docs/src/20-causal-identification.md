@@ -5,7 +5,7 @@ This guide expands on the [Getting Started](@ref) tutorial with more advanced id
 ```@example id
 using CausalStructures
 using CairoMakie
-using NetworkLayout
+using Sugiyama
 ```
 
 ## Adjustment strategies

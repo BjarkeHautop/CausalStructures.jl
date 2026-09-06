@@ -118,32 +118,6 @@ and `D` are non-adjacent and `A o-> B --> D`, the tail at `B` is forced in all M
 enumerate_mags(pag)
 ```
 
-On a PAG, possible ancestors and possible descendants answer the
-question: in which MAGs in the equivalence class could `V` be an ancestor
-(or descendant) of `W`?
-
-```@example ec
-possible_ancestors(pag, :D)
-```
-
-All three of `A`, `B`, and `C` are possible ancestors of `D` because there is
-at least one MAG in the class where each lies on a directed path to `D`. `B` is
-a definite ancestor (the `B --> D` edge is invariant); `A` and `C` are possible
-ancestors because their circle marks can resolve to tails, yielding `A --> B --> D`
-and `C --> B --> D`.
-
-```@example ec
-possible_ancestors(pag, :A)
-```
-
-`A` has no possible ancestors because every neighbor of `A` in the PAG has an invariant arrowhead at that neighbor's end, so no edge can be oriented to point into `A`.
-
-[`possible_descendants`](@ref) is the symmetric counterpart:
-
-```@example ec
-possible_descendants(pag, :A)
-```
-
-```@example ec
-possible_descendants(pag, :D)
-```
+You can also answer various causal inference questions, see
+[PAG Causal Effects](@ref pag-causal-effects-guide) for some
+examples.
