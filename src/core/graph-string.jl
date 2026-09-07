@@ -18,19 +18,30 @@
 const _GRAPH_STR_EDGE_TOKEN_RE = r"\A!?[<o]?-+[o>]?"
 const _GRAPH_STR_EDGE_MARKS_RE = r"\A(!)?([<o])?-+([o>])?\z"
 
+# `text` is the literal source text; `ident` is set only for `kind === :ident`.
+struct _GraphToken
+    kind::Symbol
+    text::String
+    ident::Symbol
+end
+
+_GraphToken(kind::Symbol, text::AbstractString) =
+    _GraphToken(kind, String(text), Symbol(""))
+_GraphToken(kind::Symbol, ident::Symbol) = _GraphToken(kind, String(ident), ident)
+
 function _lex_graph_string(s::AbstractString)
-    tokens = Tuple{Symbol,Any}[]
+    tokens = _GraphToken[]
     i = firstindex(s)
     n = ncodeunits(s)
     while i <= n
         c = s[i]
         if c == ',' || c == '\n'
-            push!(tokens, (:comma, ","))
+            push!(tokens, _GraphToken(:comma, ","))
             i = nextind(s, i)
         elseif isspace(c)
             i = nextind(s, i)
         elseif c == '+'
-            push!(tokens, (:plus, "+"))
+            push!(tokens, _GraphToken(:plus, "+"))
             i = nextind(s, i)
         elseif c == '!' ||
                c == '<' ||
@@ -42,14 +53,14 @@ function _lex_graph_string(s::AbstractString)
                     "Unexpected character '$c' at position $i in graph string: $(repr(s))",
                 ),
             )
-            push!(tokens, (:edge, m.match))
+            push!(tokens, _GraphToken(:edge, m.match))
             i += ncodeunits(m.match)
         elseif isletter(c) || c == '_'
             j = i
             while j <= n && (isletter(s[j]) || isdigit(s[j]) || s[j] == '_')
                 j = nextind(s, j)
             end
-            push!(tokens, (:ident, Symbol(s[i:prevind(s, j)])))
+            push!(tokens, _GraphToken(:ident, Symbol(s[i:prevind(s, j)])))
             i = j
         else
             throw(
@@ -87,31 +98,33 @@ function _graph_str_edge(left::Symbol, right::Symbol, tok::AbstractString)
     return CausalEdge(left, right, left_mark, right_mark)
 end
 
-function _parse_graph_statement(tokens::Vector{Tuple{Symbol,Any}})
+const _GraphStringItem = Union{GraphNode,CausalEdge,ForbiddenEdge}
+
+function _parse_graph_statement(tokens::Vector{_GraphToken})
     groups = Vector{Symbol}[]
     ops = String[]
 
     i = 1
     n = length(tokens)
     while i <= n
-        kind, val = tokens[i]
-        kind == :ident ||
-            throw(ArgumentError("Expected a node name, got '$val' in graph string"))
-        group = Symbol[val]
+        tok = tokens[i]
+        tok.kind == :ident ||
+            throw(ArgumentError("Expected a node name, got '$(tok.text)' in graph string"))
+        group = Symbol[tok.ident]
         i += 1
-        while i <= n && tokens[i][1] == :plus
+        while i <= n && tokens[i].kind == :plus
             i += 1
-            i <= n && tokens[i][1] == :ident ||
+            i <= n && tokens[i].kind == :ident ||
                 throw(ArgumentError("Expected a node name after '+' in graph string"))
-            push!(group, tokens[i][2])
+            push!(group, tokens[i].ident)
             i += 1
         end
         push!(groups, group)
 
         if i <= n
-            tokens[i][1] == :edge ||
-                throw(ArgumentError("Expected an edge marker, got '$(tokens[i][2])'"))
-            push!(ops, tokens[i][2])
+            tokens[i].kind == :edge ||
+                throw(ArgumentError("Expected an edge marker, got '$(tokens[i].text)'"))
+            push!(ops, tokens[i].text)
             i += 1
             i <= n || throw(
                 ArgumentError(
@@ -121,7 +134,7 @@ function _parse_graph_statement(tokens::Vector{Tuple{Symbol,Any}})
         end
     end
 
-    items = Any[]
+    items = _GraphStringItem[]
     if isempty(ops)
         for name in groups[1]
             push!(items, node(name))
@@ -138,10 +151,10 @@ end
 
 function _parse_graph_string(s::AbstractString)
     tokens = _lex_graph_string(s)
-    items = Any[]
-    stmt = Tuple{Symbol,Any}[]
+    items = _GraphStringItem[]
+    stmt = _GraphToken[]
     for tok in tokens
-        if tok[1] == :comma
+        if tok.kind == :comma
             isempty(stmt) || append!(items, _parse_graph_statement(stmt))
             empty!(stmt)
         else
@@ -154,6 +167,7 @@ end
 
 for T in (:DAG, :UG, :PDAG, :CPDAG, :MPDAG, :ADMG, :AG, :MAG, :UNKNOWN, :PAG)
     @eval function $T(s::AbstractString)
-        return $T(_parse_graph_string(s)...)
+        nodes, edges = _cgraph_collect(_parse_graph_string(s))
+        return build_graph($T, nodes, edges)
     end
 end

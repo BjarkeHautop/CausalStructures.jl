@@ -88,10 +88,10 @@ end
 function _basic_structural_errors(
     cg::CausalGraph,
     class_name::String,
-    edge_ok::Function;
+    edge_ok::F;
     admg::Bool = false,
     check_cycles::Bool = true,
-)
+) where {F<:Function}
     errors = String[]
 
     all(edge_ok, cg.edges) || push!(errors, "invalid edge type for graph class $class_name")
@@ -143,7 +143,19 @@ function validation_errors(::PAGConstraints, cg::CausalGraph)
     try
         mag = _mag_from_pag(cg.backend.nodes, cg.edges)
     catch err
-        push!(errors, "not a valid PAG: " * sprint(showerror, err))
+        msg = if err isa ErrorException
+            m = err.msg
+            m isa String ? m : String(string(nameof(typeof(err))))
+        elseif err isa ArgumentError
+            m = err.msg
+            m isa String ? m : String(string(nameof(typeof(err))))
+        elseif err isa DimensionMismatch
+            m = err.msg
+            m isa String ? m : String(string(nameof(typeof(err))))
+        else
+            String(string(nameof(typeof(err))))
+        end::String
+        push!(errors, "not a valid PAG: " * msg)
         return errors
     end
 
@@ -613,8 +625,10 @@ graph_class_name(::UNKNOWNConstraints) = "UNKNOWN"
 function validate(cg::CausalGraph, c::GraphConstraints)
     errors = validation_errors(c, cg)
 
-    isempty(errors) ||
-        error("Invalid $(graph_class_name(c)):\n  - " * join(errors, "\n  - "))
+    if !isempty(errors)
+        name = graph_class_name(c)::String
+        error("Invalid " * name * ":\n  - " * join(errors, "\n  - "))
+    end
 
     return cg
 end

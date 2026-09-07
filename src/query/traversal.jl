@@ -272,9 +272,9 @@ end
 function _b_possibly_causal_reachable(
     B::PDAGBackend,
     x::Int,
-    forward::Function;
+    forward::F;
     excluded::BitVector = falses(length(B.nodes)),
-)
+) where {F<:Function}
     n = length(B.nodes)
     reach = falses(n)
     path = [x]
@@ -287,9 +287,9 @@ function _b_possibly_causal_dfs!(
     path::Vector{Int},
     B::PDAGBackend,
     v::Int,
-    forward::Function,
+    forward::F,
     excluded::BitVector,
-)
+) where {F<:Function}
     for w in forward(B, v)
         (v == path[1] && excluded[w]) && continue
         _b_possibly_causal_unshielded_extend(B, path, v, w) || continue

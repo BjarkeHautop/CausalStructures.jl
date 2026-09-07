@@ -15,22 +15,30 @@ function _all_subsets(universe::Vector{Int}, min_size::Int, max_size::Int)
     out = Vector{Vector{Int}}()
     cur = Int[]
 
-    function rec(start::Int, k_rem::Int)
-        if k_rem == 0
-            push!(out, copy(cur))
-            return
-        end
-        for i = start:n
-            push!(cur, universe[i])
-            rec(i + 1, k_rem - 1)
-            pop!(cur)
-        end
-    end
-
     for k = min_size:min(max_size, n)
-        rec(1, k)
+        _all_subsets_rec!(out, cur, universe, n, 1, k)
     end
     return out
+end
+
+function _all_subsets_rec!(
+    out::Vector{Vector{Int}},
+    cur::Vector{Int},
+    universe::Vector{Int},
+    n::Int,
+    start::Int,
+    k_rem::Int,
+)
+    if k_rem == 0
+        push!(out, copy(cur))
+        return nothing
+    end
+    for i = start:n
+        push!(cur, universe[i])
+        _all_subsets_rec!(out, cur, universe, n, i + 1, k_rem - 1)
+        pop!(cur)
+    end
+    return nothing
 end
 
 # Kept as its own function: a shared `checker` local between the sequential
@@ -48,22 +56,41 @@ function _search_subsets_sequential(
     checker = make_checker()
     cur = Int[]
 
-    function rec(start::Int, k_rem::Int)
-        if k_rem == 0
-            checker(cur) && push!(valid_sets, to_symbols(cur))
-            return
-        end
-        for i = start:n
-            push!(cur, universe[i])
-            rec(i + 1, k_rem - 1)
-            pop!(cur)
-        end
-    end
-
     for k = min_size:min(max_size, n)
-        rec(1, k)
+        _search_subsets_rec!(valid_sets, cur, universe, n, checker, to_symbols, 1, k)
     end
     return valid_sets
+end
+
+function _search_subsets_rec!(
+    valid_sets::Vector{Vector{Symbol}},
+    cur::Vector{Int},
+    universe::Vector{Int},
+    n::Int,
+    checker::C,
+    to_symbols::S,
+    start::Int,
+    k_rem::Int,
+) where {C,S}
+    if k_rem == 0
+        checker(cur) && push!(valid_sets, to_symbols(cur))
+        return nothing
+    end
+    for i = start:n
+        push!(cur, universe[i])
+        _search_subsets_rec!(
+            valid_sets,
+            cur,
+            universe,
+            n,
+            checker,
+            to_symbols,
+            i + 1,
+            k_rem - 1,
+        )
+        pop!(cur)
+    end
+    return nothing
 end
 
 # Threaded path: materializes every candidate subset up front, then splits
@@ -139,22 +166,28 @@ end
 function _smallest_valid_subset(universe::Vector{Int}, is_valid::F) where {F<:Function}
     cur = Int[]
 
-    function enumerate!(start, k_rem)
-        if k_rem == 0
-            is_valid(cur) && return copy(cur)
-            return nothing
-        end
-        for i = start:length(universe)
-            push!(cur, universe[i])
-            result = enumerate!(i + 1, k_rem - 1)
-            pop!(cur)
-            result !== nothing && return result
-        end
+    for k = 0:length(universe)
+        result = _smallest_valid_subset_rec(cur, universe, is_valid, 1, k)
+        result !== nothing && return result
+    end
+    return nothing
+end
+
+function _smallest_valid_subset_rec(
+    cur::Vector{Int},
+    universe::Vector{Int},
+    is_valid::F,
+    start::Int,
+    k_rem::Int,
+) where {F}
+    if k_rem == 0
+        is_valid(cur) && return copy(cur)
         return nothing
     end
-
-    for k = 0:length(universe)
-        result = enumerate!(1, k)
+    for i = start:length(universe)
+        push!(cur, universe[i])
+        result = _smallest_valid_subset_rec(cur, universe, is_valid, i + 1, k_rem - 1)
+        pop!(cur)
         result !== nothing && return result
     end
     return nothing

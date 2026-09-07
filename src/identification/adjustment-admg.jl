@@ -100,9 +100,9 @@ function _moral_adj_filtered!(
     mask::BitVector,
     clique_buf::Vector{Int},
     direct_buf::Vector{Int},
-    collect_clique!::Function,
-    collect_direct!::Function,
-)
+    collect_clique!::F1,
+    collect_direct!::F2,
+) where {F1<:Function,F2<:Function}
     n = length(mask)
     for v = 1:n
         empty!(adj[v])
@@ -288,8 +288,8 @@ function _make_pbg_checker(
     xs::Vector{Int},
     ys::Vector{Int},
     y_mask::BitVector,
-    recompute!::Function,
-)
+    recompute!::F,
+) where {F<:Function}
     seeds_buf = Int[]
     blocked = falses(n)
     visited = falses(n)

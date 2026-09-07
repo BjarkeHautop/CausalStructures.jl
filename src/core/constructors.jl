@@ -16,6 +16,10 @@ for T in (:DAG, :UG, :PDAG, :CPDAG, :MPDAG, :ADMG, :AG, :MAG, :UNKNOWN, :PAG)
 end
 
 function _cgraph_collect(items...)
+    return _cgraph_collect(collect(items))
+end
+
+function _cgraph_collect(items::AbstractVector)
     nodes = Set{Symbol}()
     edges = CausalEdge[]
 

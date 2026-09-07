@@ -168,20 +168,29 @@ function _has_uncovered_pd_path(
     end
     visited[first] && return false
     visited[first] = true
-    function dfs(cur, prev)
-        cur == target && return true
-        for nxt = 1:n
-            adj[cur, nxt] || continue
-            visited[nxt] && continue
-            mark[nxt, cur] == Arrow && continue   # arrowhead back toward start
-            adj[prev, nxt] && continue            # uncovered: prev-nxt non-adjacent
-            visited[nxt] = true
-            dfs(nxt, cur) && return true
-            visited[nxt] = false
-        end
-        return false
+    return _has_uncovered_pd_path_dfs!(adj, mark, n, target, visited, first, start)
+end
+
+function _has_uncovered_pd_path_dfs!(
+    adj::BitMatrix,
+    mark::Matrix{Endpoint},
+    n::Int,
+    target,
+    visited::BitVector,
+    cur,
+    prev,
+)
+    cur == target && return true
+    for nxt = 1:n
+        adj[cur, nxt] || continue
+        visited[nxt] && continue
+        mark[nxt, cur] == Arrow && continue   # arrowhead back toward start
+        adj[prev, nxt] && continue            # uncovered: prev-nxt non-adjacent
+        visited[nxt] = true
+        _has_uncovered_pd_path_dfs!(adj, mark, n, target, visited, nxt, cur) && return true
+        visited[nxt] = false
     end
-    return dfs(first, start)
+    return false
 end
 
 # Is there a discriminating path <D, ..., A, beta, gamma> for `beta` in the
@@ -204,24 +213,32 @@ function _has_discriminating_path(
         (mark[a, gamma] == Arrow && mark[gamma, a] == Tail) || continue  # A -> gamma
         visited = falses(n)
         visited[beta] = visited[gamma] = visited[a] = true
-        function dfs(v)
-            for w = 1:n
-                adj[w, v] || continue
-                visited[w] && continue
-                mark[w, v] == Arrow || continue   # arrowhead at v: v is a collider
-                if !adj[w, gamma]
-                    return true                   # w = D, non-adjacent to gamma
-                end
-                # Otherwise w must continue the collider/parent chain.
-                mark[v, w] == Arrow || continue                          # v <-> w
-                (mark[w, gamma] == Arrow && mark[gamma, w] == Tail) || continue  # w -> gamma
-                visited[w] = true
-                dfs(w) && return true
-                visited[w] = false
-            end
-            return false
+        _has_discriminating_path_dfs!(adj, mark, n, gamma, visited, a) && return true
+    end
+    return false
+end
+
+function _has_discriminating_path_dfs!(
+    adj::BitMatrix,
+    mark::Matrix{Endpoint},
+    n::Int,
+    gamma,
+    visited::BitVector,
+    v,
+)
+    for w = 1:n
+        adj[w, v] || continue
+        visited[w] && continue
+        mark[w, v] == Arrow || continue   # arrowhead at v: v is a collider
+        if !adj[w, gamma]
+            return true                   # w = D, non-adjacent to gamma
         end
-        dfs(a) && return true
+        # Otherwise w must continue the collider/parent chain.
+        mark[v, w] == Arrow || continue                          # v <-> w
+        (mark[w, gamma] == Arrow && mark[gamma, w] == Tail) || continue  # w -> gamma
+        visited[w] = true
+        _has_discriminating_path_dfs!(adj, mark, n, gamma, visited, w) && return true
+        visited[w] = false
     end
     return false
 end
@@ -360,34 +377,68 @@ function _uncovered_circle_path(
         visited = falses(n)
         visited[anode] = visited[bnode] = visited[c] = true
         path = Int[anode, c]
-        function dfs(cur, prev)
-            # Try to close the path at B through cur = D.
-            if cur != c &&
-               adj[cur, bnode] &&
-               mark[cur, bnode] == Circle &&
-               mark[bnode, cur] == Circle &&
-               !adj[anode, cur] &&
-               !adj[prev, bnode]
-                push!(path, bnode)
-                return true
-            end
-            for nxt = 1:n
-                adj[cur, nxt] || continue
-                visited[nxt] && continue
-                nxt == bnode && continue
-                (mark[cur, nxt] == Circle && mark[nxt, cur] == Circle) || continue
-                adj[prev, nxt] && continue   # uncovered
-                visited[nxt] = true
-                push!(path, nxt)
-                dfs(nxt, cur) && return true
-                pop!(path)
-                visited[nxt] = false
-            end
-            return false
-        end
-        dfs(c, anode) && return path
+        _uncovered_circle_path_dfs!(
+            adj,
+            mark,
+            n,
+            anode,
+            bnode,
+            c,
+            visited,
+            path,
+            c,
+            anode,
+        ) && return path
     end
     return nothing
+end
+
+function _uncovered_circle_path_dfs!(
+    adj::BitMatrix,
+    mark::Matrix{Endpoint},
+    n::Int,
+    anode,
+    bnode,
+    c,
+    visited::BitVector,
+    path::Vector{Int},
+    cur,
+    prev,
+)
+    # Try to close the path at B through cur = D.
+    if cur != c &&
+       adj[cur, bnode] &&
+       mark[cur, bnode] == Circle &&
+       mark[bnode, cur] == Circle &&
+       !adj[anode, cur] &&
+       !adj[prev, bnode]
+        push!(path, bnode)
+        return true
+    end
+    for nxt = 1:n
+        adj[cur, nxt] || continue
+        visited[nxt] && continue
+        nxt == bnode && continue
+        (mark[cur, nxt] == Circle && mark[nxt, cur] == Circle) || continue
+        adj[prev, nxt] && continue   # uncovered
+        visited[nxt] = true
+        push!(path, nxt)
+        _uncovered_circle_path_dfs!(
+            adj,
+            mark,
+            n,
+            anode,
+            bnode,
+            c,
+            visited,
+            path,
+            nxt,
+            cur,
+        ) && return true
+        pop!(path)
+        visited[nxt] = false
+    end
+    return false
 end
 
 # R5: alpha o-o beta with an uncovered circle path between them => make
