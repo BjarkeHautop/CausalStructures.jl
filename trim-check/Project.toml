@@ -1,0 +1,12 @@
+name = "TrimCheck"
+uuid = "8b9e1c5e-4b7f-4b1e-9c1a-2f3e4d5c6b7a"
+version = "0.0.1"
+
+[deps]
+CausalStructures = "b41ab49a-79bc-5eac-acbb-517b17bd5c16"
+
+[sources]
+CausalStructures = {path = ".."}
+
+[compat]
+julia = "1.12"

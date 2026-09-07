@@ -1,0 +1,49 @@
+name: Trim check
+
+on:
+  push:
+    branches:
+      - main
+    tags: ["*"]
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "trim-check/**"
+      - "*.toml"
+  workflow_dispatch:
+
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  trim-check:
+    name: --trim=safe (JuliaC)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: "pre" # --trim=safe needs Julia 1.13+
+          arch: x64
+      - uses: julia-actions/cache@v3
+      - name: Compile trim-check/entry.jl with --trim=safe
+        run: |
+          julia -e '
+            using Pkg
+            Pkg.activate(; temp = true)
+            Pkg.add(name = "JuliaC", version = "0.3")
+            using JuliaC
+            JuliaC.main(ARGS)
+          ' -- \
+            --output-lib "$RUNNER_TEMP/trimcheck" \
+            --project trim-check \
+            --trim=safe \
+            --experimental \
+            --compile-ccallable \
+            --verbose \
+            trim-check/entry.jl
