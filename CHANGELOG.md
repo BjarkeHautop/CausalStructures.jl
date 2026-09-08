@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `maximal_local_mag`/`possible_local_structures`: Step 2 of the local-structure algorithm looked for a witness edge pointing out of `Vl` instead of into it, so it could orient a circle edge in a direction not implied by every consistent MAG.
 
+- `meek_closure`/`is_mpdag`: R1 wrongly skipped orientations that would create a new collider, and R4 used the wrong pattern, so both could leave a background-knowledge PDAG under-oriented.
+
 ### Other changes
 
 - Package now compiles under `--trim=safe` (JuliaC).

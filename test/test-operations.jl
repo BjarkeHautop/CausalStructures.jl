@@ -342,15 +342,17 @@ end
     @test :B in children(closed, :C)
 end
 
-@testitem "meek_closure R1 collider guard: do not create new unshielded collider" tags =
+@testitem "meek_closure R1: fires even when it creates a new unshielded collider elsewhere" tags =
     [:unit, :operations] begin
-    # A --> B, D --> C, B --- C: R1 would fire (A not adj C), but orienting B --> C
-    # would create unshielded collider D --> C <-- B (D not adj B) - guard blocks it.
-    pdag = PDAG(directed(:A, :B), directed(:D, :C), undirected(:B, :C))
+    # A --> B, B --- C, P --> C, A not adj C, P not adj B: Meek (1995)'s R1 has
+    # no "no new collider" exception - it is proven never to create one for a
+    # genuine CPDAG, and under background knowledge it must still fire. Orienting
+    # B --> C here creates the new unshielded collider P --> C <-- B, but R1
+    # must still apply.
+    pdag = PDAG(directed(:A, :B), undirected(:B, :C), directed(:P, :C))
     closed = meek_closure(pdag)
     @test closed isa MPDAG
-    @test has_edge(closed, :B, :C) || has_edge(closed, :C, :B)  # some edge exists
-    @test !(:C in children(closed, :B))  # B --> C must NOT be oriented
+    @test :C in children(closed, :B)
 end
 
 @testitem "meek_closure R2: orient along directed path" tags = [:unit, :operations] begin
@@ -360,6 +362,24 @@ end
     @test closed isa MPDAG
     @test :B in children(closed, :A)
     @test :B in children(closed, :C)
+end
+
+@testitem "meek_closure R4: orients through an undirected sibling's directed chain" tags =
+    [:unit, :operations] begin
+    # A --- B, A --- C, A --- D, C --> D --> B, C not adjacent to B: Meek
+    # (1995)'s R4 needs a directed chain c --> d --> b through a's undirected
+    # sibling c (here A --- C), not a directed path from a to b itself (there
+    # is none: A has no directed edges at all).
+    pdag = PDAG(
+        undirected(:A, :B),
+        undirected(:A, :C),
+        undirected(:A, :D),
+        directed(:C, :D),
+        directed(:D, :B),
+    )
+    closed = meek_closure(pdag)
+    @test closed isa MPDAG
+    @test :B in children(closed, :A)
 end
 
 @testitem "meek_closure matches causal-learn regression" tags = [:unit, :operations] begin

@@ -122,7 +122,8 @@ The four rules are:
 - **R2**: `a --- b`, directed path `a --> w --> b` exists --> orient `a --> b`
 - **R3**: `a --- b`, two parents `c, d` of `b` with `c` not adjacent to `d`,
   and `a --- c`, `a --- d` --> orient `a --> b`
-- **R4**: `a --- b`, directed path `a -->+ b` exists --> orient `a --> b`
+- **R4**: `a --- b`, `a --- c`, `c` not adjacent to `b`, and a directed path
+  `c --> d --> b` exists --> orient `a --> b`
 
 # Keyword arguments
 
@@ -195,20 +196,16 @@ function meek_closure(cg::AbstractPDAG; check_cycles::Bool = true, r4::Bool = tr
         return true
     end
 
-    # R1 collider guard: would orienting b --> c create a new unshielded collider at c?
-    creates_collider(b, c) = any(p -> p != b && !adjacent(p, b), pa[c])
-
     changed = true
     while changed
         changed = false
 
-        # R1: a --> b --- c, a not adj c, no new unshielded collider at c --> orient b --> c
+        # R1: a --> b --- c, a not adj c --> orient b --> c
         for b = 1:n
             (isempty(pa[b]) || isempty(und[b])) && continue
             pb = collect(pa[b])
             for c in collect(und[b])
                 any(a -> !adjacent(a, c), pb) || continue
-                creates_collider(b, c) && continue
                 try_orient!(b, c) && (changed = true)
             end
         end
@@ -240,15 +237,20 @@ function meek_closure(cg::AbstractPDAG; check_cycles::Bool = true, r4::Bool = tr
             end
         end
 
-        # R4: a --- b and directed path a -->⁺ b exists --> orient a --> b  (or b --> a)
+        # R4: a --- b, ∃c: a --- c, c not adj b, ∃d: c --> d --> b --> orient a --> b
         if r4
             for a = 1:n
                 for b in collect(und[a])
-                    if has_dir_path(a, b)
-                        try_orient!(a, b) && (changed = true)
-                    elseif has_dir_path(b, a)
-                        try_orient!(b, a) && (changed = true)
+                    fires = false
+                    for c in und[a]
+                        c == b && continue
+                        adjacent(c, b) && continue
+                        if any(d -> d in pa[b], ch[c])
+                            fires = true
+                            break
+                        end
                     end
+                    fires && try_orient!(a, b) && (changed = true)
                 end
             end
         end

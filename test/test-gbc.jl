@@ -33,7 +33,10 @@ end
 
 @testitem "backdoor_set CPDAG: undirected edge to Y makes Y a possible descendant" tags =
     [:unit, :gbc] begin
-    cpdag = CPDAG("A --> X <-- C, D --> Y <-- E, X --- Y")
+    # A, C confound both X and Y (each is adjacent to both), so X --- Y stays
+    # undirected under Meek closure: neither v-structure gives R1 a witness
+    # parent that is *not* adjacent to the other endpoint.
+    cpdag = CPDAG("A --> X <-- C, A --> Y <-- C, X --- Y")
     @test backdoor_set(cpdag, :X, :Y) === nothing
 end
 

@@ -493,7 +493,7 @@ end
 # True if no Meek orientation rule (R1–R4) would fire.
 # Mirrors the safeguards in meek_closure so this is consistent with it.
 function _cpdag_meek_closed(B::PDAGBackend, n::Int)
-    # R1: u-->v, v---w, u ⊄ w  ⇒  v-->w  (unless cycle or new collider)
+    # R1: u-->v, v---w, u ⊄ w  ⇒  v-->w  (unless cycle)
     for v = 1:n
         pa = _parents_slice(B, v)
         isempty(pa) && continue
@@ -501,9 +501,6 @@ function _cpdag_meek_closed(B::PDAGBackend, n::Int)
             for u in pa
                 _cpdag_adjacent(B, u, w) && continue
                 _cpdag_has_dir_path(B, w, v, n) && continue  # would create cycle
-                creates_collider =
-                    any(p -> p != v && !_cpdag_adjacent(B, v, p), _parents_slice(B, w))
-                creates_collider && continue
                 return false
             end
         end
@@ -534,11 +531,15 @@ function _cpdag_meek_closed(B::PDAGBackend, n::Int)
         end
     end
 
-    # R4: u---v and directed path u⇒v or v⇒u
+    # R4: u---v, ∃c: u---c, c ⊄ v, ∃d: c-->d-->v  ⇒  u-->v
     for v = 1:n
         for u in _undirected_slice(B, v)
-            (_cpdag_has_dir_path(B, u, v, n) || _cpdag_has_dir_path(B, v, u, n)) &&
-                return false
+            for c in _undirected_slice(B, u)
+                c == v && continue
+                _cpdag_adjacent(B, c, v) && continue
+                _cpdag_intersects(_children_slice(B, c), _parents_slice(B, v)) &&
+                    return false
+            end
         end
     end
 
