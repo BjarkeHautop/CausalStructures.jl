@@ -39,13 +39,6 @@ markers connects consecutive node groups pairwise, so `"A --> B --> C"` yields
 two edges (`A-->B`, `B-->C`) while `"A --> B + C"` yields `A-->B` and `A-->C`.
 A statement with no marker (e.g. `"F"`) declares isolated node(s).
 
-!!! note "Skipping validation"
-
-    Every graph type also has a constructor taking a node set and an edge vector directly, e.g. `DAG(nodes, edges)`, which accepts a
-    `validate::Bool = true` keyword. Pass `validate = false` to skip
-    the structural check (only do so if you are sure your algorithm
-    returns a valid graph!).
-
 ## Graph classes
 
 Every graph type is a subtype of [`CausalGraph`](@ref), and each graph class is
@@ -54,6 +47,13 @@ verified on construction to be a valid graph.
 ```@docs
 CausalGraph
 ```
+
+!!! note "Skipping validation"
+
+    Every graph type also has a constructor taking a node set and an edge vector directly, e.g. `DAG(nodes, edges)`, which accepts a
+    `validate::Bool = true` keyword. Pass `validate = false` to skip
+    the structural check (only do so if you are sure your algorithm
+    returns a valid graph!).
 
 ### Directed Acyclic Graphs
 
