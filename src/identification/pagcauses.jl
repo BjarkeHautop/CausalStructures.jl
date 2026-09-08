@@ -51,41 +51,6 @@ function _possan_mask(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int, targets)
     return reach
 end
 
-# Nodes reachable from `x` by a collider path beginning with an arrowhead
-# (Definition 5), non-endpoints restricted to `allowed`, computed in M_X (X's
-# directed-out edges excluded).
-function _collider_path_reach(
-    adj::BitMatrix,
-    mark::Matrix{Endpoint},
-    n::Int,
-    x::Int,
-    allowed::BitVector,
-)
-    reach = falses(n)
-    stack = Int[]
-    for w = 1:n
-        w == x && continue
-        adj[x, w] || continue
-        mark[x, w] == Arrow || continue   # arrowhead at w
-        mark[w, x] == Tail && continue    # x --> w: not in M_X
-        reach[w] = true
-        allowed[w] && push!(stack, w)
-    end
-    while !isempty(stack)
-        v = pop!(stack)
-        for w = 1:n
-            w == v && continue
-            w == x && continue   # a path cannot revisit its own starting point
-            adj[v, w] || continue
-            reach[w] && continue
-            mark[w, v] == Arrow || continue   # arrowhead into v: v remains a collider
-            reach[w] = true
-            allowed[w] && push!(stack, w)
-        end
-    end
-    return reach
-end
-
 # Nodes reachable from `x` via a strictly bidirected chain through members
 # of `allowed`, followed by one wildcard arrowhead-in edge (the collider-path
 # shape "X <-> ... <-> V_{k-1} <-* V" of Definition 6(1) and Definition 7).
@@ -148,10 +113,11 @@ function _induced_complete(adj::BitMatrix, n::Int, mask::BitVector)
 end
 
 # W-bar (Definition 5): V in PossAn(Y,M)\W reachable from X by a collider path
-# beginning with an arrowhead, with every non-endpoint in W.
+# beginning with an arrowhead at X, with every non-endpoint in W. This is the
+# same collider-path shape as Definition 6(1)/Definition 7,.
 function _w_bar_mask(adj, mark, n, xi::Int, yi::Int, w_mask::BitVector)
     possan_y = _possan_mask(adj, mark, n, (yi,))
-    reach = _collider_path_reach(adj, mark, n, xi, w_mask)
+    reach = _bidirected_chain_reach(adj, mark, n, xi, w_mask)
     return BitVector(reach[v] && possan_y[v] && !w_mask[v] for v = 1:n)
 end
 
@@ -355,6 +321,13 @@ function pagcauses(cg::PAG, x::Symbol, y::Symbol)
             c_mask[c] = true
         end
         _maximal_local_mag_marks!(adj, mark, n, xi, c_mask)
+        # Lemma 8 (Sec. 3.5.2): if Y is not a possible descendant of X in this
+        # maximal local MAG, X has no causal effect on Y in any MAG valid to
+        # it, so this branch contributes no adjustment sets. Without this
+        # check, Definition 6/Theorem 2's conditions degenerate to vacuously
+        # true here (e.g. an empty block set trivially satisfies all three),
+        # so `_pagcauses_local!` would otherwise report spurious sets.
+        _possde_mask(adj, mark, n, (xi,), falses(n))[yi] || continue
         _pagcauses_local!(result, adj, mark, n, xi, yi, node_vec)
     end
     return unique!(result)

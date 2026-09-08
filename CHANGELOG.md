@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `meek_closure`/`is_mpdag`: R1 wrongly skipped orientations that would create a new collider, and R4 used the wrong pattern, so both could leave a background-knowledge PDAG under-oriented.
 
+- `pagcauses`/`maximal_local_mag`: could return wrong or spurious adjustment sets. Fixed and validated testing against brute-force approach.
+
 ### Other changes
 
 - Package now compiles under `--trim=safe` (JuliaC).

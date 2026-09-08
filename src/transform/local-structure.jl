@@ -183,8 +183,14 @@ function _maximal_local_mag_marks!(
         end
     end
 
-    # Step 3: close under the local rule set.
-    _close_pag_marks_local!(adj, mark)
+    # Step 3: close under the local rule set. R8 is restricted to the region
+    # Steps 1-2 are themselves allowed to touch.
+    scope = copy(possde)
+    scope[x_idx] = true
+    for t = 1:n
+        c_mask[t] && (scope[t] = true)
+    end
+    _close_pag_marks_local!(adj, mark, scope)
     return mark
 end
 

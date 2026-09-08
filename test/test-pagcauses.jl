@@ -26,9 +26,11 @@
     end
 
     # The Sec. 3.4 brute-force baseline: D-SEP(X,Y,M_X) per MAG, kept if disjoint from De(X,M) and not containing Y.
+    # Restricted to MAGs where X is actually an ancestor of Y (Lemma 8): otherwise D-SEP is meaningless.
     function naive_dsep_sets(pag, x, y)
         sets = Set{Vector{Symbol}}()
         for mag in classical_mags(pag)
+            x in ancestors(mag, y) || continue
             chs = children(mag, x)
             mag_x = isempty(chs) ? mag : remove_edges(mag, [directed(x, c) for c in chs]...)
             w = possible_d_sep(mag_x, x, y)
@@ -113,6 +115,83 @@ end
 
     wbar = CausalStructures._w_bar_mask(adj, mark, n, xi, yi, falses(n))
     @test Set(node_vec[v] for v = 1:n if wbar[v]) == Set([:A])
+end
+
+@testitem "pagcauses: regression, R8 must not use a locally-hypothesized edge as a witness outside its own region" setup =
+    [PagcausesBaseline] tags = [:unit, :pagcauses] begin
+    # R8 was using the local hypothesis Y --> X (Step 1) as a witness to also
+    # force B/C o-> X to B/C --> X, even though B, C are outside PossDe(:Y);
+    # a MAG with Y --> X but B <-> X, C <-> X is a valid counterexample. Fixed
+    # by restricting R8 to PossDe(X,[-C]) union {X} union C.
+    mag = MAG(
+        directed(:Y, :X),
+        bidirected(:A, :X),
+        bidirected(:B, :X),
+        directed(:C, :X),
+        bidirected(:B, :Y),
+        bidirected(:C, :Y),
+    )
+    pag = mag_to_pag(mag)
+    @test backdoor_set(pag, :Y, :X) === nothing   # confirms this exercises the search, not Prop. 1
+
+    truth = naive_dsep_sets(pag, :Y, :X)
+    @test truth == Set([Symbol[], [:B], [:C], [:B, :C]])   # sanity-check the ground truth itself
+
+    @test Set(sort.(pagcauses(pag, :Y, :X))) == truth
+end
+
+@testitem "pagcauses: W-bar's collider path must begin with an arrowhead at X, not at the far endpoint" setup =
+    [PagcausesBaseline] tags = [:unit, :pagcauses] begin
+    # `_w_bar_mask` used `_collider_path_reach`, which required the arrowhead
+    # at the far endpoint of a length-1 collider path instead of at X, so it
+    # missed Y <-o C and returned an empty W-bar for W = {}, making
+    # Definition 6/Theorem 2 vacuously true and pagcauses(pag, :Y, :A) return
+    # several invalid sets ([], [:B], [:C], [:B, :C]). Fixed by having
+    # `_w_bar_mask` reuse `_bidirected_chain_reach` instead.
+    mag = MAG(
+        directed(:X, :Y),
+        directed(:X, :A),
+        directed(:X, :C),
+        directed(:B, :Y),
+        directed(:C, :Y),
+        directed(:C, :A),
+        bidirected(:B, :C),
+    )
+    pag = mag_to_pag(mag)
+    @test backdoor_set(pag, :Y, :A) === nothing   # confirms this exercises the search, not Prop. 1
+
+    mags = classical_mags(pag)
+    bogus_sets = [Symbol[], [:B], [:C], [:B, :C]]
+    for w in bogus_sets
+        @test !any(is_valid_adjustment(expand_latents(m), :Y, :A, w) for m in mags)
+    end
+
+    got = Set(sort.(pagcauses(pag, :Y, :A)))
+    @test isempty(intersect(got, Set(bogus_sets)))
+end
+
+@testitem "pagcauses: regression, a local structure with no causal effect must contribute no sets" setup =
+    [PagcausesBaseline] tags = [:unit, :pagcauses] begin
+    # For local structure C = {:X} at treatment :A, :C is outside PossDe(:A)
+    # in the resulting maximal local MAG (Lemma 8: no causal effect in that
+    # branch), yet `_pagcauses_local!` still ran on it; with DD-SEP empty, an
+    # empty block set trivially satisfies Theorem 2, so every W was spuriously
+    # accepted. Fixed by skipping a branch once Y is confirmed not to be a
+    # possible descendant of X in it.
+    mag = MAG(
+        directed(:Y, :X),
+        bidirected(:A, :X),
+        directed(:B, :X),
+        directed(:X, :C),
+        bidirected(:A, :Y),
+        directed(:Y, :C),
+        directed(:B, :A),
+        directed(:B, :C),
+    )
+    pag = mag_to_pag(mag)
+    @test backdoor_set(pag, :A, :C) === nothing   # confirms this exercises the search, not Prop. 1
+    @test naive_dsep_sets(pag, :A, :C) == Set([[:B, :Y]])   # sanity-check the ground truth itself
+    @test Set(sort.(pagcauses(pag, :A, :C))) == Set([[:B, :Y]])
 end
 
 @testitem "pagcauses: rejects graphs with undirected (selection-variable) edges" tags =

@@ -504,14 +504,23 @@ end
 
 # R8: alpha -> beta -> gamma or alpha -o beta -> gamma, and alpha o-> gamma =>
 # alpha -> gamma
-function _pag_rule_r8!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
+#
+# `scope`, when given, restricts alpha/beta/gamma to a trusted node set.
+function _pag_rule_r8!(
+    adj::BitMatrix,
+    mark::Matrix{Endpoint},
+    n::Int,
+    scope::Union{BitVector,Nothing} = nothing,
+)
     changed = false
     for alpha = 1:n, gamma = 1:n
         alpha == gamma && continue
+        scope === nothing || (scope[alpha] && scope[gamma]) || continue
         adj[alpha, gamma] || continue
         (mark[alpha, gamma] == Arrow && mark[gamma, alpha] == Circle) || continue
         for beta = 1:n
             (beta == alpha || beta == gamma) && continue
+            scope === nothing || scope[beta] || continue
             adj[alpha, beta] && adj[beta, gamma] || continue
             into_beta =
                 mark[alpha, beta] == Arrow &&
@@ -637,7 +646,16 @@ end
 # Zhang's R1-R3/R8-R10, R4 replaced by R'_4, R11 added, R5-R7 omitted (they
 # only concern undirected/selection-bias edges). Callers must ensure
 # `adj`/`mark` has no undirected edges; this function does not check that.
-function _close_pag_marks_local!(adj::BitMatrix, mark::Matrix{Endpoint})
+#
+# `scope` (PossDe(X, Mi[-C]) union {X} union C) restricts R8: it can otherwise
+# chain through a `beta --> gamma` edge that is only a local hypothesis from
+# Step 1, not a genuine invariant, to unsoundly resolve a circle outside that
+# region.
+function _close_pag_marks_local!(
+    adj::BitMatrix,
+    mark::Matrix{Endpoint},
+    scope::Union{BitVector,Nothing} = nothing,
+)
     n = size(adj, 1)
     changed = true
     while changed
@@ -646,7 +664,7 @@ function _close_pag_marks_local!(adj::BitMatrix, mark::Matrix{Endpoint})
         changed |= _pag_rule_r2!(adj, mark, n)
         changed |= _pag_rule_r3!(adj, mark, n)
         changed |= _pag_rule_r4_local!(adj, mark, n)
-        changed |= _pag_rule_r8!(adj, mark, n)
+        changed |= _pag_rule_r8!(adj, mark, n, scope)
         changed |= _pag_rule_r9!(adj, mark, n)
         changed |= _pag_rule_r10!(adj, mark, n)
         changed |= _pag_rule_r11!(adj, mark, n)
