@@ -118,3 +118,39 @@ function possible_joint_parent_sets(cg::AbstractPDAG, xs::AbstractVector{Symbol}
     end
     return results
 end
+
+"""
+    possible_parent_sets(cg::AbstractPDAG, x::Symbol) -> Vector{Vector{Symbol}}
+
+Return the possible parent sets of `x` implied by `cg`, using the graph-only
+half of local IDA (Algorithm 3 of [maathuis2009estimating](@cite)).
+For each accepted orientation of the undirected neighbors of `x`, include
+`pa(x) ∪ S`, where `S` is the subset oriented into `x`. On `MPDAG`s, acceptance
+requires a valid full Meek closure; on `CPDAG`s, the local v-structure check
+suffices. This is the `xs = [x]` special case of
+[`possible_joint_parent_sets`](@ref).
+
+Unlike [`all_adjustment_sets`](@ref), returns one entry per accepted subset,
+not per DAG in the Markov equivalence class.
+
+# Examples
+
+```jldoctest
+julia> cpdag = CPDAG("X1 --- X2 + X3 + X4, X3 + X4 --> Y");
+
+julia> sort(possible_parent_sets(cpdag, :X1); by = length)
+4-element Vector{Vector{Symbol}}:
+ []
+ [:X2]
+ [:X3]
+ [:X4]
+```
+
+# References
+
+- [maathuis2009estimating](@citet)
+- [perkovic2017mpdag](@citet)
+"""
+function possible_parent_sets(cg::AbstractPDAG, x::Symbol)
+    return [only(pa) for pa in possible_joint_parent_sets(cg, [x])]
+end

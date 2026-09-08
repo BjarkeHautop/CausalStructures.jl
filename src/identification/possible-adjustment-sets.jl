@@ -67,22 +67,16 @@ julia> possible_optimal_adjustment_sets(cpdag, :X1, :Y)
 - [witte2020efficient](@citet)
 """
 function possible_optimal_adjustment_sets(cg::AbstractPDAG, x::Symbol, y::Symbol)
-    pa = parents(cg, x)
     sibs = neighbors(cg, x; mode = :undirected)
-    k = length(sibs)
 
     result = Vector{Union{Vector{Symbol},Nothing}}()
-    for mask = 0:(2^k-1)
-        S = [sibs[i] for i = 1:k if ((mask >> (i - 1)) & 1) == 1]
-        _locally_valid_parent_orientation(cg, pa, S) || continue
-
-        parents_here = [pa; S]
+    for parents_here in possible_parent_sets(cg, x)
         if y in parents_here
             push!(result, nothing)
             continue
         end
 
-        away = [s for s in sibs if !(s in S)]
+        away = [s for s in sibs if !(s in parents_here)]
         mpdag = _oriented_local_mpdag(cg, x, parents_here, away)
         push!(result, adjustment_set(mpdag, x, y; type = :optimal))
     end

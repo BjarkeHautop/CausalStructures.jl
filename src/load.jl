@@ -72,8 +72,10 @@ include("transform/enumerate-mags.jl")
 
 # Depends on identification/backdoor.jl (adjustment_set) and
 # transform/background-knowledge.jl (apply_background_knowledge) above.
-include("identification/possible-adjustment-sets.jl")
+# possible-adjustment-sets.jl's possible_optimal_adjustment_sets calls
+# possible_parent_sets, defined in possible-joint-parent-sets.jl.
 include("identification/possible-joint-parent-sets.jl")
+include("identification/possible-adjustment-sets.jl")
 include("identification/pagcauses.jl")
 
 # I/O, generation, simulation, display, layout

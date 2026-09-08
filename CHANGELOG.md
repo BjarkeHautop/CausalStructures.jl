@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `is_valid_iv`/`all_iv_sets` on an `ADMG` could wrongly reject a valid instrument when its own edge into the treatment was bidirected (e.g. `Z <-> X`).
 
+- `possible_parent_sets`/`possible_optimal_adjustment_sets` on an `MPDAG` only checked for a new collider at the target node, so it could wrongly accept a parent orientation that closes a directed cycle elsewhere in the graph.
+
 ### Other changes
 
 - Package now compiles under `--trim=safe` (JuliaC).

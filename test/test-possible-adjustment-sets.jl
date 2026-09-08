@@ -79,3 +79,20 @@ end
     @test possible_parent_sets(mpdag, :X1) == [[:X3]]
     @test possible_optimal_adjustment_sets(mpdag, :X1, :Y) == [[:X3]]
 end
+
+@testitem "possible_parent_sets rejects a locally-valid-but-globally-cyclic orientation on MPDAG (Perkovic & Kalisch 2017, Example 4.8)" tags =
+    [:unit, :possible_adjustment_sets] begin
+    # Triangle B-C-D with only D --> B fixed by background knowledge. Directing
+    # the remaining sibling edges as B --> C, C --> D is locally valid at C (B, D
+    # are adjacent, so no new v-structure), but combined with D --> B it closes a
+    # directed cycle B --> C --> D --> B. Local IDA (Maathuis et al. 2009), which
+    # only checks for a new collider at C, cannot see this and wrongly accepts
+    # {B} as a parent set of C; the correct answer (matching Algorithm 2 of
+    # Perkovic & Kalisch 2017) excludes it.
+    cpdag = CPDAG("B --- C + D, C --- D")
+    mpdag = apply_background_knowledge(cpdag, "D --> B")
+
+    pas = possible_parent_sets(mpdag, :C)
+    @test Set(Set.(pas)) == Set(Set.([Symbol[], [:D], [:B, :D]]))
+    @test [:B] ∉ pas
+end
