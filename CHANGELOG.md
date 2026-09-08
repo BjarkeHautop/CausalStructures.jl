@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased version
 
+### Bug fixes
+
+- `is_valid_iv`/`all_iv_sets` on an `ADMG` could wrongly reject a valid instrument when its own edge into the treatment was bidirected (e.g. `Z <-> X`).
+
 ### Other changes
 
 - Package now compiles under `--trim=safe` (JuliaC).

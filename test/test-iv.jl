@@ -114,6 +114,15 @@ end
     @test is_valid_iv(admg, :X, :Y, [:Z])
 end
 
+@testitem "is_valid_iv (ADMG): Z is valid instrument via bidirected edge into X" tags =
+    [:unit, :iv] begin
+    # Z <-> X is itself a bidirected (latent-confounded) edge, and X <-> Y is a
+    # separate confounder: do(X) must remove both arrowheads into X so X stays a
+    # collider on Z <-> X <-> Y, not a conditioned-open path.
+    admg = ADMG(bidirected(:Z, :X), directed(:X, :Y), bidirected(:X, :Y))
+    @test is_valid_iv(admg, :X, :Y, [:Z])
+end
+
 @testitem "is_valid_iv (ADMG): isolated node fails relevance" tags = [:unit, :iv] begin
     admg = ADMG(bidirected(:X, :Y), directed(:Z, :X), directed(:X, :Y))
     @test !is_valid_iv(admg, :X, :Y, [:X])

@@ -14,3 +14,4 @@ node_modules
 .JETLSConfig.toml
 benchmark/
 *.pdf
+*.txt

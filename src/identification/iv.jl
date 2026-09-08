@@ -1,7 +1,6 @@
 # Instrumental Variables (Brito & Pearl 2002)
 
-# G_{overline{X}}: G with all incoming directed edges to X removed (do(X)).
-# Bidirected edges in an ADMG are left intact.
+# G_{overline{X}}: G with all edges having an arrowhead into X removed (do(X)).
 function _build_g_do_x(cg::DAG, x::Symbol)
     return build_graph(
         DAG,
@@ -10,13 +9,10 @@ function _build_g_do_x(cg::DAG, x::Symbol)
     )
 end
 
-function _build_g_do_x(cg::ADMG, x::Symbol)
-    return build_graph(
-        ADMG,
-        Set(cg.backend.nodes),
-        filter(e -> !(is_directed(e) && e.dst == x), cg.edges),
-    )
-end
+# ADMGs also carry bidirected (spousal) edges into X; do(X) must cut those too,
+# or X can remain a collider on Z <-> X <-> Y paths after mutilation. Reuses
+# the same "cut every arrowhead into X" operation id.jl relies on for G_{overline{X}}.
+_build_g_do_x(cg::ADMG, x::Symbol) = _remove_incoming(cg, (x,))
 
 # Checks (ii) before (i) to skip the more expensive graph-build when relevance fails.
 function _check_iv(cg, x, y, z, g_do_x)
