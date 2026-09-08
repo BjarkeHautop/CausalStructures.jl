@@ -239,7 +239,13 @@ function build_backend(::Type{PAG}, nodes, edges::Vector{CausalEdge})
     return PAGBackend(ordered_nodes, index, colptr, deg, rowval)
 end
 
-# Slice into bucket b (1-indexed) of node i for backends with a deg matrix
+"""
+    bucket_slice(B, i, bucket) -> AbstractVector{Int}
+
+Indices of node `i`'s neighbors in relationship `bucket`, as a view into
+`B.rowval`. Not meaningful on its own: bucket numbers only make sense per
+backend type.
+"""
 function bucket_slice(
     B::Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend,UNKNOWNBackend,PAGBackend},
     i::Int,
@@ -252,10 +258,46 @@ function bucket_slice(
     @view B.rowval[start:(start+B.deg[bucket, i]-1)]
 end
 
-# All neighbors of node i across all buckets
+"""
+    _all_nbrs_slice(B, i) -> AbstractVector{Int}
+
+Indices of all of node `i`'s neighbors, across every relationship bucket, as
+a view into `B.rowval`.
+"""
 _all_nbrs_slice(B::CausalBackend, i::Int) = @view B.rowval[B.colptr[i]:(B.colptr[i+1]-1)]
 
-# Named bucket accessors
+# Named bucket accessors. One docstring per name below (bound to the first
+# method via `function ... end`); the per-backend one-liners that follow are
+# just that bucket layout for each backend type.
+
+"""
+    _parents_slice(B, i) -> AbstractVector{Int}
+
+Indices of the parents of node `i` (`p --> i`), as a view into `B.rowval`.
+"""
+function _parents_slice end
+
+"""
+    _children_slice(B, i) -> AbstractVector{Int}
+
+Indices of the children of node `i` (`i --> c`), as a view into `B.rowval`.
+"""
+function _children_slice end
+
+"""
+    _spouses_slice(B, i) -> AbstractVector{Int}
+
+Indices of the spouses of node `i` (`i <-> s`), as a view into `B.rowval`.
+"""
+function _spouses_slice end
+
+"""
+    _undirected_slice(B, i) -> AbstractVector{Int}
+
+Indices of node `i`'s undirected neighbors (`i --- u`), as a view into
+`B.rowval`.
+"""
+function _undirected_slice end
 
 _parents_slice(B::DAGBackend, i::Int) = bucket_slice(B, i, 1)
 _children_slice(B::DAGBackend, i::Int) = bucket_slice(B, i, 2)
@@ -285,12 +327,45 @@ _parents_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 1)
 _children_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 2)
 _undirected_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 3)
 _spouses_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 4)
-# Circle-endpoint relations (from focal node X to neighbor Y).
-_circle_children_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 5)         # X o-> Y
-_circle_parents_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 6)          # X <-o Y
-_circle_undirected_out_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 7)   # X o-- Y
-_circle_undirected_in_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 8)    # X --o Y
-_circle_circle_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 9)           # X o-o Y
+
+# Circle-endpoint relations (from focal node X to neighbor Y). PAG-only: the
+# only place these five appear at all, since a definite edge has no circle
+# mark to begin with.
+
+"""
+    _circle_children_slice(B::PAGBackend, i) -> AbstractVector{Int}
+
+Indices of `j` with `i o-> j`, as a view into `B.rowval`.
+"""
+_circle_children_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 5)
+
+"""
+    _circle_parents_slice(B::PAGBackend, i) -> AbstractVector{Int}
+
+Indices of `j` with `i <-o j`, as a view into `B.rowval`.
+"""
+_circle_parents_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 6)
+
+"""
+    _circle_undirected_out_slice(B::PAGBackend, i) -> AbstractVector{Int}
+
+Indices of `j` with `i o-- j`, as a view into `B.rowval`.
+"""
+_circle_undirected_out_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 7)
+
+"""
+    _circle_undirected_in_slice(B::PAGBackend, i) -> AbstractVector{Int}
+
+Indices of `j` with `i --o j`, as a view into `B.rowval`.
+"""
+_circle_undirected_in_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 8)
+
+"""
+    _circle_circle_slice(B::PAGBackend, i) -> AbstractVector{Int}
+
+Indices of `j` with `i o-o j`, as a view into `B.rowval`.
+"""
+_circle_circle_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 9)
 
 function node_index(cg::CausalGraph, node::Symbol)
     idx = get(cg.backend.index, node, 0)

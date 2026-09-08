@@ -414,9 +414,8 @@ has the same skeleton as every MAG in the class, and each endpoint carries an
 (`-`), or a circle (`o`) where the mark varies across the class. All six edge
 kinds are allowed (`-->`, `---`, `<->`, `o->`, `o--`, `o-o`).
 
-A `PAG` is validated on construction: it must be the image of some MAG under
-[`mag_to_pag`](@ref), checked by resolving it to a MAG with [`mag_from_pag`](@ref)
-and confirming the round-trip recovers the same graph.
+Validation is checked by doing a round-trip conversion to a MAG and back, and
+verifying that the original PAG is recovered.
 
 # Examples
 
