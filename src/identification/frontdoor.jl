@@ -59,6 +59,7 @@ function is_valid_frontdoor(
     for yi in ys
         ys_mask[yi] = true
     end
+    any(v -> node_index(cg, v) in xs || ys_mask[node_index(cg, v)], z) && return false
 
     # Condition (i): Z intercepts all directed paths from X to Y.
     z_mask = falses(n)
@@ -118,6 +119,7 @@ function is_valid_frontdoor(
     for yi in ys
         ys_mask[yi] = true
     end
+    any(v -> node_index(cg, v) in xs || ys_mask[node_index(cg, v)], z) && return false
 
     # Condition (i): Z intercepts all directed paths from X to Y.
     z_mask = falses(n)

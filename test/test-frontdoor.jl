@@ -139,6 +139,13 @@ end
     @test is_valid_frontdoor(cg, :X, :Y)
 end
 
+@testitem "is_valid_frontdoor: Z overlapping X or Y is rejected" tags = [:unit, :frontdoor] begin
+    cg = DAG(directed(:U, :X), directed(:X, :M), directed(:M, :Y), directed(:U, :Y))
+    @test !is_valid_frontdoor(cg, :X, :Y, [:Y])
+    @test !is_valid_frontdoor(cg, :X, :Y, [:X])
+    @test !is_valid_frontdoor(cg, :X, :Y, [:M, :Y])
+end
+
 # ── is_valid_frontdoor on G' (Fig. 1b) ───────────────────────────────────────
 
 @testitem "is_valid_frontdoor: Jeong Fig 1b - four valid sets" setup=[JeongGraphs] tags =
@@ -536,6 +543,13 @@ end
     # X <-> Y and X <-> M: M has a backdoor path from X
     admg = ADMG(bidirected(:X, :Y), bidirected(:X, :M), directed(:X, :M), directed(:M, :Y))
     @test !is_valid_frontdoor(admg, :X, :Y, [:M])
+end
+
+@testitem "is_valid_frontdoor (ADMG): Z overlapping X or Y is rejected" tags =
+    [:unit, :frontdoor] begin
+    admg = ADMG(bidirected(:X, :Y), directed(:X, :M), directed(:M, :Y))
+    @test !is_valid_frontdoor(admg, :X, :Y, [:Y])
+    @test !is_valid_frontdoor(admg, :X, :Y, [:X])
 end
 
 @testitem "is_valid_frontdoor (ADMG): consistent with DAG latent projection" tags =
