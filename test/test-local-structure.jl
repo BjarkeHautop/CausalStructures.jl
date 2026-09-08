@@ -77,3 +77,23 @@ end
     @test_throws ArgumentError possible_local_structures(pag, :A)
     @test_throws ArgumentError maximal_local_mag(pag, :A, Symbol[])
 end
+
+@testitem "maximal_local_mag Step 2 clause (ii) needs a witness edge into Vl, not out of it" tags =
+    [:unit, :local_structure] begin
+    # Regression test: clause (ii) of Algorithm 1 Step 2 orients Vl --> Vj when
+    # F[Vl] == F[Vj] and some Vm not adjacent to Vj has Vm --> Vl. This PAG has
+    # F[V4] = F[V5] = ∅ and V4 --> V3 (an edge *out of* V4), but no edge *into*
+    # V4, so clause (ii) must not fire on V4 o-o V5. Confirmed against
+    # enumerate_mags.
+    pag = PAG(
+        "V1 o-> V4 + V5 + V6, V2 --> V3, V2 o-> V4 + V5 + V6, " *
+        "V4 --> V3, V6 --> V3, V4 o-o V5, V5 o-o V6",
+    )
+    result = maximal_local_mag(pag, :V1, Symbol[])
+    edges_set = Set((e.src, e.dst, e.src_end, e.dst_end) for e in result.edges)
+    expected = UNKNOWN(
+        "V1 --> V4 + V5 + V6, V2 --> V3, V2 o-> V4 + V5 + V6, " *
+        "V4 --> V3, V6 --> V3, V4 o-o V5, V5 o-o V6",
+    )
+    @test edges_set == Set((e.src, e.dst, e.src_end, e.dst_end) for e in expected.edges)
+end

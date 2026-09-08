@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `possible_parent_sets`/`possible_optimal_adjustment_sets` on an `MPDAG` only checked for a new collider at the target node, so it could wrongly accept a parent orientation that closes a directed cycle elsewhere in the graph.
 
+- `maximal_local_mag`/`possible_local_structures`: Step 2 of the local-structure algorithm looked for a witness edge pointing out of `Vl` instead of into it, so it could orient a circle edge in a direction not implied by every consistent MAG.
+
 ### Other changes
 
 - Package now compiles under `--trim=safe` (JuliaC).

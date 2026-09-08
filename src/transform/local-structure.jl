@@ -170,7 +170,7 @@ function _maximal_local_mag_marks!(
             if !fire && F[vl] == F[vj]
                 for vm in sub
                     (vm == vl || vm == vj || adj[vm, vj]) && continue
-                    (adj[vm, vl] && mark[vl, vm] == Arrow && mark[vm, vl] == Tail) ||
+                    (adj[vm, vl] && mark[vm, vl] == Arrow && mark[vl, vm] == Tail) ||
                         continue
                     fire = true
                     break
