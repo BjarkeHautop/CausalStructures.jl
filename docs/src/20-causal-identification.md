@@ -50,15 +50,10 @@ The [`minimal_separator`](@ref) function finds one:
 minimal_separator(dag, :X, :Y)
 ```
 
-The `restrict` keyword limits the search to a specific pool of variables. If no
-separator exists within that pool, the function returns `nothing`:
+The `restrict` keyword limits the search to a specific pool of variables.
 
 ```@example id
 minimal_separator(dag, :X, :Y; restrict = [:D, :K])
-```
-
-```@example id
-minimal_separator(dag, :X, :Y; restrict = [:D])
 ```
 
 The `include` keyword forces certain variables to always be in the result:
@@ -75,7 +70,7 @@ outcome `Y`:
 
 ```@example id
 dag2 = DAG("U --> X + Y, X --> M --> Y")
-plot(dag2; layout = :stress)
+plot(dag2)
 ```
 
 The mediator `M` is a descendant of `X`, so adjusting for it violates the
@@ -106,7 +101,7 @@ Consider a graph where `U` is an unobserved confounder and `Z` is an available i
 
 ```@example id
 dag3 = DAG("U --> X + Y, Z --> X --> Y")
-plot(dag3; layout = :stress)
+plot(dag3)
 ```
 
 Without a mediator, the frontdoor criterion cannot apply here:

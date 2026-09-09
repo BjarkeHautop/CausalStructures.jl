@@ -29,12 +29,12 @@ const _PLOT_TITLE_FONTSIZE_DEFAULT = @load_preference("plot_title_fontsize", not
 const _PLOT_TITLE_COLOR_DEFAULT = @load_preference("plot_title_color", nothing)
 const _PLOT_OUTER_MARGIN_DEFAULT = @load_preference("plot_outer_margin", 16)
 
-# Foundation: types, edges, construction, mutation, validation, backend storage
+# Foundation: types, edges, construction, editing, validation, backend storage
 include("core/defs.jl")
 include("core/edges.jl")
 include("core/constructors.jl")
 include("core/graph-string.jl")
-include("core/mutate.jl")
+include("core/edit.jl")
 include("core/validate.jl")
 include("core/backend.jl")
 

@@ -299,35 +299,28 @@ end
 """
     pagcauses(cg::PAG, x::Symbol, y::Symbol) -> Vector{Vector{Symbol}}
 
-Return every valid adjustment set relative to `(x, y)` in some MAG consistent
-with `cg`.
+Return all covariate adjustment sets for the effect of `x` on `y` that are
+valid in at least one MAG consistent with `cg` (Wang et al. 2025, Algorithm 1,
+"PAGcauses").
 
-This is the set of possible causal effects of `x` on `y` identifiable via
-covariate adjustment (Wang, Tao, Qin & Zhou 2025, Algorithm 1, "PAGcauses"),
-found without enumerating MAGs.
+Returns `Vector{Symbol}[]` if `x` is not a possible ancestor of `y`. If the
+effect is directly identifiable in `cg`, returns the corresponding
+[`backdoor_set`](@ref).
 
-The naive approach enumerates every MAG consistent with `cg` (up to
-`O(3^((d^2-d)/2))` of them for `d` nodes) and checks D-SEP in each. This
-instead turns "does some MAG give D-SEP = `W`" into a purely graphical
-existence check (Theorem 2) for each of the `O(2^d)` candidate sets `W`,
-without ever constructing a MAG; the paper's complexity analysis (Sec. 3.4)
-puts the overall cost at `O(5^d d^6)`, super-exponentially below the
-MAG-enumeration baseline.
+Throws `ArgumentError` if `cg` contains selection bias (undirected edges),
+which is not covered by the algorithm.
 
-Parallelizes over `Threads.nthreads()` once there are enough of them to
-be worth splitting across tasks.
+# Algorithm
 
-If `x` is not a possible ancestor of `y`, returns `Vector{Symbol}[]` (no causal
-effect). If the causal effect is already identifiable directly in `cg`
-([`backdoor_set`](@ref), Proposition 1), returns that single set. Otherwise,
-for each valid local structure at `x` ([`possible_local_structures`](@ref)),
-this builds the corresponding maximal local MAG ([`maximal_local_mag`](@ref))
-and searches it for potential adjustment sets (Definition 6) with a block set
-satisfying Theorem 2, pruned by the definite sets every such MAG must contain
-(DD-SEP, Definition 7).
+Rather than enumerating the ``O(3^{(d^2-d)/2})`` MAGs consistent with a PAG and
+checking D-SEP in each, the algorithm performs a graphical check for each of
+the ``O(2^d)`` candidate sets. For each possible local structure at `x`
+([`possible_local_structures`](@ref)), it constructs the corresponding maximal
+local MAG ([`maximal_local_mag`](@ref)) and searches for adjustment sets
+satisfying Theorem 2, pruned by DD-SEP (Definition 7). The overall complexity
+is ``O(5^d d^6)`` (Sec. 3.4).
 
-Throws `ArgumentError` if `cg` has selection bias (undirected edges), since
-the paper assumes none throughout.
+Parallelizes over `Threads.nthreads()` when there are enough candidates.
 
 # Examples
 

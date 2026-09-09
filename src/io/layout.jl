@@ -24,13 +24,13 @@ Compute 2-D node positions for `cg` and return them as a
 
 | `method`      | Algorithm                           | Requires                     |
 |---------------|--------------------------------------|-------------------------------|
-| `:spring`     | Fruchterman-Reingold force-directed  | `using NetworkLayout`         |
-| `:stress`     | Stress majorization                  | `using NetworkLayout`         |
-| `:sfdp`       | Scalable Force-Directed Placement    | `using NetworkLayout`         |
-| `:spectral`   | Spectral layout                      | `using NetworkLayout`         |
-| `:shell`      | Concentric shells                    | `using NetworkLayout`         |
-| `:squaregrid` | Square grid                          | `using NetworkLayout`         |
-| `:sugiyama`   | Layered/hierarchical (`DAG` only)    | `using Sugiyama`               |
+| `:spring`     | Fruchterman-Reingold force-directed  | `NetworkLayout`         |
+| `:stress`     | Stress majorization                  | `NetworkLayout`         |
+| `:sfdp`       | Scalable Force-Directed Placement    | `NetworkLayout`         |
+| `:spectral`   | Spectral layout                      | `NetworkLayout`         |
+| `:shell`      | Concentric shells                    | `NetworkLayout`         |
+| `:squaregrid` | Square grid                          | `NetworkLayout`         |
+| `:sugiyama`   | Layered/hierarchical (`DAG` only)    | `Sugiyama`               |
 
 The default is `:stress`, except for a `DAG` with Sugiyama loaded, where it
 is `:sugiyama`. Extra `kwargs` are forwarded to the underlying

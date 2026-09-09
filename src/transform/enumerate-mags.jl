@@ -20,11 +20,10 @@ This is a brute-force search. With `k` circle endpoints in the PAG, it iterates
 all `2^k` tail/arrow assignments; for each it builds the candidate graph,
 validates it as a MAG (which itself runs an m-separation search for maximality),
 and keeps it only when [`mag_to_pag`](@ref) maps it back to `cg`. The cost is
-therefore `O(2^k)` candidates times the per-candidate MAG validation, so it is
+therefore ``O(2^k)`` candidates times the per-candidate MAG validation, so it is
 exponential in the number of circle endpoints. The number of MAGs in a class can
-likewise be very large. The `2^k` candidates are independent of one another, so
-this parallelizes over `Threads.nthreads()` once there are enough of them to be
-worth splitting across tasks.
+likewise be very large. Parallelizes over `Threads.nthreads()` once there are enough
+of them to be worth splitting across tasks.
 
 # Examples
 

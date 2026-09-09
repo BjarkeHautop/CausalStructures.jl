@@ -23,7 +23,7 @@ const titles = Dict(
     "70-benchmarks.md" => "Benchmarks",
     "80-preferences.md" => "Preferences",
     "90-bibliography.md" => "Bibliography",
-    "91-developer.md" => "Developer docs",
+    "91-developer.md" => "Developer Docs",
     "95-reference" => "Reference",
 )
 

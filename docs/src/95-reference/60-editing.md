@@ -1,4 +1,4 @@
-# [Mutation](@id mutation-reference)
+# [Editing](@id editing-reference)
 
 ```@docs
 add_edges

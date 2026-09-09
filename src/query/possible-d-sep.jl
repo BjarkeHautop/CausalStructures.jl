@@ -62,10 +62,9 @@ Return D-SEP(x, y, cg): every node `V != x` for which there is a collider
 path between `x` and `V` in `cg` on which every node, including `V`, is an
 ancestor of `x` or of some member of `y`.
 
-D-SEP is the set [`backdoor_set`](@ref)`(::MAG, ...)` and
-[`backdoor_set`](@ref)`(::PAG, ...)` use as the generalized back-door set
-(Maathuis & Colombo 2015); this is the plain graph-level primitive, without
-the visible-edge removal that turns `cg` into `M_X` for that specific use.
+D-SEP is the set that [`backdoor_set`](@ref) (for [`MAG`](@ref) and [`PAG`](@ref))
+uses as the generalized back-door set (Maathuis & Colombo 2015), computed there
+on `M_X` (`cg` with `x`'s visible edges removed) rather than on `cg` directly.
 
 # Examples
 

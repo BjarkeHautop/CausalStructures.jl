@@ -4,7 +4,7 @@ Here we explain how to build a causal graph and briefly describe the meaning of
 each causal graph class. For a comprehensive introduction to these and the
 underlying theory, see, for instance, [pearl2009causality](@citet) or
 [peters2017elements](@citet); [richardsonspirtes2002ancestral](@citet) covers
-`AG`/`MAG` specifically, and [zhang2008completeness](@citet) covers `PAG`.
+[`AG`](@ref)/[`MAG`](@ref) specifically, and [zhang2008completeness](@citet) covers [`PAG`](@ref).
 
 ## [Constructing graphs](@id constructing-graphs)
 
@@ -47,13 +47,6 @@ verified on construction to be a valid graph.
 ```@docs
 CausalGraph
 ```
-
-!!! note "Skipping validation"
-
-    Every graph type also has a constructor taking a node set and an edge vector directly, e.g. `DAG(nodes, edges)`, which accepts a
-    `validate::Bool = true` keyword. Pass `validate = false` to skip
-    the structural check (only do so if you are sure your algorithm
-    returns a valid graph!).
 
 ### Directed Acyclic Graphs
 

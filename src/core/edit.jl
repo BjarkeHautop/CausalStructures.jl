@@ -1,4 +1,4 @@
-function _mutate_rebuild(cg::CausalGraph, nodes, edges)
+function _rebuild(cg::CausalGraph, nodes, edges)
     return build_graph(typeof(cg), nodes, edges)
 end
 
@@ -35,7 +35,7 @@ function add_edges(cg::CausalGraph, es::CausalEdge...)
     for e in es
         push!(new_edges, e)
     end
-    return _mutate_rebuild(cg, new_nodes, new_edges)
+    return _rebuild(cg, new_nodes, new_edges)
 end
 
 """
@@ -65,7 +65,7 @@ function remove_edges(cg::CausalGraph, es::CausalEdge...)
         end
         deleteat!(new_edges, idx)
     end
-    return _mutate_rebuild(cg, Set(cg.backend.nodes), new_edges)
+    return _rebuild(cg, Set(cg.backend.nodes), new_edges)
 end
 
 """
@@ -99,7 +99,7 @@ function add_nodes(cg::CausalGraph, ns::Symbol...)
         end
     end
     any_new || return cg
-    return _mutate_rebuild(cg, new_nodes, copy(cg.edges))
+    return _rebuild(cg, new_nodes, copy(cg.edges))
 end
 
 """
@@ -133,14 +133,14 @@ function remove_nodes(cg::CausalGraph, ns::Symbol...)
     drop = Set(ns)
     new_nodes = setdiff(Set(cg.backend.nodes), drop)
     new_edges = filter(e -> e.src ∉ drop && e.dst ∉ drop, cg.edges)
-    return _mutate_rebuild(cg, new_nodes, new_edges)
+    return _rebuild(cg, new_nodes, new_edges)
 end
 
 """
     reclass(cg::CausalGraph, T::Type{<:CausalGraph}) -> T
 
 Return a new graph of class `T` with the same nodes and edges as `cg`.
-Throws if the edges violate the structural constraints of `T`.
+Throws an error if the edges violate the structural constraints of `T`.
 
 # Examples
 

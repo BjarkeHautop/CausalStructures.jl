@@ -4,7 +4,7 @@ Every graph in CausalStructures is stored as a packed CSR (compressed sparse row
 layout. Each node's parents, children, spouses, and neighbors occupy a contiguous
 slice of a single flat array. Querying a node's parents requires only index
 arithmetic into that array, so [`parents`](@ref), [`children`](@ref),
-[`spouses`](@ref), and [`neighbors`](@ref) are effectively O(1): compute the
+[`spouses`](@ref), and [`neighbors`](@ref) are effectively ``O(1)``: compute the
 slice boundaries and return the corresponding entries. Many higher-level
 algorithms, including [`d_separated`](@ref), [`ancestors`](@ref), and
 adjustment-set search, are built on these primitive operations, so their

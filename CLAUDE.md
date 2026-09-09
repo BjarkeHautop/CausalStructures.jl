@@ -72,8 +72,8 @@ else builds on: `defs.jl` (types, backend structs), `edges.jl` (`directed`, `und
 `bidirected`, `partially_directed`, `partially_undirected`, `partial`), `constructors.jl`
 (`cgraph(...)` front door, dispatching through `build_graph` -> type constructor ->
 `_build_graph` -> `build_backend` + `validate`), `graph-string.jl` (the `cgraph(::String)`
-DSL parser, e.g. `"A --> B + C"`), `mutate.jl` (`add_edge`/`remove_edge`/`add_node`/
-`remove_node`/`reclass`), and `validate.jl` (`is_dag`, `is_mpdag`, `is_mag`, `is_pag`, …,
+DSL parser, e.g. `"A --> B + C"`), `edit.jl` (`add_edges`/`remove_edges`/`add_nodes`/
+`remove_nodes`/`reclass`), and `validate.jl` (`is_dag`, `is_mpdag`, `is_mag`, `is_pag`, …,
 plus the `validate` dispatch every constructor calls). Each graph class has its own backend
 struct (`DAGBackend`, `ADMGBackend`, `AGBackend`, …) built in `backend.jl` using a packed
 CSR layout: one `rowval` vector holds all neighbors contiguously, `colptr` gives each

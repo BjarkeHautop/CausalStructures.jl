@@ -20,7 +20,7 @@ dag = DAG("A --> X + Y, X --> M --> Y")
     All graphs you construct are validated on construction to be a valid graph according to your graph class. For a DAG this means all edges are directed edges (`-->`), and there are no cycles. Let's try to create a DAG with a cycle:
 
     ```@repl quick
-    invalid_dag = DAG("A --> B --> C --> A")  # Creates a cycle!
+    invalid_dag = DAG("A --> B --> C --> A")
     ```
 
 Since, [a picture is worth a thousand words](https://en.wikipedia.org/wiki/A_picture_is_worth_a_thousand_words)[^1]

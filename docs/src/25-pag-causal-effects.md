@@ -1,9 +1,7 @@
 # [PAG Causal Effects](@id pag-causal-effects-guide)
 
 This guide builds on [Equivalence Classes](@ref equivalence-classes-guide) and
-[Causal Identification](@ref causal-identification-guide) and covers causal
-adjustment when the graph is known only as a [`PAG`](@ref), i.e. when the underlying
-MAG is identified only up to Markov equivalence.
+[Causal Identification](@ref causal-identification-guide) and covers causal adjustment when the graph is known only as a [`PAG`](@ref), i.e. when the underlying [`MAG`](@ref) is identified only up to Markov equivalence.
 
 ```@example pc
 using CausalStructures
@@ -42,7 +40,7 @@ generalized adjustment criterion (GAC) can therefore be applied directly to the
 PAG with [`all_adjustment_sets`](@ref):
 
 ```@example pc
-all_adjustment_sets(pag, :B, :D)
+all_adjustment_sets(pag, :B, :D; minimal=false)
 ```
 
 ## Adjustment sets
@@ -90,13 +88,14 @@ This is consistent with [`possible_ancestors`](@ref).
 !!! note "Why not just enumerate the MAGs?"
 
     One could enumerate all MAGs with [`enumerate_mags`](@ref) and apply
-    [`backdoor_set`](@ref) to each one. However, the number of MAGs in a Markov
-    equivalence class grows as `O(3^((d^2-d)/2))` with the number of nodes `d`.
+    [`backdoor_set`](@ref) to each one. However, the number of MAGs in a Markov equivalence class grows as ``O(3^{(d^2-d)/2})`` with the number of nodes `d`.
 
     `pagcauses` avoids constructing these MAGs. Instead, it uses graphical conditions
     to check whether a candidate adjustment set can be valid for a MAG compatible
-    with the PAG. This reduces the complexity to `O(5^d d^6)`
+    with the PAG. This reduces the complexity to ``O(5^d d^6)``
     ([wang2025pagcauses](@citet), Section 3.4).
+
+    Depending on your graph size, the brute force approach could of course still be faster in practice.
 
 ## Local structures
 
