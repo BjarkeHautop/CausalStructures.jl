@@ -137,7 +137,7 @@ end
 ```
 
 !!! tip "Parallel search"
-    [`count_dags`](@ref), [`enumerate_dags`](@ref), [`enumerate_mags`](@ref), and
-    the whole `all_*_sets` family all parallelize their search across
-    `Threads.nthreads()` automatically once the problem is large enough to
-    benefit.
+    [`count_dags`](@ref), [`enumerate_dags`](@ref), [`enumerate_mags`](@ref),
+    [`pagcauses`](@ref), and the whole `all_*_sets` family all parallelize
+    their search across `Threads.nthreads()` automatically once the problem is
+    large enough to benefit.

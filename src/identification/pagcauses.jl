@@ -231,13 +231,29 @@ function _dd_sep_mask(adj, mark, n, xi::Int, yi::Int)
     return d
 end
 
-# Find every potential adjustment set with a valid block set (Line 8-13 of
-# Algorithm 1) in one maximal local MAG, appending the results to `result`.
-function _pagcauses_local!(result, adj, mark, n, xi::Int, yi::Int, node_vec)
-    dd_sep = _dd_sep_mask(adj, mark, n, xi, yi)
-    rest = [v for v = 1:n if v != xi && v != yi && !dd_sep[v]]
+# Below this many candidate W masks, the fixed cost of spawning tasks outweighs
+# any benefit. Determined empirically.
+const _PAGCAUSES_PARALLEL_THRESHOLD = 8
+
+# Checks every candidate `w_mask` for `mask` in `lo:hi` against Definition 6 and
+# Theorem 2, returning the potential adjustment sets with a valid block set as a
+# freshly-allocated output vector. `adj`/`mark` are only ever read here, so
+# sharing them is safe.
+function _pagcauses_local_range(
+    adj,
+    mark,
+    n,
+    xi::Int,
+    yi::Int,
+    node_vec,
+    dd_sep::BitVector,
+    rest::Vector{Int},
+    lo::Int,
+    hi::Int,
+)
     m = length(rest)
-    for mask = 0:(2^m-1)
+    out = Vector{Vector{Symbol}}()
+    for mask = lo:hi
         w_mask = copy(dd_sep)
         for i = 1:m
             ((mask >> (i - 1)) & 1) == 1 && (w_mask[rest[i]] = true)
@@ -245,8 +261,39 @@ function _pagcauses_local!(result, adj, mark, n, xi::Int, yi::Int, node_vec)
         wbar_mask = _w_bar_mask(adj, mark, n, xi, yi, w_mask)
         _is_potential_adjustment_set(adj, mark, n, xi, yi, w_mask, wbar_mask) || continue
         _exists_valid_block_set(adj, mark, n, yi, w_mask, wbar_mask) || continue
-        push!(result, sort([node_vec[v] for v = 1:n if w_mask[v]]))
+        push!(out, sort([node_vec[v] for v = 1:n if w_mask[v]]))
     end
+    return out
+end
+
+# Splits `0:(total-1)` into `Threads.nthreads()` contiguous chunks and runs each chunk on its own task via
+# `_pagcauses_local_range`, which gives every task a private output vector.
+function _pagcauses_local_threaded(adj, mark, n, xi, yi, node_vec, dd_sep, rest, total::Int)
+    nt = min(Threads.nthreads(), total)
+    chunk = cld(total, nt)
+    per_task = [Vector{Vector{Symbol}}() for _ = 1:nt]
+    Threads.@threads for t = 1:nt
+        lo = (t - 1) * chunk
+        hi = min(lo + chunk, total) - 1
+        if lo <= hi
+            per_task[t] =
+                _pagcauses_local_range(adj, mark, n, xi, yi, node_vec, dd_sep, rest, lo, hi)
+        end
+    end
+    return reduce(vcat, per_task)
+end
+
+function _pagcauses_local!(result, adj, mark, n, xi::Int, yi::Int, node_vec)
+    dd_sep = _dd_sep_mask(adj, mark, n, xi, yi)
+    rest = [v for v = 1:n if v != xi && v != yi && !dd_sep[v]]
+    total = 2^length(rest)
+
+    out = if Threads.nthreads() == 1 || total <= _PAGCAUSES_PARALLEL_THRESHOLD
+        _pagcauses_local_range(adj, mark, n, xi, yi, node_vec, dd_sep, rest, 0, total - 1)
+    else
+        _pagcauses_local_threaded(adj, mark, n, xi, yi, node_vec, dd_sep, rest, total)
+    end
+    append!(result, out)
 end
 
 """
@@ -266,6 +313,9 @@ existence check (Theorem 2) for each of the `O(2^d)` candidate sets `W`,
 without ever constructing a MAG; the paper's complexity analysis (Sec. 3.4)
 puts the overall cost at `O(5^d d^6)`, super-exponentially below the
 MAG-enumeration baseline.
+
+Parallelizes over `Threads.nthreads()` once there are enough of them to
+be worth splitting across tasks.
 
 If `x` is not a possible ancestor of `y`, returns `Vector{Symbol}[]` (no causal
 effect). If the causal effect is already identifiable directly in `cg`

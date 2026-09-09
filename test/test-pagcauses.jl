@@ -200,3 +200,47 @@ end
         PAG(undirected(:A, :B), undirected(:B, :C), undirected(:C, :D), undirected(:A, :D))
     @test_throws ArgumentError pagcauses(pag, :A, :B)
 end
+
+@testitem "_pagcauses_local_threaded matches the sequential result" tags =
+    [:unit, :pagcauses] begin
+    pag = PAG("X o-> Y, X o-> C, X o-> A, Y o-o C, C o-o A, B o-> C, B o-> Y, B o-> A")
+    node_vec, index, adj, mark =
+        CausalStructures._pag_adj_marks(pag.backend.nodes, pag.edges)
+    n = length(node_vec)
+    xi, yi = index[:X], index[:Y]
+    c_mask = falses(n)
+    c_mask[index[:A]] = true
+    CausalStructures._maximal_local_mag_marks!(adj, mark, n, xi, c_mask)
+
+    dd_sep = CausalStructures._dd_sep_mask(adj, mark, n, xi, yi)
+    rest = [v for v = 1:n if v != xi && v != yi && !dd_sep[v]]
+    total = 2^length(rest)
+    @test total > 1
+
+    sequential = CausalStructures._pagcauses_local_range(
+        adj,
+        mark,
+        n,
+        xi,
+        yi,
+        node_vec,
+        dd_sep,
+        rest,
+        0,
+        total - 1,
+    )
+    threaded = CausalStructures._pagcauses_local_threaded(
+        adj,
+        mark,
+        n,
+        xi,
+        yi,
+        node_vec,
+        dd_sep,
+        rest,
+        total,
+    )
+
+    @test Set(sequential) == Set(threaded)
+    @test !isempty(threaded)
+end
