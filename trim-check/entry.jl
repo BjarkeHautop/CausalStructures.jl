@@ -426,7 +426,7 @@ function _check_enumerate()
     return nothing
 end
 
-# --- src/io/utils.jl, uniform-dag.jl, layout.jl ------------------------------
+# --- src/io/utils.jl, uniform-dag.jl ---
 
 function _check_io()
     generate_graph(6; m = 5)
@@ -439,12 +439,6 @@ function _check_io()
     simulate_data(dag; samples = 20)
 
     uniform_dag(5)
-
-    try
-        layout(dag)
-        layout(dag, :spring)
-    catch
-    end
     return nothing
 end
 
