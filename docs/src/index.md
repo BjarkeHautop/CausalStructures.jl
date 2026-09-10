@@ -26,7 +26,7 @@ CausalGraph
     └─ UNKNOWN        No structural constraints
 ```
 
-`UNKNOWN` can be used for currently unsupported graph classes. The constraints each class imposes are validated on construction, and an error is thrown if the graph is invalid.
+[`UNKNOWN`](@ref) can be used for currently unsupported graph classes. The constraints each class imposes are validated on construction, and an error is thrown if the graph is invalid.
 
 The following edge types exist:
 

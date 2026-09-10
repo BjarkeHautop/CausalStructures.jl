@@ -25,7 +25,7 @@ delete_preferences!(CausalStructures, "key")
 
 | Default | Type | Affects |
 | ------- | ---- | ------- |
-| `true` | `Bool` | `ancestors`, `descendants`, `possible_ancestors`, `possible_descendants`, `anteriors`, `posteriors` |
+| `true` | `Bool` | [`ancestors`](@ref), [`descendants`](@ref), [`possible_ancestors`](@ref), [`possible_descendants`](@ref), [`anteriors`](@ref), [`posteriors`](@ref) |
 
 When `true` (open definition), the queried node itself is excluded from the
 result. Set to `false` to use the closed definition (node included).
@@ -43,7 +43,7 @@ the same way, e.g. `set_preferences!(CausalStructures, "plot_node_color" => "lig
 
 | Key | Default | Notes |
 | --- | ------- | ----- |
-| `"plot_layout"` | `:stress` (`:sugiyama` for a `DAG` once Sugiyama is loaded) | One of `:spring`, `:stress`, `:sfdp`, `:spectral`, `:shell`, `:squaregrid` (require NetworkLayout) or `:sugiyama` (requires Sugiyama); see [Layouts](@ref plot-layouts) |
+| `"plot_layout"` | `:stress` (`:sugiyama` for a [`DAG`](@ref) once Sugiyama is loaded) | One of `:spring`, `:stress`, `:sfdp`, `:spectral`, `:shell`, `:squaregrid` (require NetworkLayout) or `:sugiyama` (requires Sugiyama); see [Layouts](@ref plot-layouts) |
 | `"plot_node_shape"` | `:circle` | One of `:circle`, `:square`, `:ellipse`, `:rect` |
 | `"plot_node_color"` | `"white"` | Any [Makie-compatible colour](https://docs.makie.org/stable/explanations/colors) |
 | `"plot_node_strokecolor"` | `"black"` | |

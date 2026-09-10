@@ -97,7 +97,7 @@ undirected edges (`---`). In an ancestral graph, an arrowhead at a node
 indicates that the node is not an ancestor of the other endpoint. Thus, a
 bidirected edge (`<->`) indicates that neither endpoint is an ancestor of the
 other. In causal applications, such edges commonly represent unobserved
-confounding. Undirected edges have a different meaning here than in a `PDAG`:
+confounding. Undirected edges have a different meaning here than in a [`PDAG`](@ref):
 rather than representing uncertain orientation, they represent **selection
 bias**, arising from conditioning on variables that induce associations
 through common effects.
