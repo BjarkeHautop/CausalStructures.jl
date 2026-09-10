@@ -364,12 +364,12 @@ julia> dag = DAG("A --> X --> Y, A --> Y");
 julia> is_valid_adjustment(dag, :X, :Y)
 false
 
-julia> is_valid_adjustment(dag, :X, :Y, [:A])
+julia> is_valid_adjustment(dag, :X, :Y, :A)
 true
 
 julia> dag2 = DAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
-julia> is_valid_adjustment(dag2, [:X1, :X2], [:Y], [:L1, :L2])
+julia> is_valid_adjustment(dag2, [:X1, :X2], :Y, [:L1, :L2])
 true
 ```
 
@@ -423,7 +423,7 @@ julia> all_adjustment_sets(dag, :X, :Y; minimal=false)
 
 julia> dag2 = DAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
-julia> all_adjustment_sets(dag2, [:X1, :X2], [:Y])
+julia> all_adjustment_sets(dag2, [:X1, :X2], :Y)
 1-element Vector{Vector{Symbol}}:
  [:L1, :L2]
 ```
@@ -517,7 +517,7 @@ julia> admg = ADMG("L --> X --> Y, L --> Y");
 julia> is_valid_adjustment(admg, :X, :Y)       # empty Z does not block L --> Y
 false
 
-julia> is_valid_adjustment(admg, :X, :Y, [:L]) # conditioning on L blocks the backdoor path
+julia> is_valid_adjustment(admg, :X, :Y, :L) # conditioning on L blocks the backdoor path
 true
 ```
 
@@ -527,14 +527,14 @@ julia> mag = MAG("A <-> X, A --> M --> Y, X --> Y");
 julia> is_valid_adjustment(mag, :X, :Y)
 false
 
-julia> is_valid_adjustment(mag, :X, :Y, [:A])
+julia> is_valid_adjustment(mag, :X, :Y, :A)
 true
 ```
 
 ```jldoctest
 julia> admg2 = ADMG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
-julia> is_valid_adjustment(admg2, [:X1, :X2], [:Y], [:L1, :L2])
+julia> is_valid_adjustment(admg2, [:X1, :X2], :Y, [:L1, :L2])
 true
 ```
 
@@ -613,7 +613,7 @@ julia> all_adjustment_sets(mpdag, :X, :Y, minimal = false)
 ```jldoctest
 julia> admg2 = ADMG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
-julia> all_adjustment_sets(admg2, [:X1, :X2], [:Y])
+julia> all_adjustment_sets(admg2, [:X1, :X2], :Y)
 1-element Vector{Vector{Symbol}}:
  [:L1, :L2]
 ```
@@ -684,7 +684,7 @@ julia> adjustment_set(admg, :X, :Y)
 
 julia> admg2 = ADMG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
-julia> sort(adjustment_set(admg2, [:X1, :X2], [:Y]))
+julia> sort(adjustment_set(admg2, [:X1, :X2], :Y))
 2-element Vector{Symbol}:
  :L1
  :L2

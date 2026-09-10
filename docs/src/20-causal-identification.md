@@ -59,7 +59,7 @@ minimal_separator(dag, :X, :Y; restrict = [:D, :K])
 The `include` keyword forces certain variables to always be in the result:
 
 ```@example id
-minimal_separator(dag, :X, :Y; include = [:K])
+minimal_separator(dag, :X, :Y; include = :K)
 ```
 
 ## Frontdoor adjustment
@@ -77,14 +77,14 @@ The mediator `M` is a descendant of `X`, so adjusting for it violates the
 backdoor criterion:
 
 ```@example id
-is_valid_backdoor(dag2, :X, :Y, [:M])
+is_valid_backdoor(dag2, :X, :Y, :M)
 ```
 
 However, `M` intercepts every causal path from `X` to `Y` and is itself
 unconfounded; this is exactly the *frontdoor criterion*:
 
 ```@example id
-is_valid_frontdoor(dag2, :X, :Y, [:M])
+is_valid_frontdoor(dag2, :X, :Y, :M)
 ```
 
 ```@example id
@@ -107,7 +107,7 @@ plot(dag3)
 Without a mediator, the frontdoor criterion cannot apply here:
 
 ```@example id
-is_valid_frontdoor(dag3, :X, :Y, [:Z])
+is_valid_frontdoor(dag3, :X, :Y, :Z)
 ```
 
 However, `Z` is a valid instrument since it is d-connected to `X` and d-separated from
@@ -115,7 +115,7 @@ However, `Z` is a valid instrument since it is d-connected to `X` and d-separate
 incoming edges to `X` removed):
 
 ```@example id
-is_valid_iv(dag3, :X, :Y, [:Z])
+is_valid_iv(dag3, :X, :Y, :Z)
 ```
 
 ## ADMG adjustment
@@ -126,14 +126,14 @@ the graph. An ADMG arises naturally by projecting unobserved variables out of a
 DAG via [`latent_project`](@ref). Let's project `U` out of `dag3`:
 
 ```@example id
-admg = latent_project(dag3, [:U])
+admg = latent_project(dag3, :U)
 ```
 
 Removing `U` introduces `X <-> Y`, which captures its confounding effect. The functions discussed above also
 work on ADMGs, e.g.:
 
 ```@example id
-is_valid_iv(admg, :X, :Y, [:Z])
+is_valid_iv(admg, :X, :Y, :Z)
 ```
 
 ## General identification
@@ -153,7 +153,7 @@ Projecting `U` out of the front-door graph gives an ADMG where no adjustment set
 exists, yet the effect is identified through the mediator:
 
 ```@example id
-admg2 = latent_project(dag2, [:U])
+admg2 = latent_project(dag2, :U)
 id(admg2, :X, :Y)
 ```
 

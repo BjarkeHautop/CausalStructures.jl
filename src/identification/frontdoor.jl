@@ -22,19 +22,19 @@ formula, even in the presence of unmeasured confounders between `x` and `y`.
 ```jldoctest
 julia> cg = DAG("U --> X --> M --> Y, U --> Y");
 
-julia> is_valid_frontdoor(cg, :X, :Y, [:M])  # M mediates X -> Y and satisfies all conditions
+julia> is_valid_frontdoor(cg, :X, :Y, :M)  # M mediates X -> Y and satisfies all conditions
 true
 
 julia> is_valid_frontdoor(cg, :X, :Y)         # empty Z leaves directed path X -> M -> Y open
 false
 
-julia> is_valid_frontdoor(cg, :X, :Y, [:U])   # U does not intercept X -> M -> Y
+julia> is_valid_frontdoor(cg, :X, :Y, :U)   # U does not intercept X -> M -> Y
 false
 
 julia> cg2 = DAG(
            "U1 --> X1 + Y1, U2 --> X2 + Y2, X1 --> M, X2 --> M, M --> Y1 + Y2");
 
-julia> is_valid_frontdoor(cg2, [:X1, :X2], [:Y1, :Y2], [:M])  # M mediates every X --> Y path
+julia> is_valid_frontdoor(cg2, [:X1, :X2], [:Y1, :Y2], :M)  # M mediates every X --> Y path
 true
 ```
 
@@ -486,7 +486,8 @@ Return a front-door adjustment set Z with `include ⊆ Z ⊆ restrict` satisfyin
 all three front-door conditions relative to (`x`, `y`) in `cg`, or `nothing` if
 no such set exists.
 
-`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
+`x`, `y`, `include`, and `restrict` may each be a single `Symbol` or an
+`AbstractVector{Symbol}`.
 
 - `include`: nodes forced into the set.
 - `restrict`: candidate pool from which the set is drawn. Defaults to all nodes
@@ -507,7 +508,7 @@ arrowhead into a node just like a directed parent does).
 ```jldoctest
 julia> cg = DAG("U --> X + Y, X --> Z --> Y");
 
-julia> frontdoor_set(cg, :X, :Y; restrict = [:Z])
+julia> frontdoor_set(cg, :X, :Y; restrict = :Z)
 1-element Vector{Symbol}:
  :Z
 ```
@@ -523,12 +524,12 @@ julia> frontdoor_set(cg, :X, :Y; restrict = [:A, :B, :C, :D])
  :B
  :C
 
-julia> frontdoor_set(cg, :X, :Y; include = [:C], restrict = [:A, :C])
+julia> frontdoor_set(cg, :X, :Y; include = :C, restrict = [:A, :C])
 2-element Vector{Symbol}:
  :A
  :C
 
-julia> frontdoor_set(cg, :X, :Y; include = [:D], restrict = [:A, :B, :C, :D]) === nothing
+julia> frontdoor_set(cg, :X, :Y; include = :D, restrict = [:A, :B, :C, :D]) === nothing
 true
 ```
 
@@ -548,7 +549,7 @@ julia> frontdoor_set(admg, :X, :Y; restrict = [:A, :B, :C, :D])
 julia> cg2 = DAG(
            "U1 --> X1 + Y1, U2 --> X2 + Y2, X1 --> M, X2 --> M, M --> Y1 + Y2");
 
-julia> frontdoor_set(cg2, [:X1, :X2], [:Y1, :Y2]; restrict = [:M])
+julia> frontdoor_set(cg2, [:X1, :X2], [:Y1, :Y2]; restrict = :M)
 1-element Vector{Symbol}:
  :M
 ```
@@ -561,8 +562,8 @@ function frontdoor_set(
     cg::Union{DAG,ADMG},
     x::Union{Symbol,AbstractVector{Symbol}},
     y::Union{Symbol,AbstractVector{Symbol}};
-    include::AbstractVector{Symbol} = Symbol[],
-    restrict::Union{Nothing,AbstractVector{Symbol}} = nothing,
+    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
 )
     B = cg.backend
     n = length(B.nodes)
@@ -580,7 +581,7 @@ function frontdoor_set(
     end
 
     i_mask = falses(n)
-    for s in include
+    for s in _as_symbol_vec(include)
         i_mask[node_index(cg, s)] = true
     end
     r_mask = falses(n)
@@ -588,7 +589,7 @@ function frontdoor_set(
     ys_syms = _as_symbol_set(y)
     _restrict =
         restrict === nothing ? filter(v -> !(v in xs_syms) && !(v in ys_syms), nodes(cg)) :
-        restrict
+        _as_symbol_vec(restrict)
     for s in _restrict
         r_mask[node_index(cg, s)] = true
     end
@@ -707,7 +708,8 @@ end
 Return all front-door adjustment sets Z with `include ⊆ Z ⊆ restrict` relative
 to (`x`, `y`) in `cg`.
 
-`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
+`x`, `y`, `include`, and `restrict` may each be a single `Symbol` or an
+`AbstractVector{Symbol}`.
 
 - `include`: nodes forced into every returned set.
 - `restrict`: candidate pool from which sets are drawn. Defaults to all nodes
@@ -723,7 +725,7 @@ polynomial time and takes polynomial time between consecutive results. For
 ```jldoctest
 julia> cg = DAG("U --> X + Y, X --> Z --> Y");
 
-julia> all_frontdoor_sets(cg, :X, :Y; restrict = [:Z])
+julia> all_frontdoor_sets(cg, :X, :Y; restrict = :Z)
 1-element Vector{Vector{Symbol}}:
  [:Z]
 ```
@@ -757,7 +759,7 @@ julia> sort(all_frontdoor_sets(admg, :X, :Y; restrict = [:A, :B, :C, :D]))
 julia> cg2 = DAG(
            "U1 --> X1 + Y1, U2 --> X2 + Y2, X1 --> M, X2 --> M, M --> Y1 + Y2");
 
-julia> all_frontdoor_sets(cg2, [:X1, :X2], [:Y1, :Y2]; restrict = [:M])
+julia> all_frontdoor_sets(cg2, [:X1, :X2], [:Y1, :Y2]; restrict = :M)
 1-element Vector{Vector{Symbol}}:
  [:M]
 ```
@@ -770,8 +772,8 @@ function all_frontdoor_sets(
     cg::Union{DAG,ADMG},
     x::Union{Symbol,AbstractVector{Symbol}},
     y::Union{Symbol,AbstractVector{Symbol}};
-    include::AbstractVector{Symbol} = Symbol[],
-    restrict::Union{Nothing,AbstractVector{Symbol}} = nothing,
+    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
 )
     B = cg.backend
     n = length(B.nodes)
@@ -789,7 +791,7 @@ function all_frontdoor_sets(
     end
 
     i_mask = falses(n)
-    for s in include
+    for s in _as_symbol_vec(include)
         i_mask[node_index(cg, s)] = true
     end
     r_mask = falses(n)
@@ -797,7 +799,7 @@ function all_frontdoor_sets(
     ys_syms = _as_symbol_set(y)
     _restrict =
         restrict === nothing ? filter(v -> !(v in xs_syms) && !(v in ys_syms), nodes(cg)) :
-        restrict
+        _as_symbol_vec(restrict)
     for s in _restrict
         r_mask[node_index(cg, s)] = true
     end

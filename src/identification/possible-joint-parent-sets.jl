@@ -52,10 +52,12 @@ function _acyclic_extension_exists(cg::AbstractPDAG, gained::Dict{Symbol,Vector{
 end
 
 """
-    possible_joint_parent_sets(cg::AbstractPDAG, xs::AbstractVector{Symbol}) ->
+    possible_joint_parent_sets(cg::AbstractPDAG, xs) ->
         Vector{Vector{Vector{Symbol}}}
 
 Return every locally valid joint parental structure of `xs` implied by `cg`.
+
+`xs` may be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 This is the graph part of joint-IDA (Nandy, Maathuis & Richardson 2017),
 generalizing [`possible_parent_sets`](@ref) from a single intervention node to
@@ -101,7 +103,11 @@ endpoint of that collision is in `xs`.
 - [maathuis2009estimating](@citet)
 - [nandy2017jointida](@citet)
 """
-function possible_joint_parent_sets(cg::AbstractPDAG, xs::AbstractVector{Symbol})
+function possible_joint_parent_sets(
+    cg::AbstractPDAG,
+    xs::Union{Symbol,AbstractVector{Symbol}},
+)
+    xs = _as_symbol_vec(xs)
     allunique(xs) || throw(ArgumentError("xs must not contain duplicate nodes"))
     isempty(xs) && throw(ArgumentError("xs must be non-empty"))
 

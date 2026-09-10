@@ -51,7 +51,7 @@ No, there is a directed path `X --> M --> Y`.
 If we condition on the mediator `M`, does that make them independent?
 
 ```@example quick
-d_separated(dag, :X, :Y, [:M])
+d_separated(dag, :X, :Y, :M)
 ```
 
 Still no, the backdoor path via `A`: `X <-- A --> Y` remains open.
@@ -79,7 +79,7 @@ adjustment_set(dag, :X, :Y)
 We can also verify that a specific set is valid:
 
 ```@example quick
-is_valid_adjustment(dag, :X, :Y, [:A])
+is_valid_adjustment(dag, :X, :Y, :A)
 ```
 
 And enumerate all minimal valid adjustment sets:

@@ -295,7 +295,7 @@ julia> pag = mag_to_pag(mag);
 julia> is_valid_adjustment(pag, :X, :Y)
 false
 
-julia> is_valid_adjustment(pag, :X, :Y, [:A])
+julia> is_valid_adjustment(pag, :X, :Y, :A)
 true
 
 julia> mag2 = MAG(
@@ -303,7 +303,7 @@ julia> mag2 = MAG(
 
 julia> pag2 = mag_to_pag(mag2);
 
-julia> is_valid_adjustment(pag2, [:X1, :X2], [:Y], [:A1, :A2])
+julia> is_valid_adjustment(pag2, [:X1, :X2], :Y, [:A1, :A2])
 true
 ```
 
@@ -358,7 +358,7 @@ julia> mag2 = MAG(
 
 julia> pag2 = mag_to_pag(mag2);
 
-julia> all_adjustment_sets(pag2, [:X1, :X2], [:Y])
+julia> all_adjustment_sets(pag2, [:X1, :X2], :Y)
 1-element Vector{Vector{Symbol}}:
  [:A1, :A2]
 ```
@@ -438,7 +438,7 @@ julia> mag2 = MAG(
 
 julia> pag2 = mag_to_pag(mag2);
 
-julia> sort(adjustment_set(pag2, [:X1, :X2], [:Y]))
+julia> sort(adjustment_set(pag2, [:X1, :X2], :Y))
 2-element Vector{Symbol}:
  :A1
  :A2

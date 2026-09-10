@@ -29,6 +29,9 @@ Return the [`AG`](@ref) over the remaining nodes after conditioning on
 `cond_vars` and marginalizing out `marg_vars`, following Definition 4.2.1 of
 [richardsonspirtes2002ancestral](@cite).
 
+`cond_vars` and `marg_vars` may each be a single `Symbol` or an
+`AbstractVector{Symbol}`.
+
 Two remaining nodes are adjacent if and only if they cannot be m-separated by
 any subset of the other remaining nodes given `cond_vars`. The edge type is
 determined by the anterior relationships: `a --> b` if `a` is anterior to `b`
@@ -43,7 +46,7 @@ be disjoint.
 ```jldoctest
 julia> dag = DAG("U --> X + Y");
 
-julia> ag = condition_marginalize(dag; marg_vars = [:U])
+julia> ag = condition_marginalize(dag; marg_vars = :U)
 AG with 2 nodes and 1 edge:
   nodes: X, Y
   edges:
@@ -53,7 +56,7 @@ AG with 2 nodes and 1 edge:
 ```jldoctest
 julia> admg = ADMG("U --> X + Y, X --> Y");
 
-julia> condition_marginalize(admg; marg_vars = [:U])
+julia> condition_marginalize(admg; marg_vars = :U)
 AG with 2 nodes and 1 edge:
   nodes: X, Y
   edges:
@@ -66,9 +69,11 @@ AG with 2 nodes and 1 edge:
 """
 function condition_marginalize(
     cg::Union{DAG,ADMG,AbstractAG};
-    cond_vars::AbstractVector{Symbol} = Symbol[],
-    marg_vars::AbstractVector{Symbol} = Symbol[],
+    cond_vars::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    marg_vars::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
+    cond_vars = _as_symbol_vec(cond_vars)
+    marg_vars = _as_symbol_vec(marg_vars)
     all_ns = Set(nodes(cg))
 
     for v in cond_vars

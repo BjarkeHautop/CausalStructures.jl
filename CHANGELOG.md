@@ -9,10 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-- `d_separated`, `m_separated`, and the backdoor/frontdoor/adjustment-set/`is_valid_iv`
-functions that take a conditioning set now also accept a bare `Symbol` for `z` (in
-addition to `Vector{Symbol}`), matching the `Vector{Symbol}` support already added for
-`x`/`y`.
+- Node-set arguments across the package (`x`/`y`/`z`, `include`/`restrict`, `latents`,
+`nodes`, etc.) now also accept a single `Symbol`, not just `Vector{Symbol}`.
 
 ### Bug fixes
 

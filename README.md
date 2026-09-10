@@ -76,7 +76,7 @@ You can then run a variety of causal graph queries, transformations,
 adjustment-set computations, and separation criteria. For example, if `U` is unobserved, we can project it out to obtain an `ADMG`.
 
 ```julia
-admg = latent_project(dag, [:U])
+admg = latent_project(dag, :U)
 ```
 
 ## Contributing

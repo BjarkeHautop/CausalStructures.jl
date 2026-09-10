@@ -517,7 +517,7 @@ julia> cg = DAG("A --> B --> C");
 julia> d_separated(cg, :A, :C)        # chain A --> B --> C is open
 false
 
-julia> d_separated(cg, :A, :C, [:B]) # conditioning on B blocks the chain
+julia> d_separated(cg, :A, :C, :B) # conditioning on B blocks the chain
 true
 
 julia> coll = DAG("A --> C <-- B");
@@ -525,12 +525,12 @@ julia> coll = DAG("A --> C <-- B");
 julia> d_separated(coll, :A, :B)         # collider A --> C <-- B: blocked without conditioning
 true
 
-julia> d_separated(coll, :A, :B, [:C])  # conditioning on collider C opens the path
+julia> d_separated(coll, :A, :B, :C)  # conditioning on collider C opens the path
 false
 
 julia> mpdag = MPDAG("A --- B --> C");
 
-julia> d_separated(mpdag, :A, :C, [:B]) # B blocks whether A --> B or A <-- B
+julia> d_separated(mpdag, :A, :C, :B) # B blocks whether A --> B or A <-- B
 true
 
 julia> d_separated(mpdag, :A, :C)       # B is possibly a non-collider: open path exists
@@ -541,7 +541,7 @@ julia> chain = DAG("A --> C <-- B, C --> D");
 julia> d_separated(chain, [:A, :B], :D)         # C lies on both A-->C-->D and B-->C-->D: paths open
 false
 
-julia> d_separated(chain, [:A, :B], :D, [:C])  # conditioning on chain node C blocks both paths
+julia> d_separated(chain, [:A, :B], :D, :C)  # conditioning on chain node C blocks both paths
 true
 ```
 
@@ -634,7 +634,7 @@ julia> cg = DAG("A --> B --> C");
 julia> m_separated(cg, :A, :C)        # equivalent to d_separated on a DAG
 false
 
-julia> m_separated(cg, :A, :C, [:B])
+julia> m_separated(cg, :A, :C, :B)
 true
 
 julia> admg = ADMG("A --> B, A <-> C");
@@ -642,7 +642,7 @@ julia> admg = ADMG("A --> B, A <-> C");
 julia> m_separated(admg, :B, :C)        # B and C are connected via the bidirected edge at A
 false
 
-julia> m_separated(admg, :B, :C, [:A]) # conditioning on A blocks the path
+julia> m_separated(admg, :B, :C, :A) # conditioning on A blocks the path
 true
 
 julia> admg2 = ADMG("A <-> C <-> B");

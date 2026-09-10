@@ -53,10 +53,10 @@ for one structural coefficient `x -> y`.
 julia> # Classic IV graph: Z --> X --> Y with hidden confounder U --> X, U --> Y
        cg = DAG("Z --> X --> Y, U --> X + Y");
 
-julia> is_valid_iv(cg, :X, :Y, [:Z])  # Z is a valid instrument
+julia> is_valid_iv(cg, :X, :Y, :Z)  # Z is a valid instrument
 true
 
-julia> is_valid_iv(cg, :X, :Y, [:U])  # U confounds X and Y; fails exclusion restriction
+julia> is_valid_iv(cg, :X, :Y, :U)  # U confounds X and Y; fails exclusion restriction
 false
 ```
 
@@ -64,7 +64,7 @@ false
 julia> # ADMG: X <-> Y encodes the hidden confounder directly
        admg = ADMG("X <-> Y, Z --> X --> Y");
 
-julia> is_valid_iv(admg, :X, :Y, [:Z])
+julia> is_valid_iv(admg, :X, :Y, :Z)
 true
 ```
 
@@ -72,7 +72,7 @@ true
 julia> # Z instruments X, which affects two outcomes Y1 and Y2
        cg2 = DAG("Z --> X, X --> Y1 + Y2, U --> X + Y1 + Y2");
 
-julia> is_valid_iv(cg2, :X, [:Y1, :Y2], [:Z])
+julia> is_valid_iv(cg2, :X, [:Y1, :Y2], :Z)
 true
 ```
 

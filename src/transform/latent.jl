@@ -9,10 +9,12 @@
 #   4. remove v
 # Returns an ADMG over the observed (non-latent) nodes.
 """
-    latent_project(cg::DAG, latents::AbstractVector{Symbol}) -> ADMG
+    latent_project(cg::DAG, latents) -> ADMG
 
 Project out latent (unobserved) variables from `cg` to produce an
 [`ADMG`](@ref) over the observed variables only.
+
+`latents` may be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 Each latent node `v` is eliminated by node substitution: directed edges
 `p --> c` are added for every parent `p` and child `c` of `v`, and bidirected
@@ -24,14 +26,14 @@ edges `s <-> c` are added for every sibling `s` (bidirected neighbor) and child
 ```jldoctest
 julia> dag = DAG("U --> X + Y, X --> Y");
 
-julia> latent_project(dag, [:U])
+julia> latent_project(dag, :U)
 ADMG with 2 nodes and 2 edges:
   nodes: X, Y
   edges:
     X --> Y, X <-> Y
 ```
 """
-function latent_project(cg::DAG, latents::AbstractVector{Symbol})
+function latent_project(cg::DAG, latents::Union{Symbol,AbstractVector{Symbol}})
     B = cg.backend
     n = length(B.nodes)
 
@@ -48,7 +50,7 @@ function latent_project(cg::DAG, latents::AbstractVector{Symbol})
 
     remove = falses(n)
     elim = Int[]
-    for l in latents
+    for l in _as_symbol_vec(latents)
         idx = node_index(cg, l)
         remove[idx] = true
         push!(elim, idx)
@@ -120,27 +122,30 @@ function latent_project(cg::DAG, latents::AbstractVector{Symbol})
 end
 
 """
-    exogenize(cg::DAG, nodes::AbstractVector{Symbol}) -> DAG
+    exogenize(cg::DAG, nodes) -> DAG
 
 Return a copy of `cg` with each node in `nodes` made exogenous: all incoming
 edges to that node are removed, and its parents are connected directly to its
 children to preserve reachability.
+
+`nodes` may be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 # Examples
 
 ```jldoctest
 julia> dag = DAG("A --> B --> C");
 
-julia> dag2 = exogenize(dag, [:B])
+julia> dag2 = exogenize(dag, :B)
 DAG with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:
     A --> C, B --> C
 ```
 """
-function exogenize(cg::DAG, nodes_to_exo::AbstractVector{Symbol})
+function exogenize(cg::DAG, nodes::Union{Symbol,AbstractVector{Symbol}})
     B = cg.backend
     n = length(B.nodes)
+    nodes_to_exo = _as_symbol_vec(nodes)
 
     for v in nodes_to_exo
         haskey(B.index, v) || error("Node $(v) not in graph")
@@ -185,7 +190,7 @@ function exogenize(cg::DAG, nodes_to_exo::AbstractVector{Symbol})
 end
 
 """
-    normalize_latent_structure(cg::DAG, latents::AbstractVector{Symbol}) -> DAG
+    normalize_latent_structure(cg::DAG, latents) -> DAG
 
 Normalize the latent structure of `cg` while preserving the induced marginal
 model over the observed variables. Applies the following steps (Evans 2016,
@@ -198,12 +203,14 @@ Lemmas 1-3):
 3. Remove latent nodes whose child set is a strict subset of another latent
    node's child set.
 
+`latents` may be a single `Symbol` or an `AbstractVector{Symbol}`.
+
 # Examples
 
 ```jldoctest
 julia> dag = DAG("A --> U --> X + Y");
 
-julia> result = normalize_latent_structure(dag, [:U])
+julia> result = normalize_latent_structure(dag, :U)
 DAG with 4 nodes and 4 edges:
   nodes: A, U, X, Y
   edges:
@@ -214,17 +221,18 @@ DAG with 4 nodes and 4 edges:
 
 - [evans2016graphs](@citet)
 """
-function normalize_latent_structure(cg::DAG, latents::AbstractVector{Symbol})
+function normalize_latent_structure(cg::DAG, latents::Union{Symbol,AbstractVector{Symbol}})
     B = cg.backend
     n = length(B.nodes)
+    latents_vec = _as_symbol_vec(latents)
 
-    for l in latents
+    for l in latents_vec
         haskey(B.index, l) || error("Unknown latent node: $(l)")
     end
 
-    isempty(latents) && return cg
+    isempty(latents_vec) && return cg
 
-    latent_idxs = unique([B.index[l] for l in latents])
+    latent_idxs = unique([B.index[l] for l in latents_vec])
 
     pa = [Set{Int}() for _ = 1:n]
     ch = [Set{Int}() for _ = 1:n]

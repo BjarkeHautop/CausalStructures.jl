@@ -138,12 +138,12 @@ julia> pdag = PDAG("A --> X --> Y, A --> Y");
 julia> is_valid_adjustment(pdag, :X, :Y)
 false
 
-julia> is_valid_adjustment(pdag, :X, :Y, [:A])
+julia> is_valid_adjustment(pdag, :X, :Y, :A)
 true
 
 julia> pdag2 = PDAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
-julia> is_valid_adjustment(pdag2, [:X1, :X2], [:Y], [:L1, :L2])
+julia> is_valid_adjustment(pdag2, [:X1, :X2], :Y, [:L1, :L2])
 true
 ```
 
@@ -202,7 +202,7 @@ julia> all_adjustment_sets(mpdag, :X, :Y, minimal = false)
 
 julia> pdag2 = PDAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
-julia> all_adjustment_sets(pdag2, [:X1, :X2], [:Y])
+julia> all_adjustment_sets(pdag2, [:X1, :X2], :Y)
 1-element Vector{Vector{Symbol}}:
  [:L1, :L2]
 ```

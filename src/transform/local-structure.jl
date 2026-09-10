@@ -264,9 +264,11 @@ function possible_local_structures(cg::PAG, x::Symbol)
 end
 
 """
-    maximal_local_mag(cg::PAG, x::Symbol, c::AbstractVector{Symbol}) -> UNKNOWN
+    maximal_local_mag(cg::PAG, x::Symbol, c) -> UNKNOWN
 
 Return the maximal local MAG for the local structure `c` at `x` in `cg`.
+
+`c` may be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 This is `cg` with `x <-> v` for `v in c` and `x --> v` for `x`'s other
 circle-marked neighbors (Wang, Qin & Zhou 2023, Algorithm 1), treated as local
@@ -289,7 +291,7 @@ julia> mag = MAG("A <-> X, B --> X, A <-> B, X --> Y");
 
 julia> pag = mag_to_pag(mag);
 
-julia> maximal_local_mag(pag, :X, [:A])
+julia> maximal_local_mag(pag, :X, :A)
 UNKNOWN with 4 nodes and 4 edges:
   nodes: A, B, X, Y
   edges:
@@ -301,13 +303,13 @@ UNKNOWN with 4 nodes and 4 edges:
 - [wang2023localbk](@citet)
 - [wang2025pagcauses](@citet)
 """
-function maximal_local_mag(cg::PAG, x::Symbol, c::AbstractVector{Symbol})
+function maximal_local_mag(cg::PAG, x::Symbol, c::Union{Symbol,AbstractVector{Symbol}})
     _check_no_selection_variables(cg, "maximal_local_mag (Wang, Qin & Zhou 2023)")
     node_vec, index, adj, mark = _pag_adj_marks(cg.backend.nodes, cg.edges)
     n = length(node_vec)
     x_idx = index[x]
     c_mask = falses(n)
-    for s in c
+    for s in _as_symbol_vec(c)
         c_mask[index[s]] = true
     end
     _maximal_local_mag_marks!(adj, mark, n, x_idx, c_mask)

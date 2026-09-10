@@ -119,10 +119,12 @@ _subgraph_type(::Type{PAG}) = UNKNOWN
 _subgraph_type(T::Type{<:CausalGraph}) = T
 
 """
-    subgraph(cg::CausalGraph, nodes::AbstractVector{Symbol}) -> CausalGraph
+    subgraph(cg::CausalGraph, nodes) -> CausalGraph
 
 Return the subgraph of `cg` induced by `nodes`: restricted to the given node
 set, keeping only edges whose both endpoints are in `nodes`.
+
+`nodes` may be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 The return type matches `cg` for most classes, but two classes are downgraded, because the
 induced subgraph need not satisfy the stronger class invariant:
@@ -146,8 +148,8 @@ DAG with 2 nodes and 1 edge:
     A --> B
 ```
 """
-function subgraph(cg::CausalGraph, nodes::AbstractVector{Symbol})
-    keep = Set(nodes)
+function subgraph(cg::CausalGraph, nodes::Union{Symbol,AbstractVector{Symbol}})
+    keep = _as_symbol_set(nodes)
     edges = _subgraph_edges(cg.edges, keep)
     return _subgraph_type(typeof(cg))(keep, edges)
 end

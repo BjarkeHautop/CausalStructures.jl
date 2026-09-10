@@ -119,7 +119,7 @@ maximal_local_mag(pag, :A, Symbol[])
 ```
 
 ```@example pc
-maximal_local_mag(pag, :A, [:B])
+maximal_local_mag(pag, :A, :B)
 ```
 
 These correspond to the two cases considered by `pagcauses(pag, :A, :D)`: the first
