@@ -140,3 +140,10 @@ end
     @test all_adjustment_sets(pag, [:X1, :X2], [:Y]) == [[:A1, :A2]]
     @test Set(adjustment_set(pag, [:X1, :X2], [:Y])) == Set([:A1, :A2])
 end
+
+@testitem "is_valid_adjustment PAG: accepts a bare Symbol for z" setup =
+    [PagAdjustmentHelpers] tags = [:unit, :pag_adjustment] begin
+    mag = MAG(directed(:B, :X), bidirected(:A, :X), directed(:A, :Y), directed(:X, :Y))
+    pag = mag_to_pag(mag)
+    @test is_valid_adjustment(pag, :X, :Y, :A) == is_valid_adjustment(pag, :X, :Y, [:A])
+end

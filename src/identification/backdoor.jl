@@ -4,8 +4,7 @@
 Return `true` if `z` satisfies the backdoor criterion for the causal effect of
 `x` on `y` in `cg`.
 
-`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`; for
-sets, `x`/`y` in the criterion below refer to the whole set.
+`x`, `y`, and `z` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 `z` is a valid backdoor set if (1) no node in `z` is a descendant of `x`, and
 (2) `z` blocks every backdoor path from `x` to `y`.
@@ -51,7 +50,7 @@ function is_valid_backdoor(
     cg::DAG,
     x::Union{Symbol,AbstractVector{Symbol}},
     y::Union{Symbol,AbstractVector{Symbol}},
-    z::AbstractVector{Symbol} = Symbol[],
+    z::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
     B = cg.backend
     n = length(B.nodes)
@@ -69,11 +68,9 @@ function is_valid_backdoor(
 
     # Reject any z member that is a descendant of some x ∈ X.
     de_x = _descendants_bitmask(B, xs)
-    z_idxs = Vector{Int}(undef, length(z))
-    for (i, v) in enumerate(z)
-        vi = node_index(cg, v)
+    z_idxs = _node_indices(cg, z)
+    for vi in z_idxs
         de_x[vi] && return false
-        z_idxs[i] = vi
     end
 
     # Pa(X) \ X: parents of some x ∈ X that are not themselves in X.
@@ -233,13 +230,13 @@ function is_valid_backdoor(
     cg::ADMG,
     x::Union{Symbol,AbstractVector{Symbol}},
     y::Union{Symbol,AbstractVector{Symbol}},
-    z::AbstractVector{Symbol} = Symbol[],
+    z::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
     B = cg.backend
     xs = _node_indices(cg, x)
     de_x = _descendants_bitmask(B, xs)
-    for v in z
-        de_x[node_index(cg, v)] && return false
+    for vi in _node_indices(cg, z)
+        de_x[vi] && return false
     end
     xs_syms = Set{Symbol}(x isa Symbol ? (x,) : x)
     gx = build_graph(

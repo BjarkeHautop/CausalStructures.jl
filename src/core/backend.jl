@@ -382,6 +382,11 @@ _node_indices(cg::CausalGraph, x::AbstractVector{Symbol}) = [node_index(cg, v) f
 _as_symbol_set(x::Symbol) = Set{Symbol}((x,))
 _as_symbol_set(x::AbstractVector{Symbol}) = Set{Symbol}(x)
 
+# Normalizes a single node or a set of nodes to an AbstractVector{Symbol}, for
+# functions that index/iterate the conditioning set more than once.
+_as_symbol_vec(x::Symbol) = Symbol[x]
+_as_symbol_vec(x::AbstractVector{Symbol}) = x
+
 """
     neighbors(cg::CausalGraph, node::Symbol; mode::Symbol = :all) -> Vector{Symbol}
 

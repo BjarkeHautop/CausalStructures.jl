@@ -124,7 +124,7 @@ end
 Return `true` if `z` is a valid adjustment set for estimating the total causal
 effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
 
-`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
+`x`, `y`, and `z` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 The forbidden set is computed using possible descendants (nodes reachable via
 directed or undirected edges) and the separation check uses the moralized
@@ -156,12 +156,12 @@ function is_valid_adjustment(
     cg::AbstractPDAG,
     x::Union{Symbol,AbstractVector{Symbol}},
     y::Union{Symbol,AbstractVector{Symbol}},
-    z::AbstractVector{Symbol} = Symbol[],
+    z::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
     B = cg.backend
     xs = _node_indices(cg, x)
     ys = _node_indices(cg, y)
-    z_idxs = [node_index(cg, v) for v in z]
+    z_idxs = _node_indices(cg, z)
 
     forbidden = _forbidden_set_pdag(B, xs, ys)
     any(v -> forbidden[v], z_idxs) && return false

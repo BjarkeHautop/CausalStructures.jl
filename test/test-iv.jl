@@ -166,3 +166,9 @@ end
     @test !is_valid_iv(dag, :X, [:Y1, :Y2], [:U])
     @test Set(all_iv_sets(dag, :X, [:Y1, :Y2])) == Set([[:Z1], [:Z2]])
 end
+
+@testitem "is_valid_iv: accepts a bare Symbol for z" tags = [:unit, :iv] begin
+    dag = DAG(directed(:Z, :X), directed(:X, :Y), directed(:U, :X), directed(:U, :Y))
+    @test is_valid_iv(dag, :X, :Y, :Z) == is_valid_iv(dag, :X, :Y, [:Z])
+    @test is_valid_iv(dag, :X, :Y, :U) == is_valid_iv(dag, :X, :Y, [:U])
+end

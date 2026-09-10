@@ -176,6 +176,19 @@ end
     @test m_separated(admg, [:A, :B], :C, [:A, :B])
 end
 
+# ── scalar z ─────────────────────────────────────────────────────────────────
+
+@testitem "d_separated: accepts a bare Symbol for z" tags = [:unit, :separation] begin
+    cg = DAG(directed(:A, :B), directed(:B, :C))
+    @test d_separated(cg, :A, :C, :B) == d_separated(cg, :A, :C, [:B])
+    @test d_separated(cg, [:A], [:C], :B) == d_separated(cg, [:A], [:C], [:B])
+end
+
+@testitem "m_separated: accepts a bare Symbol for z" tags = [:unit, :separation] begin
+    admg = ADMG(directed(:A, :B), bidirected(:A, :C))
+    @test m_separated(admg, :B, :C, :A) == m_separated(admg, :B, :C, [:A])
+end
+
 @testitem "minimal_separator: accepts Vector{Symbol} for x and y (DAG)" tags =
     [:unit, :separation] begin
     dag = DAG(directed(:A, :M1), directed(:M1, :Y), directed(:B, :M2), directed(:M2, :Y))

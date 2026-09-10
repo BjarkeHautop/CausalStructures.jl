@@ -213,6 +213,12 @@ end
     @test all_adjustment_sets(pdag, [:X1, :X2], [:Y]) == [[:L1, :L2]]
 end
 
+@testitem "is_valid_adjustment AbstractPDAG: accepts a bare Symbol for z" tags =
+    [:unit, :pdag_adjustment] begin
+    pdag = PDAG("A --> X --> Y, A --> Y")
+    @test is_valid_adjustment(pdag, :X, :Y, :A) == is_valid_adjustment(pdag, :X, :Y, [:A])
+end
+
 @testitem "is_valid_adjustment MPDAG: empty set is invalid when background knowledge introduces a partially directed cycle" tags =
     [:unit, :pdag_adjustment] begin
     # D --> B added as background knowledge to a 4-cycle CPDAG (Perković,

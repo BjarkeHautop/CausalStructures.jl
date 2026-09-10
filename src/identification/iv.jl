@@ -31,14 +31,14 @@ _reachable_single!(visited, q, reached, B::ADMGBackend, seed, a_mask, z_mask) =
     _reachable_admg_single!(visited, q, reached, B, seed, a_mask, z_mask)
 
 """
-    is_valid_iv(cg::Union{DAG,ADMG}, x::Symbol, y, z::AbstractVector{Symbol}) -> Bool
+    is_valid_iv(cg::Union{DAG,ADMG}, x::Symbol, y, z) -> Bool
 
 Return `true` if `z` is a valid instrumental set for the causal effect of `x` on `y`
 in `cg`.
 
-`y` may be a single `Symbol` or an `AbstractVector{Symbol}` (multiple outcomes
-of the same treatment `x`); `x` must be a single `Symbol`, since the
-instrumental-set criterion is defined for one structural coefficient `x -> y`.
+`y` and `z` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
+`x` must be a single `Symbol`, since the instrumental-set criterion is defined
+for one structural coefficient `x -> y`.
 
 `z` is a valid instrumental set if:
 1. Every `zi ∈ z` is d-/m-separated from `y` given `{x}` in the interventional graph
@@ -85,12 +85,13 @@ function is_valid_iv(
     cg::Union{DAG,ADMG},
     x::Symbol,
     y::Union{Symbol,AbstractVector{Symbol}},
-    z::AbstractVector{Symbol},
+    z::Union{Symbol,AbstractVector{Symbol}},
 )
-    isempty(z) && return false
+    z_vec = _as_symbol_vec(z)
+    isempty(z_vec) && return false
     ys_syms = _as_symbol_set(y)
-    any(zi -> zi === x || zi in ys_syms, z) && return false
-    return _check_iv(cg, x, y, z, _build_g_do_x(cg, x))
+    any(zi -> zi === x || zi in ys_syms, z_vec) && return false
+    return _check_iv(cg, x, y, z_vec, _build_g_do_x(cg, x))
 end
 
 """

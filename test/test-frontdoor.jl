@@ -641,3 +641,8 @@ end
     @test frontdoor_set(cg, [:X1, :X2], [:Y1, :Y2]; restrict = [:M]) == [:M]
     @test all_frontdoor_sets(cg, [:X1, :X2], [:Y1, :Y2]; restrict = [:M]) == [[:M]]
 end
+
+@testitem "is_valid_frontdoor: accepts a bare Symbol for z" tags = [:unit, :frontdoor] begin
+    cg = DAG(directed(:U, :X), directed(:X, :M), directed(:M, :Y), directed(:U, :Y))
+    @test is_valid_frontdoor(cg, :X, :Y, :M) == is_valid_frontdoor(cg, :X, :Y, [:M])
+end

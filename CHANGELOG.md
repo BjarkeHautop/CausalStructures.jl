@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased version
 
+### New features
+
+- `d_separated`, `m_separated`, and the backdoor/frontdoor/adjustment-set/`is_valid_iv`
+functions that take a conditioning set now also accept a bare `Symbol` for `z` (in
+addition to `Vector{Symbol}`), matching the `Vector{Symbol}` support already added for
+`x`/`y`.
+
 ### Bug fixes
 
 - `is_valid_iv`/`all_iv_sets` on an `ADMG` could wrongly reject a valid instrument when its own edge into the treatment was bidirected (e.g. `Z <-> X`).

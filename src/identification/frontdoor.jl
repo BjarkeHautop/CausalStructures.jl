@@ -4,8 +4,7 @@
 Return `true` if `z` satisfies the front-door criterion for the causal effect of
 `x` on `y` in `cg`.
 
-`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`; for
-sets, `x`/`y` in the criterion below refer to the whole set.
+`x`, `y`, and `z` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 `z` is a valid front-door set if:
 1. `z` intercepts all directed paths from `x` to `y`.
@@ -48,7 +47,7 @@ function is_valid_frontdoor(
     cg::DAG,
     x::Union{Symbol,AbstractVector{Symbol}},
     y::Union{Symbol,AbstractVector{Symbol}},
-    z::AbstractVector{Symbol} = Symbol[],
+    z::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
     B = cg.backend
     n = length(B.nodes)
@@ -59,11 +58,12 @@ function is_valid_frontdoor(
     for yi in ys
         ys_mask[yi] = true
     end
-    any(v -> node_index(cg, v) in xs || ys_mask[node_index(cg, v)], z) && return false
+    z_vec = _as_symbol_vec(z)
+    any(v -> node_index(cg, v) in xs || ys_mask[node_index(cg, v)], z_vec) && return false
 
     # Condition (i): Z intercepts all directed paths from X to Y.
     z_mask = falses(n)
-    for v in z
+    for v in z_vec
         z_mask[node_index(cg, v)] = true
     end
     seeds_bfs = [xi for xi in xs if !z_mask[xi]]
@@ -90,14 +90,14 @@ function is_valid_frontdoor(
 
     # Condition (ii): X ⊥ Zi | ∅ in G_X for every Zi ∈ Z.
     gx = _build_gx(cg, x)
-    for zi in z
+    for zi in z_vec
         d_separated(gx, x, zi, Symbol[]) || return false
     end
 
     # Condition (iii): Zi ⊥ Y | X ∪ (Z \ {Zi}) in G_Zi for every Zi ∈ Z.
-    for (k, zi) in enumerate(z)
+    for (k, zi) in enumerate(z_vec)
         gzi = _build_gx(cg, zi)
-        cond = [x; [z[j] for j in eachindex(z) if j != k]]
+        cond = [x; [z_vec[j] for j in eachindex(z_vec) if j != k]]
         d_separated(gzi, zi, y, cond) || return false
     end
 
@@ -108,7 +108,7 @@ function is_valid_frontdoor(
     cg::ADMG,
     x::Union{Symbol,AbstractVector{Symbol}},
     y::Union{Symbol,AbstractVector{Symbol}},
-    z::AbstractVector{Symbol} = Symbol[],
+    z::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
     B = cg.backend
     n = length(B.nodes)
@@ -119,11 +119,12 @@ function is_valid_frontdoor(
     for yi in ys
         ys_mask[yi] = true
     end
-    any(v -> node_index(cg, v) in xs || ys_mask[node_index(cg, v)], z) && return false
+    z_vec = _as_symbol_vec(z)
+    any(v -> node_index(cg, v) in xs || ys_mask[node_index(cg, v)], z_vec) && return false
 
     # Condition (i): Z intercepts all directed paths from X to Y.
     z_mask = falses(n)
-    for v in z
+    for v in z_vec
         z_mask[node_index(cg, v)] = true
     end
     seeds_bfs = [xi for xi in xs if !z_mask[xi]]
@@ -150,14 +151,14 @@ function is_valid_frontdoor(
 
     # Condition (ii): X ⊥_m Zi | ∅ in G_X for every Zi ∈ Z.
     gx = _build_gx(cg, x)
-    for zi in z
+    for zi in z_vec
         m_separated(gx, x, zi, Symbol[]) || return false
     end
 
     # Condition (iii): Zi ⊥_m Y | X ∪ (Z \ {Zi}) in G_Zi for every Zi ∈ Z.
-    for (k, zi) in enumerate(z)
+    for (k, zi) in enumerate(z_vec)
         gzi = _build_gx(cg, zi)
-        cond = [x; [z[j] for j in eachindex(z) if j != k]]
+        cond = [x; [z_vec[j] for j in eachindex(z_vec) if j != k]]
         m_separated(gzi, zi, y, cond) || return false
     end
 

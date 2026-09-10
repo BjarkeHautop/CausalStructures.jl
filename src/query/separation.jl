@@ -493,8 +493,8 @@ end
 
 Return `true` if `x` and `y` are d-separated given `z` in `cg`.
 
-`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`; for
-sets, the result is `true` iff every node in `x` is d-separated from every
+`x`, `y`, and `z` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
+The result is `true` iff every node in `x` is d-separated from every
 node in `y` given `z`.
 
 Two nodes are d-separated given a conditioning set `z` if every path between
@@ -554,13 +554,13 @@ function d_separated(
     cg::DAG,
     x::Union{Symbol,AbstractVector{Symbol}},
     y::Union{Symbol,AbstractVector{Symbol}},
-    z::AbstractVector{Symbol} = Symbol[],
+    z::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
     B = cg.backend
     xs = _node_indices(cg, x)
     ys = _node_indices(cg, y)
     (isempty(xs) || isempty(ys)) && return true
-    z_idxs = [node_index(cg, v) for v in z]
+    z_idxs = _node_indices(cg, z)
 
     n = length(B.nodes)
     z_mask = falses(n)
@@ -581,13 +581,13 @@ function d_separated(
     cg::AbstractPDAG,
     x::Union{Symbol,AbstractVector{Symbol}},
     y::Union{Symbol,AbstractVector{Symbol}},
-    z::AbstractVector{Symbol} = Symbol[],
+    z::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
     B = cg.backend
     xs = _node_indices(cg, x)
     ys = _node_indices(cg, y)
     (isempty(xs) || isempty(ys)) && return true
-    z_idxs = [node_index(cg, v) for v in z]
+    z_idxs = _node_indices(cg, z)
 
     n = length(B.nodes)
     z_mask = falses(n)
@@ -609,8 +609,8 @@ end
 
 Return `true` if `x` and `y` are m-separated given `z` in `cg`.
 
-`x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`; for
-sets, the result is `true` iff every node in `x` is m-separated from every
+`x`, `y`, and `z` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
+The result is `true` iff every node in `x` is m-separated from every
 node in `y` given `z`.
 
 M-separation generalizes d-separation to graphs with bidirected and undirected
@@ -659,7 +659,7 @@ m_separated(
     cg::DAG,
     x::Union{Symbol,AbstractVector{Symbol}},
     y::Union{Symbol,AbstractVector{Symbol}},
-    z::AbstractVector{Symbol} = Symbol[],
+    z::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 ) = d_separated(cg, x, y, z)
 
 # Returns true iff x ⊥_m y | z in ADMG cg.
@@ -667,13 +667,13 @@ function m_separated(
     cg::ADMG,
     x::Union{Symbol,AbstractVector{Symbol}},
     y::Union{Symbol,AbstractVector{Symbol}},
-    z::AbstractVector{Symbol} = Symbol[],
+    z::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
     B = cg.backend
     xs = _node_indices(cg, x)
     ys = _node_indices(cg, y)
     (isempty(xs) || isempty(ys)) && return true
-    z_idxs = [node_index(cg, v) for v in z]
+    z_idxs = _node_indices(cg, z)
 
     n = length(B.nodes)
     z_mask = falses(n)
@@ -695,13 +695,13 @@ function m_separated(
     cg::AbstractAG,
     x::Union{Symbol,AbstractVector{Symbol}},
     y::Union{Symbol,AbstractVector{Symbol}},
-    z::AbstractVector{Symbol} = Symbol[],
+    z::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
     B = cg.backend
     xs = _node_indices(cg, x)
     ys = _node_indices(cg, y)
     (isempty(xs) || isempty(ys)) && return true
-    z_idxs = [node_index(cg, v) for v in z]
+    z_idxs = _node_indices(cg, z)
 
     n = length(B.nodes)
     z_mask = falses(n)
@@ -723,13 +723,13 @@ function m_separated(
     cg::PAG,
     x::Union{Symbol,AbstractVector{Symbol}},
     y::Union{Symbol,AbstractVector{Symbol}},
-    z::AbstractVector{Symbol} = Symbol[],
+    z::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
     B = cg.backend
     xs = _node_indices(cg, x)
     ys = _node_indices(cg, y)
     (isempty(xs) || isempty(ys)) && return true
-    z_idxs = [node_index(cg, v) for v in z]
+    z_idxs = _node_indices(cg, z)
 
     n = length(B.nodes)
     z_mask = falses(n)

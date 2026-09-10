@@ -500,3 +500,28 @@ end
     @test is_valid_adjustment(mag, [:X1, :X2], [:Y], [:A, :B])
     @test !is_valid_adjustment(mag, [:X1, :X2], [:Y])
 end
+
+# ── scalar z ─────────────────────────────────────────────────────────────────
+
+@testitem "is_valid_backdoor DAG: accepts a bare Symbol for z" setup = [EciGraph] tags =
+    [:unit, :backdoor] begin
+    cg = _eci_graph()
+    @test is_valid_backdoor(cg, :X, :Y, :A) == is_valid_backdoor(cg, :X, :Y, [:A])
+end
+
+@testitem "is_valid_backdoor ADMG: accepts a bare Symbol for z" setup = [TwoConfounderGraph] tags =
+    [:unit, :backdoor] begin
+    admg = _two_confounder_graph(ADMG)
+    @test is_valid_backdoor(admg, :X1, :Y, :L1) == is_valid_backdoor(admg, :X1, :Y, [:L1])
+end
+
+@testitem "is_valid_adjustment DAG: accepts a bare Symbol for z" setup = [EciGraph] tags =
+    [:unit, :backdoor] begin
+    cg = _eci_graph()
+    @test is_valid_adjustment(cg, :X, :Y, :A) == is_valid_adjustment(cg, :X, :Y, [:A])
+end
+
+@testitem "is_valid_adjustment MAG: accepts a bare Symbol for z" tags = [:unit, :backdoor] begin
+    mag = MAG(bidirected(:A, :X), directed(:A, :M), directed(:M, :Y), directed(:X, :Y))
+    @test is_valid_adjustment(mag, :X, :Y, :A) == is_valid_adjustment(mag, :X, :Y, [:A])
+end

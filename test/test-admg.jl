@@ -188,3 +188,8 @@ end
     @test all_adjustment_sets(admg, [:X1, :X2], [:Y]) == [[:L1, :L2]]
     @test Set(adjustment_set(admg, [:X1, :X2], [:Y])) == Set([:L1, :L2])
 end
+
+@testitem "is_valid_adjustment ADMG: accepts a bare Symbol for z" tags = [:unit, :admg] begin
+    admg = ADMG("L --> X --> Y, L --> Y")
+    @test is_valid_adjustment(admg, :X, :Y, :L) == is_valid_adjustment(admg, :X, :Y, [:L])
+end
