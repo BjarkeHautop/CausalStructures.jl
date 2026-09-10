@@ -9,4 +9,4 @@ CausalStructures = "b41ab49a-79bc-5eac-acbb-517b17bd5c16"
 CausalStructures = {path = ".."}
 
 [compat]
-julia = "1.12"
+julia = "1.13"

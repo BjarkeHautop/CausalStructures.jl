@@ -106,8 +106,13 @@ Base.hash(e::Quotient, h::UInt) = hash(e.den, hash(e.num, hash(:Quotient, h)))
 _free_vars(e::Prob) = Set{Symbol}(vcat(e.vars, e.given))
 _free_vars(e::Marginal) = setdiff(_free_vars(e.term), Set(e.index))
 _free_vars(e::Quotient) = union(_free_vars(e.num), _free_vars(e.den))
-_free_vars(e::Product) =
-    isempty(e.terms) ? Set{Symbol}() : union((_free_vars(t) for t in e.terms)...)
+function _free_vars(e::Product)
+    acc = Set{Symbol}()
+    for t in e.terms
+        union!(acc, _free_vars(t))
+    end
+    return acc
+end
 
 # The factors of an expression, as a fresh vector the caller may mutate.
 _factors(e::Product) = copy(e.terms)
@@ -388,8 +393,13 @@ end
 _vars_used(e::Prob) = Set{Symbol}(vcat(e.vars, e.given))
 _vars_used(e::Marginal) = union(Set{Symbol}(e.index), _vars_used(e.term))
 _vars_used(e::Quotient) = union(_vars_used(e.num), _vars_used(e.den))
-_vars_used(e::Product) =
-    isempty(e.terms) ? Set{Symbol}() : union((_vars_used(t) for t in e.terms)...)
+function _vars_used(e::Product)
+    acc = Set{Symbol}()
+    for t in e.terms
+        union!(acc, _vars_used(t))
+    end
+    return acc
+end
 
 _rename(e::Prob, m::Dict{Symbol,Symbol}) =
     prob([get(m, v, v) for v in e.vars]; given = [get(m, v, v) for v in e.given])

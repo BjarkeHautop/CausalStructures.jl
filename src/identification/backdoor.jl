@@ -392,11 +392,15 @@ function adjustment_set(
         for v = 1:n
             (xs_mask[v] || ys_mask[v]) && (keep[v] = false)
         end
-        return [B.nodes[v] for v = 1:n if keep[v]]
+        return _mask_nodes(B, keep)
 
     elseif type === :backdoor
-        de_x = _descendants_bitmask(B, xs)
-        restrict = [B.nodes[v] for v = 1:n if !xs_mask[v] && !ys_mask[v] && !de_x[v]]
+        de_x1 = _descendants_bitmask(B, xs)
+        restrict_mask = falses(n)
+        for v = 1:n
+            restrict_mask[v] = !xs_mask[v] && !ys_mask[v] && !de_x1[v]
+        end
+        restrict = _mask_nodes(B, restrict_mask)
         xs_syms = Set{Symbol}(x isa Symbol ? (x,) : x)
         gx = build_graph(
             DAG,
@@ -414,22 +418,22 @@ function adjustment_set(
         for v = 1:n
             (xs_mask[v] || ys_mask[v]) && (keep[v] = false)
         end
-        return [B.nodes[v] for v = 1:n if keep[v]]
+        return _mask_nodes(B, keep)
 
     elseif type === :optimal
-        de_x = _descendants_bitmask(B, xs)
+        de_x2 = _descendants_bitmask(B, xs)
         for xi in xs
-            de_x[xi] = false  # exclude X itself
+            de_x2[xi] = false  # exclude X itself
         end
 
         an_y = _ancestors_bitmask(B, ys)  # includes ys
 
         cn_mask = falses(n)
         for v = 1:n
-            de_x[v] && an_y[v] && (cn_mask[v] = true)
+            de_x2[v] && an_y[v] && (cn_mask[v] = true)
         end
         for yi in ys
-            de_x[yi] && (cn_mask[yi] = true)  # add y if y ∈ De(X)
+            de_x2[yi] && (cn_mask[yi] = true)  # add y if y ∈ De(X)
         end
 
         pacn_mask = falses(n)
@@ -445,7 +449,7 @@ function adjustment_set(
         for v = 1:n
             cn_mask[v] && (pacn_mask[v] = false)
         end
-        return [B.nodes[v] for v = 1:n if pacn_mask[v]]
+        return _mask_nodes(B, pacn_mask)
 
     else
         throw(

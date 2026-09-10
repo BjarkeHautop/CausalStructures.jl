@@ -266,6 +266,9 @@ a view into `B.rowval`.
 """
 _all_nbrs_slice(B::CausalBackend, i::Int) = @view B.rowval[B.colptr[i]:(B.colptr[i+1]-1)]
 
+_mask_nodes(B::CausalBackend, mask::BitVector) =
+    [B.nodes[v] for v in eachindex(mask) if mask[v]]
+
 # Named bucket accessors. One docstring per name below (bound to the first
 # method via `function ... end`); the per-backend one-liners that follow are
 # just that bucket layout for each backend type.

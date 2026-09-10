@@ -39,12 +39,12 @@ end
 
 function _acyclic_extension_exists(cg::AbstractPDAG, gained::Dict{Symbol,Vector{Symbol}})
     isempty(gained) && return true
-    items = Any[]
+    items = RequiredEdge[]
     for (v, newps) in gained, p in newps
         push!(items, required_directed(p, v))
     end
     try
-        apply_background_knowledge(cg, BackgroundKnowledge(items...))
+        apply_background_knowledge(cg, BackgroundKnowledge(items, ForbiddenEdge[]))
         return true
     catch
         return false

@@ -6,14 +6,14 @@ function _oriented_local_mpdag(
     parents_in::AbstractVector{Symbol},
     away::AbstractVector{Symbol},
 )
-    items = Any[]
+    items = RequiredEdge[]
     for s in parents_in
         push!(items, required_directed(s, x))
     end
     for s in away
         push!(items, required_directed(x, s))
     end
-    return apply_background_knowledge(cg, BackgroundKnowledge(items...))
+    return apply_background_knowledge(cg, BackgroundKnowledge(items, ForbiddenEdge[]))
 end
 
 """
