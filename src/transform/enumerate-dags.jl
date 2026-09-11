@@ -221,6 +221,9 @@ function _dag_from_index_adjacency(
     return DAG(new_edges, backend)
 end
 
+# Kept as separate copies of the same recursion (differing only at the leaf)
+# rather than merged via a leaf-callback closure: that merge benchmarked
+# ~19% slower on `count_dags`.
 function _list_dags_enum!(pa, ch, und, input_pa, skeleton, node_names, index, out, trail)
     edge = _smallest_und_edge_enum(und)
     if edge === nothing

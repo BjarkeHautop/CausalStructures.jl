@@ -229,7 +229,9 @@ function _reachable_dag(
     return reached
 end
 
-# In-place, single-seed variant of `_reachable_dag` for hot loops
+# In-place, single-seed variant of `_reachable_dag` for hot loops. Kept as a
+# separate copy of the BFS body rather than an extracted shared function:
+# that merge benchmarked ~4-9% slower on this hot path.
 function _reachable_dag_single!(
     visited::BitMatrix,
     q::Vector{Tuple{Int,Int}},

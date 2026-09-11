@@ -60,6 +60,37 @@ function topological_sort(cg::DAG)
     return ordering
 end
 
+# Shared stack-based reachability for `ancestors`/`descendants`: both walk a
+# single directed bucket (`_parents_slice`/`_children_slice`) backward or
+# forward from `node`, differing only in which slice they follow.
+function _directed_reach(cg, node::Symbol, slice::F; open::Bool) where {F<:Function}
+    B = cg.backend
+    n = length(B.nodes)
+    node_idx = node_index(cg, node)
+    seen = falses(n)
+    stack = Int[]
+    sizehint!(stack, n)
+    for p in slice(B, node_idx)
+        if !seen[p]
+            seen[p] = true
+            push!(stack, p)
+        end
+    end
+
+    while !isempty(stack)
+        idx = pop!(stack)
+        for p in slice(B, idx)
+            if !seen[p]
+                seen[p] = true
+                push!(stack, p)
+            end
+        end
+    end
+
+    result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
+    return open ? result : [node; result]
+end
+
 """
     ancestors(cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG}, node::Symbol; open::Bool = true) -> Vector{Symbol}
 
@@ -94,31 +125,7 @@ function ancestors(
     node::Symbol;
     open::Bool = _OPEN_DEFAULT,
 )
-    B = cg.backend
-    n = length(B.nodes)
-    node_idx = node_index(cg, node)
-    seen = falses(n)
-    stack = Int[]
-    sizehint!(stack, n)
-    for p in _parents_slice(B, node_idx)
-        if !seen[p]
-            seen[p] = true
-            push!(stack, p)
-        end
-    end
-
-    while !isempty(stack)
-        idx = pop!(stack)
-        for p in _parents_slice(B, idx)
-            if !seen[p]
-                seen[p] = true
-                push!(stack, p)
-            end
-        end
-    end
-
-    result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
-    return open ? result : [node; result]
+    return _directed_reach(cg, node, _parents_slice; open)
 end
 
 """
@@ -157,31 +164,7 @@ function descendants(
     node::Symbol;
     open::Bool = _OPEN_DEFAULT,
 )
-    B = cg.backend
-    n = length(B.nodes)
-    node_idx = node_index(cg, node)
-    seen = falses(n)
-    stack = Int[]
-    sizehint!(stack, n)
-    for c in _children_slice(B, node_idx)
-        if !seen[c]
-            seen[c] = true
-            push!(stack, c)
-        end
-    end
-
-    while !isempty(stack)
-        idx = pop!(stack)
-        for c in _children_slice(B, idx)
-            if !seen[c]
-                seen[c] = true
-                push!(stack, c)
-            end
-        end
-    end
-
-    result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
-    return open ? result : [node; result]
+    return _directed_reach(cg, node, _children_slice; open)
 end
 
 """
@@ -602,11 +585,13 @@ anteriors(cg::DAG, node::Symbol; open::Bool = _OPEN_DEFAULT) = ancestors(cg, nod
 
 anteriors(cg::ADMG, node::Symbol; open::Bool = _OPEN_DEFAULT) = ancestors(cg, node; open)
 
-function anteriors(
-    cg::Union{AbstractPDAG,AbstractAG},
-    node::Symbol;
-    open::Bool = _OPEN_DEFAULT,
-)
+# Shared reachability for `anteriors`/`posteriors`.
+function _directed_undirected_reach(
+    cg,
+    node::Symbol,
+    slice::F;
+    open::Bool,
+) where {F<:Function}
     B = cg.backend
     n = length(B.nodes)
     node_idx = node_index(cg, node)
@@ -614,7 +599,7 @@ function anteriors(
     seen[node_idx] = true  # sentinel: prevents re-enqueuing via undirected edges
     stack = Int[]
     sizehint!(stack, n)
-    for p in _parents_slice(B, node_idx)
+    for p in slice(B, node_idx)
         if !seen[p]
             seen[p] = true
             push!(stack, p)
@@ -629,7 +614,7 @@ function anteriors(
 
     while !isempty(stack)
         idx = pop!(stack)
-        for p in _parents_slice(B, idx)
+        for p in slice(B, idx)
             if !seen[p]
                 seen[p] = true
                 push!(stack, p)
@@ -646,6 +631,14 @@ function anteriors(
     seen[node_idx] = false  # clear sentinel so node doesn't appear in result
     result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
     return open ? result : [node; result]
+end
+
+function anteriors(
+    cg::Union{AbstractPDAG,AbstractAG},
+    node::Symbol;
+    open::Bool = _OPEN_DEFAULT,
+)
+    return _directed_undirected_reach(cg, node, _parents_slice; open)
 end
 
 """
@@ -695,45 +688,7 @@ function posteriors(
     node::Symbol;
     open::Bool = _OPEN_DEFAULT,
 )
-    B = cg.backend
-    n = length(B.nodes)
-    node_idx = node_index(cg, node)
-    seen = falses(n)
-    seen[node_idx] = true  # sentinel: prevents re-enqueuing via undirected edges
-    stack = Int[]
-    sizehint!(stack, n)
-    for c in _children_slice(B, node_idx)
-        if !seen[c]
-            seen[c] = true
-            push!(stack, c)
-        end
-    end
-    for u in _undirected_slice(B, node_idx)
-        if !seen[u]
-            seen[u] = true
-            push!(stack, u)
-        end
-    end
-
-    while !isempty(stack)
-        idx = pop!(stack)
-        for c in _children_slice(B, idx)
-            if !seen[c]
-                seen[c] = true
-                push!(stack, c)
-            end
-        end
-        for u in _undirected_slice(B, idx)
-            if !seen[u]
-                seen[u] = true
-                push!(stack, u)
-            end
-        end
-    end
-
-    seen[node_idx] = false  # clear sentinel so node doesn't appear in result
-    result = [B.nodes[i] for i in eachindex(seen) if seen[i]]
-    return open ? result : [node; result]
+    return _directed_undirected_reach(cg, node, _children_slice; open)
 end
 
 # Marks `node_idx`'s parents, children, and co-parents (other parents of its
