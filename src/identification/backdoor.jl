@@ -599,3 +599,52 @@ function backdoor_set(cg::DAG, x::Symbol, y::Symbol)
     yi in _parents_slice(B, xi) && return nothing
     return sort(B.nodes[_parents_slice(B, xi)])
 end
+
+"""
+    backdoor_set(cg::ADMG, x::Symbol, y::Symbol) -> Union{Vector{Symbol},Nothing}
+
+Return a generalized back-door set relative to `(x, y)` and `cg`,
+or `nothing` if none exists.
+
+# Examples
+
+```jldoctest
+julia> admg = ADMG("A --> X --> Y, A --> Y");
+
+julia> backdoor_set(admg, :X, :Y)
+1-element Vector{Symbol}:
+ :A
+
+julia> admg2 = ADMG("A --> X --> Y, A <-> Y");  # latent confounder A also causes Y
+
+julia> backdoor_set(admg2, :X, :Y)
+1-element Vector{Symbol}:
+ :A
+
+julia> admg3 = ADMG(directed(:X, :Y), bidirected(:X, :Y));  # direct edge plus latent confounder
+
+julia> backdoor_set(admg3, :X, :Y) === nothing  # Y stays adjacent to X in M_X via X <-> Y
+true
+```
+
+# References
+
+- [maathuiscolombo2015gbc](@citet)
+"""
+function backdoor_set(cg::ADMG, x::Symbol, y::Symbol)
+    B = cg.backend
+    n = length(B.nodes)
+    xi = node_index(cg, x)
+    yi = node_index(cg, y)
+
+    de_x = _descendants_bitmask(B, [xi])
+    universe = [B.nodes[v] for v = 1:n if v != xi && v != yi && !de_x[v]]
+
+    gx = build_graph(
+        ADMG,
+        Set(B.nodes),
+        filter(e -> !(is_directed(e) && e.src == x), cg.edges),
+    )
+
+    return minimal_separator(gx, x, y; restrict = universe)
+end

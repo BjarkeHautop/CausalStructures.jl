@@ -126,3 +126,56 @@ end
     pag = mag_to_pag(mag)
     @test_throws ArgumentError backdoor_set(pag, :A, :B)
 end
+
+# ── ADMG  ─────────────────────────────────────────────────────────────────────
+
+@testitem "backdoor_set ADMG: classic confounder" tags = [:unit, :gbc] begin
+    admg = ADMG("A --> X --> Y, A --> Y")
+    @test sort(backdoor_set(admg, :X, :Y)) == [:A]
+    @test backdoor_set(admg, :Y, :A) === nothing  # A is a parent of Y
+end
+
+@testitem "backdoor_set ADMG: no other nodes gives empty set" tags = [:unit, :gbc] begin
+    admg = ADMG(directed(:X, :Y))
+    @test backdoor_set(admg, :X, :Y) == Symbol[]
+end
+
+@testitem "backdoor_set ADMG: latent confounder on the path is a valid witness" tags =
+    [:unit, :gbc] begin
+    admg = ADMG("A --> X --> Y, A <-> Y")
+    z = backdoor_set(admg, :X, :Y)
+    @test z == [:A]
+    @test is_valid_adjustment(admg, :X, :Y, z)
+end
+
+@testitem "backdoor_set ADMG: direct latent confounder between X and Y is unidentifiable" tags =
+    [:unit, :gbc] begin
+    # X --> Y (direct effect) plus X <-> Y (latent confounder): removing the
+    # directed edge in M_X still leaves X <-> Y, so Y stays adjacent to X.
+    admg = ADMG(directed(:X, :Y), bidirected(:X, :Y))
+    @test backdoor_set(admg, :X, :Y) === nothing
+end
+
+@testitem "backdoor_set ADMG: agrees with all_backdoor_sets" tags = [:unit, :gbc] begin
+    admg = ADMG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y")
+    z = backdoor_set(admg, :X1, :Y)
+    @test z !== nothing
+    @test is_valid_backdoor(admg, :X1, :Y, z)
+    @test any(s -> s == z, all_backdoor_sets(admg, :X1, :Y))
+end
+
+@testitem "backdoor_set ADMG: consistent with DAG latent projection" tags = [:unit, :gbc] begin
+    dag = DAG(
+        directed(:W, :A),
+        directed(:W, :B),
+        directed(:A, :X),
+        directed(:A, :Y),
+        directed(:X, :Y),
+    )
+    admg = latent_project(dag, [:W])
+    z_dag = backdoor_set(dag, :X, :Y)
+    z_admg = backdoor_set(admg, :X, :Y)
+    @test z_dag !== nothing && z_admg !== nothing
+    @test is_valid_backdoor(admg, :X, :Y, z_admg)
+    @test is_valid_backdoor(dag, :X, :Y, z_admg)
+end
