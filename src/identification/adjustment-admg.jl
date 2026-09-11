@@ -49,44 +49,6 @@ function _forbidden_set(
     return forbidden
 end
 
-# Ancestors bitmask in G with removed directed edges deleted.
-function _ancestors_bitmask_filtered(
-    B::Union{DAGBackend,ADMGBackend},
-    seeds::Vector{Int},
-    removed::Set{Tuple{Int,Int}},
-)
-    n = length(B.nodes)
-    return _ancestors_bitmask_filtered!(falses(n), Int[], B, seeds, removed)
-end
-
-function _ancestors_bitmask_filtered!(
-    mask::BitVector,
-    stack::Vector{Int},
-    B::Union{DAGBackend,ADMGBackend},
-    seeds::Vector{Int},
-    removed::Set{Tuple{Int,Int}},
-)
-    fill!(mask, false)
-    empty!(stack)
-    for s in seeds
-        if !mask[s]
-            mask[s] = true
-            push!(stack, s)
-        end
-    end
-    while !isempty(stack)
-        u = pop!(stack)
-        for p in _parents_slice(B, u)
-            (p, u) in removed && continue
-            if !mask[p]
-                mask[p] = true
-                push!(stack, p)
-            end
-        end
-    end
-    return mask
-end
-
 # Shared moralized-PBG-adjacency builder for ADMG/PAG/PDAG.
 # For each masked node v, `collect_clique!(buf, v)` fills `buf` with
 # the (masked, non-removed) neighbors that must be pairwise cliqued together
@@ -201,7 +163,7 @@ function _m_separated_pbg(
 )
     (isempty(xs) || isempty(ys)) && return true
     seeds = unique([xs; ys; z])
-    mask = _ancestors_bitmask_filtered(B, seeds, removed)
+    mask = _ancestors_bitmask(B, seeds, removed)
     adj = _admg_moral_adj_filtered(B, mask, removed)
     return _bfs_blocked_reaches(adj, mask, xs, ys, z)
 end
@@ -360,9 +322,9 @@ function _d_separated_pbg_dag(
     isempty(seeds_bfs) && return true
 
     seeds = unique([xs; ys; z])
-    mask = _ancestors_bitmask_filtered(B, seeds, removed)
+    mask = _ancestors_bitmask(B, seeds, removed)
 
-    reached = _reachable_dag_filtered(B, seeds_bfs, mask, z_mask, removed)
+    reached = _reachable_dag(B, seeds_bfs, mask, z_mask, removed)
     return !any(reached[yi] for yi in ys)
 end
 
@@ -673,7 +635,7 @@ function all_adjustment_sets(
         direct_buf = Int[]
 
         function recompute!(seeds_buf)
-            _ancestors_bitmask_filtered!(anc_mask, anc_stack, B, seeds_buf, removed)
+            _ancestors_bitmask!(anc_mask, anc_stack, B, seeds_buf, removed)
             _admg_moral_adj_filtered!(adj, B, anc_mask, removed, clique_buf, direct_buf)
             return anc_mask, adj
         end

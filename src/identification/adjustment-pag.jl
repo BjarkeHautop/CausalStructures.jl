@@ -132,70 +132,6 @@ function _pbg_removed_pag(B::PAGBackend, xs::Vector{Int}, ys::Vector{Int})
     return removed
 end
 
-# Anterior bitmask for the PBG: reachable from seeds via collapsed parents
-# (excluding removed directed edges) or any collapsed-undirected edge.
-function _pag_anterior_bitmask_filtered(
-    B::PAGBackend,
-    seeds::Vector{Int},
-    removed::Set{Tuple{Int,Int}},
-)
-    n = length(B.nodes)
-    return _pag_anterior_bitmask_filtered!(falses(n), Int[], B, seeds, removed)
-end
-
-function _pag_anterior_bitmask_filtered!(
-    mask::BitVector,
-    stack::Vector{Int},
-    B::PAGBackend,
-    seeds::Vector{Int},
-    removed::Set{Tuple{Int,Int}},
-)
-    fill!(mask, false)
-    empty!(stack)
-    for s in seeds
-        if !mask[s]
-            mask[s] = true
-            push!(stack, s)
-        end
-    end
-    while !isempty(stack)
-        u = pop!(stack)
-        for p in _parents_slice(B, u)
-            (p, u) in removed && continue
-            if !mask[p]
-                mask[p] = true
-                push!(stack, p)
-            end
-        end
-        for p in _circle_parents_slice(B, u)
-            (p, u) in removed && continue
-            if !mask[p]
-                mask[p] = true
-                push!(stack, p)
-            end
-        end
-        for w in _undirected_slice(B, u)
-            if !mask[w]
-                mask[w] = true
-                push!(stack, w)
-            end
-        end
-        for w in _circle_undirected_out_slice(B, u)
-            if !mask[w]
-                mask[w] = true
-                push!(stack, w)
-            end
-        end
-        for w in _circle_circle_slice(B, u)
-            if !mask[w]
-                mask[w] = true
-                push!(stack, w)
-            end
-        end
-    end
-    return mask
-end
-
 # Moralized PBG adjacency: collapsed parents and spouses of each retained node
 # are cliqued together, as for AG/MAG; collapsed undirected neighbors just get
 # a direct edge, as for PDAG.
@@ -263,7 +199,7 @@ function _m_separated_pbg_pag(
 )
     (isempty(xs) || isempty(ys)) && return true
     seeds = unique([xs; ys; z])
-    mask = _pag_anterior_bitmask_filtered(B, seeds, removed)
+    mask = _pag_anterior_bitmask(B, seeds, removed)
     adj = _pag_moral_adj_filtered(B, mask, removed)
     return _bfs_blocked_reaches(adj, mask, xs, ys, z)
 end
@@ -397,7 +333,7 @@ function all_adjustment_sets(
         direct_buf = Int[]
 
         function recompute!(seeds_buf)
-            _pag_anterior_bitmask_filtered!(anc_mask, anc_stack, B, seeds_buf, removed)
+            _pag_anterior_bitmask!(anc_mask, anc_stack, B, seeds_buf, removed)
             _pag_moral_adj_filtered!(adj, B, anc_mask, removed, clique_buf, direct_buf)
             return anc_mask, adj
         end

@@ -5,12 +5,15 @@
 #   caugi/src/rust/src/graph/alg/min_msep.rs    (REACHABLE, Bayes-ball for mixed graphs)
 
 # Ancestor bitmask: nodes reachable from seeds via directed parents only.
+# When `removed` is given, (src, dst) directed edges it contains are treated
+# as absent, without constructing that graph.
 function _ancestors_bitmask(
     B::Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend},
     seeds::Vector{Int},
+    removed::Union{Nothing,Set{Tuple{Int,Int}}} = nothing,
 )
     n = length(B.nodes)
-    return _ancestors_bitmask!(falses(n), Int[], B, seeds)
+    return _ancestors_bitmask!(falses(n), Int[], B, seeds, removed)
 end
 
 function _ancestors_bitmask!(
@@ -18,6 +21,7 @@ function _ancestors_bitmask!(
     stack::Vector{Int},
     B::Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend},
     seeds::Vector{Int},
+    removed::Union{Nothing,Set{Tuple{Int,Int}}} = nothing,
 )
     fill!(mask, false)
     empty!(stack)
@@ -30,6 +34,7 @@ function _ancestors_bitmask!(
     while !isempty(stack)
         u = pop!(stack)
         for p in _parents_slice(B, u)
+            removed !== nothing && (p, u) in removed && continue
             if !mask[p]
                 mask[p] = true
                 push!(stack, p)
@@ -40,9 +45,15 @@ function _ancestors_bitmask!(
 end
 
 # Anterior bitmask (AG): nodes reachable from seeds via directed parents OR undirected edges.
-function _anterior_bitmask(B::Union{AGBackend,PDAGBackend}, seeds::Vector{Int})
+# When `removed` is given, (src, dst) directed edges it contains are treated
+# as absent, without constructing that graph.
+function _anterior_bitmask(
+    B::Union{AGBackend,PDAGBackend},
+    seeds::Vector{Int},
+    removed::Union{Nothing,Set{Tuple{Int,Int}}} = nothing,
+)
     n = length(B.nodes)
-    return _anterior_bitmask!(falses(n), Int[], B, seeds)
+    return _anterior_bitmask!(falses(n), Int[], B, seeds, removed)
 end
 
 function _anterior_bitmask!(
@@ -50,6 +61,7 @@ function _anterior_bitmask!(
     stack::Vector{Int},
     B::Union{AGBackend,PDAGBackend},
     seeds::Vector{Int},
+    removed::Union{Nothing,Set{Tuple{Int,Int}}} = nothing,
 )
     fill!(mask, false)
     empty!(stack)
@@ -62,6 +74,7 @@ function _anterior_bitmask!(
     while !isempty(stack)
         u = pop!(stack)
         for p in _parents_slice(B, u)
+            removed !== nothing && (p, u) in removed && continue
             if !mask[p]
                 mask[p] = true
                 push!(stack, p)
@@ -82,10 +95,26 @@ end
 # circle_undirected_out, circle_undirected_in, circle_circle) -- circle marks
 # collapse to tails, as for `possible_ancestors`/`possible_descendants`
 # (query/traversal.jl).
-function _pag_anterior_bitmask(B::PAGBackend, seeds::Vector{Int})
+# When `removed` is given, (src, dst) directed edges it contains are treated
+# as absent, without constructing that graph.
+function _pag_anterior_bitmask(
+    B::PAGBackend,
+    seeds::Vector{Int},
+    removed::Union{Nothing,Set{Tuple{Int,Int}}} = nothing,
+)
     n = length(B.nodes)
-    mask = falses(n)
-    stack = Int[]
+    return _pag_anterior_bitmask!(falses(n), Int[], B, seeds, removed)
+end
+
+function _pag_anterior_bitmask!(
+    mask::BitVector,
+    stack::Vector{Int},
+    B::PAGBackend,
+    seeds::Vector{Int},
+    removed::Union{Nothing,Set{Tuple{Int,Int}}} = nothing,
+)
+    fill!(mask, false)
+    empty!(stack)
     for s in seeds
         if !mask[s]
             mask[s] = true
@@ -95,12 +124,14 @@ function _pag_anterior_bitmask(B::PAGBackend, seeds::Vector{Int})
     while !isempty(stack)
         u = pop!(stack)
         for p in _parents_slice(B, u)
+            removed !== nothing && (p, u) in removed && continue
             if !mask[p]
                 mask[p] = true
                 push!(stack, p)
             end
         end
         for p in _circle_parents_slice(B, u)
+            removed !== nothing && (p, u) in removed && continue
             if !mask[p]
                 mask[p] = true
                 push!(stack, p)
@@ -153,11 +184,14 @@ function _relax_mixed!(
 end
 
 # REACHABLE for DAG (2 marks: Tail, Head). No spouses/undirected edges exist in a DAG.
+# When `removed` is given, (src, dst) edges it contains are treated as absent,
+# without constructing that graph.
 function _reachable_dag(
     B::DAGBackend,
     xs::Vector{Int},
     a_mask::BitVector,
     z_mask::BitVector,
+    removed::Union{Nothing,Set{Tuple{Int,Int}}} = nothing,
 )
     n = length(B.nodes)
     visited = falses(n, 2)
@@ -179,54 +213,11 @@ function _reachable_dag(
         head += 1
         v_in_z = z_mask[v]
         for p in _parents_slice(B, v)   # p-->v: out=Head(2), nbr_in=Tail(1)
+            removed !== nothing && (p, v) in removed && continue
             _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, p, 1)
         end
         for c in _children_slice(B, v)  # v-->c: out=Tail(1), nbr_in=Head(2)
-            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 1, c, 2)
-        end
-    end
-
-    reached = falses(n)
-    for v = 1:n
-        reached[v] = visited[v, 1] || visited[v, 2]
-    end
-    return reached
-end
-
-# Same as `_reachable_dag`, but in the graph with `removed` (src, dst) edges
-# deleted without constructing that graph.
-function _reachable_dag_filtered(
-    B::DAGBackend,
-    xs::Vector{Int},
-    a_mask::BitVector,
-    z_mask::BitVector,
-    removed::Set{Tuple{Int,Int}},
-)
-    n = length(B.nodes)
-    visited = falses(n, 2)
-    q = Tuple{Int,Int}[]
-
-    for x in xs
-        a_mask[x] || continue
-        for m = 1:2
-            if !visited[x, m]
-                visited[x, m] = true
-                push!(q, (x, m))
-            end
-        end
-    end
-
-    head = 1
-    while head <= length(q)
-        v, in_m = q[head]
-        head += 1
-        v_in_z = z_mask[v]
-        for p in _parents_slice(B, v)   # p-->v: out=Head(2), nbr_in=Tail(1)
-            (p, v) in removed && continue
-            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, p, 1)
-        end
-        for c in _children_slice(B, v)  # v-->c: out=Tail(1), nbr_in=Head(2)
-            (v, c) in removed && continue
+            removed !== nothing && (v, c) in removed && continue
             _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 1, c, 2)
         end
     end

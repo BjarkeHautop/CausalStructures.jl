@@ -113,7 +113,7 @@ function _d_separated_pbg_pdag(
 )
     (isempty(xs) || isempty(ys)) && return true
     seeds = unique([xs; ys; z])
-    mask = _anterior_bitmask_filtered(B, seeds, removed)
+    mask = _anterior_bitmask(B, seeds, removed)
     adj = _pdag_moral_adj_filtered(B, mask, removed)
     return _bfs_blocked_reaches(adj, mask, xs, ys, z)
 end
@@ -242,7 +242,7 @@ function all_adjustment_sets(
         direct_buf = Int[]
 
         function recompute!(seeds_buf)
-            _anterior_bitmask_filtered!(anc_mask, anc_stack, B, seeds_buf, removed)
+            _anterior_bitmask!(anc_mask, anc_stack, B, seeds_buf, removed)
             _pdag_moral_adj_filtered!(adj, B, anc_mask, removed, clique_buf, direct_buf)
             return anc_mask, adj
         end

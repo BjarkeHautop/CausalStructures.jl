@@ -72,51 +72,6 @@ end
 
 # ── MAG proper-backdoor graph helpers ────────────────────────────────────────
 
-# Anterior bitmask in the PBG: reachable via directed parents (excluding removed)
-# or undirected edges.
-function _anterior_bitmask_filtered(
-    B::Union{AGBackend,PDAGBackend},
-    seeds::Vector{Int},
-    removed::Set{Tuple{Int,Int}},
-)
-    n = length(B.nodes)
-    return _anterior_bitmask_filtered!(falses(n), Int[], B, seeds, removed)
-end
-
-function _anterior_bitmask_filtered!(
-    mask::BitVector,
-    stack::Vector{Int},
-    B::Union{AGBackend,PDAGBackend},
-    seeds::Vector{Int},
-    removed::Set{Tuple{Int,Int}},
-)
-    fill!(mask, false)
-    empty!(stack)
-    for s in seeds
-        if !mask[s]
-            mask[s] = true
-            push!(stack, s)
-        end
-    end
-    while !isempty(stack)
-        u = pop!(stack)
-        for p in _parents_slice(B, u)
-            (p, u) in removed && continue
-            if !mask[p]
-                mask[p] = true
-                push!(stack, p)
-            end
-        end
-        for w in _undirected_slice(B, u)
-            if !mask[w]
-                mask[w] = true
-                push!(stack, w)
-            end
-        end
-    end
-    return mask
-end
-
 # True if 'from' has an arrowhead pointing into 'at' in the PBG.
 # Directed edges in removed are treated as absent.
 function _arrowhead_at_filtered(
@@ -222,7 +177,7 @@ function _m_separated_pbg_ag(
 )
     (isempty(xs) || isempty(ys)) && return true
     seeds = unique([xs; ys; z])
-    mask = _anterior_bitmask_filtered(B, seeds, removed)
+    mask = _anterior_bitmask(B, seeds, removed)
     adj = _ag_augmented_adj_filtered(B, mask, removed)
     return _bfs_blocked_reaches(adj, mask, xs, ys, z)
 end
@@ -276,7 +231,7 @@ function all_adjustment_sets(
         q_buf = Tuple{Int,Int}[]
 
         function recompute!(seeds_buf)
-            _anterior_bitmask_filtered!(anc_mask, anc_stack, B, seeds_buf, removed)
+            _anterior_bitmask!(anc_mask, anc_stack, B, seeds_buf, removed)
             _ag_augmented_adj_filtered!(
                 adj,
                 visited_stamp,
