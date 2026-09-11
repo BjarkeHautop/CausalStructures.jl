@@ -15,12 +15,12 @@ returned vector.
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B --> C");
+julia> dag = DAG("A <-- B, A --> C");
 
-julia> topological_sort(cg)
+julia> topological_sort(dag)
 3-element Vector{Symbol}:
- :A
  :B
+ :A
  :C
 ```
 
