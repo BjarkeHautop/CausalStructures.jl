@@ -396,13 +396,7 @@ function adjustment_set(
             restrict_mask[v] = !xs_mask[v] && !ys_mask[v] && !de_x1[v]
         end
         restrict = _mask_nodes(B, restrict_mask)
-        xs_syms = Set{Symbol}(x isa Symbol ? (x,) : x)
-        gx = build_graph(
-            DAG,
-            Set(B.nodes),
-            filter(e -> !(is_directed(e) && e.src in xs_syms), cg.edges),
-        )
-        z = minimal_separator(gx, x, y; restrict = restrict)
+        z = _backdoor_minimal_separator(cg, x, y; restrict = restrict)
         z !== nothing && return z
 
         # Fallback: Pa(X) is a valid (if non-minimal) backdoor set, unless

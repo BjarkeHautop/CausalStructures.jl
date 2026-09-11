@@ -16,6 +16,7 @@ function _d_connected_restricted_mask(
     start_idxs::Vector{Int},
     conditioned::BitVector,
     ancestor_mask::BitVector,
+    no_out_mask::Union{Nothing,BitVector} = nothing,
 )
     n = length(B.nodes)
 
@@ -44,7 +45,9 @@ function _d_connected_restricted_mask(
         head += 1
 
         if !conditioned[v]
+            no_out = no_out_mask !== nothing && no_out_mask[v]
             if dir == 1  # Down: propagate to children
+                no_out && continue
                 for ch in _children_slice(B, v)
                     ancestor_mask[ch] || continue
                     if !visited[ch, 1]
@@ -55,6 +58,7 @@ function _d_connected_restricted_mask(
                 end
             else  # Up: propagate to parents and bounce to children
                 for pa in _parents_slice(B, v)
+                    no_out_mask !== nothing && no_out_mask[pa] && continue
                     ancestor_mask[pa] || continue
                     if !visited[pa, 2]
                         visited[pa, 2] = true
@@ -62,6 +66,7 @@ function _d_connected_restricted_mask(
                         push!(queue, (pa, 2))
                     end
                 end
+                no_out && continue
                 for ch in _children_slice(B, v)
                     ancestor_mask[ch] || continue
                     if !visited[ch, 1]
@@ -74,6 +79,7 @@ function _d_connected_restricted_mask(
         else
             if dir == 1  # Down at conditioned collider: activate, propagate to parents
                 for pa in _parents_slice(B, v)
+                    no_out_mask !== nothing && no_out_mask[pa] && continue
                     ancestor_mask[pa] || continue
                     if !visited[pa, 2]
                         visited[pa, 2] = true
@@ -257,6 +263,57 @@ function minimal_separator(
     end
     for v in inc_idxs
         z_mask[v] = true
+    end
+
+    return B.nodes[[v for v = 1:n if z_mask[v]]]
+end
+
+# Same FINDMINSEP algorithm as `minimal_separator(cg::DAG, x, y; restrict)`, but
+# in the graph with every edge out of `x` removed without constructing that
+# graph.
+function _backdoor_minimal_separator(
+    cg::DAG,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}};
+    restrict::Union{Symbol,AbstractVector{Symbol}},
+)
+    B = cg.backend
+    n = length(B.nodes)
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
+    xs_mask = falses(n)
+    for xi in xs
+        xs_mask[xi] = true
+    end
+    ys_mask = falses(n)
+    for yi in ys
+        ys_mask[yi] = true
+    end
+    res_idxs = _node_indices(cg, restrict)
+
+    seeds = unique([xs; ys])
+    ancestor_mask = _ancestors_bitmask(B, seeds)
+
+    z0_mask = falses(n)
+    for r in res_idxs
+        if ancestor_mask[r] && !xs_mask[r] && !ys_mask[r]
+            z0_mask[r] = true
+        end
+    end
+
+    x_star_mask = _d_connected_restricted_mask(B, xs, z0_mask, ancestor_mask, xs_mask)
+    any(x_star_mask[yi] for yi in ys) && return nothing
+
+    zx_mask = falses(n)
+    for v = 1:n
+        z0_mask[v] && x_star_mask[v] && (zx_mask[v] = true)
+    end
+
+    y_star_mask = _d_connected_restricted_mask(B, ys, zx_mask, ancestor_mask, xs_mask)
+
+    z_mask = falses(n)
+    for v = 1:n
+        zx_mask[v] && y_star_mask[v] && (z_mask[v] = true)
     end
 
     return B.nodes[[v for v = 1:n if z_mask[v]]]
