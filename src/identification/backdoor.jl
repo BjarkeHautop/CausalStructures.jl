@@ -230,17 +230,22 @@ function is_valid_backdoor(
 )
     B = cg.backend
     xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
+    z_idxs = _node_indices(cg, z)
     de_x = _descendants_bitmask(B, xs)
-    for vi in _node_indices(cg, z)
+    for vi in z_idxs
         de_x[vi] && return false
     end
-    xs_syms = Set{Symbol}(x isa Symbol ? (x,) : x)
-    gx = build_graph(
-        ADMG,
-        Set(B.nodes),
-        filter(e -> !(is_directed(e) && e.src in xs_syms), cg.edges),
-    )
-    return m_separated(gx, x, y, z)
+
+    # m-separation in the graph with every directed edge out of x removed,
+    # without constructing that graph (avoids rebuilding an ADMG per call).
+    removed = Set{Tuple{Int,Int}}()
+    for xi in xs
+        for c in _children_slice(B, xi)
+            push!(removed, (xi, c))
+        end
+    end
+    return _m_separated_pbg(B, xs, ys, z_idxs, removed)
 end
 
 function all_backdoor_sets(

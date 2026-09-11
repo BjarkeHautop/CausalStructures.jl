@@ -193,6 +193,51 @@ function _reachable_dag(
     return reached
 end
 
+# Same as `_reachable_dag`, but in the graph with `removed` (src, dst) edges
+# deleted without constructing that graph.
+function _reachable_dag_filtered(
+    B::DAGBackend,
+    xs::Vector{Int},
+    a_mask::BitVector,
+    z_mask::BitVector,
+    removed::Set{Tuple{Int,Int}},
+)
+    n = length(B.nodes)
+    visited = falses(n, 2)
+    q = Tuple{Int,Int}[]
+
+    for x in xs
+        a_mask[x] || continue
+        for m = 1:2
+            if !visited[x, m]
+                visited[x, m] = true
+                push!(q, (x, m))
+            end
+        end
+    end
+
+    head = 1
+    while head <= length(q)
+        v, in_m = q[head]
+        head += 1
+        v_in_z = z_mask[v]
+        for p in _parents_slice(B, v)   # p-->v: out=Head(2), nbr_in=Tail(1)
+            (p, v) in removed && continue
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, p, 1)
+        end
+        for c in _children_slice(B, v)  # v-->c: out=Tail(1), nbr_in=Head(2)
+            (v, c) in removed && continue
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 1, c, 2)
+        end
+    end
+
+    reached = falses(n)
+    for v = 1:n
+        reached[v] = visited[v, 1] || visited[v, 2]
+    end
+    return reached
+end
+
 # In-place, single-seed variant of `_reachable_dag` for hot loops
 function _reachable_dag_single!(
     visited::BitMatrix,

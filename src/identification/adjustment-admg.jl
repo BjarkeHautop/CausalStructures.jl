@@ -51,7 +51,7 @@ end
 
 # Ancestors bitmask in G with removed directed edges deleted.
 function _ancestors_bitmask_filtered(
-    B::ADMGBackend,
+    B::Union{DAGBackend,ADMGBackend},
     seeds::Vector{Int},
     removed::Set{Tuple{Int,Int}},
 )
@@ -62,7 +62,7 @@ end
 function _ancestors_bitmask_filtered!(
     mask::BitVector,
     stack::Vector{Int},
-    B::ADMGBackend,
+    B::Union{DAGBackend,ADMGBackend},
     seeds::Vector{Int},
     removed::Set{Tuple{Int,Int}},
 )
@@ -340,6 +340,32 @@ function _pbg_dag(cg::DAG, xs::Vector{Int}, ys::Vector{Int})
     return build_graph(DAG, Set(B.nodes), kept)
 end
 
+# d-separation check in the proper backdoor graph, without constructing it:
+# `removed` edges are skipped during traversal instead. Used by
+# `is_valid_adjustment` (DAG) to avoid rebuilding a `DAG` on every call.
+function _d_separated_pbg_dag(
+    B::DAGBackend,
+    xs::Vector{Int},
+    ys::Vector{Int},
+    z::Vector{Int},
+    removed::Set{Tuple{Int,Int}},
+)
+    (isempty(xs) || isempty(ys)) && return true
+    n = length(B.nodes)
+    z_mask = falses(n)
+    for v in z
+        z_mask[v] = true
+    end
+    seeds_bfs = filter(xi -> !z_mask[xi], xs)
+    isempty(seeds_bfs) && return true
+
+    seeds = unique([xs; ys; z])
+    mask = _ancestors_bitmask_filtered(B, seeds, removed)
+
+    reached = _reachable_dag_filtered(B, seeds_bfs, mask, z_mask, removed)
+    return !any(reached[yi] for yi in ys)
+end
+
 """
     is_valid_adjustment(cg::DAG, x, y, z = Symbol[]) -> Bool
 
@@ -389,7 +415,8 @@ function is_valid_adjustment(
     forbidden = _forbidden_set(B, xs, ys)
     any(v -> forbidden[v], z_idxs) && return false
 
-    return d_separated(_pbg_dag(cg, xs, ys), x, y, z)
+    removed = _pbg_removed(B, xs, ys)
+    return _d_separated_pbg_dag(B, xs, ys, z_idxs, removed)
 end
 
 """
