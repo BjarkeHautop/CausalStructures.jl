@@ -44,7 +44,7 @@ true
 - [jeong2022finding](@citet)
 """
 function is_valid_frontdoor(
-    cg::DAG,
+    cg::Union{DAG,ADMG},
     x::Union{Symbol,AbstractVector{Symbol}},
     y::Union{Symbol,AbstractVector{Symbol}},
     z::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
@@ -88,68 +88,8 @@ function is_valid_frontdoor(
         end
     end
 
-    # Condition (ii): X ⊥ Zi | ∅ in G_X for every Zi ∈ Z.
-    gx = _build_gx(cg, x)
-    for zi in z_vec
-        d_separated(gx, x, zi, Symbol[]) || return false
-    end
-
-    # Condition (iii): Zi ⊥ Y | X ∪ (Z \ {Zi}) in G_Zi for every Zi ∈ Z.
-    for (k, zi) in enumerate(z_vec)
-        gzi = _build_gx(cg, zi)
-        cond = [x; [z_vec[j] for j in eachindex(z_vec) if j != k]]
-        d_separated(gzi, zi, y, cond) || return false
-    end
-
-    return true
-end
-
-function is_valid_frontdoor(
-    cg::ADMG,
-    x::Union{Symbol,AbstractVector{Symbol}},
-    y::Union{Symbol,AbstractVector{Symbol}},
-    z::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
-)
-    B = cg.backend
-    n = length(B.nodes)
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
-    (isempty(xs) || isempty(ys)) && return true
-    ys_mask = falses(n)
-    for yi in ys
-        ys_mask[yi] = true
-    end
-    z_vec = _as_symbol_vec(z)
-    any(v -> node_index(cg, v) in xs || ys_mask[node_index(cg, v)], z_vec) && return false
-
-    # Condition (i): Z intercepts all directed paths from X to Y.
-    z_mask = falses(n)
-    for v in z_vec
-        z_mask[node_index(cg, v)] = true
-    end
-    seeds_bfs = [xi for xi in xs if !z_mask[xi]]
-    visited = falses(n)
-    queue = Int[]
-    for xi in seeds_bfs
-        if !visited[xi]
-            visited[xi] = true
-            push!(queue, xi)
-        end
-    end
-    head = 1
-    while head <= length(queue)
-        u = queue[head]
-        head += 1
-        for c in _children_slice(B, u)
-            z_mask[c] && continue
-            ys_mask[c] && return false
-            visited[c] && continue
-            visited[c] = true
-            push!(queue, c)
-        end
-    end
-
-    # Condition (ii): X ⊥_m Zi | ∅ in G_X for every Zi ∈ Z.
+    # Condition (ii): X ⊥_m Zi | ∅ in G_X for every Zi ∈ Z. For a DAG this is
+    # ordinary d-separation, since `m_separated(::DAG, ...) == d_separated`.
     gx = _build_gx(cg, x)
     for zi in z_vec
         m_separated(gx, x, zi, Symbol[]) || return false

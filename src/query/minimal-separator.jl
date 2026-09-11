@@ -411,7 +411,7 @@ function _findminsep(B, xs::Vector{Int}, ys::Vector{Int}, inc_idxs, res_idxs)
 end
 
 function minimal_separator(
-    cg::ADMG,
+    cg::Union{ADMG,AbstractAG,PAG,AbstractPDAG},
     x::Union{Symbol,AbstractVector{Symbol}},
     y::Union{Symbol,AbstractVector{Symbol}};
     include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
@@ -472,35 +472,6 @@ function _ag_msep_exists!(
     return !reached[v]
 end
 
-function minimal_separator(
-    cg::AbstractAG,
-    x::Union{Symbol,AbstractVector{Symbol}},
-    y::Union{Symbol,AbstractVector{Symbol}};
-    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
-    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
-)
-    B = cg.backend
-    n = length(B.nodes)
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
-    xs_mask = falses(n)
-    for xi in xs
-        xs_mask[xi] = true
-    end
-    ys_mask = falses(n)
-    for yi in ys
-        ys_mask[yi] = true
-    end
-    inc_idxs = _node_indices(cg, include)
-    res_idxs = if restrict === nothing
-        [i for i = 1:n if !xs_mask[i] && !ys_mask[i]]
-    else
-        _node_indices(cg, restrict)
-    end
-    result = _findminsep(B, xs, ys, inc_idxs, res_idxs)
-    return result === nothing ? nothing : B.nodes[result]
-end
-
 function _find_nearest_sep(
     B::PAGBackend,
     xs::Vector{Int},
@@ -537,35 +508,6 @@ function _find_nearest_sep(
         z_mask[i] = true
     end
     return [v for v = 1:n if z_mask[v]]
-end
-
-function minimal_separator(
-    cg::PAG,
-    x::Union{Symbol,AbstractVector{Symbol}},
-    y::Union{Symbol,AbstractVector{Symbol}};
-    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
-    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
-)
-    B = cg.backend
-    n = length(B.nodes)
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
-    xs_mask = falses(n)
-    for xi in xs
-        xs_mask[xi] = true
-    end
-    ys_mask = falses(n)
-    for yi in ys
-        ys_mask[yi] = true
-    end
-    inc_idxs = _node_indices(cg, include)
-    res_idxs = if restrict === nothing
-        [i for i = 1:n if !xs_mask[i] && !ys_mask[i]]
-    else
-        _node_indices(cg, restrict)
-    end
-    result = _findminsep(B, xs, ys, inc_idxs, res_idxs)
-    return result === nothing ? nothing : B.nodes[result]
 end
 
 # REACHABLE for PDAG (3 marks: Tail, Head, Undir); no spouse edges.
@@ -648,33 +590,4 @@ function _find_nearest_sep(
         z_mask[i] = true
     end
     return [v for v = 1:n if z_mask[v]]
-end
-
-function minimal_separator(
-    cg::AbstractPDAG,
-    x::Union{Symbol,AbstractVector{Symbol}},
-    y::Union{Symbol,AbstractVector{Symbol}};
-    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
-    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
-)
-    B = cg.backend
-    n = length(B.nodes)
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
-    xs_mask = falses(n)
-    for xi in xs
-        xs_mask[xi] = true
-    end
-    ys_mask = falses(n)
-    for yi in ys
-        ys_mask[yi] = true
-    end
-    inc_idxs = _node_indices(cg, include)
-    res_idxs = if restrict === nothing
-        [i for i = 1:n if !xs_mask[i] && !ys_mask[i]]
-    else
-        _node_indices(cg, restrict)
-    end
-    result = _findminsep(B, xs, ys, inc_idxs, res_idxs)
-    return result === nothing ? nothing : B.nodes[result]
 end
