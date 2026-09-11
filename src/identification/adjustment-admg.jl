@@ -28,7 +28,7 @@ function _descendants_bitmask(
     return mask
 end
 
-# forb(X,Y) = De(cn(X,Y) \ Y) ∪ X,  where cn(X,Y) = De(X) ∩ An(Y)
+# forb(X,Y) = De(cn(X,Y) \ X) ∪ X,  where cn(X,Y) = De(X) ∩ An(Y)
 function _forbidden_set(
     B::Union{DAGBackend,ADMGBackend,AGBackend},
     xs::Vector{Int},
@@ -37,15 +37,13 @@ function _forbidden_set(
     n = length(B.nodes)
     de_x = _descendants_bitmask(B, xs)
     an_y = _ancestors_bitmask(B, ys)
-    y_mask = falses(n)
-    for y in ys
-
-        y_mask[y] = true
-    end
-    causal_minus_y = [v for v = 1:n if de_x[v] && an_y[v] && !y_mask[v]]
-    forbidden = _descendants_bitmask(B, causal_minus_y)
+    x_mask = falses(n)
     for x in xs
-
+        x_mask[x] = true
+    end
+    causal_minus_x = [v for v = 1:n if de_x[v] && an_y[v] && !x_mask[v]]
+    forbidden = _descendants_bitmask(B, causal_minus_x)
+    for x in xs
         forbidden[x] = true
     end
     return forbidden

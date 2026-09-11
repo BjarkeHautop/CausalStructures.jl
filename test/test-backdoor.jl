@@ -28,6 +28,17 @@ end
     @test !is_valid_backdoor(cg, :X, :Y)             # empty set: backdoor path A-->X open
 end
 
+@testitem "is_valid_backdoor DAG: direct Y --> X edge is an unblockable backdoor path" tags =
+    [:unit, :backdoor] begin
+    dag = DAG(directed(:Y, :X))
+    @test !is_valid_backdoor(dag, :X, :Y, Symbol[])
+    @test !d_separated(dag, :X, :Y, Symbol[])
+
+    dag2 = DAG(directed(:Y, :X), directed(:A, :Y))
+    @test !is_valid_backdoor(dag2, :X, :Y, [:A])
+    @test isempty(all_backdoor_sets(dag2, :X, :Y; minimal = false, max_size = 1))
+end
+
 @testitem "all_backdoor_sets: minimal sets on ECI graph" setup=[EciGraph] tags =
     [:unit, :backdoor] begin
     cg = _eci_graph()
@@ -137,14 +148,12 @@ end
     @test Set(adjustment_set(cg, :X, :Y; type = :backdoor)) == Set([:A])
 end
 
-@testitem "adjustment_set: backdoor type falls back to parents when Y is a direct cause of X" tags =
+@testitem "adjustment_set: no valid set when Y is a direct cause of X" tags =
     [:unit, :backdoor] begin
-    # Y --> X, A --> X: Y is a parent of X, so removing X's outgoing edges still
-    # leaves a direct edge Y --> X into X that no conditioning set can block.
-    # minimal_separator therefore finds no valid separator, and adjustment_set
-    # falls back to returning Pa(X) \ {X, Y}.
-    cg = DAG(directed(:Y, :X), directed(:A, :X))
-    @test adjustment_set(cg, :X, :Y; type = :backdoor) == [:A]
+    dag = DAG(directed(:Y, :X), directed(:A, :X))
+    @test adjustment_set(dag, :X, :Y; type = :parents) === nothing
+    @test adjustment_set(dag, :X, :Y; type = :backdoor) === nothing
+    @test adjustment_set(dag, :X, :Y; type = :optimal) === nothing
 end
 
 @testitem "adjustment_set: backdoor type valid when parent is not ancestor of Y" tags =
@@ -206,6 +215,14 @@ end
     dag = DAG(directed(:A, :X), directed(:X, :M), directed(:M, :Y), directed(:A, :Y))
     @test !is_valid_adjustment(dag, :X, :Y, [:M])  # M is forbidden (descendant of X)
     @test is_valid_adjustment(dag, :X, :Y, [:A])
+end
+
+@testitem "is_valid_adjustment DAG: off-path descendant of X is not forbidden" tags =
+    [:unit, :backdoor] begin
+    dag = DAG(directed(:A, :X), directed(:X, :Y), directed(:X, :W))
+    @test is_valid_adjustment(dag, :X, :Y, Symbol[])
+    @test is_valid_adjustment(dag, :X, :Y, [:W])
+    @test is_valid_adjustment(dag, :X, :Y, [:A, :W])
 end
 
 @testitem "is_valid_adjustment DAG: agrees with is_valid_backdoor on ECI graph" setup =

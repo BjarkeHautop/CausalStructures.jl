@@ -11,7 +11,11 @@
         ns = nodes(dag)
         x, y = ns[1], ns[2]
         z = adjustment_set(dag, x, y; type = :backdoor)
-        @test is_valid_backdoor(dag, x, y, z)
+        if z === nothing
+            @test y in parents(dag, x)  # only case with no valid backdoor set
+        else
+            @test is_valid_backdoor(dag, x, y, z)
+        end
     end
 end
 
@@ -22,7 +26,11 @@ end
         ns = nodes(dag)
         x, y = ns[1], ns[2]
         z = adjustment_set(dag, x, y; type = :parents)
-        @test is_valid_backdoor(dag, x, y, z)
+        if z === nothing
+            @test y in parents(dag, x)  # only case with no valid backdoor set
+        else
+            @test is_valid_backdoor(dag, x, y, z)
+        end
     end
 end
 

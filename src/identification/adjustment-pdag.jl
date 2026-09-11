@@ -28,18 +28,18 @@ function _possible_ancestors_bitmask(B::PDAGBackend, seeds::Vector{Int})
     return mask
 end
 
-# forb(X,Y) for PDAG: PossibleDe(Cn(X,Y) \ Y) ∪ X,
+# forb(X,Y) for PDAG: PossibleDe(Cn(X,Y) \ X) ∪ X,
 # where Cn(X,Y) = PossibleDe(X) ∩ PossibleAn(Y) (nodes on possibly directed paths X --> Y).
 function _forbidden_set_pdag(B::PDAGBackend, xs::Vector{Int}, ys::Vector{Int})
     n = length(B.nodes)
     poss_de_x = _possible_descendants_bitmask(B, xs)
     ant_y = _possible_ancestors_bitmask(B, ys)
-    y_mask = falses(n)
-    for y in ys
-        y_mask[y] = true
+    x_mask = falses(n)
+    for x in xs
+        x_mask[x] = true
     end
-    causal_minus_y = [v for v = 1:n if poss_de_x[v] && ant_y[v] && !y_mask[v]]
-    forbidden = _possible_descendants_bitmask(B, causal_minus_y)
+    causal_minus_x = [v for v = 1:n if poss_de_x[v] && ant_y[v] && !x_mask[v]]
+    forbidden = _possible_descendants_bitmask(B, causal_minus_x)
     for x in xs
         forbidden[x] = true
     end

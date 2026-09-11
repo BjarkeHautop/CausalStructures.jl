@@ -91,17 +91,17 @@ function _pag_possible_ancestors_bitmask(B::PAGBackend, seeds::Vector{Int})
     return mask
 end
 
-# forb(X,Y) = PossDe(Cn(X,Y) \ Y) ∪ X, where Cn(X,Y) = PossDe(X) ∩ PossAn(Y).
+# forb(X,Y) = PossDe(Cn(X,Y) \ X) ∪ X, where Cn(X,Y) = PossDe(X) ∩ PossAn(Y).
 function _forbidden_set_pag(B::PAGBackend, xs::Vector{Int}, ys::Vector{Int})
     n = length(B.nodes)
     poss_de_x = _pag_possible_descendants_bitmask(B, xs)
     poss_an_y = _pag_possible_ancestors_bitmask(B, ys)
-    y_mask = falses(n)
-    for y in ys
-        y_mask[y] = true
+    x_mask = falses(n)
+    for x in xs
+        x_mask[x] = true
     end
-    causal_minus_y = [v for v = 1:n if poss_de_x[v] && poss_an_y[v] && !y_mask[v]]
-    forbidden = _pag_possible_descendants_bitmask(B, causal_minus_y)
+    causal_minus_x = [v for v = 1:n if poss_de_x[v] && poss_an_y[v] && !x_mask[v]]
+    forbidden = _pag_possible_descendants_bitmask(B, causal_minus_x)
     for x in xs
         forbidden[x] = true
     end

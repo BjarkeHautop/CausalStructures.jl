@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `pagcauses`/`maximal_local_mag`: could return wrong or spurious adjustment sets. Fixed and validated testing against brute-force approach.
 
+- `is_valid_backdoor`/`all_backdoor_sets` on a `DAG` wrongly accepted any set when `y` was itself a parent of `x`.
+
+- The generalized adjustment criterion's forbidden set (`is_valid_adjustment`/`all_adjustment_sets` on `DAG`/`ADMG`/`AG`/`MAG`/`AbstractPDAG`/`PAG`) excluded `y` instead of `x` from the causal-path nodes before taking descendants.
+
 ### Other changes
 
 - Package now compiles under `--trim=safe` (JuliaC).

@@ -143,6 +143,21 @@ end
     @test is_valid_adjustment(admg, :X, :Y, [:L])
 end
 
+@testitem "is_valid_adjustment: off-path descendant of X is not forbidden" tags =
+    [:unit, :admg] begin
+    # X-->M-->Y, X-->W, L-->X, L-->Y: W is a descendant of X but not on any
+    # causal path to Y, so it is not forbidden (unlike the mediator M).
+    admg = ADMG(
+        directed(:X, :M),
+        directed(:M, :Y),
+        directed(:X, :W),
+        directed(:L, :X),
+        directed(:L, :Y),
+    )
+    @test !is_valid_adjustment(admg, :X, :Y, [:M])       # M is on causal path
+    @test is_valid_adjustment(admg, :X, :Y, [:L, :W])
+end
+
 @testitem "all_adjustment_sets: finds minimal set" tags = [:unit, :admg] begin
     admg = ADMG(directed(:L, :X), directed(:X, :Y), directed(:L, :Y))
     sets = all_adjustment_sets(admg, :X, :Y; minimal = true)

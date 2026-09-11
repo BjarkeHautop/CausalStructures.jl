@@ -61,10 +61,6 @@ function is_valid_backdoor(
     for xi in xs
         xs_mask[xi] = true
     end
-    ys_mask = falses(n)
-    for yi in ys
-        ys_mask[yi] = true
-    end
 
     # Reject any z member that is a descendant of some x ∈ X.
     de_x = _descendants_bitmask(B, xs)
@@ -97,10 +93,11 @@ function is_valid_backdoor(
     end
 
     # Each parent gets its own Bayes-ball traversal so a collider at x ∈ X
-    # reopens only when that x ∈ obs.
+    # reopens only when that x ∈ obs. A parent that is itself in Y is a
+    # direct X <-- Y edge, an unblockable backdoor path, so it must still be
+    # checked.
     for p_idx in parents_x
         blocked[p_idx] && continue  # p is in obs --> trivially d-separated
-        ys_mask[p_idx] && continue  # p is one of the outcomes itself, not a path to check
         reached = _reachable_dag(B, [p_idx], mask, blocked)
         any(reached[yi] for yi in ys) && return false
     end
@@ -210,7 +207,6 @@ function all_backdoor_sets(
 
             for p_idx in parents_x
                 blocked[p_idx] && continue
-                ys_mask[p_idx] && continue
                 _reachable_dag_single!(visited, q, reached, B, p_idx, anc_mask, blocked)
                 any(reached[yi] for yi in ys) && return false
             end
@@ -316,9 +312,10 @@ function all_backdoor_sets(
 end
 
 """
-    adjustment_set(cg::DAG, x, y; type::Symbol = :optimal) -> Vector{Symbol}
+    adjustment_set(cg::DAG, x, y; type::Symbol = :optimal) -> Union{Nothing,Vector{Symbol}}
 
-Compute an adjustment set for the causal effect of `x` on `y` in `cg`.
+Compute an adjustment set for the causal effect of `x` on `y` in `cg`, or
+`nothing` if no valid adjustment set exists.
 
 `x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
@@ -389,7 +386,8 @@ function adjustment_set(
         for v = 1:n
             (xs_mask[v] || ys_mask[v]) && (keep[v] = false)
         end
-        return _mask_nodes(B, keep)
+        z = _mask_nodes(B, keep)
+        return is_valid_backdoor(cg, x, y, z) ? z : nothing
 
     elseif type === :backdoor
         de_x1 = _descendants_bitmask(B, xs)
@@ -407,7 +405,8 @@ function adjustment_set(
         z = minimal_separator(gx, x, y; restrict = restrict)
         z !== nothing && return z
 
-        # Fallback: Pa(X) is always a valid (if non-minimal) backdoor set.
+        # Fallback: Pa(X) is a valid (if non-minimal) backdoor set, unless
+        # some y ∈ Y is itself a parent of X.
         keep = falses(n)
         for xi in xs, p in _parents_slice(B, xi)
             keep[p] = true
@@ -415,7 +414,8 @@ function adjustment_set(
         for v = 1:n
             (xs_mask[v] || ys_mask[v]) && (keep[v] = false)
         end
-        return _mask_nodes(B, keep)
+        z = _mask_nodes(B, keep)
+        return is_valid_backdoor(cg, x, y, z) ? z : nothing
 
     elseif type === :optimal
         de_x2 = _descendants_bitmask(B, xs)
@@ -446,7 +446,8 @@ function adjustment_set(
         for v = 1:n
             cn_mask[v] && (pacn_mask[v] = false)
         end
-        return _mask_nodes(B, pacn_mask)
+        z = _mask_nodes(B, pacn_mask)
+        return is_valid_adjustment(cg, x, y, z) ? z : nothing
 
     else
         throw(
@@ -459,9 +460,10 @@ end
 
 """
     adjustment_set(cg::AbstractPDAG, x, y; type::Symbol = :optimal)
-        -> Vector{Symbol}
+        -> Union{Nothing,Vector{Symbol}}
 
-Compute an adjustment set for the causal effect of `x` on `y` in `cg`.
+Compute an adjustment set for the causal effect of `x` on `y` in `cg`, or
+`nothing` if no valid adjustment set exists.
 
 `x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
@@ -471,8 +473,6 @@ Two types are supported:
 - `:optimal`: O-set ``\\mathrm{Pa}(\\mathrm{Cn}(x,y)) \\setminus (\\{x\\} \\cup \\mathrm{Cn}(x,y))``,
   where ``\\mathrm{Cn}(x,y) = \\mathrm{PossibleDe}(x) \\cap \\mathrm{PossibleAn}(y)`` (nodes
   on possibly directed paths from `x` to `y`).
-
-Returns an empty vector if `x` has no causal path to `y`.
 
 # Examples
 
@@ -525,7 +525,8 @@ function adjustment_set(
         for v = 1:n
             (xs_mask[v] || ys_mask[v]) && (keep[v] = false)
         end
-        return [B.nodes[v] for v = 1:n if keep[v]]
+        z = [B.nodes[v] for v = 1:n if keep[v]]
+        return is_valid_adjustment(cg, x, y, z) ? z : nothing
 
     elseif type === :optimal
         poss_de_x = _possible_descendants_bitmask(B, xs)
@@ -556,7 +557,8 @@ function adjustment_set(
         for v = 1:n
             cn_mask[v] && (pacn_mask[v] = false)
         end
-        return [B.nodes[v] for v = 1:n if pacn_mask[v]]
+        z = [B.nodes[v] for v = 1:n if pacn_mask[v]]
+        return is_valid_adjustment(cg, x, y, z) ? z : nothing
 
     else
         throw(ArgumentError("Unknown adjustment_set type $type. Use :parents or :optimal."))
