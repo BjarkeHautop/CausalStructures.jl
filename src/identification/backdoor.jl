@@ -33,12 +33,12 @@ false
 julia> is_valid_backdoor(admg, :X, :Y, :A) # conditioning on A still blocks it
 true
 
-julia> cg2 = DAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
+julia> dag2 = DAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
-julia> is_valid_backdoor(cg2, [:X1, :X2], :Y)              # both confounding paths are open
+julia> is_valid_backdoor(dag2, [:X1, :X2], :Y)              # both confounding paths are open
 false
 
-julia> is_valid_backdoor(cg2, [:X1, :X2], :Y, [:L1, :L2])  # conditioning on both blocks them
+julia> is_valid_backdoor(dag2, [:X1, :X2], :Y, [:L1, :L2])  # conditioning on both blocks them
 true
 ```
 
@@ -136,9 +136,9 @@ julia> all_backdoor_sets(admg, :X, :Y)
 1-element Vector{Vector{Symbol}}:
  [:A]
 
-julia> cg2 = DAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
+julia> dag2 = DAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
-julia> all_backdoor_sets(cg2, [:X1, :X2], :Y)
+julia> all_backdoor_sets(dag2, [:X1, :X2], :Y)
 1-element Vector{Vector{Symbol}}:
  [:L1, :L2]
 ```
@@ -351,9 +351,9 @@ julia> adjustment_set(dag, :X, :Y; type = :optimal)
 1-element Vector{Symbol}:
  :K
 
-julia> cg2 = DAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
+julia> dag2 = DAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
 
-julia> sort(adjustment_set(cg2, [:X1, :X2], :Y; type = :optimal))
+julia> sort(adjustment_set(dag2, [:X1, :X2], :Y; type = :optimal))
 2-element Vector{Symbol}:
  :L1
  :L2
@@ -568,12 +568,12 @@ end
     backdoor_set(cg::DAG, x::Symbol, y::Symbol) -> Union{Vector{Symbol},Nothing}
 
 Return a generalized back-door set relative to `(x, y)` and `cg` using the
-Generalized Backdoor Criterion (GBC; Maathuis & Colombo 2015, Corollary 4.1), or
-`nothing` if none exists.
+Generalized Backdoor Criterion (GBC; [maathuiscolombo2015gbc](@citet),
+Corollary 4.1), or `nothing` if none exists.
 
-For a DAG this reduces to Pearl's original result: a generalized back-door set
-exists if and only if `y` is not a parent of `x`, and when it exists,
-`parents(cg, x)` is such a set (not necessarily minimal).
+For a DAG this reduces to Pearl's original result ([pearl2009causality](@citet)):
+a generalized back-door set exists if and only if `y` is not a parent of `x`,
+and when it exists, `parents(cg, x)` is such a set (not necessarily minimal).
 
 # Examples
 
@@ -591,6 +591,7 @@ true
 # References
 
 - [maathuiscolombo2015gbc](@citet)
+- [pearl2009causality](@citet)
 """
 function backdoor_set(cg::DAG, x::Symbol, y::Symbol)
     B = cg.backend

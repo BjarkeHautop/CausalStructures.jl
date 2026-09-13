@@ -121,7 +121,7 @@ exists within the allowed candidate set.
 
 # Algorithm
 
-Implements FINDMINSEP from van der Zander & Liśkiewicz (UAI 2020), running in
+Implements FINDMINSEP from [vanderzander2020finding](@citet), running in
 ``O(n + m)`` time. FINDNEARESTSEP is called twice; once from `x`, once from `y`
 restricted to the first result, and the outputs are intersected.
 
@@ -188,8 +188,7 @@ julia> minimal_separator(pag, :A, :M)
 1-element Vector{Symbol}:
  :X
 
-julia> mag2 = MAG(
-           "A <-> X1, B <-> X2, A --> M1 --> Y, B --> M2 --> Y");
+julia> mag2 = MAG("A <-> X1, B <-> X2, A --> M1 --> Y, B --> M2 --> Y");
 
 julia> sort(minimal_separator(mag2, [:X1, :X2], :Y))
 2-element Vector{Symbol}:

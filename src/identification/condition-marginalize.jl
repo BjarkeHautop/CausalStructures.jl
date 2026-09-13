@@ -27,7 +27,7 @@ end
 
 Return the [`AG`](@ref) over the remaining nodes after conditioning on
 `cond_vars` and marginalizing out `marg_vars`, following Definition 4.2.1 of
-[richardsonspirtes2002ancestral](@cite).
+[richardsonspirtes2002ancestral](@citet).
 
 `cond_vars` and `marg_vars` may each be a single `Symbol` or an
 `AbstractVector{Symbol}`.

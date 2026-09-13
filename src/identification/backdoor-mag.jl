@@ -27,8 +27,8 @@ end
     backdoor_set(cg::MAG, x::Symbol, y::Symbol) -> Union{Vector{Symbol},Nothing}
 
 Return a generalized back-door set relative to `(x, y)` and `cg` using the
-Generalized Backdoor Criterion (GBC; Maathuis & Colombo 2015, Corollary 4.3), or
-`nothing` if none exists.
+Generalized Backdoor Criterion (GBC; [maathuiscolombo2015gbc](@citet),
+Corollary 4.3), or `nothing` if none exists.
 
 Let `M_X` be `cg` with every visible directed edge out of `x` removed
 (Definition 4.2). A generalized back-door set exists if and only if `y` is not

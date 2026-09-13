@@ -193,7 +193,7 @@ end
     normalize_latent_structure(cg::DAG, latents) -> DAG
 
 Normalize the latent structure of `cg` while preserving the induced marginal
-model over the observed variables. Applies the following steps (Evans 2016,
+model over the observed variables. Applies the following steps ([evans2016graphs](@citet),
 Lemmas 1-3):
 
 1. Exogenize all latent nodes (remove their incoming edges, rerouting through

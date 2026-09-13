@@ -9,8 +9,8 @@ end
     backdoor_set(cg::CPDAG, x::Symbol, y::Symbol) -> Union{Vector{Symbol},Nothing}
 
 Return a generalized back-door set relative to `(x, y)` and `cg` using the
-Generalized Backdoor Criterion (GBC; Maathuis & Colombo 2015, Corollary 4.2), or
-`nothing` if none exists.
+Generalized Backdoor Criterion (GBC; [maathuiscolombo2015gbc](@citet),
+Corollary 4.2), or `nothing` if none exists.
 
 Let `C_X` be `cg` with every directed edge out of `x` removed. A generalized
 back-door set exists if and only if `y` is not a parent of `x` and `y` is not

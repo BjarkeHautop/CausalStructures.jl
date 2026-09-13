@@ -822,8 +822,9 @@ they impose the same m-separation constraints.
 # Examples
 
 `A <-> B <-> C` and `A --> B <-- C` both have an unshielded collider at `B`, so
-they share the PAG `A o-> B <-o C` and are Markov equivalent. Replacing one
-bidirected edge with `B --> C` removes the collider, changing the class:
+they share the PAG `A o-> B <-o C` and are Markov equivalent. Replacing the
+`B <-> C` edge with `B --> C` removes that collider, changing the equivalence
+class:
 
 ```jldoctest
 julia> m1 = MAG("A <-> B <-> C");

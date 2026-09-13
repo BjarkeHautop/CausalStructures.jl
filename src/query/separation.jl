@@ -537,11 +537,9 @@ end
 """
     d_separated(cg::Union{DAG,AbstractPDAG}, x, y, z = Symbol[]) -> Bool
 
-Return `true` if `x` and `y` are d-separated given `z` in `cg`.
-
-`x`, `y`, and `z` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
-The result is `true` iff every node in `x` is d-separated from every
-node in `y` given `z`.
+Return `true` iff every node in `x` is d-separated from every node in `y`
+given `z` in `cg`. `x`, `y`, and `z` may each be a single `Symbol` or an
+`AbstractVector{Symbol}`.
 
 Two nodes are d-separated given a conditioning set `z` if every path between
 them is blocked. A path is blocked if it contains either a non-collider node
@@ -653,11 +651,9 @@ end
 """
     m_separated(cg::Union{DAG,ADMG,AbstractAG,PAG}, x, y, z = Symbol[]) -> Bool
 
-Return `true` if `x` and `y` are m-separated given `z` in `cg`.
-
-`x`, `y`, and `z` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
-The result is `true` iff every node in `x` is m-separated from every
-node in `y` given `z`.
+Return `true` iff every node in `x` is m-separated from every node in `y`
+given `z` in `cg`. `x`, `y`, and `z` may each be a single `Symbol` or an
+`AbstractVector{Symbol}`.
 
 M-separation generalizes d-separation to graphs with bidirected and undirected
 edges. For a [`DAG`](@ref), m-separation is equivalent to [`d_separated`](@ref).

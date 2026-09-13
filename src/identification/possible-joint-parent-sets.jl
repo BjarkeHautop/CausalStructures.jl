@@ -59,7 +59,7 @@ Return every locally valid joint parental structure of `xs` implied by `cg`.
 
 `xs` may be a single `Symbol` or an `AbstractVector{Symbol}`.
 
-This is the graph part of joint-IDA (Nandy, Maathuis & Richardson 2017),
+This is the graph part of joint-IDA ([nandy2017jointida](@citet)),
 generalizing [`possible_parent_sets`](@ref) from a single intervention node to
 a set of simultaneous interventions.
 

@@ -7,8 +7,8 @@
     backdoor_set(cg::PAG, x::Symbol, y::Symbol) -> Union{Vector{Symbol},Nothing}
 
 Return a generalized back-door set relative to `(x, y)` and `cg` using the
-Generalized Backdoor Criterion (GBC; Maathuis & Colombo 2015, Theorem 4.1), or
-`nothing` if none exists.
+Generalized Backdoor Criterion (GBC; [maathuiscolombo2015gbc](@citet), Theorem
+4.1), or `nothing` if none exists.
 
 Let `R` be any MAG in the Markov equivalence class of `cg` with the same
 number of edges into `x` as `cg` (Definition 4.2; such an `R` always exists,
