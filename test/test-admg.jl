@@ -181,7 +181,25 @@ end
     @test isempty(sets)
 end
 
-@testitem "adjustment_set ADMG: returns valid set, prefers smaller" tags = [:unit, :admg] begin
+@testitem "is_valid_adjustment ADMG: a chain of distinct bidirected confounders isn't a valid separator" tags =
+    [:unit, :admg] begin
+    admg = ADMG(
+        directed(:V3, :V6),
+        bidirected(:V3, :V4),
+        bidirected(:V3, :V5),
+        directed(:V4, :V6),
+        directed(:V5, :V4),
+        bidirected(:V5, :V6),
+        directed(:V7, :V4),
+    )
+    z = [:V3, :V4, :V5]
+    @test !is_valid_adjustment(admg, :V6, :V7, z)
+    @test !m_separated(admg, :V6, :V7, z)
+    @test isempty(all_adjustment_sets(admg, :V6, :V7; minimal = false, max_size = 3))
+    @test adjustment_set(admg, :V6, :V7) === nothing
+end
+
+@testitem "adjustment_set ADMG: returns a minimal valid set" tags = [:unit, :admg] begin
     admg = ADMG(directed(:L, :X), directed(:X, :Y), directed(:L, :Y), directed(:M, :Y))
     z = adjustment_set(admg, :X, :Y)
     @test is_valid_adjustment(admg, :X, :Y, z)
@@ -193,6 +211,13 @@ end
     z = adjustment_set(admg, :X, :Y)
     @test is_valid_adjustment(admg, :X, :Y, z)
     @test z == Symbol[]
+end
+
+@testitem "adjustment_set ADMG: nothing when unidentifiable" tags = [:unit, :admg] begin
+    # X --> Y (direct effect) plus X <-> Y (latent confounder): no set can
+    # block the unobserved confounding.
+    admg = ADMG(directed(:X, :Y), bidirected(:X, :Y))
+    @test adjustment_set(admg, :X, :Y) === nothing
 end
 
 @testitem "is_valid_adjustment ADMG: accepts Vector{Symbol} for x and y" tags =

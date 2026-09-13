@@ -283,6 +283,7 @@ function _reachable_admg(
     xs::Vector{Int},
     a_mask::BitVector,
     z_mask::BitVector,
+    removed::Union{Nothing,Set{Tuple{Int,Int}}} = nothing,
 )
     n = length(B.nodes)
     visited = falses(n, 2)
@@ -304,9 +305,11 @@ function _reachable_admg(
         head += 1
         v_in_z = z_mask[v]
         for p in _parents_slice(B, v)   # p-->v: out=Head(2), nbr_in=Tail(1)
+            removed !== nothing && (p, v) in removed && continue
             _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, p, 1)
         end
         for c in _children_slice(B, v)  # v-->c: out=Tail(1), nbr_in=Head(2)
+            removed !== nothing && (v, c) in removed && continue
             _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 1, c, 2)
         end
         for s in _spouses_slice(B, v)   # v<->s: out=Head(2), nbr_in=Head(2)
@@ -470,6 +473,7 @@ function _reachable_pag(
     xs::Vector{Int},
     a_mask::BitVector,
     z_mask::BitVector,
+    removed::Union{Nothing,Set{Tuple{Int,Int}}} = nothing,
 )
     n = length(B.nodes)
     visited = falses(n, 3)
@@ -491,15 +495,19 @@ function _reachable_pag(
         head += 1
         v_in_z = z_mask[v]
         for p in _parents_slice(B, v)
+            removed !== nothing && (p, v) in removed && continue
             _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, p, 1)
         end
         for p in _circle_parents_slice(B, v)
+            removed !== nothing && (p, v) in removed && continue
             _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, p, 1)
         end
         for c in _children_slice(B, v)
+            removed !== nothing && (v, c) in removed && continue
             _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 1, c, 2)
         end
         for c in _circle_children_slice(B, v)
+            removed !== nothing && (v, c) in removed && continue
             _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 1, c, 2)
         end
         for s in _spouses_slice(B, v)

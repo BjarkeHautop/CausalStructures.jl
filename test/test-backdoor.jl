@@ -362,12 +362,18 @@ end
     @test !is_valid_adjustment(mag, :X, :Y)
 end
 
-@testitem "adjustment_set AbstractAG: returns valid set, prefers smaller" tags =
-    [:unit, :backdoor] begin
+@testitem "adjustment_set AbstractAG: returns a minimal valid set" tags = [:unit, :backdoor] begin
     mag = MAG(bidirected(:A, :X), directed(:A, :M), directed(:M, :Y), directed(:X, :Y))
     z = adjustment_set(mag, :X, :Y)
     @test is_valid_adjustment(mag, :X, :Y, z)
     @test z == [:A]
+end
+
+@testitem "adjustment_set AbstractAG: nothing when unidentifiable" tags = [:unit, :backdoor] begin
+    # X --> Y with no other nodes: no witness exists, so the edge is invisible
+    # and stays in the proper backdoor graph, leaving X and Y adjacent.
+    mag = MAG(directed(:X, :Y))
+    @test adjustment_set(mag, :X, :Y) === nothing
 end
 
 @testitem "adjustment_set AbstractAG: empty set valid" tags = [:unit, :backdoor] begin

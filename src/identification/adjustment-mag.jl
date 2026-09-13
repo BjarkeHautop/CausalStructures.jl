@@ -256,11 +256,10 @@ function all_adjustment_sets(
 end
 
 """
-    adjustment_set(cg::AbstractAG, x, y) -> Vector{Symbol}
+    adjustment_set(cg::AbstractAG, x, y) -> Union{Nothing,Vector{Symbol}}
 
-Return a single valid adjustment set for the causal effect of `x` on `y` in `cg`,
-preferring smaller sets. Returns the smallest valid adjustment set found by trying
-sizes 0, 1, 2, ... in order and stopping at the first valid set.
+Return a inclusion-minimal valid adjustment set for the causal effect of `x` on `y` in `cg`, or
+`nothing` if none exists.
 
 `x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
@@ -280,11 +279,17 @@ julia> sort(adjustment_set(mag2, [:X1, :X2], :Y))
 2-element Vector{Symbol}:
  :A
  :B
+
+julia> mag3 = MAG(directed(:X, :Y));  # invisible edge: no witness rules out a latent confounder
+
+julia> adjustment_set(mag3, :X, :Y) === nothing
+true
 ```
 
 # References
 
 - [perkovic2018complete](@citet)
+- [vanderzander2020finding](@citet)
 """
 function adjustment_set(
     cg::AbstractAG,
@@ -305,8 +310,11 @@ function adjustment_set(
     universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
     removed = _pbg_removed_ag(B, xs, ys)
 
-    result =
-        _smallest_valid_subset(universe, z -> _m_separated_pbg_ag(B, xs, ys, z, removed))
-    result === nothing && return Symbol[]
+    seeds = unique([xs; ys])
+    mask = _anterior_bitmask(B, seeds, removed)
+    adj = _ag_augmented_adj_filtered(B, mask, removed)
+
+    result = _findminsep_from_adj(adj, mask, xs, ys, universe)
+    result === nothing && return nothing
     return [B.nodes[v] for v in result]
 end

@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added `backdoor_set` (Generalized Backdoor Criterion) for `ADMG`.
 
+### Bug fixes
+
+- `is_valid_adjustment`/`all_adjustment_sets` on `ADMG` and `PAG` could wrongly validate an
+adjustment set when a node had two or more bidirected/circle edges to distinct confounders.
+
 ### Other changes
 
 - Improved performance of `adjustment_set`.

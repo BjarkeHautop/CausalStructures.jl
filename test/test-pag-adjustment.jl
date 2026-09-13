@@ -103,6 +103,24 @@ end
     end
 end
 
+@testitem "is_valid_adjustment PAG: a chain of distinct bidirected/circle confounders isn't a valid separator" setup =
+    [PagAdjustmentHelpers] tags = [:unit, :pag_adjustment] begin
+    # Ground truth (every MAG in the equivalence class) says V3 and V6 remain
+    # m-connected given z=[V1,V2,V4], since the bidirected/circle edges here
+    # are distinct latent confounders, not a shared one.
+    pag = PAG(
+        "V1 <-> V2, V1 o-> V5, V6 o-> V1, V3 o-> V2, V4 o-> V2, V2 <-> V5, " *
+        "V3 o-o V4, V4 o-> V5, V4 o-o V6, V6 o-> V5",
+    )
+    z = [:V1, :V2, :V4]
+    @test !is_valid_adjustment(pag, :V3, :V6, z)
+    @test !_valid_in_every_mag(pag, :V3, :V6, z)
+    @test !any(
+        s -> sort(s) == sort(z),
+        all_adjustment_sets(pag, :V3, :V6; minimal = false, max_size = 3),
+    )
+end
+
 # ── adjustment_set ─────────────────────────────────────────────────────────
 
 @testitem "adjustment_set PAG: returns valid set, prefers smaller" setup =
@@ -118,7 +136,7 @@ end
     [PagAdjustmentHelpers] tags = [:unit, :pag_adjustment] begin
     mag = MAG(directed(:A, :X), directed(:X, :Y), directed(:A, :Y))
     pag = mag_to_pag(mag)
-    @test adjustment_set(pag, :X, :Y) == Symbol[]
+    @test adjustment_set(pag, :X, :Y) === nothing
     @test !is_valid_adjustment(pag, :X, :Y)
 end
 

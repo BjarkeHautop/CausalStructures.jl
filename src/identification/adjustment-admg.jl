@@ -49,7 +49,7 @@ function _forbidden_set(
     return forbidden
 end
 
-# Shared moralized-PBG-adjacency builder for ADMG/PAG/PDAG.
+# Moralized-PBG-adjacency builder for PDAG (see adjustment-pdag.jl).
 # For each masked node v, `collect_clique!(buf, v)` fills `buf` with
 # the (masked, non-removed) neighbors that must be pairwise cliqued together
 # with v (e.g. parents and spouses), and `collect_direct!(buf, v)` fills `buf`
@@ -92,45 +92,6 @@ function _moral_adj_filtered!(
     return adj
 end
 
-# ADMG moralization with removed directed edges (PBG variant).
-function _admg_moral_adj_filtered(
-    B::ADMGBackend,
-    mask::BitVector,
-    removed::Set{Tuple{Int,Int}},
-)
-    n = length(B.nodes)
-    adj = [Int[] for _ = 1:n]
-    return _admg_moral_adj_filtered!(adj, B, mask, removed, Int[], Int[])
-end
-
-function _admg_moral_adj_filtered!(
-    adj::Vector{Vector{Int}},
-    B::ADMGBackend,
-    mask::BitVector,
-    removed::Set{Tuple{Int,Int}},
-    clique_buf::Vector{Int},
-    direct_buf::Vector{Int},
-)
-    function collect_clique!(buf, v)
-        for p in _parents_slice(B, v)
-            (mask[p] && !((p, v) in removed)) && push!(buf, p)
-        end
-        for s in _spouses_slice(B, v)
-            mask[s] && push!(buf, s)
-        end
-    end
-    collect_direct!(buf, v) = nothing
-
-    return _moral_adj_filtered!(
-        adj,
-        mask,
-        clique_buf,
-        direct_buf,
-        collect_clique!,
-        collect_direct!,
-    )
-end
-
 # Compute PBG removed edges: x --> v with x ∈ X, v ∉ X, v ∈ An(Y).
 #
 # DAG/ADMG only: a DAG's directed edges are always confounding-free by
@@ -153,7 +114,9 @@ function _pbg_removed(B::Union{DAGBackend,ADMGBackend}, xs::Vector{Int}, ys::Vec
     return removed
 end
 
-# BFS m-sep check in PBG (precomputed removed edges).
+# m-sep check in PBG (precomputed removed edges). Two or more bidirected
+# edges at the same node can represent distinct latent confounders, so this
+# uses the mark-based Bayes-ball rather than moralization.
 function _m_separated_pbg(
     B::ADMGBackend,
     xs::Vector{Int},
@@ -162,10 +125,19 @@ function _m_separated_pbg(
     removed::Set{Tuple{Int,Int}},
 )
     (isempty(xs) || isempty(ys)) && return true
+    n = length(B.nodes)
+    z_mask = falses(n)
+    for v in z
+        z_mask[v] = true
+    end
+    seeds_bfs = filter(xi -> !z_mask[xi], xs)
+    isempty(seeds_bfs) && return true
+
     seeds = unique([xs; ys; z])
     mask = _ancestors_bitmask(B, seeds, removed)
-    adj = _admg_moral_adj_filtered(B, mask, removed)
-    return _bfs_blocked_reaches(adj, mask, xs, ys, z)
+
+    reached = _reachable_admg(B, seeds_bfs, mask, z_mask, removed)
+    return !any(reached[yi] for yi in ys)
 end
 
 # Is sorted vector a ⊆ sorted vector b?
@@ -195,10 +167,10 @@ function _prune_minimal!(sets::Vector{Vector{Symbol}})
     copy!(sets, out)
 end
 
-# Shared BFS core for the `_m/d_separated_pbg*` checks below (ADMG/AG/PAG/PDAG):
-# with `mask` restricting which nodes are present in the PBG, `adj` its
-# moralized adjacency, and `z` the blocking set, decide whether any x in `xs`
-# reaches any y in `ys`.
+# Shared BFS core for `_m_separated_pbg_ag` and PDAG's PBG check: with `mask`
+# restricting which nodes are present in the PBG, `adj` its moralized
+# adjacency, and `z` the blocking set, decide whether any x in `xs` reaches
+# any y in `ys`.
 function _bfs_blocked_reaches(
     adj::Vector{Vector{Int}},
     mask::BitVector,
@@ -238,11 +210,69 @@ function _bfs_blocked_reaches(
     return true
 end
 
-# Shared candidate-checker factory for `all_adjustment_sets` (ADMG/AG/PAG/PDAG):
+# FINDNEARESTSEP (van der Zander & Liśkiewicz 2020) on an explicit undirected
+# adjacency-list graph that's already moralized/filtered for the AG/MAG PBG
+# and restricted to `mask`. Mirrors `_find_nearest_sep` in, but from a precomputed
+# `adj` instead of a raw
+# graph. `res_idxs` is assumed disjoint from `xs`/`ys`.
+function _nearest_sep_from_adj(
+    adj::Vector{Vector{Int}},
+    mask::BitVector,
+    xs::Vector{Int},
+    ys::Vector{Int},
+    res_idxs::Vector{Int},
+)
+    n = length(mask)
+    blocked = falses(n)
+    for r in res_idxs
+        mask[r] && (blocked[r] = true)
+    end
+
+    visited = falses(n)
+    queue = Int[]
+    for x in xs
+        (mask[x] && !visited[x]) || continue
+        visited[x] = true
+        push!(queue, x)
+    end
+    head = 1
+    while head <= length(queue)
+        u = queue[head]
+        head += 1
+        blocked[u] && continue  # a candidate wall: reached, but don't propagate past it
+        for w in adj[u]
+            visited[w] && continue
+            visited[w] = true
+            push!(queue, w)
+        end
+    end
+
+    any(visited[yi] for yi in ys) && return nothing
+    return [v for v in res_idxs if blocked[v] && visited[v]]
+end
+
+# Two-pass FINDMINSEP (from `xs`, then from `ys` restricted to the first
+# result, intersected) over the same explicit adjacency-list graph.
+function _findminsep_from_adj(
+    adj::Vector{Vector{Int}},
+    mask::BitVector,
+    xs::Vector{Int},
+    ys::Vector{Int},
+    res_idxs::Vector{Int},
+)
+    zx = _nearest_sep_from_adj(adj, mask, xs, ys, res_idxs)
+    zx === nothing && return nothing
+    zy = _nearest_sep_from_adj(adj, mask, ys, xs, zx)
+    zy === nothing && return nothing
+    zy_set = Set(zy)
+    return sort!([v for v in zx if v in zy_set])
+end
+
+# Shared candidate-checker factory for `all_adjustment_sets` (AG/MAG and PDAG):
 # `recompute!(seeds_buf)` (re)computes the anterior/ancestor mask and moralized
 # PBG adjacency for a candidate `z` into caller-owned scratch and returns them;
 # this wraps that in the blocked/visited/queue bookkeeping and BFS common to
-# every graph class's `all_adjustment_sets`.
+# both graph classes' `all_adjustment_sets`.
 function _make_pbg_checker(
     n::Int,
     xs::Vector{Int},
@@ -300,6 +330,18 @@ function _pbg_dag(cg::DAG, xs::Vector{Int}, ys::Vector{Int})
     removed_syms = Set((B.nodes[s], B.nodes[t]) for (s, t) in removed)
     kept = filter(e -> !(is_directed(e) && (e.src, e.dst) in removed_syms), cg.edges)
     return build_graph(DAG, Set(B.nodes), kept)
+end
+
+# Build the proper backdoor graph as an actual ADMG by dropping the edges
+# `_pbg_removed` identifies. Safe since dropping edges from an ADMG
+# still returns an ADMG.
+function _pbg_admg(cg::ADMG, xs::Vector{Int}, ys::Vector{Int})
+    B = cg.backend
+    removed = _pbg_removed(B, xs, ys)
+    isempty(removed) && return cg
+    removed_syms = Set((B.nodes[s], B.nodes[t]) for (s, t) in removed)
+    kept = filter(e -> !(is_directed(e) && (e.src, e.dst) in removed_syms), cg.edges)
+    return build_graph(ADMG, Set(B.nodes), kept)
 end
 
 # d-separation check in the proper backdoor graph, without constructing it:
@@ -626,22 +668,7 @@ function all_adjustment_sets(
     universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
     removed = _pbg_removed(B, xs, ys)
 
-    # Scratch buffers allocated once per `make_checker` call
-    function make_checker()
-        anc_mask = falses(n)
-        anc_stack = Int[]
-        adj = [Int[] for _ = 1:n]
-        clique_buf = Int[]
-        direct_buf = Int[]
-
-        function recompute!(seeds_buf)
-            _ancestors_bitmask!(anc_mask, anc_stack, B, seeds_buf, removed)
-            _admg_moral_adj_filtered!(adj, B, anc_mask, removed, clique_buf, direct_buf)
-            return anc_mask, adj
-        end
-
-        return _make_pbg_checker(n, xs, ys, y_mask, recompute!)
-    end
+    make_checker() = z_idxs -> _m_separated_pbg(B, xs, ys, z_idxs, removed)
 
     to_symbols(cur) = sort([B.nodes[v] for v in cur])
 
@@ -652,11 +679,10 @@ function all_adjustment_sets(
 end
 
 """
-    adjustment_set(cg::ADMG, x, y) -> Vector{Symbol}
+    adjustment_set(cg::ADMG, x, y) -> Union{Nothing,Vector{Symbol}}
 
-Return a single valid adjustment set for the causal effect of `x` on `y` in
-`cg`, preferring smaller sets. Returns the smallest valid adjustment set found
-by trying sizes 0, 1, 2, ... in order and stopping at the first valid set.
+Return a valid inclusion-minimal adjustment set for the causal effect of `x` on `y` in `cg`, or
+`nothing` if none exists.
 
 `x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
@@ -675,6 +701,11 @@ julia> sort(adjustment_set(admg2, [:X1, :X2], :Y))
 2-element Vector{Symbol}:
  :L1
  :L2
+
+julia> admg3 = ADMG(directed(:X, :Y), bidirected(:X, :Y));  # direct edge plus latent confounder
+
+julia> adjustment_set(admg3, :X, :Y) === nothing
+true
 ```
 
 # References
@@ -697,10 +728,8 @@ function adjustment_set(
         y_mask[yi] = true
     end
 
-    universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
-    removed = _pbg_removed(B, xs, ys)
+    universe = [B.nodes[v] for v = 1:n if !forbidden[v] && !y_mask[v]]
+    gx = _pbg_admg(cg, xs, ys)
 
-    result = _smallest_valid_subset(universe, z -> _m_separated_pbg(B, xs, ys, z, removed))
-    result === nothing && return Symbol[]
-    return [B.nodes[v] for v in result]
+    return minimal_separator(gx, x, y; restrict = universe)
 end
