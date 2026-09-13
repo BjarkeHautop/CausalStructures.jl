@@ -9,9 +9,9 @@ Check whether `cg` satisfies the structural constraints of a [`DAG`](@ref)
 # Examples
 
 ```jldoctest
-julia> cg = PDAG("A --> B --> C");
+julia> pdag = PDAG("A --> B --> C");
 
-julia> is_dag(cg)
+julia> is_dag(pdag)
 true
 ```
 """
@@ -26,9 +26,9 @@ Check whether `cg` satisfies the structural constraints of a [`PDAG`](@ref)
 # Examples
 
 ```jldoctest
-julia> cg = UNKNOWN("A --> B --- C");
+julia> unk = UNKNOWN("A --> B --- C");
 
-julia> is_pdag(cg)
+julia> is_pdag(unk)
 true
 ```
 """
@@ -177,9 +177,9 @@ Return the nodes of `cg` in alphabetical order.
 # Examples
 
 ```jldoctest
-julia> cg = DAG("B --> A --> C");
+julia> dag = DAG("B --> A --> C");
 
-julia> nodes(cg)
+julia> nodes(dag)
 3-element Vector{Symbol}:
  :A
  :B
@@ -202,9 +202,9 @@ construction.
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B");
+julia> dag = DAG("A --> B");
 
-julia> is_simple(cg)
+julia> is_simple(dag)
 true
 
 julia> unk = UNKNOWN("A --> B, A --> B");
@@ -247,9 +247,9 @@ construction.
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B --> C");
+julia> dag = DAG("A --> B --> C");
 
-julia> is_acyclic(cg)
+julia> is_acyclic(dag)
 true
 
 julia> unk = UNKNOWN("A --> B, B --> A");
@@ -459,9 +459,9 @@ Returns a `Dict` mapping each node name to a length-`samples` vector.
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B --> C");
+julia> dag = DAG("A --> B --> C");
 
-julia> data = simulate_data(cg; samples = 100);
+julia> data = simulate_data(dag; samples = 100);
 
 julia> haskey(data, :A)
 true
@@ -539,9 +539,9 @@ Return the edges of `cg`.
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B --> C");
+julia> dag = DAG("A --> B --> C");
 
-julia> edges(cg)
+julia> edges(dag)
 2-element Vector{CausalEdge}:
  A --> B
  B --> C

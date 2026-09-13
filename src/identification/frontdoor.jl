@@ -20,15 +20,15 @@ formula, even in the presence of unmeasured confounders between `x` and `y`.
 # Examples
 
 ```jldoctest
-julia> cg = DAG("U --> X --> M --> Y, U --> Y");
+julia> dag = DAG("U --> X --> M --> Y, U --> Y");
 
-julia> is_valid_frontdoor(cg, :X, :Y, :M)  # M mediates X -> Y and satisfies all conditions
+julia> is_valid_frontdoor(dag, :X, :Y, :M)  # M mediates X -> Y and satisfies all conditions
 true
 
-julia> is_valid_frontdoor(cg, :X, :Y)         # empty Z leaves directed path X -> M -> Y open
+julia> is_valid_frontdoor(dag, :X, :Y)         # empty Z leaves directed path X -> M -> Y open
 false
 
-julia> is_valid_frontdoor(cg, :X, :Y, :U)   # U does not intercept X -> M -> Y
+julia> is_valid_frontdoor(dag, :X, :Y, :U)   # U does not intercept X -> M -> Y
 false
 
 julia> cg2 = DAG(
@@ -446,30 +446,30 @@ arrowhead into a node just like a directed parent does).
 # Examples
 
 ```jldoctest
-julia> cg = DAG("U --> X + Y, X --> Z --> Y");
+julia> dag = DAG("U --> X + Y, X --> Z --> Y");
 
-julia> frontdoor_set(cg, :X, :Y; restrict = :Z)
+julia> frontdoor_set(dag, :X, :Y; restrict = :Z)
 1-element Vector{Symbol}:
  :Z
 ```
 
 ```jldoctest
 julia> # Jeong (2022) Fig. 1b
-       cg = DAG(
+       dag = DAG(
            "U1 --> X + Y, U2 --> X + D, X --> A, A --> B + C + D, B + C + D --> Y");
 
-julia> frontdoor_set(cg, :X, :Y; restrict = [:A, :B, :C, :D])
+julia> frontdoor_set(dag, :X, :Y; restrict = [:A, :B, :C, :D])
 3-element Vector{Symbol}:
  :A
  :B
  :C
 
-julia> frontdoor_set(cg, :X, :Y; include = :C, restrict = [:A, :C])
+julia> frontdoor_set(dag, :X, :Y; include = :C, restrict = [:A, :C])
 2-element Vector{Symbol}:
  :A
  :C
 
-julia> frontdoor_set(cg, :X, :Y; include = :D, restrict = [:A, :B, :C, :D]) === nothing
+julia> frontdoor_set(dag, :X, :Y; include = :D, restrict = [:A, :B, :C, :D]) === nothing
 true
 ```
 
@@ -663,18 +663,18 @@ polynomial time and takes polynomial time between consecutive results. For
 # Examples
 
 ```jldoctest
-julia> cg = DAG("U --> X + Y, X --> Z --> Y");
+julia> dag = DAG("U --> X + Y, X --> Z --> Y");
 
-julia> all_frontdoor_sets(cg, :X, :Y; restrict = :Z)
+julia> all_frontdoor_sets(dag, :X, :Y; restrict = :Z)
 1-element Vector{Vector{Symbol}}:
  [:Z]
 ```
 
 ```jldoctest
-julia> cg = DAG(
+julia> dag = DAG(
            "U1 --> X + Y, U2 --> X + D, X --> A, A --> B + C + D, B + C + D --> Y");
 
-julia> sort(all_frontdoor_sets(cg, :X, :Y; restrict = [:A, :B, :C, :D]))
+julia> sort(all_frontdoor_sets(dag, :X, :Y; restrict = [:A, :B, :C, :D]))
 4-element Vector{Vector{Symbol}}:
  [:A]
  [:A, :B]

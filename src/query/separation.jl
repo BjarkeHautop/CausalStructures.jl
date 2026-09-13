@@ -558,12 +558,12 @@ traversal treating undirected edges as never forming a collider endpoint.
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B --> C");
+julia> dag = DAG("A --> B --> C");
 
-julia> d_separated(cg, :A, :C)        # chain A --> B --> C is open
+julia> d_separated(dag, :A, :C)        # chain A --> B --> C is open
 false
 
-julia> d_separated(cg, :A, :C, :B) # conditioning on B blocks the chain
+julia> d_separated(dag, :A, :C, :B) # conditioning on B blocks the chain
 true
 
 julia> coll = DAG("A --> C <-- B");
@@ -675,12 +675,12 @@ tails (as for [`possible_ancestors`](@ref)/[`possible_descendants`](@ref)).
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B --> C");
+julia> dag = DAG("A --> B --> C");
 
-julia> m_separated(cg, :A, :C)        # equivalent to d_separated on a DAG
+julia> m_separated(dag, :A, :C)        # equivalent to d_separated on a DAG
 false
 
-julia> m_separated(cg, :A, :C, :B)
+julia> m_separated(dag, :A, :C, :B)
 true
 
 julia> admg = ADMG("A --> B, A <-> C");

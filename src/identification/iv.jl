@@ -51,12 +51,12 @@ for one structural coefficient `x -> y`.
 
 ```jldoctest
 julia> # Classic IV graph: Z --> X --> Y with hidden confounder U --> X, U --> Y
-       cg = DAG("Z --> X --> Y, U --> X + Y");
+       dag = DAG("Z --> X --> Y, U --> X + Y");
 
-julia> is_valid_iv(cg, :X, :Y, :Z)  # Z is a valid instrument
+julia> is_valid_iv(dag, :X, :Y, :Z)  # Z is a valid instrument
 true
 
-julia> is_valid_iv(cg, :X, :Y, :U)  # U confounds X and Y; fails exclusion restriction
+julia> is_valid_iv(dag, :X, :Y, :U)  # U confounds X and Y; fails exclusion restriction
 false
 ```
 
@@ -112,9 +112,9 @@ only inclusion-minimal sets are returned.
 # Examples
 
 ```jldoctest
-julia> cg = DAG("Z1 --> X, Z2 --> X, X --> Y, U --> X + Y");
+julia> dag = DAG("Z1 --> X, Z2 --> X, X --> Y, U --> X + Y");
 
-julia> all_iv_sets(cg, :X, :Y)
+julia> all_iv_sets(dag, :X, :Y)
 2-element Vector{Vector{Symbol}}:
  [:Z1]
  [:Z2]

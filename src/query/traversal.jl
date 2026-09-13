@@ -105,16 +105,16 @@ default can be changed project-wide via Preferences.jl:
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B --> C");
+julia> dag = DAG("A --> B --> C");
 
-julia> ancestors(cg, :A)
+julia> ancestors(dag, :A)
 Symbol[]
 
-julia> ancestors(cg, :A, open = false)
+julia> ancestors(dag, :A, open = false)
 1-element Vector{Symbol}:
  :A
 
-julia> ancestors(cg, :C)
+julia> ancestors(dag, :C)
 2-element Vector{Symbol}:
  :A
  :B
@@ -142,17 +142,17 @@ default can be changed project-wide via Preferences.jl:
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B --> C");
+julia> dag = DAG("A --> B --> C");
 
-julia> descendants(cg, :A)
+julia> descendants(dag, :A)
 2-element Vector{Symbol}:
  :B
  :C
 
-julia> descendants(cg, :C)
+julia> descendants(dag, :C)
 Symbol[]
 
-julia> descendants(cg, :A, open = false)
+julia> descendants(dag, :A, open = false)
 3-element Vector{Symbol}:
  :A
  :B
@@ -184,9 +184,9 @@ undirected edge is not considered exogenous.
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B --> C");
+julia> dag = DAG("A --> B --> C");
 
-julia> exogenous_nodes(cg)
+julia> exogenous_nodes(dag)
 1-element Vector{Symbol}:
  :A
 
@@ -563,9 +563,9 @@ default can be changed project-wide via Preferences.jl:
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B --> C");
+julia> dag = DAG("A --> B --> C");
 
-julia> anteriors(cg, :C)  # same as ancestors for a DAG
+julia> anteriors(dag, :C)  # same as ancestors for a DAG
 2-element Vector{Symbol}:
  :A
  :B
@@ -660,9 +660,9 @@ default can be changed project-wide via Preferences.jl:
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B --> C");
+julia> dag = DAG("A --> B --> C");
 
-julia> posteriors(cg, :A)  # same as descendants for a DAG
+julia> posteriors(dag, :A)  # same as descendants for a DAG
 2-element Vector{Symbol}:
  :B
  :C
@@ -723,15 +723,15 @@ co-parents, spouses, and undirected neighbors.
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B --> C, D --> C");
+julia> dag = DAG("A --> B --> C, D --> C");
 
-julia> markov_blanket(cg, :B)
+julia> markov_blanket(dag, :B)
 3-element Vector{Symbol}:
  :A
  :C
  :D
 
-julia> markov_blanket(cg, :C)
+julia> markov_blanket(dag, :C)
 2-element Vector{Symbol}:
  :B
  :D

@@ -407,19 +407,19 @@ joined by circle-mark edges (`o->`, `o--`, `o-o`) are reported by `:all` only.
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B <-- C");
+julia> dag = DAG("A --> B <-- C");
 
-julia> neighbors(cg, :B)
+julia> neighbors(dag, :B)
 2-element Vector{Symbol}:
  :A
  :C
 
-julia> neighbors(cg, :B, mode = :in)
+julia> neighbors(dag, :B, mode = :in)
 2-element Vector{Symbol}:
  :A
  :C
 
-julia> neighbors(cg, :A, mode = :out)
+julia> neighbors(dag, :A, mode = :out)
 1-element Vector{Symbol}:
  :B
 
@@ -474,14 +474,14 @@ returned; a circle endpoint at `node` is not a parent.
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B <-- C");
+julia> dag = DAG("A --> B <-- C");
 
-julia> parents(cg, :B)
+julia> parents(dag, :B)
 2-element Vector{Symbol}:
  :A
  :C
 
-julia> parents(cg, :A)
+julia> parents(dag, :A)
 Symbol[]
 ```
 """
@@ -501,14 +501,14 @@ returned; a circle endpoint at the child is not a definite child.
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B + C");
+julia> dag = DAG("A --> B + C");
 
-julia> children(cg, :A)
+julia> children(dag, :A)
 2-element Vector{Symbol}:
  :B
  :C
 
-julia> children(cg, :B)
+julia> children(dag, :B)
 Symbol[]
 ```
 """
@@ -523,9 +523,9 @@ Return `true` if there is any edge between `src` and `dst` in `cg`.
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B");
+julia> dag = DAG("A --> B");
 
-julia> has_edge(cg, :A, :B)
+julia> has_edge(dag, :A, :B)
 true
 ```
 """

@@ -138,7 +138,7 @@ A Directed Acyclic Graph. Directed edges only, and no directed cycles allowed.
 # Examples
 
 ```jldoctest
-julia> cg = DAG(directed(:A, :B), directed(:B, :C))
+julia> dag = DAG(directed(:A, :B), directed(:B, :C))
 DAG with 3 nodes and 2 edges:
   nodes: A, B, C
   edges:

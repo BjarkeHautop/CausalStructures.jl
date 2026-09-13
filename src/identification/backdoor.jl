@@ -17,12 +17,12 @@ Return `true` if `z` satisfies the backdoor criterion for the causal effect of
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> X --> Y, A --> Y");
+julia> dag = DAG("A --> X --> Y, A --> Y");
 
-julia> is_valid_backdoor(cg, :X, :Y)       # empty Z leaves the backdoor path A --> Y open
+julia> is_valid_backdoor(dag, :X, :Y)       # empty Z leaves the backdoor path A --> Y open
 false
 
-julia> is_valid_backdoor(cg, :X, :Y, :A) # conditioning on A blocks the backdoor path
+julia> is_valid_backdoor(dag, :X, :Y, :A) # conditioning on A blocks the backdoor path
 true
 
 julia> admg = ADMG("A --> X --> Y, A <-> Y");
@@ -124,9 +124,9 @@ bidirected edges and are never candidates.
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> X --> Y, A --> Y");
+julia> dag = DAG("A --> X --> Y, A --> Y");
 
-julia> all_backdoor_sets(cg, :X, :Y)
+julia> all_backdoor_sets(dag, :X, :Y)
 1-element Vector{Vector{Symbol}}:
  [:A]
 
@@ -334,20 +334,20 @@ Three types are supported:
 # Examples
 
 ```jldoctest
-julia> cg = DAG(
+julia> dag = DAG(
            "C --> X, X --> F, X --> D --> Y, A --> X,
            A --> K --> Y, D --> G, Y --> H");
 
-julia> sort(adjustment_set(cg, :X, :Y; type = :parents))
+julia> sort(adjustment_set(dag, :X, :Y; type = :parents))
 2-element Vector{Symbol}:
  :A
  :C
 
-julia> adjustment_set(cg, :X, :Y; type = :backdoor)
+julia> adjustment_set(dag, :X, :Y; type = :backdoor)
 1-element Vector{Symbol}:
  :A
 
-julia> adjustment_set(cg, :X, :Y; type = :optimal)
+julia> adjustment_set(dag, :X, :Y; type = :optimal)
 1-element Vector{Symbol}:
  :K
 
@@ -578,13 +578,13 @@ exists if and only if `y` is not a parent of `x`, and when it exists,
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> X --> Y, A --> Y");
+julia> dag = DAG("A --> X --> Y, A --> Y");
 
-julia> backdoor_set(cg, :X, :Y)
+julia> backdoor_set(dag, :X, :Y)
 1-element Vector{Symbol}:
  :A
 
-julia> backdoor_set(cg, :Y, :A) === nothing  # A is a parent of Y
+julia> backdoor_set(dag, :Y, :A) === nothing  # A is a parent of Y
 true
 ```
 

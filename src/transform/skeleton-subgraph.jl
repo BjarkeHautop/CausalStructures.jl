@@ -28,9 +28,9 @@ directed or partially-directed edge with an undirected edge.
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B --> C");
+julia> dag = DAG("A --> B --> C");
 
-julia> sk = skeleton(cg);
+julia> sk = skeleton(dag);
 
 julia> neighbors(sk, :B)
 2-element Vector{Symbol}:
@@ -56,9 +56,9 @@ undirected neighbors are included in the skeleton but do not form a clique.
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> C <-- B");
+julia> dag = DAG("A --> C <-- B");
 
-julia> m = moralize(cg);
+julia> m = moralize(dag);
 
 julia> neighbors(m, :C)   # A and B are now married
 2-element Vector{Symbol}:
@@ -139,9 +139,9 @@ induced subgraph need not satisfy the stronger class invariant:
 # Examples
 
 ```jldoctest
-julia> cg = DAG("A --> B --> C, A --> C");
+julia> dag = DAG("A --> B --> C, A --> C");
 
-julia> sg = subgraph(cg, [:A, :B])
+julia> sg = subgraph(dag, [:A, :B])
 DAG with 2 nodes and 1 edge:
   nodes: A, B
   edges:
