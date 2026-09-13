@@ -272,8 +272,7 @@ julia> adjustment_set(mag, :X, :Y)
 1-element Vector{Symbol}:
  :A
 
-julia> mag2 = MAG(
-           "A <-> X1, B <-> X2, A --> M1 --> Y, B --> M2 --> Y, X1 --> Y, X2 --> Y");
+julia> mag2 = MAG("A <-> X1, B <-> X2, A --> M1 --> Y, B --> M2 --> Y, X1 --> Y, X2 --> Y");
 
 julia> sort(adjustment_set(mag2, [:X1, :X2], :Y))
 2-element Vector{Symbol}:

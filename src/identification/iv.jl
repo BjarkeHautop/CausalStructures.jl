@@ -49,9 +49,10 @@ for one structural coefficient `x -> y`.
 
 # Examples
 
+Classic IV graph: `Z --> X --> Y` with hidden confounder `U --> X`, `U --> Y`:
+
 ```jldoctest
-julia> # Classic IV graph: Z --> X --> Y with hidden confounder U --> X, U --> Y
-       dag = DAG("Z --> X --> Y, U --> X + Y");
+julia> dag = DAG("Z --> X --> Y, U --> X + Y");
 
 julia> is_valid_iv(dag, :X, :Y, :Z)  # Z is a valid instrument
 true
@@ -60,19 +61,21 @@ julia> is_valid_iv(dag, :X, :Y, :U)  # U confounds X and Y; fails exclusion rest
 false
 ```
 
+ADMG: `X <-> Y` encodes the hidden confounder directly:
+
 ```jldoctest
-julia> # ADMG: X <-> Y encodes the hidden confounder directly
-       admg = ADMG("X <-> Y, Z --> X --> Y");
+julia> admg = ADMG("X <-> Y, Z --> X --> Y");
 
 julia> is_valid_iv(admg, :X, :Y, :Z)
 true
 ```
 
-```jldoctest
-julia> # Z instruments X, which affects two outcomes Y1 and Y2
-       cg2 = DAG("Z --> X, X --> Y1 + Y2, U --> X + Y1 + Y2");
+`Z` instruments `X`, which affects two outcomes `Y1` and `Y2`:
 
-julia> is_valid_iv(cg2, :X, [:Y1, :Y2], :Z)
+```jldoctest
+julia> dag2 = DAG("Z --> X, X --> Y1 + Y2, U --> X + Y1 + Y2");
+
+julia> is_valid_iv(dag2, :X, [:Y1, :Y2], :Z)
 true
 ```
 
@@ -119,10 +122,9 @@ julia> all_iv_sets(dag, :X, :Y)
  [:Z1]
  [:Z2]
 
-julia> cg2 = DAG(
-           "Z1 --> X, Z2 --> X, X --> Y1 + Y2, U --> X + Y1 + Y2");
+julia> dag2 = DAG("Z1 --> X, Z2 --> X, X --> Y1 + Y2, U --> X + Y1 + Y2");
 
-julia> all_iv_sets(cg2, :X, [:Y1, :Y2])
+julia> all_iv_sets(dag2, :X, [:Y1, :Y2])
 2-element Vector{Vector{Symbol}}:
  [:Z1]
  [:Z2]

@@ -31,10 +31,9 @@ false
 julia> is_valid_frontdoor(dag, :X, :Y, :U)   # U does not intercept X -> M -> Y
 false
 
-julia> cg2 = DAG(
-           "U1 --> X1 + Y1, U2 --> X2 + Y2, X1 --> M, X2 --> M, M --> Y1 + Y2");
+julia> dag2 = DAG("U1 --> X1 + Y1, U2 --> X2 + Y2, X1 --> M, X2 --> M, M --> Y1 + Y2");
 
-julia> is_valid_frontdoor(cg2, [:X1, :X2], [:Y1, :Y2], :M)  # M mediates every X --> Y path
+julia> is_valid_frontdoor(dag2, [:X1, :X2], [:Y1, :Y2], :M)  # M mediates every X --> Y path
 true
 ```
 
@@ -453,10 +452,10 @@ julia> frontdoor_set(dag, :X, :Y; restrict = :Z)
  :Z
 ```
 
+[jeong2022finding](@citet) Fig. 1b:
+
 ```jldoctest
-julia> # Jeong (2022) Fig. 1b
-       dag = DAG(
-           "U1 --> X + Y, U2 --> X + D, X --> A, A --> B + C + D, B + C + D --> Y");
+julia> dag = DAG("U1 --> X + Y, U2 --> X + D, X --> A, A --> B + C + D, B + C + D --> Y");
 
 julia> frontdoor_set(dag, :X, :Y; restrict = [:A, :B, :C, :D])
 3-element Vector{Symbol}:
@@ -473,10 +472,10 @@ julia> frontdoor_set(dag, :X, :Y; include = :D, restrict = [:A, :B, :C, :D]) ===
 true
 ```
 
+Fig. 1b latent-projected to an ADMG: `U1 -> X <-> Y`, `U2 -> X <-> D`:
+
 ```jldoctest
-julia> # Fig. 1b latent-projected to an ADMG: U1 -> X <-> Y, U2 -> X <-> D
-       admg = ADMG(
-           "X <-> Y, X <-> D, X --> A, A --> B + C + D, B + C + D --> Y");
+julia> admg = ADMG("X <-> Y, X <-> D, X --> A, A --> B + C + D, B + C + D --> Y");
 
 julia> frontdoor_set(admg, :X, :Y; restrict = [:A, :B, :C, :D])
 3-element Vector{Symbol}:
@@ -486,10 +485,9 @@ julia> frontdoor_set(admg, :X, :Y; restrict = [:A, :B, :C, :D])
 ```
 
 ```jldoctest
-julia> cg2 = DAG(
-           "U1 --> X1 + Y1, U2 --> X2 + Y2, X1 --> M, X2 --> M, M --> Y1 + Y2");
+julia> dag2 = DAG("U1 --> X1 + Y1, U2 --> X2 + Y2, X1 --> M, X2 --> M, M --> Y1 + Y2");
 
-julia> frontdoor_set(cg2, [:X1, :X2], [:Y1, :Y2]; restrict = :M)
+julia> frontdoor_set(dag2, [:X1, :X2], [:Y1, :Y2]; restrict = :M)
 1-element Vector{Symbol}:
  :M
 ```
@@ -670,9 +668,10 @@ julia> all_frontdoor_sets(dag, :X, :Y; restrict = :Z)
  [:Z]
 ```
 
+[jeong2022finding](@citet) Fig. 1b:
+
 ```jldoctest
-julia> dag = DAG(
-           "U1 --> X + Y, U2 --> X + D, X --> A, A --> B + C + D, B + C + D --> Y");
+julia> dag = DAG("U1 --> X + Y, U2 --> X + D, X --> A, A --> B + C + D, B + C + D --> Y");
 
 julia> sort(all_frontdoor_sets(dag, :X, :Y; restrict = [:A, :B, :C, :D]))
 4-element Vector{Vector{Symbol}}:
@@ -682,10 +681,10 @@ julia> sort(all_frontdoor_sets(dag, :X, :Y; restrict = [:A, :B, :C, :D]))
  [:A, :C]
 ```
 
+Fig. 1b latent-projected to an ADMG: `U1 -> X <-> Y`, `U2 -> X <-> D`:
+
 ```jldoctest
-julia> # Fig. 1b latent-projected to an ADMG: U1 -> X <-> Y, U2 -> X <-> D
-       admg = ADMG(
-           "X <-> Y, X <-> D, X --> A, A --> B + C + D, B + C + D --> Y");
+julia> admg = ADMG("X <-> Y, X <-> D, X --> A, A --> B + C + D, B + C + D --> Y");
 
 julia> sort(all_frontdoor_sets(admg, :X, :Y; restrict = [:A, :B, :C, :D]))
 4-element Vector{Vector{Symbol}}:
@@ -696,10 +695,9 @@ julia> sort(all_frontdoor_sets(admg, :X, :Y; restrict = [:A, :B, :C, :D]))
 ```
 
 ```jldoctest
-julia> cg2 = DAG(
-           "U1 --> X1 + Y1, U2 --> X2 + Y2, X1 --> M, X2 --> M, M --> Y1 + Y2");
+julia> dag2 = DAG("U1 --> X1 + Y1, U2 --> X2 + Y2, X1 --> M, X2 --> M, M --> Y1 + Y2");
 
-julia> all_frontdoor_sets(cg2, [:X1, :X2], [:Y1, :Y2]; restrict = :M)
+julia> all_frontdoor_sets(dag2, [:X1, :X2], [:Y1, :Y2]; restrict = :M)
 1-element Vector{Vector{Symbol}}:
  [:M]
 ```

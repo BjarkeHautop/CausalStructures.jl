@@ -624,8 +624,7 @@ julia> all_adjustment_sets(mag, :X, :Y)
 ```
 
 ```jldoctest
-julia> mpdag = MPDAG(
-           "A --> X, B --> X, X --> Y, A --> Y, B --- K, K --> Y");
+julia> mpdag = MPDAG("A --> X, B --> X, X --> Y, A --> Y, B --- K, K --> Y");
 
 julia> all_adjustment_sets(mpdag, :X, :Y)
 2-element Vector{Vector{Symbol}}:

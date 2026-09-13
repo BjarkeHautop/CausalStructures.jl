@@ -325,8 +325,7 @@ Parallelizes over `Threads.nthreads()` when there are enough candidates.
 # Examples
 
 ```jldoctest
-julia> pag = PAG(
-           "X o-> Y, X o-> C, X o-> A, Y o-o C, C o-o A, B o-> C, B o-> Y, B o-> A");
+julia> pag = PAG("X o-> Y, X o-> C, X o-> A, Y o-o C, C o-o A, B o-> C, B o-> Y, B o-> A");
 
 julia> sort(sort.(pagcauses(pag, :X, :Y)))
 5-element Vector{Vector{Symbol}}:

@@ -228,7 +228,8 @@ julia> is_valid_adjustment(pag, :X, :Y, :A)
 true
 
 julia> mag2 = MAG(
-           "B1 --> X1, A1 <-> X1, A1 --> Y, X1 --> Y, B2 --> X2, A2 <-> X2, A2 --> Y, X2 --> Y");
+           "B1 --> X1, A1 <-> X1, A1 --> Y, X1 --> Y,
+           B2 --> X2, A2 <-> X2, A2 --> Y, X2 --> Y");
 
 julia> pag2 = mag_to_pag(mag2);
 
@@ -283,7 +284,8 @@ julia> all_adjustment_sets(pag, :X, :Y)
  [:A]
 
 julia> mag2 = MAG(
-           "B1 --> X1, A1 <-> X1, A1 --> Y, X1 --> Y, B2 --> X2, A2 <-> X2, A2 --> Y, X2 --> Y");
+           "B1 --> X1, A1 <-> X1, A1 --> Y, X1 --> Y,
+           B2 --> X2, A2 <-> X2, A2 --> Y, X2 --> Y");
 
 julia> pag2 = mag_to_pag(mag2);
 
@@ -347,7 +349,8 @@ julia> adjustment_set(pag, :X, :Y)
  :A
 
 julia> mag2 = MAG(
-           "B1 --> X1, A1 <-> X1, A1 --> Y, X1 --> Y, B2 --> X2, A2 <-> X2, A2 --> Y, X2 --> Y");
+           "B1 --> X1, A1 <-> X1, A1 --> Y, X1 --> Y,
+           B2 --> X2, A2 <-> X2, A2 --> Y, X2 --> Y");
 
 julia> pag2 = mag_to_pag(mag2);
 
