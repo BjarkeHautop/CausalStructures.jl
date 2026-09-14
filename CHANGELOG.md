@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased version
 
+### Breaking changes
+
+- `plot`'s layout-algorithm keywords (e.g. `seed`, `iterations`) must now be passed as
+`layout_kwargs = (; seed = 1)` instead of directly, since `plot` is now backed by a proper
+Makie recipe with a fixed set of attributes.
+- `plot` now returns a `FigureAxisPlot` instead of a `Figure`.
+
 ### New features
 
 - Added `backdoor_set` (Generalized Backdoor Criterion) for `ADMG`.
@@ -14,10 +21,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CausalGraph` now supports `==` and `hash`, comparing graphs structurally (same class,
 nodes, and edges).
 
+- `plot!(ax, cg)` draws a `CausalGraph` into an `Axis` you already own, so multiple graphs
+(or a graph and other plots) can share one `Figure`. The returned plot is reactive, e.g.
+`plt.node_color[] = :red` restyles it in place.
+
 ### Bug fixes
 
 - `is_valid_adjustment`/`all_adjustment_sets` on `ADMG` and `PAG` could wrongly validate an
 adjustment set when a node had two or more bidirected/circle edges to distinct confounders.
+
+- `plot`'s `edge_paths` override for one edge no longer discards automatic per-edge routing
+(e.g. from `layout = :sugiyama`) for the rest of the graph's edges.
 
 ### Other changes
 

@@ -35,7 +35,7 @@ end
     positions = layout(dag, :spring; seed = 1405)
     positions[:A] = (0.0, 2.0)
 
-    @test Makie.plot(dag; layout = positions) isa Makie.Figure
+    @test Makie.plot(dag; layout = positions) isa Makie.FigureAxisPlot
 end
 
 @testitem "NetworkLayoutExt: default layout method becomes :stress once loaded" tags =

@@ -30,7 +30,7 @@ end
     positions = layout(dag, :sugiyama)
     positions[:A] = (0.0, 2.0)
 
-    @test Makie.plot(dag; layout = positions) isa Makie.Figure
+    @test Makie.plot(dag; layout = positions) isa Makie.FigureAxisPlot
 end
 
 @testitem "SugiyamaExt: becomes the default layout for a DAG once loaded" tags =
@@ -51,10 +51,10 @@ end
     using Sugiyama
 
     dag = DAG(directed(:A, :B), directed(:B, :C), directed(:A, :C))
-    @test Makie.plot(dag) isa Makie.Figure
+    @test Makie.plot(dag) isa Makie.FigureAxisPlot
 
     # An explicit `edge_paths` still takes precedence over the automatic one.
     positions = layout(dag)
     custom = Dict((:A, :C) => [positions[:A], (0.5, 5.0), positions[:C]])
-    @test Makie.plot(dag; edge_paths = custom) isa Makie.Figure
+    @test Makie.plot(dag; edge_paths = custom) isa Makie.FigureAxisPlot
 end

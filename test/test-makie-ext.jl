@@ -13,7 +13,7 @@
         partial(:F, :A),
     )
     fig = Makie.plot(g; layout = :stress)
-    @test fig isa Makie.Figure
+    @test fig isa Makie.FigureAxisPlot
 end
 
 @testitem "Makie.plot: routes an edge around an obstacle node" tags = [:unit, :plot] begin
@@ -23,7 +23,7 @@ end
     # B sits on the straight A--C chord, forcing _route_edge_path to bend it.
     g = DAG(directed(:A, :C), node(:B))
     fig = Makie.plot(g; layout = [(0.0, 0.0), (1.0, 0.0), (2.0, 0.0)])
-    @test fig isa Makie.Figure
+    @test fig isa Makie.FigureAxisPlot
 end
 
 @testitem "Makie.plot: fans out multiple edges between the same pair" tags = [:unit, :plot] begin
@@ -32,7 +32,7 @@ end
 
     admg = ADMG(directed(:X, :Y), bidirected(:X, :Y))
     fig = Makie.plot(admg; layout = :stress)
-    @test fig isa Makie.Figure
+    @test fig isa Makie.FigureAxisPlot
 end
 
 @testitem "Makie.plot: resolves per-edge and per-node style dicts" tags = [:unit, :plot] begin
@@ -53,11 +53,11 @@ end
         label_fontsize = Dict(:Y => 20.0),
         label_font = Dict(:Y => :bold),
     )
-    @test fig isa Makie.Figure
+    @test fig isa Makie.FigureAxisPlot
 
     # No :default and no matching key/type => falls back to the hard-coded color.
     fig_fallback = Makie.plot(admg; layout = :stress, edge_color = Dict((:A, :Z) => :red))
-    @test fig_fallback isa Makie.Figure
+    @test fig_fallback isa Makie.FigureAxisPlot
 end
 
 @testitem "Makie.plot: title options" tags = [:unit, :plot] begin
@@ -66,7 +66,7 @@ end
 
     dag = DAG(directed(:A, :B))
     fig_no_title = Makie.plot(dag; layout = :stress)
-    @test fig_no_title isa Makie.Figure
+    @test fig_no_title isa Makie.FigureAxisPlot
 
     fig_title = Makie.plot(
         dag;
@@ -75,7 +75,7 @@ end
         title_fontsize = 20,
         title_color = :navy,
     )
-    @test fig_title isa Makie.Figure
+    @test fig_title isa Makie.FigureAxisPlot
 end
 
 @testitem "Makie.plot: accepts a custom position vector, errors on length mismatch" tags =
@@ -85,7 +85,7 @@ end
 
     dag = DAG(directed(:A, :B))
     fig = Makie.plot(dag; layout = [(0.0, 0.0), (1.0, 1.0)])
-    @test fig isa Makie.Figure
+    @test fig isa Makie.FigureAxisPlot
 
     @test_throws ErrorException Makie.plot(dag; layout = [(0.0, 0.0)])
 end
@@ -110,7 +110,7 @@ end
         arrow_size = 0.1,
         circle_size = 0.05,
     )
-    @test fig isa Makie.Figure
+    @test fig isa Makie.FigureAxisPlot
 end
 
 @testitem "Makie.plot: text-fit node sizing grows for longer labels" tags = [:unit, :plot] begin
@@ -126,11 +126,11 @@ end
     # error, with node circles sized per label instead of uniformly.
     dag = DAG(directed(:Exposure, :Y_outcome))
     fig = Makie.plot(dag; layout = :stress)
-    @test fig isa Makie.Figure
+    @test fig isa Makie.FigureAxisPlot
 
     # Explicit node_radius overrides text-fit sizing back to a uniform value.
     fig2 = Makie.plot(dag; layout = :stress, node_radius = 0.1)
-    @test fig2 isa Makie.Figure
+    @test fig2 isa Makie.FigureAxisPlot
 end
 
 @testitem "MakieExt: node sizing rounds out to equal sides for short labels" tags =
@@ -213,7 +213,7 @@ end
 
     dag = DAG(e_ax, e_ay, e_xy)
     fig = Makie.plot(dag; layout = :stress, edge_color = val)
-    @test fig isa Makie.Figure
+    @test fig isa Makie.FigureAxisPlot
 end
 
 @testitem "Makie.plot: arrow_fill defaults to edge color and accepts hollow arrowheads" tags =
@@ -223,10 +223,10 @@ end
 
     dag = DAG(directed(:A, :B))
     fig_default = Makie.plot(dag; layout = :stress)
-    @test fig_default isa Makie.Figure
+    @test fig_default isa Makie.FigureAxisPlot
 
     fig_hollow = Makie.plot(dag; layout = :stress, arrow_fill = :transparent)
-    @test fig_hollow isa Makie.Figure
+    @test fig_hollow isa Makie.FigureAxisPlot
 
     fig_dict = Makie.plot(
         dag;
@@ -234,7 +234,7 @@ end
         edge_color = :steelblue,
         arrow_fill = Dict((:A, :B) => :transparent, :default => nothing),
     )
-    @test fig_dict isa Makie.Figure
+    @test fig_dict isa Makie.FigureAxisPlot
 end
 
 @testitem "Makie.plot: NetworkLayout output with far-flung isolated nodes doesn't blow up figure size" tags =
@@ -247,9 +247,9 @@ end
     # coordinate scale wildly inconsistent with the connected component's
     # actual node spacing.
     g = DAG(directed(:A, :B), directed(:B, :C), directed(:A, :C), node(:ISO1), node(:ISO2))
-    fig = Makie.plot(g; layout = :stress, seed = 1)
-    @test fig isa Makie.Figure
-    w, h = Makie.widths(fig.scene.viewport[])
+    fig = Makie.plot(g; layout = :stress, layout_kwargs = (; seed = 1))
+    @test fig isa Makie.FigureAxisPlot
+    w, h = Makie.widths(fig.figure.scene.viewport[])
     @test (w, h) == (600, 450)
 end
 
@@ -259,10 +259,10 @@ end
 
     dag = DAG(directed(:A, :B))
     fig = Makie.plot(dag; layout = :stress, outer_margin = 30, title_gap = 10.0)
-    @test fig isa Makie.Figure
+    @test fig isa Makie.FigureAxisPlot
 
     fig_title = Makie.plot(dag; layout = :stress, title = "Stretched", title_gap = 12.0)
-    @test fig_title isa Makie.Figure
+    @test fig_title isa Makie.FigureAxisPlot
 end
 
 @testitem "Makie.plot: node shapes render, and unknown shapes error" tags = [:unit, :plot] begin
@@ -272,7 +272,7 @@ end
     dag = DAG(directed(:A, :B), directed(:B, :C))
 
     for shape in (:circle, :square)
-        @test Makie.plot(dag; layout = :stress, node_shape = shape) isa Makie.Figure
+        @test Makie.plot(dag; layout = :stress, node_shape = shape) isa Makie.FigureAxisPlot
     end
 
     fig = Makie.plot(
@@ -280,7 +280,7 @@ end
         layout = :stress,
         node_shape = Dict(:A => :square, :default => :circle),
     )
-    @test fig isa Makie.Figure
+    @test fig isa Makie.FigureAxisPlot
 
     @test_throws ErrorException Makie.plot(dag; layout = :stress, node_shape = :hexagon)
 end
@@ -345,11 +345,11 @@ end
         node_shape = :square,
         labels = Dict(:A0 => "Treatment\nat baseline", :L1 => "Confounder"),
     )
-    @test fig isa Makie.Figure
+    @test fig isa Makie.FigureAxisPlot
 
     # Nodes with no entry keep their own name; :default covers the rest.
     fig_default = Makie.plot(dag; layout = :stress, labels = Dict(:default => "?"))
-    @test fig_default isa Makie.Figure
+    @test fig_default isa Makie.FigureAxisPlot
 end
 
 @testitem "Makie.plot: node_linestyle draws a dashed border" tags = [:unit, :plot] begin
@@ -357,14 +357,14 @@ end
     using NetworkLayout
 
     dag = DAG(directed(:U, :X), directed(:U, :Y), directed(:X, :Y))
-    @test Makie.plot(dag; layout = :stress, node_linestyle = :dash) isa Makie.Figure
+    @test Makie.plot(dag; layout = :stress, node_linestyle = :dash) isa Makie.FigureAxisPlot
     fig = Makie.plot(
         dag;
         layout = :stress,
         node_linestyle = Dict(:U => :dash),
         node_shape = Dict(:U => :square, :default => :circle),
     )
-    @test fig isa Makie.Figure
+    @test fig isa Makie.FigureAxisPlot
 end
 
 @testitem "Makie.plot: layout accepts positions keyed by node name" tags = [:unit, :plot] begin
@@ -374,7 +374,7 @@ end
     dag = DAG(directed(:A, :B), directed(:B, :C))
     fig =
         Makie.plot(dag; layout = Dict(:A => (0.0, 0.0), :B => (1.0, 0.0), :C => (2.0, 1.0)))
-    @test fig isa Makie.Figure
+    @test fig isa Makie.FigureAxisPlot
 
     @test_throws ErrorException Makie.plot(dag; layout = Dict(:A => (0.0, 0.0)))
 end
@@ -386,10 +386,10 @@ end
     # The routed A --> C curve has to clip against B's box, not a circle.
     g = DAG(directed(:A, :C), node(:B))
     fig = Makie.plot(g; layout = [(0.0, 0.0), (1.0, 0.0), (2.0, 0.0)], node_shape = :square)
-    @test fig isa Makie.Figure
+    @test fig isa Makie.FigureAxisPlot
 
     admg = ADMG(directed(:X, :Y), bidirected(:X, :Y))
-    @test Makie.plot(admg; layout = :stress, node_shape = :square) isa Makie.Figure
+    @test Makie.plot(admg; layout = :stress, node_shape = :square) isa Makie.FigureAxisPlot
 end
 
 @testitem "MakieExt: curvature bows an edge, signed relative to src --> dst" tags =
@@ -423,14 +423,14 @@ end
 
     admg = ADMG(directed(:X, :Y), bidirected(:X, :Z), directed(:Z, :Y))
 
-    @test Makie.plot(admg; layout = :stress, curvature = 0.3) isa Makie.Figure
+    @test Makie.plot(admg; layout = :stress, curvature = 0.3) isa Makie.FigureAxisPlot
     @test Makie.plot(admg; layout = :stress, curvature = Dict(:bidirected => 0.3)) isa
-          Makie.Figure
+          Makie.FigureAxisPlot
     @test Makie.plot(
         admg;
         layout = :stress,
         curvature = Dict((:X, :Y) => -0.4, :default => 0.0),
-    ) isa Makie.Figure
+    ) isa Makie.FigureAxisPlot
 end
 
 @testitem "Makie.plot: explicit curvature is not overridden by routing or fanning" tags =
@@ -444,7 +444,7 @@ end
     # around it; an explicit curvature takes precedence instead.
     g = DAG(directed(:A, :C), node(:B))
     positions = [(0.0, 0.0), (1.0, 0.0), (2.0, 0.0)]
-    @test Makie.plot(g; layout = positions, curvature = 0.3) isa Makie.Figure
+    @test Makie.plot(g; layout = positions, curvature = 0.3) isa Makie.FigureAxisPlot
 
     # Routing bends away from the obstacle; asking for the opposite sign gets
     # the opposite side, which only holds if curvature wins.
@@ -494,13 +494,13 @@ end
     custom = [(0.0, 0.0), (1.0, -0.6), (2.0, 0.0)]
 
     @test Makie.plot(g; layout = positions, edge_paths = Dict((:A, :C) => custom)) isa
-          Makie.Figure
+          Makie.FigureAxisPlot
     @test Makie.plot(
         g;
         layout = positions,
         curvature = 0.3,
         edge_paths = Dict((:A, :C) => custom),
-    ) isa Makie.Figure
+    ) isa Makie.FigureAxisPlot
 
     # Same precedence check as for curvature, but directly on the geometry:
     # the auto-router bends away from B (below the chord); the override
@@ -541,7 +541,7 @@ end
         layout = [(0.0, 0.0), (0.0, 2.0), (2.0, 1.0)],
         edge_paths = Dict((:A, :C) => [(0.0, 0.0), (2.0, 1.0)]),
     )
-    @test fig isa Makie.Figure
+    @test fig isa Makie.FigureAxisPlot
 
     # An override that never clears the node boundary is degenerate and
     # falls back too, rather than erroring.
@@ -551,7 +551,7 @@ end
         layout = [(0.0, 0.0), (2.0, 0.0)],
         edge_paths = Dict((:A, :B) => [(0.0, 0.0), (0.001, 0.0)]),
     )
-    @test fig2 isa Makie.Figure
+    @test fig2 isa Makie.FigureAxisPlot
 end
 
 @testitem "MakieExt: a CausalEdge key names one exact edge" tags = [:unit, :plot] begin
@@ -606,4 +606,93 @@ end
     # A tuple in either order still outranks a node-wide key.
     val = Dict((:X, :A) => :blue, :A => :red, :default => :black)
     @test ext._resolve_edge(val, e_ax, :fallback) == :blue
+end
+
+@testitem "Makie.plot: plottype routes CausalGraph to CausalGraphPlot" tags = [:unit, :plot] begin
+    using Makie
+
+    ext = Base.get_extension(CausalStructures, :MakieExt)
+    dag = DAG(directed(:A, :B))
+    @test Makie.plottype(dag) === ext.CausalGraphPlot
+end
+
+@testitem "Makie.plot!: composes into a caller-built Figure alongside another panel" tags =
+    [:unit, :plot] begin
+    using Makie
+    using NetworkLayout
+
+    dag = DAG(directed(:A, :B), directed(:B, :C))
+    admg = ADMG(directed(:X, :Y), bidirected(:X, :Y))
+
+    ext = Base.get_extension(CausalStructures, :MakieExt)
+    fig = Makie.Figure()
+    ax1 = Makie.Axis(fig[1, 1]; aspect = Makie.DataAspect())
+    ax2 = Makie.Axis(fig[1, 2]; aspect = Makie.DataAspect())
+    plt1 = Makie.plot!(ax1, dag; layout = :stress)
+    plt2 = Makie.plot!(ax2, admg; layout = :stress, node_color = :salmon)
+
+    @test plt1 isa ext.CausalGraphPlot
+    @test plt2 isa ext.CausalGraphPlot
+    # Each panel drew its own nodes/edges into the same Figure, independently.
+    @test !isempty(plt1.plots)
+    @test !isempty(plt2.plots)
+end
+
+@testitem "Makie.plot: changing an attribute after the fact redraws in place" tags =
+    [:unit, :plot] begin
+    using Makie
+    using NetworkLayout
+
+    dag = DAG(directed(:A, :B), directed(:B, :C))
+    fig, ax, plt = Makie.plot(dag; layout = :stress)
+    n_before = length(plt.plots)
+
+    # A style change redraws (clears + recreates the fixed set of child
+    # subplots) rather than erroring or silently accumulating orphaned ones.
+    plt.node_color[] = :red
+    @test length(plt.plots) == n_before
+
+    plt.curvature[] = 0.3
+    @test length(plt.plots) == n_before
+
+    plt.labels[] = Dict(:A => "Treated")
+    @test length(plt.plots) == n_before
+end
+
+@testitem "Makie.plot: layout_kwargs forwards extra keywords to the layout algorithm" tags =
+    [:unit, :plot] begin
+    using Makie
+    using NetworkLayout
+
+    dag = DAG(directed(:A, :B), directed(:B, :C))
+    result = Makie.plot(dag; layout = :spring, layout_kwargs = (; seed = 1))
+    @test result isa Makie.FigureAxisPlot
+
+    # plot! (composability path) accepts it the same way.
+    fig2 = Makie.Figure()
+    ax2 = Makie.Axis(fig2[1, 1]; aspect = Makie.DataAspect())
+    plt2 = Makie.plot!(
+        ax2,
+        dag;
+        layout = :spring,
+        layout_kwargs = (; seed = 1, iterations = 50),
+    )
+    @test !isempty(plt2.plots)
+end
+
+@testitem "Makie.plot: edge_paths merges with (rather than replaces) auto-routed paths" tags =
+    [:unit, :plot] begin
+    using Makie
+    using Sugiyama
+
+    # `layout = :sugiyama` auto-computes a routed path for every edge; an
+    # `edge_paths` override for just one edge must not make the others fall
+    # back to plain obstacle-avoidance routing.
+    dag = DAG(directed(:A, :B), directed(:A, :C), directed(:B, :C))
+    result = Makie.plot(
+        dag;
+        layout = :sugiyama,
+        edge_paths = Dict((:A, :B) => [(0.0, 0.0), (0.5, 1.0), (1.0, 0.0)]),
+    )
+    @test result isa Makie.FigureAxisPlot
 end

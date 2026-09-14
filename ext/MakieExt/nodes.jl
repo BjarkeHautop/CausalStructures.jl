@@ -21,7 +21,6 @@ function _circumradius(g::_NodeGeom)
     return sqrt(g.hw^2 + g.hh^2)
 end
 
-# Center-to-boundary distance along the unit vector `dir`.
 function _boundary_distance(g::_NodeGeom, dir::Point2f)
     c, s = abs(dir[1]), abs(dir[2])
     if _is_round_family(g.shape)
@@ -61,8 +60,10 @@ function _shape_polygon(g::_NodeGeom; n::Int = 60)
 end
 
 # A dashed border is stroked separately, since `poly!`'s own stroke is solid.
+# `parent` is whatever a Makie plotting call accepts as its target - an Axis,
+# or (from the `CausalGraphPlot` recipe) the recipe's own `Plot` object.
 function _draw_node!(
-    ax,
+    parent,
     g::_NodeGeom;
     color = :white,
     strokecolor = :black,
@@ -72,16 +73,16 @@ function _draw_node!(
     pts = _shape_polygon(g)
     if linestyle === nothing
         Makie.poly!(
-            ax,
+            parent,
             pts;
             color = color,
             strokecolor = strokecolor,
             strokewidth = strokewidth,
         )
     else
-        Makie.poly!(ax, pts; color = color, strokewidth = 0)
+        Makie.poly!(parent, pts; color = color, strokewidth = 0)
         Makie.lines!(
-            ax,
+            parent,
             pts;
             color = strokecolor,
             linewidth = strokewidth,
@@ -117,7 +118,7 @@ end
 
 # Half-extents (pixels) fitting `label` inside a node of the given shape, with
 # `padding` clear on every side. Pixels because text is fixed-pixel-sized;
-# `Makie.plot` converts to data units once it picks the ratio.
+# the caller converts to data units once it picks the ratio.
 function _text_fit_pixel_size(label, shape::Symbol, fontsize::Real, font, padding::Real)
     w, h = _text_pixel_size(label, fontsize, font)
     pad = Float32(padding)

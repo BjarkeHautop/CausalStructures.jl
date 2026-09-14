@@ -326,6 +326,29 @@ plot(dag; fig_size = (800, 600))
     Node positions keep the layout's own aspect ratio by default, so depending on the chosen `fig_size` you can get a lot of empty space
     in the plot. Pass `stretch_to_fig_size = true` to disable this.
 
+## Composing into an existing figure
+
+So far we've only used `plot`, which builds its own `Figure` and `Axis` for
+you. If you already have an `Axis` (say, one panel of a bigger figure),
+`plot!(ax, cg; kwargs...)` draws into that instead, with the same keywords as
+`plot` above except `outer_margin`, `title_gap`, `fig_size`, and
+`stretch_to_fig_size`, since those size the figure `plot` builds for you.
+
+This is how you put two graphs side by side, or mix one in with other plots:
+
+```@example plot
+fig = Figure(size = (900, 400))
+plot!(Axis(fig[1, 1]; aspect = DataAspect()), dag)
+plot!(Axis(fig[1, 2]; aspect = DataAspect()), admg; node_color = :salmon)
+Makie.hidedecorations!.(fig.content)
+Makie.hidespines!.(fig.content)
+fig
+```
+
+Node and label sizes adapt to whatever space each `Axis` actually has. Resizing the window
+alone however won't re-trigger the sizing. Instead, touch an attribute (or replot) and it
+will update.
+
 ## Combining options
 
 Here we plot a PAG where we combine a bunch of different

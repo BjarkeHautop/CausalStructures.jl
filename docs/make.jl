@@ -6,6 +6,8 @@ using DocumenterCodeBlocks
 
 bib = CitationBibliography(joinpath(@__DIR__, "src", "references.bib"); style = :authoryear)
 
+const _makie_ext = Base.get_extension(CausalStructures, :MakieExt)
+
 DocMeta.setdocmeta!(
     CausalStructures,
     :DocTestSetup,
@@ -86,7 +88,8 @@ function list_pages()
 end
 
 makedocs(;
-    modules = [CausalStructures],
+    modules = [CausalStructures, _makie_ext],
+    checkdocs_ignored_modules = [_makie_ext],
     authors = "Bjarke Hautop Kristensen <bjarke.hautop@gmail.com>",
     repo = "https://github.com/BjarkeHautop/CausalStructures.jl/blob/{commit}{path}#{line}",
     sitename = "CausalStructures.jl",
