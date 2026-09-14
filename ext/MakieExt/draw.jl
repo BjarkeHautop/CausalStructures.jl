@@ -332,10 +332,9 @@ end
 # only their data does. Every redraw clears and recreates them wholesale
 # (`empty!(plot.plots)`) rather than diffing a variable subplot structure.
 #
-# Node/label sizing reads the containing Axis's live pixel viewport, but only
-# on a redraw - a plain window resize with no attribute touched won't
-# re-trigger it (that would need tracking the viewport itself as an input,
-# like `GraphMakie.GraphPlot` does; not yet implemented).
+# Node/label sizing reads the containing Axis's live pixel viewport, and the
+# viewport itself is tracked as an `onany` input below, so a plain window
+# resize with no attribute touched still re-solves node/label sizing to fit.
 function Makie.plot!(plot::CausalGraphPlot)
     function update_plot(
         cg,
@@ -359,6 +358,7 @@ function Makie.plot!(plot::CausalGraphPlot)
         label_color,
         label_fontsize,
         label_font,
+        viewport,
     )
         empty!(plot.plots)
 
@@ -405,8 +405,7 @@ function Makie.plot!(plot::CausalGraphPlot)
         # Text is fixed-pixel-sized regardless of zoom, so node sizes (data
         # units) are solved for the pixels-per-data-unit ratio the Axis's
         # real pixel area implies.
-        avail_w, avail_h =
-            Float32.(Makie.widths(Makie.viewport(Makie.parent_scene(plot))[]))
+        avail_w, avail_h = Float32.(Makie.widths(viewport))
 
         xs = [p[1] for p in positions]
         ys = [p[2] for p in positions]
@@ -529,6 +528,10 @@ function Makie.plot!(plot::CausalGraphPlot)
         return
     end
 
+    # Tracking the Axis's own pixel viewport (not just `plot`'s attributes)
+    # as an `onany` input is what makes node/label sizing keep up with a live
+    # window resize.
+    viewport = Makie.viewport(Makie.parent_scene(plot))
     Makie.onany(
         update_plot,
         plot,
@@ -552,7 +555,8 @@ function Makie.plot!(plot::CausalGraphPlot)
         plot.edge_paths,
         plot.label_color,
         plot.label_fontsize,
-        plot.label_font;
+        plot.label_font,
+        viewport;
         update = true,
     )
     return plot
@@ -567,9 +571,9 @@ Makie.plottype(::CausalGraph) = CausalGraphPlot
 Visualize a [`CausalGraph`](@ref) using Makie. Requires loading a Makie
 backend (e.g. `using CairoMakie`) before calling.
 
-Both return a live `CausalGraphPlot`: every keyword below (except the
-figure-level ones noted last) is a reactive attribute, so e.g.
-`plt.node_color[] = :red` restyles the existing plot in place.
+Every keyword below (except the figure-level ones noted last) is one of its
+reactive attributes, so e.g. `plt.node_color[] = :red` restyles the existing
+plot in place.
 
 Keyword arguments: `layout`, `layout_kwargs`, `labels`, `node_shape`,
 `node_radius`, `node_padding`, `arrow_size`, `circle_size`, `node_color`,
@@ -583,9 +587,7 @@ per-node/per-edge overrides; a per-edge `Dict` may be keyed by a
 the chosen layout algorithm, e.g. `layout_kwargs = (; seed = 1)`.
 
 `title`, `title_fontsize`, `title_color`, `title_gap`, `outer_margin`,
-`fig_size`, `stretch_to_fig_size` only apply to `Makie.plot`: the standalone
-entry point creates and sizes the `Figure`/`Axis` itself, while `plot!` draws
-into one you already control.
+`fig_size`, `stretch_to_fig_size` only apply to `Makie.plot`.
 
 `edge_paths` can be used to override an edge's drawn route directly: a
 `Dict` (same keying as other per-edge overrides) from an edge to a vector

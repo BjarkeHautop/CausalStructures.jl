@@ -616,6 +616,30 @@ end
     @test Makie.plottype(dag) === ext.CausalGraphPlot
 end
 
+@testitem "Makie.plot: resizing the figure re-solves node/label sizing live" tags =
+    [:unit, :plot] begin
+    using Makie
+    using NetworkLayout
+
+    dag = DAG(directed(:A, :B), directed(:B, :C))
+    fig, ax, plt = Makie.plot(dag; layout = :stress, fig_size = (300, 300))
+    n_plots = length(plt.plots)
+
+    # Node bodies are drawn after all edges (2 edges * (line + arrowhead) = 4,
+    # so plots 5/6/7 are node A/B/C's poly).
+    node_poly = plt.plots[5]
+    bbox_before = Makie.widths(Makie.data_limits(node_poly))
+
+    # A much bigger canvas needs a smaller node radius in data units to keep
+    # the same on-screen (pixel) node size - and this should happen from the
+    # resize alone, with no attribute touched.
+    resize!(fig.scene, 1200, 1200)
+    bbox_after = Makie.widths(Makie.data_limits(plt.plots[5]))
+
+    @test length(plt.plots) == n_plots
+    @test bbox_after[1] < bbox_before[1]
+end
+
 @testitem "Makie.plot!: composes into a caller-built Figure alongside another panel" tags =
     [:unit, :plot] begin
     using Makie

@@ -38,6 +38,15 @@ dag = DAG(
 plot(dag)
 ```
 
+`plot` returns a `FigureAxisPlot`, so `fig, ax, plt = plot(dag)` gives you back
+the `Figure`, its `Axis`, and the plot itself - and `plt` is reactive:
+
+```@example plot
+fig, ax, plt = plot(dag)
+plt.node_color[] = :salmon
+fig
+```
+
 Styling breaks down into four areas, covered below:
 
 - **[Layout](@ref plot-layouts)** — where nodes are placed
@@ -251,7 +260,7 @@ positions = layout(dag, :spring)
 
 plot(dag;
     layout = positions,
-    edge_paths = Dict((:K, :Y) => [positions[:K], (1.5, 2.0), positions[:Y]]),
+    edge_paths = Dict((:K, :Y) => [positions[:K], (0.5, -0.25), positions[:Y]]),
 )
 ```
 
@@ -345,9 +354,8 @@ Makie.hidespines!.(fig.content)
 fig
 ```
 
-Node and label sizes adapt to whatever space each `Axis` actually has. Resizing the window
-alone however won't re-trigger the sizing. Instead, touch an attribute (or replot) and it
-will update.
+Node and label sizes stay fitted to whatever space each `Axis` has, live -
+including as the window or `Figure` is resized.
 
 ## Combining options
 

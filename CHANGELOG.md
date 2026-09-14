@@ -22,8 +22,11 @@ Makie recipe with a fixed set of attributes.
 nodes, and edges).
 
 - `plot!(ax, cg)` draws a `CausalGraph` into an `Axis` you already own, so multiple graphs
-(or a graph and other plots) can share one `Figure`. The returned plot is reactive, e.g.
-`plt.node_color[] = :red` restyles it in place.
+(or a graph and other plots) can share one `Figure`.
+
+- `plot`/`plot!`'s returned plot is fully reactive: `plt.node_color[] = :red` restyles it
+in place, and node/label sizing keeps fitting the containing `Axis` live, including as
+it's resized.
 
 ### Bug fixes
 
