@@ -34,7 +34,8 @@ Let us plot the DAG from Figure 6.5 of
 
 ```@example plot
 dag = DAG(
-    "C --> X, A --> X + K, X --> F + D, K --> Y, D --> Y + G, Y --> H")
+    "C --> X, A --> X + K, X --> F + D, K --> Y, D --> Y + G, Y --> H"
+)
 plot(dag)
 ```
 
@@ -354,9 +355,6 @@ Makie.hidespines!.(fig.content)
 fig
 ```
 
-Node and label sizes stay fitted to whatever space each `Axis` has, live -
-including as the window or `Figure` is resized.
-
 ## Combining options
 
 Here we plot a PAG where we combine a bunch of different
@@ -364,7 +362,8 @@ styling options:
 
 ```@example plot
 pag = PAG(
-    "C o-> X, D --> G + Y, X --> D + F, Y --> H, K o-> X, K --> Y")
+    "C o-> X, D --> G + Y, X --> D + F, Y --> H, K o-> X, K --> Y"
+)
 
 plot(
     pag;

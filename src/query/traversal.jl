@@ -418,8 +418,6 @@ Preferences.jl: `set_preferences!(CausalStructures, "open" => false)`.
 # Examples
 
 ```jldoctest
-julia> using CausalStructures
-
 julia> pag = PAG("A o-> B <-o C");
 
 julia> sort(possible_ancestors(pag, :B))
@@ -494,8 +492,6 @@ Preferences.jl: `set_preferences!(CausalStructures, "open" => false)`.
 # Examples
 
 ```jldoctest
-julia> using CausalStructures
-
 julia> pag = PAG("A o-> B <-o C");
 
 julia> possible_descendants(pag, :A)

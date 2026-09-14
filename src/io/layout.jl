@@ -39,16 +39,18 @@ algorithm.
 ## Examples
 
 ```julia
-using CausalStructures, NetworkLayout
+using NetworkLayout
 
-dag = DAG(directed(:A, :X), directed(:X, :Y))
+dag = DAG("A ---> X, A ---> Y, X ---> Y")
 
-layout(dag)                # :stress (the default without Sugiyama loaded)
+layout(dag)
 layout(dag, :spring)
 layout(dag, :spring; seed = 1405, iterations = 200)
 
 positions = layout(dag, :spring)
 positions[:A] = (0.0, 2.0)
+
+using CairoMakie
 plot(dag; layout = positions)
 ```
 """

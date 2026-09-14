@@ -569,7 +569,7 @@ Makie.plottype(::CausalGraph) = CausalGraphPlot
     Makie.plot!(ax, cg; kwargs...) -> CausalGraphPlot
 
 Visualize a [`CausalGraph`](@ref) using Makie. Requires loading a Makie
-backend (e.g. `using CairoMakie`) before calling.
+backend (e.g. CairoMakie) before calling.
 
 Every keyword below (except the figure-level ones noted last) is one of its
 reactive attributes, so e.g. `plt.node_color[] = :red` restyles the existing
@@ -600,9 +600,9 @@ styling precedence rules, and examples.
 ## Examples
 
 ```julia
-using CausalStructures, CairoMakie
+using CairoMakie
 
-dag = DAG(directed(:A, :X), directed(:A, :Y), directed(:X, :Y))
+dag = DAG("A ---> X, A ---> Y, X ---> Y")
 
 Makie.plot(dag; node_color = :lightblue, edge_color = :gray40)
 Makie.plot(dag; edge_color = Dict((:A, :X) => :red, :default => :black))
