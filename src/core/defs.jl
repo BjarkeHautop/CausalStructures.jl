@@ -438,6 +438,24 @@ struct PAG <: CausalGraph
     PAG(edges::Vector{CausalEdge}, backend::PAGBackend) = new(edges, backend)
 end
 
+# Structural equality: Edges are sorted so that UNKNOWN, which allows parallel edges,
+# still compares multiplicities rather than collapsing duplicates.
+_edge_key(e::CausalEdge) = (e.src, e.dst, e.src_end, e.dst_end)
+
+function Base.:(==)(a::T, b::T) where {T<:CausalGraph}
+    a.backend.nodes == b.backend.nodes || return false
+    return sort(a.edges; by = _edge_key) == sort(b.edges; by = _edge_key)
+end
+
+Base.:(==)(::CausalGraph, ::CausalGraph) = false
+
+function Base.hash(cg::CausalGraph, h::UInt)
+    h = hash(typeof(cg), h)
+    h = hash(cg.backend.nodes, h)
+    h = hash(sort(cg.edges; by = _edge_key), h)
+    return h
+end
+
 function _build_graph(
     ::Type{T},
     nodes,

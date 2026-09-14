@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added `backdoor_set` (Generalized Backdoor Criterion) for `ADMG`.
 
+- `CausalGraph` now supports `==` and `hash`, comparing graphs structurally (same class,
+nodes, and edges).
+
 ### Bug fixes
 
 - `is_valid_adjustment`/`all_adjustment_sets` on `ADMG` and `PAG` could wrongly validate an
