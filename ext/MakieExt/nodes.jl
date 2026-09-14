@@ -111,7 +111,7 @@ function _text_pixel_size(label, fontsize::Real, font)
         w = max(w, lw)
         h = max(h, lh)
     end
-    # 1.2 line spacing, matching Makie's default `lineheight`.
+    # 1.2 is a fixed approximation good enough for sizing the node's fitted box.
     return w, h * (1.0f0 + 1.2f0 * (length(lines) - 1))
 end
 

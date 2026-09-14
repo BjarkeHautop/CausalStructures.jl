@@ -275,10 +275,6 @@ function _resolve_edge(val, e::CausalEdge, fallback)
     return fallback
 end
 
-# Resolve a per-node style attribute.
-#
-# `val` may be a scalar or a Dict{Symbol, <value>} keyed by node name.
-# Dict may also contain :default as a fallback.
 function _resolve_curvature(val, e::CausalEdge)
     resolved = _resolve_edge(val, e, nothing)
     return resolved === nothing ? nothing : Float32(resolved)
@@ -298,6 +294,8 @@ function _resolve_edge_path(edge_paths, e::CausalEdge, cx1, cy1, scale1, stretch
     return Point2f[_apply_aspect_stretch(p, cx2, cy2, sx2, sy2) for p in pts]
 end
 
+# Resolve a per-node style attribute: either a scalar, or a Dict keyed by
+# node name, with :default as a fallback.
 function _resolve_node(val, node::Symbol, fallback)
     val isa AbstractDict || return val
     haskey(val, node) && return val[node]
@@ -341,7 +339,7 @@ Makie.plot(dag; node_color = :lightblue, edge_color = :gray40)
 Makie.plot(dag; edge_color = Dict((:A, :X) => :red, :default => :black))
 Makie.plot(dag; edge_color = Dict(directed(:A, :X) => :red, :default => :black))
 Makie.plot(dag; node_shape = Dict(:A => :square, :default => :circle))
-Makie.plot(dag; node_shape = :rect, labels = Dict(:A => "Age at\nbaseline"))
+Makie.plot(dag; node_shape = :rect, labels = Dict(:A => "Age at\\nbaseline"))
 Makie.plot(dag; curvature = Dict((:A, :Y) => 0.3))
 Makie.plot(dag; title = "My DAG", layout = :spring)
 ```
@@ -384,18 +382,26 @@ function Makie.plot(
 
     raw_positions, auto_edge_paths =
         _positions_and_auto_edge_paths(cg, layout, layout_kwargs)
-    edge_paths = edge_paths === nothing ? auto_edge_paths : edge_paths
+    # A user-supplied `edge_paths` only overrides the edges it names.
+    edge_paths = if edge_paths === nothing
+        auto_edge_paths
+    elseif auto_edge_paths === nothing
+        edge_paths
+    else
+        merge(auto_edge_paths, edge_paths)
+    end
     cx1, cy1, scale1 = _unit_extent_params(raw_positions)
     positions = Point2f[_apply_unit_extent(p, cx1, cy1, scale1) for p in raw_positions]
+
+    fig_height_budget = Float32(fig_size[2]) - (title !== nothing ? 40.0f0 : 0.0f0)
+    avail_w = Float32(fig_size[1]) - 2.0f0 * Float32(outer_margin)
+    avail_h = fig_height_budget - 2.0f0 * Float32(outer_margin)
 
     # Tracked (rather than folded into `positions` alone) so `edge_paths`
     # waypoints can be carried through the identical transform below.
     stretch_params = nothing
     if stretch_to_fig_size
-        fig_height_budget0 = Float32(fig_size[2]) - (title !== nothing ? 40.0f0 : 0.0f0)
-        avail_w0 = Float32(fig_size[1]) - 2.0f0 * Float32(outer_margin)
-        avail_h0 = fig_height_budget0 - 2.0f0 * Float32(outer_margin)
-        stretch_params = _aspect_stretch_params(positions, avail_w0 / avail_h0)
+        stretch_params = _aspect_stretch_params(positions, avail_w / avail_h)
         positions = Point2f[_apply_aspect_stretch(p, stretch_params...) for p in positions]
     end
 
@@ -414,10 +420,6 @@ function Makie.plot(
         nd in node_names
     ]
 
-    # Reference size (node-count based, ignoring label length), used only
-    # when node_radius is given explicitly.
-    r_ref = Float32(something(node_radius, max(0.12, 0.4 * sin(π / max(n, 2)))))
-
     # The figure is a fixed size, independent of layout/graph - otherwise the
     # same graph would render at a different size depending only on which
     # layout algorithm placed its nodes. Node sizes (data units) are therefore
@@ -429,12 +431,9 @@ function Makie.plot(
     bbox_w = max(maximum(xs) - minimum(xs), 1.0f-3)
     bbox_h = max(maximum(ys) - minimum(ys), 1.0f-3)
 
-    fig_height_budget = Float32(fig_size[2]) - (title !== nothing ? 40.0f0 : 0.0f0)
-    avail_w = Float32(fig_size[1]) - 2.0f0 * Float32(outer_margin)
-    avail_h = fig_height_budget - 2.0f0 * Float32(outer_margin)
-
     half_w, half_h = if node_radius !== nothing
-        fill(r_ref, n), fill(r_ref, n)
+        r = Float32(node_radius)
+        fill(r, n), fill(r, n)
     else
         pixel_sizes = [
             max.(
@@ -477,7 +476,7 @@ function Makie.plot(
     # Arrowhead/open-circle-endpoint sizes stay consistent across the plot
     # regardless of any single node's label length, so they're based on the
     # typical (not per-node) node size.
-    r_typical = node_radius !== nothing ? r_ref : Float32(sum(radii) / n)
+    r_typical = node_radius !== nothing ? Float32(node_radius) : Float32(sum(radii) / n)
     r_arrow = Float32(something(arrow_size, r_typical * 0.4f0))
     r_circle = Float32(something(circle_size, r_typical * 0.28f0))
 
