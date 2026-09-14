@@ -46,7 +46,7 @@ be disjoint.
 ```jldoctest
 julia> dag = DAG("U --> X + Y");
 
-julia> ag = condition_marginalize(dag; marg_vars = :U)
+julia> condition_marginalize(dag; marg_vars = :U)
 AG with 2 nodes and 1 edge:
   nodes: X, Y
   edges:
@@ -54,13 +54,29 @@ AG with 2 nodes and 1 edge:
 ```
 
 ```jldoctest
-julia> admg = ADMG("U --> X + Y, X --> Y");
+julia> admg = ADMG("U --> X + Y, X <-> Z, Y --> Z");
 
 julia> condition_marginalize(admg; marg_vars = :U)
-AG with 2 nodes and 1 edge:
-  nodes: X, Y
+AG with 3 nodes and 3 edges:
+  nodes: X, Y, Z
   edges:
-    X --> Y
+    X <-> Y, X <-> Z, Y --> Z
+```
+
+```jldoctest
+julia> mag = MAG("A <-> X, X --> C, Y --> C, A <-> Y");
+
+julia> condition_marginalize(mag; marg_vars = :A)
+AG with 3 nodes and 2 edges:
+  nodes: C, X, Y
+  edges:
+    X --> C, Y --> C
+
+julia> condition_marginalize(mag; cond_vars = :A)
+AG with 3 nodes and 3 edges:
+  nodes: C, X, Y
+  edges:
+    X --> C, Y --> C, X <-> Y
 ```
 
 # References

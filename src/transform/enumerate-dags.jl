@@ -401,10 +401,22 @@ can be very large.
 ```jldoctest
 julia> pdag = PDAG("A --- B --- C");
 
-julia> dags = enumerate_dags(pdag);
+julia> dags = enumerate_dags(pdag)
+3-element Vector{DAG}:
+ DAG with 3 nodes and 2 edges:
+  nodes: A, B, C
+  edges:
+    A --> B, B --> C
 
-julia> length(dags)
-3
+ DAG with 3 nodes and 2 edges:
+  nodes: A, B, C
+  edges:
+    B --> A, B --> C
+
+ DAG with 3 nodes and 2 edges:
+  nodes: A, B, C
+  edges:
+    B --> A, C --> B
 ```
 
 # References

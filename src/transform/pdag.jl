@@ -289,11 +289,21 @@ applies [`meek_closure`](@ref) to propagate all implied orientations.
 ```jldoctest
 julia> dag = DAG("A --> B");
 
-julia> cpdag = dag_to_cpdag(dag)
+julia> dag_to_cpdag(dag)
 CPDAG with 2 nodes and 1 edge:
   nodes: A, B
   edges:
     A --- B
+```
+
+```jldoctest
+julia> dag = DAG("C --> X, A --> X + Y, Y --> Z");
+
+julia> dag_to_cpdag(dag)
+CPDAG with 5 nodes and 4 edges:
+  nodes: A, C, X, Y, Z
+  edges:
+    A --- Y, C --> X, A --> X, Y --- Z
 ```
 """
 function dag_to_cpdag(cg::DAG)

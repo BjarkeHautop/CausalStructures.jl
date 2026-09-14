@@ -30,12 +30,11 @@ directed or partially-directed edge with an undirected edge.
 ```jldoctest
 julia> dag = DAG("A --> B --> C");
 
-julia> sk = skeleton(dag);
-
-julia> neighbors(sk, :B)
-2-element Vector{Symbol}:
- :A
- :C
+julia> skeleton(dag)
+UG with 3 nodes and 2 edges:
+  nodes: A, B, C
+  edges:
+    A --- B, B --- C
 ```
 """
 function skeleton(cg::Union{DAG,AbstractPDAG})
@@ -58,21 +57,19 @@ undirected neighbors are included in the skeleton but do not form a clique.
 ```jldoctest
 julia> dag = DAG("A --> C <-- B");
 
-julia> m = moralize(dag);
-
-julia> neighbors(m, :C)   # A and B are now married
-2-element Vector{Symbol}:
- :A
- :B
+julia> moralize(dag)   # A and B are now married (share child C)
+UG with 3 nodes and 3 edges:
+  nodes: A, B, C
+  edges:
+    A --- C, B --- C, A --- B
 
 julia> pdag = PDAG("A --> C <-- B, D --- C");
 
-julia> mp = moralize(pdag);
-
-julia> sort(neighbors(mp, :A))   # A married to B (co-directed-parents of C); D not married
-2-element Vector{Symbol}:
- :B
- :C
+julia> moralize(pdag)   # A married to B (co-directed-parents of C); D not married
+UG with 4 nodes and 4 edges:
+  nodes: A, B, C, D
+  edges:
+    A --- C, B --- C, C --- D, A --- B
 ```
 """
 function moralize(cg::Union{DAG,AbstractPDAG})
