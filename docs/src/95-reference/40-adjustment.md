@@ -49,6 +49,8 @@ all_iv_sets
 ```@docs
 id
 idc
+idp
+cidp
 ```
 
 ### Estimands

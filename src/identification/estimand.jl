@@ -332,12 +332,15 @@ end
 
 Form the ratio `num / den`.
 
-A denominator of `1` returns `num` unchanged, and a factor appearing on both
-sides cancels. When both sides are probability terms sharing the same
-conditioning set, and the denominator's variables are a subset of the
-numerator's, the ratio collapses to a conditional: `P(a, b | c) / P(b | c)`
-becomes `P(a | b, c)`. That is what turns the ratios of marginals produced by
-the ID recursion back into ordinary conditionals.
+A denominator of `1` returns `num` unchanged. When the denominator is itself
+`a / b` and the numerator is exactly `a`, the ratio collapses to `b`; this is
+what most often turns `_reduce_bucket`'s divisions back into something
+readable. Otherwise, a factor appearing on both sides cancels. When both
+sides are probability terms sharing the same conditioning set, and the
+denominator's variables are a subset of the numerator's, the ratio collapses
+to a conditional: `P(a, b | c) / P(b | c)` becomes `P(a | b, c)`. That is
+what turns the ratios of marginals produced by the ID recursion back into
+ordinary conditionals.
 
 Cancellation assumes the cancelled factor is non-zero, which is the positivity
 assumption the identification results are stated under anyway.
@@ -347,6 +350,15 @@ assumption the identification results are stated under anyway.
 ```jldoctest
 julia> quotient(prob([:Y, :Z]; given = [:X]), prob(:Z; given = [:X]))
 P(Y | X, Z)
+```
+
+```jldoctest
+julia> a = quotient(prob([:Y, :Z]), prob(:X));
+
+julia> b = marginal(:W, quotient(prob([:W, :Y, :Z]), prob(:W; given = [:X])));
+
+julia> quotient(a, quotient(a, b))
+Σ_{W} (P(W, Y, Z) / P(W | X))
 ```
 
 The ratio is kept when it is not a conditional, here because the two terms
@@ -359,6 +371,9 @@ P(Y, Z | X) / P(Z)
 """
 function quotient(num::Estimand, den::Estimand)
     isone(den) && return num
+
+    # a / (a / b) == b.
+    den isa Quotient && num == den.num && return den.den
 
     # A factor shared by both sides cancels. Re-entering with one factor fewer
     # on each side lets the remaining rules see through the cancellation.

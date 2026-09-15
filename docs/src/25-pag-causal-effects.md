@@ -126,3 +126,34 @@ These correspond to the two cases considered by `pagcauses(pag, :A, :D)`: the fi
 gives `{}` as a valid adjustment set for `A` and `D`, while the second gives `{B}`.
 The result is returned as [`UNKNOWN`](@ref) rather than `MAG`, since local
 background knowledge about one node need not resolve every circle in the graph.
+
+## General identification
+
+The methods above are each sufficient, not necessary: an effect can be identifiable
+even when no adjustment set exists. [`idp`](@ref) and [`cidp`](@ref) implement the
+IDP/CIDP algorithms of [jaber2022causal](@citet), the PAG analogues of [`id`](@ref)
+and [`idc`](@ref) (see [General identification](@ref
+causal-identification-guide)): they decide identifiability of `P(y | do(x))` and
+`P(y | do(x), z)` from a PAG and, when identifiable, return the estimand.
+
+Consider a MAG where `A` confounds `X`, `B --> X`, and `X` causes `Y`, and view the Markov equivalence class:
+
+```@example pc
+mag3 = MAG("B --> X, A <-> X, A --> Y, X --> Y")
+pag3 = mag_to_pag(mag3)
+plot(pag3)
+```
+
+We can then check whether the effect of `X` on `Y` is identifiable with
+[`idp`](@ref):
+
+```@example pc
+idp(pag3, :X, :Y)
+```
+
+The effect is identifiable (through the witnessed backdoor structure), and
+conditioning on the confounder `A` also identifies the conditional effect:
+
+```@example pc
+cidp(pag3, :X, :Y; given = :A)
+```
