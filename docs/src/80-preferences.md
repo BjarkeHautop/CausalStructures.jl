@@ -51,6 +51,7 @@ the same way, e.g. `set_preferences!(CausalStructures, "plot_node_color" => "lig
 | `"plot_node_linestyle"` | `nothing` | `nothing` draws a solid border; set e.g. `:dash` or `:dot` |
 | `"plot_edge_color"` | `"black"` | |
 | `"plot_linewidth"` | `1.5` | |
+| `"plot_edge_linestyle"` | `nothing` | `nothing` draws a solid line; set e.g. `:dash` or `:dot` |
 | `"plot_curvature"` | `nothing` | `nothing` routes each edge automatically; a number forces that curvature (including `0.0`, for a straight line) |
 | `"plot_label_color"` | `"black"` | |
 | `"plot_label_fontsize"` | `14.0` | |

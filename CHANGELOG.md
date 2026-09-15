@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Automatic edge routing via dummy nodes (from Sugiyama) now work with `stretch_to_fig=true`.
 
+- Implement idp and cidp for identifying causal effects from PAGs (Jaber et al. 2022), generalizing id/idc from ADMGs.
+
+- `plot` gains `edge_linestyle`, styling an edge's own line (e.g. dashing `<->` edges to mark latent confounding, as is common in the literature).
+
 ## [0.6.0] - 2026-09-14
 
 ### Breaking changes

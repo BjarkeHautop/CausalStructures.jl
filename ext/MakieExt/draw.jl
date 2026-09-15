@@ -131,6 +131,7 @@ function _draw_edge!(
     color = :black,
     fill = color,
     linewidth = 1.5f0,
+    linestyle = nothing,
 )
     path = _edge_path(
         e,
@@ -159,7 +160,13 @@ function _draw_edge!(
     trim_start = has_arrow_src ? r_arrow : 0.0f0
     trim_end = has_arrow_dst ? r_arrow : 0.0f0
     shaft = _trim_polyline(path, trim_start, trim_end)
-    length(shaft) >= 2 && Makie.lines!(parent, shaft; color = color, linewidth = linewidth)
+    length(shaft) >= 2 && Makie.lines!(
+        parent,
+        shaft;
+        color = color,
+        linewidth = linewidth,
+        linestyle = linestyle,
+    )
 
     has_arrow_dst && _draw_arrowhead!(
         parent,
@@ -319,6 +326,7 @@ Makie.@recipe(CausalGraphPlot, graph) do scene
         edge_color = CausalStructures._PLOT_EDGE_COLOR_DEFAULT,
         arrow_fill = CausalStructures._PLOT_EDGE_ARROW_FILL_DEFAULT,
         linewidth = CausalStructures._PLOT_LINEWIDTH_DEFAULT,
+        edge_linestyle = CausalStructures._PLOT_EDGE_LINESTYLE_DEFAULT,
         curvature = CausalStructures._PLOT_CURVATURE_DEFAULT,
         edge_paths = nothing,
         label_color = CausalStructures._PLOT_LABEL_COLOR_DEFAULT,
@@ -353,6 +361,7 @@ function Makie.plot!(plot::CausalGraphPlot)
         edge_color,
         arrow_fill,
         linewidth,
+        edge_linestyle,
         curvature,
         edge_paths,
         label_color,
@@ -501,6 +510,7 @@ function Makie.plot!(plot::CausalGraphPlot)
                 color = resolved_color,
                 fill = something(_resolve_edge(arrow_fill, e, nothing), resolved_color),
                 linewidth = Float32(_resolve_edge(linewidth, e, 1.5f0)),
+                linestyle = _resolve_edge(edge_linestyle, e, nothing),
             )
         end
 
@@ -551,6 +561,7 @@ function Makie.plot!(plot::CausalGraphPlot)
         plot.edge_color,
         plot.arrow_fill,
         plot.linewidth,
+        plot.edge_linestyle,
         plot.curvature,
         plot.edge_paths,
         plot.label_color,
@@ -578,9 +589,9 @@ plot in place.
 Keyword arguments: `layout`, `layout_kwargs`, `labels`, `node_shape`,
 `node_radius`, `node_padding`, `arrow_size`, `circle_size`, `node_color`,
 `node_strokecolor`, `node_strokewidth`, `node_linestyle`, `edge_color`,
-`arrow_fill`, `linewidth`, `curvature`, `edge_paths`, `label_color`,
-`label_fontsize`, `label_font` are shared by both `plot` and `plot!`. Style
-keywords accept either a scalar (applied to everything) or a `Dict` for
+`arrow_fill`, `linewidth`, `edge_linestyle`, `curvature`, `edge_paths`,
+`label_color`, `label_fontsize`, `label_font` are shared by both `plot` and
+`plot!`. Style keywords accept either a scalar (applied to everything) or a `Dict` for
 per-node/per-edge overrides; a per-edge `Dict` may be keyed by a
 `CausalEdge`, a `(src, dst)` tuple, a node name, an edge-type symbol, or
 `:default`. `layout_kwargs` is a `NamedTuple` of extra keywords forwarded to

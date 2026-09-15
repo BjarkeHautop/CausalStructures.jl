@@ -367,6 +367,21 @@ end
     @test fig isa Makie.FigureAxisPlot
 end
 
+@testitem "Makie.plot: edge_linestyle draws a dashed line" tags = [:unit, :plot] begin
+    using Makie
+    using NetworkLayout
+
+    admg = ADMG("X --> Y, X <-> Z, Z --> Y")
+    @test Makie.plot(admg; layout = :stress, edge_linestyle = :dash) isa
+          Makie.FigureAxisPlot
+    fig = Makie.plot(
+        admg;
+        layout = :stress,
+        edge_linestyle = Dict(:bidirected => :dash, :default => nothing),
+    )
+    @test fig isa Makie.FigureAxisPlot
+end
+
 @testitem "Makie.plot: layout accepts positions keyed by node name" tags = [:unit, :plot] begin
     using Makie
     using NetworkLayout

@@ -168,12 +168,13 @@ Each edge style argument accepts either a scalar or a `Dict` keyed by (and follo
  4. an edge-type symbol (`:directed`, `:undirected`, `:bidirected`, `:partially_directed`, `:partially_undirected`, `:partial`)
  5. `:default` as a fallback
 
-| Keyword      | Default   | Controls               |
-| ------------ | --------- | ----------------------- |
-| `edge_color` | `:black`  | line / marker color     |
-| `arrow_fill` | `nothing` | arrowhead fill color    |
-| `linewidth`  | `1.5`     | line width              |
-| `curvature`  | `nothing` | how far the edge bows   |
+| Keyword          | Default   | Controls               |
+| ---------------- | --------- | ----------------------- |
+| `edge_color`     | `:black`  | line / marker color     |
+| `arrow_fill`     | `nothing` | arrowhead fill color    |
+| `linewidth`      | `1.5`     | line width              |
+| `edge_linestyle` | `nothing` (solid) | line style      |
+| `curvature`      | `nothing` | how far the edge bows   |
 
 Let's style some edges by type:
 
@@ -192,6 +193,13 @@ transparent color for a hollow, outline-only arrowhead:
 
 ```@example plot
 plot(dag; arrow_fill = :transparent)
+```
+
+`edge_linestyle` styles the line itself, e.g. to dash `<->` edges the way
+some of the literature marks latent confounding:
+
+```@example plot
+plot(admg; edge_linestyle = Dict(:bidirected => :dash))
 ```
 
 ### Targeting specific edges
