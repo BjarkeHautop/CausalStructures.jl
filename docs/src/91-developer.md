@@ -7,6 +7,10 @@ Some notes on performance. Before doing any of these, please profile the code, t
 Every graph constructor takes `validate::Bool`. You can use `validate=false` if the algorithm is proven to give a valid
 graph type, e.g. [`dag_to_cpdag`](@ref)'s last step.
 
+```@docs
+CausalStructures._build_graph
+```
+
 There's a stronger version of the same idea: constructing a graph directly from `(edges, backend)`, bypassing `build_backend` too. This can be useful when the algorithm already has the information needed to construct the backend, so rebuilding it from scratch would be unnecessarily expensive.
 
 For example, [`enumerate_dags`](@ref) assembles `colptr`/`deg`/`rowval` directly from index sets it already knows are sorted, rather than rebuilding the backend from scratch.

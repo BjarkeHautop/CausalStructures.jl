@@ -456,6 +456,33 @@ function Base.hash(cg::CausalGraph, h::UInt)
     return h
 end
 
+"""
+    T(node_set, edges::Vector{CausalEdge}; validate::Bool = true) -> T
+
+Every concrete graph type `T` (`DAG`, `UG`, `PDAG`, `CPDAG`, `MPDAG`, `ADMG`, `AG`,
+`MAG`, `UNKNOWN`, `PAG`) has this constructor, which builds a graph directly from a
+node set and an edge vector, bypassing the `items...` collection and the
+[string DSL](@ref constructing-graphs) that the other constructor forms
+(`T(items...)`, `T(s::AbstractString)`) go through to get there.
+
+Pass `validate = false` to skip the structural check for performance reasons.
+
+# Examples
+
+```jldoctest
+julia> DAG(Set([:A, :B]), [directed(:A, :B)])
+DAG with 2 nodes and 1 edge:
+  nodes: A, B
+  edges:
+    A --> B
+
+julia> DAG(Set([:A, :B]), [directed(:A, :B), directed(:B, :A)]; validate = false)
+DAG with 2 nodes and 2 edges:
+  nodes: A, B
+  edges:
+    A --> B, B --> A
+```
+"""
 function _build_graph(
     ::Type{T},
     nodes,

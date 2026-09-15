@@ -6,6 +6,33 @@ using DocumenterCodeBlocks
 
 bib = CitationBibliography(joinpath(@__DIR__, "src", "references.bib"); style = :authoryear)
 
+# Copy the root CHANGELOG.md into the docs, linking each release header to its
+# GitHub release tag (e.g. `## [0.6.0] - 2026-09-14` -> a link to the v0.6.0 release).
+const _repo_url = "https://github.com/BjarkeHautop/CausalStructures.jl"
+
+function _add_release_links(line::AbstractString)
+    m = match(r"^## \[([0-9]+\.[0-9]+\.[0-9]+)\] (.*)$", line)
+    m === nothing && return line
+    tag, rest = m.captures
+    return "## [$tag]($_repo_url/releases/tag/v$tag) $rest"
+end
+
+let changelog_path = joinpath(@__DIR__, "src", "85-changelog.md")
+    open(changelog_path, "w") do io
+        println(
+            io,
+            """
+            ```@meta
+            EditURL = "$_repo_url/blob/main/CHANGELOG.md"
+            ```
+            """,
+        )
+        for line in eachline(joinpath(dirname(@__DIR__), "CHANGELOG.md"))
+            println(io, _add_release_links(line))
+        end
+    end
+end
+
 const _makie_ext = Base.get_extension(CausalStructures, :MakieExt)
 
 DocMeta.setdocmeta!(
@@ -24,6 +51,7 @@ const titles = Dict(
     "40-plotting.md" => "Plotting",
     "70-benchmarks.md" => "Benchmarks",
     "80-preferences.md" => "Preferences",
+    "85-changelog.md" => "Changelog",
     "90-bibliography.md" => "Bibliography",
     "91-developer.md" => "Developer Docs",
     "95-reference" => "Reference",
