@@ -41,6 +41,8 @@ include("core/backend.jl")
 # Graph query algorithms: traversal, separation, minimal separators
 include("query/traversal.jl")
 include("query/separation.jl")
+include("query/buckets.jl")
+include("query/definite-separation.jl")
 include("query/minimal-separator.jl")
 include("query/possible-d-sep.jl")
 
@@ -66,6 +68,7 @@ include("transform/latent.jl")
 include("transform/pdag.jl")
 include("transform/background-knowledge.jl")
 include("transform/mag.jl")
+include("transform/manipulate-pag.jl")
 include("transform/local-structure.jl")
 include("transform/enumerate-dags.jl")
 include("transform/enumerate-mags.jl")
@@ -77,6 +80,11 @@ include("transform/enumerate-mags.jl")
 include("identification/possible-joint-parent-sets.jl")
 include("identification/possible-adjustment-sets.jl")
 include("identification/pagcauses.jl")
+
+# Depends on query/buckets.jl, query/definite-separation.jl, and
+# transform/manipulate-pag.jl above.
+include("identification/idp.jl")
+include("identification/cidp.jl")
 
 # I/O, generation, simulation, display, layout
 include("io/utils.jl")
