@@ -310,6 +310,36 @@ plot(dag;
 )
 ```
 
+### Edge labels
+
+Each edge label style argument accepts either a scalar or a `Dict` for
+per-edge overrides, using the same keying rules as other edge styling (a
+`CausalEdge`, a `(src, dst)` tuple, a node name, an edge-type symbol, or
+`:default`).
+
+| Keyword            | Default    | Controls                                              |
+| ------------------- | ---------- | ------------------------------------------------------ |
+| `elabels`          | `nothing`  | text drawn along each edge                             |
+| `elabel_color`     | `:black`   | edge label text color                                  |
+| `elabel_fontsize`  | `12.0`     | edge label font size                                   |
+| `elabel_font`      | `:regular` | edge label font                                        |
+| `elabel_shift`     | `0.5`      | position along the edge, 0 (source) to 1 (destination) |
+| `elabel_distance`  | `nothing`  | perpendicular gap (pixels) from the edge; `nothing` scales with `elabel_fontsize` |
+
+```@example plot
+plot(dag; elabels = Dict(directed(:K, :Y) => "hello"))
+```
+
+The label follows the edge's own angle, while `elabel_shift`/`elabel_distance` move it along/off that path:
+
+```@example plot
+plot(dag;
+    elabels = Dict(directed(:K, :Y) => "hi"),
+    elabel_shift = 0.75,
+    elabel_distance = 12,
+)
+```
+
 ### Titles
 
 Pass `title` to add a plot title (`nothing` by default, i.e. no title).

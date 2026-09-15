@@ -17,6 +17,12 @@ const _PLOT_LABEL_COLOR_DEFAULT = @load_preference("plot_label_color", "black")
 const _PLOT_LABEL_FONTSIZE_DEFAULT = @load_preference("plot_label_fontsize", 14.0)
 const _PLOT_LABEL_FONT_DEFAULT::Symbol =
     Symbol(@load_preference("plot_label_font", "regular"))
+const _PLOT_ELABEL_COLOR_DEFAULT = @load_preference("plot_elabel_color", "black")
+const _PLOT_ELABEL_FONTSIZE_DEFAULT = @load_preference("plot_elabel_fontsize", 12.0)
+const _PLOT_ELABEL_FONT_DEFAULT::Symbol =
+    Symbol(@load_preference("plot_elabel_font", "regular"))
+const _PLOT_ELABEL_SHIFT_DEFAULT = @load_preference("plot_elabel_shift", 0.5)
+const _PLOT_ELABEL_DISTANCE_DEFAULT = @load_preference("plot_elabel_distance", nothing)
 const _PLOT_NODE_PADDING_DEFAULT = @load_preference("plot_node_padding", 10.0)
 const _PLOT_EDGE_ARROW_FILL_DEFAULT = @load_preference("plot_edge_arrow_fill", nothing)
 const _PLOT_FIG_SIZE_DEFAULT =

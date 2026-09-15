@@ -56,6 +56,11 @@ the same way, e.g. `set_preferences!(CausalStructures, "plot_node_color" => "lig
 | `"plot_label_color"` | `"black"` | |
 | `"plot_label_fontsize"` | `14.0` | |
 | `"plot_label_font"` | `"regular"` | Any [Makie-compatible font](https://docs.makie.org/stable/explanations/fonts) name or theme key |
+| `"plot_elabel_color"` | `"black"` | |
+| `"plot_elabel_fontsize"` | `12.0` | |
+| `"plot_elabel_font"` | `"regular"` | Any [Makie-compatible font](https://docs.makie.org/stable/explanations/fonts) name or theme key |
+| `"plot_elabel_shift"` | `0.5` | Position along the edge, 0 (source) to 1 (destination) |
+| `"plot_elabel_distance"` | `nothing` | Perpendicular gap (pixels) from the edge; `nothing` scales with `plot_elabel_fontsize` |
 | `"plot_node_padding"` | `10.0` | Space between label and circle edge; ignored when `node_radius` is set explicitly |
 | `"plot_edge_arrow_fill"` | `nothing` | `nothing` matches the edge's own color (solid arrowhead); set e.g. `"transparent"` for a hollow one |
 | `"plot_fig_size"` | `[600.0, 450.0]` | Pixels, fixed regardless of graph/layout; see [Figure size and margins](@ref) |

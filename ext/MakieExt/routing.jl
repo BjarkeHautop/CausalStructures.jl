@@ -248,3 +248,21 @@ function _trim_polyline(
     keep = [pts[i] for i = 1:n if cum[i] > s_lo && cum[i] < s_hi]
     return vcat([interp_at(s_lo)], keep, [interp_at(s_hi)])
 end
+
+# Point at a given arc-length fraction (0 = pts[1], 1 = pts[end]) along a
+# sampled polyline, for placing an edge label at its midpoint.
+function _path_point_at_fraction(pts::AbstractVector{Point2f}, frac::Float32)
+    n = length(pts)
+    n == 1 && return pts[1]
+    cum = Vector{Float32}(undef, n)
+    cum[1] = 0.0f0
+    for i = 2:n
+        cum[i] = cum[i-1] + _norm2(pts[i] - pts[i-1])
+    end
+    target = clamp(frac, 0.0f0, 1.0f0) * cum[end]
+    i = something(findlast(<=(target), cum), 1)
+    i >= n && return pts[n]
+    seg_total = cum[i+1] - cum[i]
+    t = seg_total > 0 ? (target - cum[i]) / seg_total : 0.0f0
+    return pts[i] + t * (pts[i+1] - pts[i])
+end

@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `plot` gains `edge_linestyle`, styling an edge's own line (e.g. dashing `<->` edges to mark latent confounding, as is common in the literature).
 
+- `plot` gains `elabels`, `elabel_color`, `elabel_fontsize`, `elabel_font`, `elabel_shift`,
+and `elabel_distance` for drawing text along each edge, following its own angle.
+
 ## [0.6.0] - 2026-09-14
 
 ### Breaking changes

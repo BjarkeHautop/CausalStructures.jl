@@ -14,6 +14,15 @@ end
 _resolve_font(font) =
     font isa Symbol ? Makie.to_font(Makie.theme(:fonts), font) : Makie.to_font(font)
 
+# Angle (radians) to draw an edge label at, following a unit tangent vector
+# but flipped upright when it points leftward. Negating
+# the vector before taking its angle keeps the result in atan's own (-pi, pi]
+# range instead of overflowing to 2pi when the original angle was already pi.
+function _upright_angle(tan::Point2f)
+    t = tan[1] < 0.0f0 ? -tan : tan
+    return atan(t[2], t[1])
+end
+
 # Filled circle polygon in data coordinates, for open-circle edge markers.
 function _draw_filled_circle!(
     parent,
@@ -143,7 +152,7 @@ function _draw_edge!(
         linewidth,
         explicit_path,
     )
-    path === nothing && return
+    path === nothing && return nothing
 
     has_arrow_src = e.src_end === _Arrow
     has_arrow_dst = e.dst_end === _Arrow
@@ -207,6 +216,7 @@ function _draw_edge!(
             strokewidth = linewidth,
         )
     end
+    return path
 end
 
 # Signed fan-out slot per edge: 0 if it's alone on its node pair, otherwise
@@ -331,6 +341,12 @@ Makie.@recipe(CausalGraphPlot, graph) do scene
         label_color = CausalStructures._PLOT_LABEL_COLOR_DEFAULT,
         label_fontsize = CausalStructures._PLOT_LABEL_FONTSIZE_DEFAULT,
         label_font = CausalStructures._PLOT_LABEL_FONT_DEFAULT,
+        elabels = nothing,
+        elabel_color = CausalStructures._PLOT_ELABEL_COLOR_DEFAULT,
+        elabel_fontsize = CausalStructures._PLOT_ELABEL_FONTSIZE_DEFAULT,
+        elabel_font = CausalStructures._PLOT_ELABEL_FONT_DEFAULT,
+        elabel_shift = CausalStructures._PLOT_ELABEL_SHIFT_DEFAULT,
+        elabel_distance = CausalStructures._PLOT_ELABEL_DISTANCE_DEFAULT,
     )
 end
 
@@ -366,6 +382,12 @@ function Makie.plot!(plot::CausalGraphPlot)
         label_color,
         label_fontsize,
         label_font,
+        elabels,
+        elabel_color,
+        elabel_fontsize,
+        elabel_font,
+        elabel_shift,
+        elabel_distance,
         viewport,
     )
         empty!(plot.plots)
@@ -494,7 +516,7 @@ function Makie.plot!(plot::CausalGraphPlot)
             ]
 
             resolved_color = _resolve_edge(edge_color, e, :black)
-            _draw_edge!(
+            path = _draw_edge!(
                 plot,
                 e,
                 geoms[src_idx],
@@ -511,6 +533,47 @@ function Makie.plot!(plot::CausalGraphPlot)
                 linewidth = Float32(_resolve_edge(linewidth, e, 1.5f0)),
                 linestyle = _resolve_edge(edge_linestyle, e, nothing),
             )
+
+            if elabels !== nothing && path !== nothing
+                text = _resolve_edge(elabels, e, nothing)
+                if text !== nothing
+                    resolved_elabel_fontsize =
+                        Float32(_resolve_edge(elabel_fontsize, e, 12.0f0))
+                    shift =
+                        clamp(Float32(_resolve_edge(elabel_shift, e, 0.5f0)), 0.0f0, 1.0f0)
+                    mid = _path_point_at_fraction(path, shift)
+                    # Offset perpendicular to the path's local tangent (taken
+                    # near `shift`, not always the midpoint) so the label
+                    # clears the line whatever the edge's angle, including
+                    # vertical.
+                    tan = _unit(
+                        _path_point_at_fraction(path, clamp(shift + 0.02f0, 0.0f0, 1.0f0)) - _path_point_at_fraction(
+                            path,
+                            clamp(shift - 0.02f0, 0.0f0, 1.0f0),
+                        ),
+                    )
+                    perp = Point2f(-tan[2], tan[1])
+                    # Scaled to the label's own fontsize by default, so it
+                    # clears the line's stroke by roughly a full line height,
+                    # whatever the font size; `elabel_distance` overrides it.
+                    resolved_distance = _resolve_edge(elabel_distance, e, nothing)
+                    gap_px =
+                        resolved_distance === nothing ? resolved_elabel_fontsize :
+                        Float32(resolved_distance)
+                    pos = mid + (gap_px / px_per_data_unit) * perp
+                    Makie.text!(
+                        plot,
+                        pos[1],
+                        pos[2];
+                        text = string(text),
+                        align = (:center, :center),
+                        rotation = _upright_angle(tan),
+                        color = _resolve_edge(elabel_color, e, :black),
+                        fontsize = resolved_elabel_fontsize,
+                        font = _resolve_edge(elabel_font, e, :regular),
+                    )
+                end
+            end
         end
 
         for i in eachindex(node_names)
@@ -566,6 +629,12 @@ function Makie.plot!(plot::CausalGraphPlot)
         plot.label_color,
         plot.label_fontsize,
         plot.label_font,
+        plot.elabels,
+        plot.elabel_color,
+        plot.elabel_fontsize,
+        plot.elabel_font,
+        plot.elabel_shift,
+        plot.elabel_distance,
         viewport;
         update = true,
     )
@@ -589,7 +658,9 @@ Keyword arguments: `layout`, `layout_kwargs`, `labels`, `node_shape`,
 `node_radius`, `node_padding`, `arrow_size`, `circle_size`, `node_color`,
 `node_strokecolor`, `node_strokewidth`, `node_linestyle`, `edge_color`,
 `arrow_fill`, `linewidth`, `edge_linestyle`, `curvature`, `edge_paths`,
-`label_color`, `label_fontsize`, `label_font` are shared by both `plot` and
+`label_color`, `label_fontsize`, `label_font`, `elabels`, `elabel_color`,
+`elabel_fontsize`, `elabel_font`, `elabel_shift`, `elabel_distance` are
+shared by both `plot` and
 `plot!`. Style keywords accept either a scalar (applied to everything) or a `Dict` for
 per-node/per-edge overrides; a per-edge `Dict` may be keyed by a
 `CausalEdge`, a `(src, dst)` tuple, a node name, an edge-type symbol, or

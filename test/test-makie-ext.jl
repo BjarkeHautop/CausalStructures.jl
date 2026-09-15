@@ -735,3 +735,115 @@ end
     )
     @test result isa Makie.FigureAxisPlot
 end
+
+@testitem "Makie.plot: elabels draws a text plot per labelled edge" tags = [:unit, :plot] begin
+    using Makie
+    using NetworkLayout
+
+    dag = DAG(directed(:A, :B), directed(:B, :C))
+    fig, ax, plt_none = Makie.plot(dag; layout = :stress)
+    n_unlabelled = length(plt_none.plots)
+
+    # A scalar elabels value applies to every edge: 2 extra text plots.
+    fig2, ax2, plt_all = Makie.plot(dag; layout = :stress, elabels = "e")
+    @test length(plt_all.plots) == n_unlabelled + 2
+
+    # A Dict labels only the edges it names.
+    fig3, ax3, plt_one =
+        Makie.plot(dag; layout = :stress, elabels = Dict((:A, :B) => "direct"))
+    @test length(plt_one.plots) == n_unlabelled + 1
+
+    # elabel_color/elabel_fontsize/elabel_font accept scalars and Dicts too.
+    fig4 = Makie.plot(
+        dag;
+        layout = :stress,
+        elabels = "e",
+        elabel_color = Dict((:A, :B) => :red, :default => :black),
+        elabel_fontsize = 10.0,
+        elabel_font = :bold,
+    )
+    @test fig4 isa Makie.FigureAxisPlot
+end
+
+@testitem "Makie.plot: elabel_shift/elabel_distance move the label along/off the edge" tags =
+    [:unit, :plot] begin
+    using Makie
+
+    # A straight horizontal A --> B edge: the elabel Text plot is plots[3]
+    # (Lines, arrowhead Poly, Text), and its perpendicular offset is a pure
+    # y-shift while its along-edge position is a pure x-shift.
+    dag = DAG(directed(:A, :B))
+    label_pos(; kwargs...) =
+        Makie.plot(dag; layout = [(0.0, 0.0), (2.0, 0.0)], elabels = "e", kwargs...).plot.plots[3][1][][1]
+
+    # Higher elabel_shift moves the label further toward the destination.
+    x_early = label_pos(; elabel_shift = 0.25)[1]
+    x_late = label_pos(; elabel_shift = 0.75)[1]
+    @test x_late > x_early
+
+    # elabel_shift outside [0, 1] clamps rather than extrapolating past an
+    # endpoint.
+    @test label_pos(; elabel_shift = -1.0)[1] == label_pos(; elabel_shift = 0.0)[1]
+    @test label_pos(; elabel_shift = 2.0)[1] == label_pos(; elabel_shift = 1.0)[1]
+
+    # A larger elabel_distance pushes the label further from the (horizontal)
+    # line, i.e. a bigger |y|.
+    y_near = abs(label_pos(; elabel_distance = 5.0)[2])
+    y_far = abs(label_pos(; elabel_distance = 50.0)[2])
+    @test y_far > y_near
+
+    # With elabel_distance left as `nothing` (the default), the gap scales
+    # with elabel_fontsize instead of staying fixed.
+    y_small_font = abs(label_pos(; elabel_fontsize = 8.0)[2])
+    y_big_font = abs(label_pos(; elabel_fontsize = 40.0)[2])
+    @test y_big_font > y_small_font
+
+    # Both accept a per-edge Dict too.
+    fig = Makie.plot(
+        dag;
+        layout = [(0.0, 0.0), (2.0, 0.0)],
+        elabels = "e",
+        elabel_shift = Dict((:A, :B) => 0.75, :default => 0.5),
+        elabel_distance = Dict((:A, :B) => 20.0, :default => 10.0),
+    )
+    @test fig isa Makie.FigureAxisPlot
+end
+
+@testitem "MakieExt: _path_point_at_fraction interpolates along a polyline's arc length" tags =
+    [:unit, :plot] begin
+    using Makie
+
+    ext = Base.get_extension(CausalStructures, :MakieExt)
+    P = Makie.Point2f
+
+    straight = P[P(0, 0), P(2, 0)]
+    @test ext._path_point_at_fraction(straight, 0.0f0) == P(0, 0)
+    @test ext._path_point_at_fraction(straight, 1.0f0) == P(2, 0)
+    @test ext._path_point_at_fraction(straight, 0.5f0) == P(1, 0)
+
+    # Arc length, not sample-index count: an uneven split still lands at the
+    # true halfway point by distance.
+    bent = P[P(0, 0), P(1, 0), P(1, 4)]
+    @test ext._path_point_at_fraction(bent, 0.5f0) ≈ P(1, 1.5)
+end
+
+@testitem "MakieExt: _upright_angle follows the tangent but never lands upside down" tags =
+    [:unit, :plot] begin
+    using Makie
+
+    ext = Base.get_extension(CausalStructures, :MakieExt)
+    P = Makie.Point2f
+
+    # Rightward and upward tangents pass straight through: 0 and pi/2.
+    @test ext._upright_angle(P(1, 0)) ≈ 0.0f0
+    @test ext._upright_angle(P(0, 1)) ≈ Float32(pi) / 2
+
+    # A leftward tangent flips by pi, landing at 0 (upright) rather than pi
+    # (upside down).
+    @test ext._upright_angle(P(-1, 0)) ≈ 0.0f0
+
+    # A down-and-left tangent (angle -3pi/4) flips to its upright mirror
+    # (pi/4), not straight down.
+    got = ext._upright_angle(P(-1, -1))
+    @test got ≈ Float32(pi) / 4
+end
