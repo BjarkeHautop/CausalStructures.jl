@@ -639,14 +639,11 @@ function Makie.plot(
     if stretch_to_fig_size
         # Precompute final, stretched positions and hand them to the recipe
         # as explicit positions, rather than letting `plot!` invoke the
-        # (possibly randomized) layout algorithm a second time. This drops
-        # any auto-routed `edge_paths` the layout would otherwise produce
-        # (currently only `:sugiyama`), which then falls back to the
-        # recipe's own edge routing instead of Sugiyama's dummy-node one.
+        # (possibly randomized) layout algorithm a second time.
         resolved_layout =
             layout === Makie.automatic ? CausalStructures._default_layout_method(cg) :
             layout
-        raw_positions, _ =
+        raw_positions, auto_edge_paths =
             _positions_and_auto_edge_paths(cg, resolved_layout, layout_kwargs)
         cx1, cy1, scale1 = _unit_extent_params(raw_positions)
         positions = Point2f[_apply_unit_extent(p, cx1, cy1, scale1) for p in raw_positions]
@@ -656,6 +653,20 @@ function Makie.plot(
         avail_h = fig_height_budget - 2.0f0 * Float32(outer_margin)
         stretch_params = _aspect_stretch_params(positions, avail_w / avail_h)
         positions = Point2f[_apply_aspect_stretch(p, stretch_params...) for p in positions]
+
+        if auto_edge_paths !== nothing
+            stretched_auto_edge_paths = Dict(
+                key => Point2f[
+                    _apply_aspect_stretch(
+                        _apply_unit_extent(Point2f(p[1], p[2]), cx1, cy1, scale1),
+                        stretch_params...,
+                    ) for p in path
+                ] for (key, path) in auto_edge_paths
+            )
+            edge_paths =
+                edge_paths === nothing ? stretched_auto_edge_paths :
+                merge(stretched_auto_edge_paths, edge_paths)
+        end
 
         layout = Dict{Symbol,NTuple{2,Float64}}(
             nd => (Float64(p[1]), Float64(p[2])) for
