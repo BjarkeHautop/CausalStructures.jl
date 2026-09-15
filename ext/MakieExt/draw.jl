@@ -12,8 +12,7 @@ function _norm2(p::Point2f)
 end
 
 _resolve_font(font) =
-    font isa Symbol ? Makie.to_font(Makie.current_default_theme()[:fonts], font) :
-    Makie.to_font(font)
+    font isa Symbol ? Makie.to_font(Makie.theme(:fonts), font) : Makie.to_font(font)
 
 # Filled circle polygon in data coordinates, for open-circle edge markers.
 function _draw_filled_circle!(
@@ -541,7 +540,7 @@ function Makie.plot!(plot::CausalGraphPlot)
     # Tracking the Axis's own pixel viewport (not just `plot`'s attributes)
     # as an `onany` input is what makes node/label sizing keep up with a live
     # window resize.
-    viewport = Makie.viewport(Makie.parent_scene(plot))
+    viewport = Makie.viewport(parent(plot))
     Makie.onany(
         update_plot,
         plot,

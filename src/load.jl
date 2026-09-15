@@ -1,7 +1,7 @@
 
-using Preferences
-using Random
-using Statistics
+using Preferences: Preferences, @load_preference
+using Random: Random, randperm
+using Statistics: Statistics
 
 const _OPEN_DEFAULT::Bool = @load_preference("open", true)
 

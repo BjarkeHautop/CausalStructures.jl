@@ -104,7 +104,7 @@ end
 function _ag_augmented_adj_filtered!(
     adj::Vector{Vector{Int}},
     visited::Vector{Int},
-    stamp_ref::Base.RefValue{Int},
+    stamp_ref::Ref{Int},
     q::Vector{Tuple{Int,Int}},
     B::AGBackend,
     mask::BitVector,
