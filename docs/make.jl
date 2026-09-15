@@ -131,6 +131,7 @@ makedocs(;
             "25-pag-causal-effects.md",
             "40-plotting.md",
             "70-benchmarks.md",
+            "95-reference/40-adjustment.md",
         ],
     ),
     pages = list_pages(),
