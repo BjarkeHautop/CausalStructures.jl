@@ -117,5 +117,6 @@ export ADMG,
     subgraph,
     topological_sort,
     undirected,
-    uniform_dag
+    uniform_dag,
+    uniform_dag_counts
 end

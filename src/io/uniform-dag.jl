@@ -1,3 +1,31 @@
+"""
+    uniform_dag_counts(n::Integer) -> Vector{Vector{BigInt}}
+
+Precompute the DP table `uniform_dag` needs to sample DAGs on `n` nodes.
+`table[m][k]` is the number of labelled DAGs on `m` nodes with exactly `k`
+outpoints, for every `1 <= m <= n`; entry `m` only depends on entries `< m`,
+so a table computed for some `n` is also valid for any `n' <= n`.
+
+Pass the result as `uniform_dag(rng, n; counts = table)` to avoid
+recomputing it on every draw when sampling many DAGs at the same (or a
+smaller) `n`.
+
+# Examples
+
+```jldoctest
+julia> table = uniform_dag_counts(20);
+
+julia> using Random
+
+julia> dags = [uniform_dag(Xoshiro(i), 20; counts = table) for i = 1:5];
+```
+
+# References
+
+- [kuipers2015uniform](@citet)
+"""
+uniform_dag_counts(n::Integer) = _uniform_dag_counts(Int(n))
+
 # a[m][k] = number of labelled DAGs on m nodes with exactly k outpoints, for
 # all 1 <= m <= n and 1 <= k <= m. Needed for every core size the recursion
 # below may recurse into, not just `n` itself, hence the full triangle.
@@ -100,18 +128,23 @@ function _uniform_dag_skeleton(rng::Random.AbstractRNG, ks::Vector{Int}, n::Int)
 end
 
 """
-    uniform_dag([rng], n::Integer) -> DAG
+    uniform_dag([rng], n::Integer; counts = nothing) -> DAG
 
 Generate a random [`DAG`](@ref) on `n` observed nodes named `V1, …, Vn`
 uniformly at random from the space of all labelled DAGs on `n` nodes.
 
 Unlike [`generate_graph`](@ref), which samples edges independently (uniform
 over graphs of a given size/density but *not* uniform over the space of
-DAGs), this uses the recursive-enumeration algorithm of Kuipers & Moffa
-(2015).
+DAGs), this uses the recursive-enumeration algorithm of
+[kuipers2015uniform](@citet).
 
 `rng` defaults to `Random.default_rng()` when omitted; pass an explicit
 `AbstractRNG` (e.g. `Random.Xoshiro(seed)`) for reproducibility.
+
+Cost grows quickly with `n` (well past `O(n^3)`, since the DP table's `BigInt`
+entries also grow in digit-width), unlike [`generate_graph`](@ref)'s roughly
+edge-linear cost; pass a table from [`uniform_dag_counts`](@ref) via `counts`
+to avoid recomputing it when drawing many DAGs at the same `n` (or below).
 
 # Examples
 
@@ -123,16 +156,25 @@ dag = uniform_dag(6)
 
 - [kuipers2015uniform](@citet)
 """
-function uniform_dag(rng::Random.AbstractRNG, n::Integer)
+function uniform_dag(
+    rng::Random.AbstractRNG,
+    n::Integer;
+    counts::Union{Nothing,Vector{Vector{BigInt}}} = nothing,
+)
     n = Int(n)
     if n <= 0
         error("n must be positive")
+    end
+    if counts !== nothing && length(counts) < n
+        error(
+            "counts table only covers n <= $(length(counts)) nodes, but n = $n was requested",
+        )
     end
 
     node_names = [Symbol("V$(i)") for i = 1:n]
     node_set = Set(node_names)
 
-    a = _uniform_dag_counts(n)
+    a = counts === nothing ? _uniform_dag_counts(n) : counts
     ks = _sample_uniform_dag_outpoints(rng, a, n)
     Q = _uniform_dag_skeleton(rng, ks, n)
     perm = randperm(rng, n)
@@ -149,4 +191,5 @@ function uniform_dag(rng::Random.AbstractRNG, n::Integer)
     return DAG(node_set, edges; validate = false)
 end
 
-uniform_dag(n::Integer) = uniform_dag(Random.default_rng(), n)
+uniform_dag(n::Integer; counts::Union{Nothing,Vector{Vector{BigInt}}} = nothing) =
+    uniform_dag(Random.default_rng(), n; counts = counts)

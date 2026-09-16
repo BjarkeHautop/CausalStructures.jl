@@ -42,6 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `edge_label_shift`, and `edge_label_distance` for drawing text along each edge, following
   its own angle.
 
+- `uniform_dag` gains a `counts` keyword (paired with the new `uniform_dag_counts`) to reuse a precomputed DP table across repeated draws at the same `n` (or smaller).
+
 ## [0.6.0] - 2026-09-14
 
 ### Breaking changes
