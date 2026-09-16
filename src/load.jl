@@ -6,35 +6,6 @@ using Statistics: Statistics
 const _OPEN_DEFAULT::Bool = @load_preference("open", true)
 
 const _PLOT_LAYOUT_PREFERENCE = @load_preference("plot_layout", nothing)
-const _PLOT_NODE_COLOR_DEFAULT = @load_preference("plot_node_color", "white")
-const _PLOT_NODE_STROKECOLOR_DEFAULT = @load_preference("plot_node_strokecolor", "black")
-const _PLOT_NODE_STROKEWIDTH_DEFAULT = @load_preference("plot_node_strokewidth", 2.0)
-const _PLOT_EDGE_COLOR_DEFAULT = @load_preference("plot_edge_color", "black")
-const _PLOT_EDGE_LINESTYLE_DEFAULT = @load_preference("plot_edge_linestyle", nothing)
-const _PLOT_LINEWIDTH_DEFAULT = @load_preference("plot_linewidth", 1.5)
-const _PLOT_CURVATURE_DEFAULT = @load_preference("plot_curvature", nothing)
-const _PLOT_LABEL_COLOR_DEFAULT = @load_preference("plot_label_color", "black")
-const _PLOT_LABEL_FONTSIZE_DEFAULT = @load_preference("plot_label_fontsize", 14.0)
-const _PLOT_LABEL_FONT_DEFAULT::Symbol =
-    Symbol(@load_preference("plot_label_font", "regular"))
-const _PLOT_ELABEL_COLOR_DEFAULT = @load_preference("plot_elabel_color", "black")
-const _PLOT_ELABEL_FONTSIZE_DEFAULT = @load_preference("plot_elabel_fontsize", 12.0)
-const _PLOT_ELABEL_FONT_DEFAULT::Symbol =
-    Symbol(@load_preference("plot_elabel_font", "regular"))
-const _PLOT_ELABEL_SHIFT_DEFAULT = @load_preference("plot_elabel_shift", 0.5)
-const _PLOT_ELABEL_DISTANCE_DEFAULT = @load_preference("plot_elabel_distance", nothing)
-const _PLOT_NODE_PADDING_DEFAULT = @load_preference("plot_node_padding", 10.0)
-const _PLOT_EDGE_ARROW_FILL_DEFAULT = @load_preference("plot_edge_arrow_fill", nothing)
-const _PLOT_FIG_SIZE_DEFAULT =
-    Tuple(Float64.(@load_preference("plot_fig_size", [600.0, 450.0])))
-const _PLOT_STRETCH_TO_FIG_SIZE_DEFAULT::Bool =
-    @load_preference("plot_stretch_to_fig_size", false)
-const _PLOT_NODE_SHAPE_DEFAULT::Symbol =
-    Symbol(@load_preference("plot_node_shape", "circle"))
-const _PLOT_NODE_LINESTYLE_DEFAULT = @load_preference("plot_node_linestyle", nothing)
-const _PLOT_TITLE_FONTSIZE_DEFAULT = @load_preference("plot_title_fontsize", nothing)
-const _PLOT_TITLE_COLOR_DEFAULT = @load_preference("plot_title_color", nothing)
-const _PLOT_OUTER_MARGIN_DEFAULT = @load_preference("plot_outer_margin", 16)
 
 # Foundation: types, edges, construction, editing, validation, backend storage
 include("core/defs.jl")

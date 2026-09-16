@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Breaking changes
+
+- `plot`'s visual defaults (colors, linewidths, etc) are no
+longer configurable via `Preferences.jl`. Instead, set a project-wide default with a Makie theme,
+e.g. `Makie.set_theme!(CausalGraphPlot = (node_color = :lightblue,))`.
+
 ### New features
 
 - Automatic edge routing via dummy nodes (from Sugiyama) now work with `stretch_to_fig=true`.

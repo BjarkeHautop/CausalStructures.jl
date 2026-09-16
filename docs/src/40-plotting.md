@@ -55,6 +55,13 @@ Styling breaks down into four areas, covered below:
 - **[Styling edges](@ref)** — edge appearance
 - **[Labels and titles](@ref)** — text and annotations
 
+For a project-wide default you can use a
+[Makie theme](https://docs.makie.org/stable/explanations/theming/themes):
+
+```julia
+Makie.set_theme!(CausalGraphPlot = (node_color = :lightblue, linewidth = 2))
+```
+
 ## [Layout](@id plot-layouts)
 
 The `layout` keyword controls node placement and defaults to `:sugiyama:` for a DAG if Sugiyama.jl is loaded, else `:stress`.

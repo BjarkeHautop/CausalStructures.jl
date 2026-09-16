@@ -323,30 +323,30 @@ Makie.@recipe(CausalGraphPlot, graph) do scene
         layout = Makie.automatic,
         layout_kwargs = (;),
         labels = nothing,
-        node_shape = CausalStructures._PLOT_NODE_SHAPE_DEFAULT,
+        node_shape = :circle,
         node_radius = nothing,
-        node_padding = CausalStructures._PLOT_NODE_PADDING_DEFAULT,
+        node_padding = 10.0,
         arrow_size = nothing,
         circle_size = nothing,
-        node_color = CausalStructures._PLOT_NODE_COLOR_DEFAULT,
-        node_strokecolor = CausalStructures._PLOT_NODE_STROKECOLOR_DEFAULT,
-        node_strokewidth = CausalStructures._PLOT_NODE_STROKEWIDTH_DEFAULT,
-        node_linestyle = CausalStructures._PLOT_NODE_LINESTYLE_DEFAULT,
-        edge_color = CausalStructures._PLOT_EDGE_COLOR_DEFAULT,
-        arrow_fill = CausalStructures._PLOT_EDGE_ARROW_FILL_DEFAULT,
-        linewidth = CausalStructures._PLOT_LINEWIDTH_DEFAULT,
-        edge_linestyle = CausalStructures._PLOT_EDGE_LINESTYLE_DEFAULT,
-        curvature = CausalStructures._PLOT_CURVATURE_DEFAULT,
+        node_color = :white,
+        node_strokecolor = :black,
+        node_strokewidth = 2.0,
+        node_linestyle = nothing,
+        edge_color = :black,
+        arrow_fill = nothing,
+        linewidth = 1.5,
+        edge_linestyle = nothing,
+        curvature = nothing,
         edge_paths = nothing,
-        label_color = CausalStructures._PLOT_LABEL_COLOR_DEFAULT,
-        label_fontsize = CausalStructures._PLOT_LABEL_FONTSIZE_DEFAULT,
-        label_font = CausalStructures._PLOT_LABEL_FONT_DEFAULT,
+        label_color = :black,
+        label_fontsize = 14.0,
+        label_font = :regular,
         elabels = nothing,
-        elabel_color = CausalStructures._PLOT_ELABEL_COLOR_DEFAULT,
-        elabel_fontsize = CausalStructures._PLOT_ELABEL_FONTSIZE_DEFAULT,
-        elabel_font = CausalStructures._PLOT_ELABEL_FONT_DEFAULT,
-        elabel_shift = CausalStructures._PLOT_ELABEL_SHIFT_DEFAULT,
-        elabel_distance = CausalStructures._PLOT_ELABEL_DISTANCE_DEFAULT,
+        elabel_color = :black,
+        elabel_fontsize = 12.0,
+        elabel_font = :regular,
+        elabel_shift = 0.5,
+        elabel_distance = nothing,
     )
 end
 
@@ -670,6 +670,9 @@ the chosen layout algorithm, e.g. `layout_kwargs = (; seed = 1)`.
 `title`, `title_fontsize`, `title_color`, `title_gap`, `outer_margin`,
 `fig_size`, `stretch_to_fig_size` only apply to `Makie.plot`.
 
+For a project-wide default, use a Makie theme, e.g.
+`Makie.set_theme!(CausalGraphPlot = (node_color = :lightblue,))`.
+
 `edge_paths` can be used to override an edge's drawn route directly: a
 `Dict` (same keying as other per-edge overrides) from an edge to a vector
 of waypoints running from its source node's position to its destination
@@ -707,12 +710,12 @@ function Makie.plot(
     layout_kwargs::NamedTuple = (;),
     edge_paths::Union{AbstractDict,Nothing} = nothing,
     title::Union{AbstractString,Nothing} = nothing,
-    title_fontsize::Union{Real,Nothing} = CausalStructures._PLOT_TITLE_FONTSIZE_DEFAULT,
-    title_color = CausalStructures._PLOT_TITLE_COLOR_DEFAULT,
+    title_fontsize::Union{Real,Nothing} = nothing,
+    title_color = nothing,
     title_gap::Real = 4.0,
-    outer_margin::Real = CausalStructures._PLOT_OUTER_MARGIN_DEFAULT,
-    fig_size::NTuple{2,Real} = CausalStructures._PLOT_FIG_SIZE_DEFAULT,
-    stretch_to_fig_size::Bool = CausalStructures._PLOT_STRETCH_TO_FIG_SIZE_DEFAULT,
+    outer_margin::Real = 16,
+    fig_size::NTuple{2,Real} = (600.0, 450.0),
+    stretch_to_fig_size::Bool = false,
     kwargs...,
 )
     isempty(cg.backend.nodes) && error("Cannot plot an empty graph (0 nodes).")
