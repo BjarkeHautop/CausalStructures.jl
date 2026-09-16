@@ -154,58 +154,59 @@ function all_iv_sets(
     g_do_x = _build_g_do_x(cg, x)  # built once; x/y already excluded from universe
     Bd = g_do_x.backend
 
-    function make_checker()
-        empty_zmask = falses(n)
-        excl_zmask = falses(n)
-        excl_zmask[x_idx] = true
+    empty_zmask = falses(n)
+    excl_zmask = falses(n)
+    excl_zmask[x_idx] = true
 
-        anc_mask = falses(n)
-        anc_stack = Int[]
-        visited = falses(n, 2)
-        q = Tuple{Int,Int}[]
-        reached = falses(n)
-        seeds_buf = Int[]
+    anc_mask = falses(n)
+    anc_stack = Int[]
+    visited = falses(n, 2)
+    q = Tuple{Int,Int}[]
+    reached = falses(n)
+    seeds_buf = Int[]
 
-        # a ⊥ b | ∅ in backend Bk
-        function separated_empty(Bk, a, b)
-            empty!(seeds_buf)
-            push!(seeds_buf, a, b)
-            _ancestors_bitmask!(anc_mask, anc_stack, Bk, seeds_buf)
-            _reachable_single!(visited, q, reached, Bk, a, anc_mask, empty_zmask)
-            return !reached[b]
-        end
-
-        # a ⊥ Y | {x} in backend Bk, for the (possibly multi-node) target set `bs`
-        function separated_given_x(Bk, a, bs)
-            empty!(seeds_buf)
-            push!(seeds_buf, a, x_idx)
-            append!(seeds_buf, bs)
-            _ancestors_bitmask!(anc_mask, anc_stack, Bk, seeds_buf)
-            _reachable_single!(visited, q, reached, Bk, a, anc_mask, excl_zmask)
-            return !any(reached[bi] for bi in bs)
-        end
-
-        return function valid_candidate(z_idxs::Vector{Int})
-            relevant = false
-            for zi in z_idxs
-                if !separated_empty(B, zi, x_idx)
-                    relevant = true
-                    break
-                end
-            end
-            relevant || return false
-
-            for zi in z_idxs
-                separated_given_x(Bd, zi, ys_idx) || return false
-            end
-            return true
-        end
+    # a ⊥ b | ∅ in backend Bk
+    function separated_empty(Bk, a, b)
+        empty!(seeds_buf)
+        push!(seeds_buf, a, b)
+        _ancestors_bitmask!(anc_mask, anc_stack, Bk, seeds_buf)
+        _reachable_single!(visited, q, reached, Bk, a, anc_mask, empty_zmask)
+        return !reached[b]
     end
+
+    # a ⊥ Y | {x} in backend Bk, for the (possibly multi-node) target set `bs`
+    function separated_given_x(Bk, a, bs)
+        empty!(seeds_buf)
+        push!(seeds_buf, a, x_idx)
+        append!(seeds_buf, bs)
+        _ancestors_bitmask!(anc_mask, anc_stack, Bk, seeds_buf)
+        _reachable_single!(visited, q, reached, Bk, a, anc_mask, excl_zmask)
+        return !any(reached[bi] for bi in bs)
+    end
+
+    # Unlike backdoor/GAC-style criteria, the IV criterion tests each candidate
+    # node individually against the *fixed* conditioning set {x}. So whether a
+    # node can belong to a valid set at all (exclusion) and whether it can witness
+    # relevance are both Z-independent, and can be decided once per node.
+    valid_pool = [v for v in universe if separated_given_x(Bd, v, ys_idx)]
+    relevant_pool = [v for v in valid_pool if !separated_empty(B, v, x_idx)]
 
     to_symbols(cur) = sort([B.nodes[v] for v in cur])
 
-    valid_sets = _search_subsets(universe, 1, max_size, make_checker, to_symbols)
+    if minimal
+        return [[B.nodes[v]] for v in relevant_pool]
+    end
 
-    minimal && _prune_minimal!(valid_sets)
+    isempty(relevant_pool) && return Vector{Vector{Symbol}}()
+
+    relevant_mask = falses(n)
+    for v in relevant_pool
+        relevant_mask[v] = true
+    end
+
+    valid_sets = Vector{Vector{Symbol}}()
+    for c in _all_subsets(valid_pool, 1, max_size)
+        any(v -> relevant_mask[v], c) && push!(valid_sets, to_symbols(c))
+    end
     return valid_sets
 end

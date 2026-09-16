@@ -1,7 +1,7 @@
-# Shared brute-force subset search used by `all_backdoor_sets`,
-# `all_adjustment_sets` (PDAG/MPDAG/CPDAG, ADMG, AG/MAG), and `all_iv_sets`:
-# each enumerates candidate subsets of a "universe" of node indices up to a
-# bounded size and keeps the ones a per-candidate validity check accepts.
+# Shared brute-force subset search used by `all_backdoor_sets` and
+# `all_adjustment_sets` (PDAG/MPDAG/CPDAG, ADMG, AG/MAG): each enumerates
+# candidate subsets of a "universe" of node indices up to a bounded size and
+# keeps the ones a per-candidate validity check accepts.
 
 # Below this many total candidate subsets, the fixed cost of materializing
 # the candidate list and spawning tasks outweighs any benefit.
