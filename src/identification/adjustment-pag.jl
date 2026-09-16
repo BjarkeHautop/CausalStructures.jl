@@ -337,6 +337,9 @@ Return a inclusion-minimalvalid adjustment set for the causal effect of `x` on `
 
 `x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
+Unlike the [`DAG`](@ref)/[`AbstractPDAG`](@ref) methods of `adjustment_set`,
+this method takes no `type` keyword.
+
 # Examples
 
 ```jldoctest

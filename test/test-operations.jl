@@ -476,7 +476,7 @@ end
     # Figure 10 (Richardson & Spirtes 2002): U-->X, U-->Y, A-->X, B-->Y
     # Marginalizing U: X<->Y added, A-->X and B-->Y preserved
     cg = DAG(directed(:U, :X), directed(:U, :Y), directed(:A, :X), directed(:B, :Y))
-    mg = condition_marginalize(cg; marg_vars = [:U])
+    mg = condition_marginalize(cg; index = [:U])
     @test mg isa AG
     @test Set(nodes(mg)) == Set([:A, :B, :X, :Y])
     has_edge_type(cg, u, v, f) = any(e -> e.src == u && e.dst == v && f(e), cg.edges)
@@ -492,7 +492,7 @@ end
     [:unit, :operations] begin
     # Conditioning on U: removes U from graph, remaining nodes A,B,X,Y
     cg = DAG(directed(:U, :X), directed(:U, :Y), directed(:A, :X), directed(:B, :Y))
-    mg = condition_marginalize(cg; cond_vars = [:U])
+    mg = condition_marginalize(cg; given = [:U])
     @test mg isa AG
     @test Set(nodes(mg)) == Set([:A, :B, :X, :Y])
     @test :U ∉ nodes(mg)
@@ -511,7 +511,7 @@ end
         directed(:S, :D),
         directed(:D, :C),
     )
-    result = condition_marginalize(f11; cond_vars = [:S])
+    result = condition_marginalize(f11; given = [:S])
     @test result isa AG
     @test Set(nodes(result)) == Set([:A, :B, :C, :D, :L1, :L2])
     has_e(cg, u, v) = has_edge(cg, u, v) || has_edge(cg, v, u)
@@ -534,7 +534,7 @@ end
         directed(:S, :D),
         directed(:D, :C),
     )
-    result = condition_marginalize(f11; marg_vars = [:L1, :L2])
+    result = condition_marginalize(f11; index = [:L1, :L2])
     @test result isa AG
     @test Set(nodes(result)) == Set([:A, :B, :C, :D, :S])
     has_dir(cg, u, v) =
@@ -545,25 +545,21 @@ end
     @test has_dir(result, :D, :C)
 end
 
-@testitem "condition_marginalize: errors on empty cond/marg" tags = [:unit, :operations] begin
+@testitem "condition_marginalize: errors on empty given/index" tags = [:unit, :operations] begin
     cg = DAG(directed(:A, :B))
     @test_throws ErrorException condition_marginalize(cg)
 end
 
-@testitem "condition_marginalize: errors on overlapping cond/marg" tags =
+@testitem "condition_marginalize: errors on overlapping given/index" tags =
     [:unit, :operations] begin
     cg = DAG(directed(:A, :B), directed(:B, :C))
-    @test_throws ErrorException condition_marginalize(
-        cg;
-        cond_vars = [:B],
-        marg_vars = [:B],
-    )
+    @test_throws ErrorException condition_marginalize(cg; given = [:B], index = [:B])
 end
 
 @testitem "condition_marginalize: single remaining node returns empty AG" tags =
     [:unit, :operations] begin
     cg = DAG(directed(:A, :B))
-    result = condition_marginalize(cg; marg_vars = [:B])
+    result = condition_marginalize(cg; index = [:B])
     @test result isa AG
     @test length(nodes(result)) <= 1
 end
@@ -576,14 +572,14 @@ end
         directed(:B, :Y),
         bidirected(:X, :Z),
     )
-    mg = condition_marginalize(cg; cond_vars = [:U])
+    mg = condition_marginalize(cg; given = [:U])
     @test mg isa AG
     @test :U ∉ nodes(mg)
 end
 
 @testitem "condition_marginalize: accepts MAG input" tags = [:unit, :operations] begin
     mag = MAG(directed(:X, :Y), directed(:X, :Z), bidirected(:Y, :Z))
-    result = condition_marginalize(mag; marg_vars = [:Z])
+    result = condition_marginalize(mag; index = [:Z])
     @test result isa AG
     @test :Z ∉ nodes(result)
     @test :X ∈ nodes(result) && :Y ∈ nodes(result)
@@ -591,7 +587,7 @@ end
 
 @testitem "condition_marginalize: accepts ADMG input" tags = [:unit, :operations] begin
     admg = ADMG(directed(:U, :X), directed(:U, :Y), directed(:X, :Y))
-    result = condition_marginalize(admg; marg_vars = [:U])
+    result = condition_marginalize(admg; index = [:U])
     @test result isa AG
     @test Set(nodes(result)) == Set([:X, :Y])
     @test has_edge(result, :X, :Y)

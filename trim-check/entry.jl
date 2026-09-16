@@ -315,13 +315,13 @@ end
 
 function _check_condition_marginalize()
     dag = DAG("U --> X + Y")
-    condition_marginalize(dag; marg_vars = [:U])
+    condition_marginalize(dag; index = [:U])
 
     admg = ADMG("U --> X + Y, X --> Y")
-    condition_marginalize(admg; marg_vars = [:U])
+    condition_marginalize(admg; index = [:U])
 
     ag = AG("C <-> A <-> B <-> D, A --> D, B --> C")
-    condition_marginalize(ag; cond_vars = [:C])
+    condition_marginalize(ag; given = [:C])
     return nothing
 end
 

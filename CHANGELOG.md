@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   are renamed to `node_labels`, `node_label_color`, `node_label_fontsize`, and
   `node_label_font`, for consistency with the `node_*`/`edge_*` naming used elsewhere.
 
+- `condition_marginalize`'s keywords `cond_vars`/`marg_vars` are renamed to `given`/`index`,
+  matching the `given` keyword used by `idc`/`cidp`/`prob` and the `index` argument used by
+  `marginal`.
+
 ### New features
 
 - Support of Makie themes: `plot`'s `edge_color` and `edge_label_color` now inherit the active Makie theme's

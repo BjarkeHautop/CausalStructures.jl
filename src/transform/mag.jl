@@ -814,9 +814,9 @@ function _mag_from_pag(nodes, edges::Vector{CausalEdge})
 end
 
 """
-    markov_equivalent(g1::MAG, g2::MAG) -> Bool
+    markov_equivalent(cg1::MAG, cg2::MAG) -> Bool
 
-Return `true` if `g1` and `g2` belong to the same Markov equivalence class, i.e.
+Return `true` if `cg1` and `cg2` belong to the same Markov equivalence class, i.e.
 they impose the same m-separation constraints.
 
 # Examples
@@ -844,7 +844,7 @@ false
 
 - [ali2009markov](@citet)
 """
-function markov_equivalent(g1::MAG, g2::MAG)
-    Set(g1.backend.nodes) != Set(g2.backend.nodes) && return false
-    return _pag_signature(_mag_to_pag_edges(g1)) == _pag_signature(_mag_to_pag_edges(g2))
+function markov_equivalent(cg1::MAG, cg2::MAG)
+    Set(cg1.backend.nodes) != Set(cg2.backend.nodes) && return false
+    return _pag_signature(_mag_to_pag_edges(cg1)) == _pag_signature(_mag_to_pag_edges(cg2))
 end

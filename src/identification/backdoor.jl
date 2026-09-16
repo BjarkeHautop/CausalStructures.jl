@@ -331,6 +331,11 @@ Three types are supported:
 - `:optimal`: O-set ``\\mathrm{Pa}(\\mathrm{cn}(x,y)) \\setminus (\\{x\\} \\cup \\mathrm{cn}(x,y))``,
   where ``\\mathrm{cn}(x,y) = \\mathrm{De}(x) \\cap \\mathrm{An}(y)``.
 
+The `type` keyword is specific to the [`DAG`](@ref)/[`AbstractPDAG`](@ref)
+methods; the [`ADMG`](@ref)/[`AbstractAG`](@ref)/[`PAG`](@ref) methods of
+`adjustment_set` take no `type` keyword and always return a fixed
+inclusion-minimal valid adjustment set.
+
 # Examples
 
 ```jldoctest
@@ -472,6 +477,11 @@ Two types are supported:
 - `:optimal`: O-set ``\\mathrm{Pa}(\\mathrm{Cn}(x,y)) \\setminus (\\{x\\} \\cup \\mathrm{Cn}(x,y))``,
   where ``\\mathrm{Cn}(x,y) = \\mathrm{PossibleDe}(x) \\cap \\mathrm{PossibleAn}(y)`` (nodes
   on possibly directed paths from `x` to `y`).
+
+The `type` keyword is specific to the [`DAG`](@ref)/[`AbstractPDAG`](@ref)
+methods; the [`ADMG`](@ref)/[`AbstractAG`](@ref)/[`PAG`](@ref) methods of
+`adjustment_set` take no `type` keyword and always return a fixed
+inclusion-minimal valid adjustment set.
 
 # Examples
 

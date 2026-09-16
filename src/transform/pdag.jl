@@ -362,9 +362,9 @@ function dag_to_cpdag(cg::DAG)
 end
 
 """
-    markov_equivalent(g1::DAG, g2::DAG) -> Bool
+    markov_equivalent(cg1::DAG, cg2::DAG) -> Bool
 
-Return `true` if `g1` and `g2` belong to the same Markov equivalence class
+Return `true` if `cg1` and `cg2` belong to the same Markov equivalence class
 (MEC), i.e. they encode exactly the same conditional independences.
 
 Two DAGs are Markov equivalent if and only if they share the same skeleton
@@ -375,16 +375,16 @@ characterization (Verma & Pearl, 1990).
 # Examples
 
 ```jldoctest
-julia> g1 = DAG("A --> B <-- C");
+julia> cg1 = DAG("A --> B <-- C");
 
-julia> g2 = DAG("A --> B <-- C");
+julia> cg2 = DAG("A --> B <-- C");
 
-julia> markov_equivalent(g1, g2)
+julia> markov_equivalent(cg1, cg2)
 true
 
-julia> g3 = DAG("A --> B --> C");
+julia> cg3 = DAG("A --> B --> C");
 
-julia> markov_equivalent(g1, g3)
+julia> markov_equivalent(cg1, cg3)
 false
 ```
 
@@ -392,8 +392,8 @@ false
 
 - [vermapearl1990equivalence](@citet)
 """
-function markov_equivalent(g1::DAG, g2::DAG)
-    B1, B2 = g1.backend, g2.backend
+function markov_equivalent(cg1::DAG, cg2::DAG)
+    B1, B2 = cg1.backend, cg2.backend
     n = length(B1.nodes)
     length(B2.nodes) != n && return false
     Set(B1.nodes) != Set(B2.nodes) && return false

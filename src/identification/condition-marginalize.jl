@@ -23,22 +23,22 @@ end
 
 """
     condition_marginalize(cg::Union{DAG,ADMG,AbstractAG};
-                          cond_vars = Symbol[], marg_vars = Symbol[]) -> AG
+                          given = Symbol[], index = Symbol[]) -> AG
 
 Return the [`AG`](@ref) over the remaining nodes after conditioning on
-`cond_vars` and marginalizing out `marg_vars`, following Definition 4.2.1 of
+`given` and marginalizing out `index`, following Definition 4.2.1 of
 [richardsonspirtes2002ancestral](@citet).
 
-`cond_vars` and `marg_vars` may each be a single `Symbol` or an
+`given` and `index` may each be a single `Symbol` or an
 `AbstractVector{Symbol}`.
 
 Two remaining nodes are adjacent if and only if they cannot be m-separated by
-any subset of the other remaining nodes given `cond_vars`. The edge type is
-determined by the anterior relationships: `a --> b` if `a` is anterior to `b`
+any subset of the other remaining nodes given `given`. The edge type is
+determined by the anterior relations: `a --> b` if `a` is anterior to `b`
 but not vice versa; `a <-> b` if neither is anterior to the other; `a --- b`
 if each is anterior to the other.
 
-At least one of `cond_vars` or `marg_vars` must be non-empty, and they must
+At least one of `given` or `index` must be non-empty, and they must
 be disjoint.
 
 # Examples
@@ -46,7 +46,7 @@ be disjoint.
 ```jldoctest
 julia> dag = DAG("U --> X + Y");
 
-julia> condition_marginalize(dag; marg_vars = :U)
+julia> condition_marginalize(dag; index = :U)
 AG with 2 nodes and 1 edge:
   nodes: X, Y
   edges:
@@ -56,7 +56,7 @@ AG with 2 nodes and 1 edge:
 ```jldoctest
 julia> admg = ADMG("U --> X + Y, X <-> Z, Y --> Z");
 
-julia> condition_marginalize(admg; marg_vars = :U)
+julia> condition_marginalize(admg; index = :U)
 AG with 3 nodes and 3 edges:
   nodes: X, Y, Z
   edges:
@@ -66,13 +66,13 @@ AG with 3 nodes and 3 edges:
 ```jldoctest
 julia> mag = MAG("A <-> X, X --> C, Y --> C, A <-> Y");
 
-julia> condition_marginalize(mag; marg_vars = :A)
+julia> condition_marginalize(mag; index = :A)
 AG with 3 nodes and 2 edges:
   nodes: C, X, Y
   edges:
     X --> C, Y --> C
 
-julia> condition_marginalize(mag; cond_vars = :A)
+julia> condition_marginalize(mag; given = :A)
 AG with 3 nodes and 3 edges:
   nodes: C, X, Y
   edges:
@@ -85,59 +85,56 @@ AG with 3 nodes and 3 edges:
 """
 function condition_marginalize(
     cg::Union{DAG,ADMG,AbstractAG};
-    cond_vars::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
-    marg_vars::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    given::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    index::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
-    cond_vars = _as_symbol_vec(cond_vars)
-    marg_vars = _as_symbol_vec(marg_vars)
+    given = _as_symbol_vec(given)
+    index = _as_symbol_vec(index)
     all_ns = Set(nodes(cg))
 
-    for v in cond_vars
-        v in all_ns || error("Unknown node in cond_vars: $(v)")
+    for v in given
+        v in all_ns || error("Unknown node in given: $(v)")
     end
-    for v in marg_vars
-        v in all_ns || error("Unknown node in marg_vars: $(v)")
+    for v in index
+        v in all_ns || error("Unknown node in index: $(v)")
     end
 
-    isempty(cond_vars) &&
-        isempty(marg_vars) &&
-        error("Either cond_vars or marg_vars must be non-empty")
+    isempty(given) && isempty(index) && error("Either given or index must be non-empty")
 
-    !isempty(intersect(cond_vars, marg_vars)) &&
-        error("cond_vars and marg_vars must be disjoint")
+    !isempty(intersect(given, index)) && error("given and index must be disjoint")
 
-    removed = Set([cond_vars; marg_vars])
+    removed = Set([given; index])
     remaining = [v for v in nodes(cg) if !(v in removed)]
     n_rem = length(remaining)
 
     n_rem < 2 && return AG(Set(remaining), CausalEdge[]; validate = false)
 
-    # Pre-compute anteriors for all remaining nodes and cond_vars on the original graph.
-    nodes_for_ant = unique([remaining; collect(cond_vars)])
+    # Pre-compute anteriors for all remaining nodes and `given` on the original graph.
+    nodes_for_ant = unique([remaining; collect(given)])
     ant_dict = Dict{Symbol,Set{Symbol}}()
     for v in nodes_for_ant
         ant_dict[v] = Set(anteriors(cg, v))  # open=true: v itself excluded
     end
 
-    # Ant(S), S = cond_vars: shared by every pair, computed once.
-    cond_closure = Set{Symbol}(cond_vars)
-    for v in cond_vars
-        haskey(ant_dict, v) && union!(cond_closure, ant_dict[v])
+    # Ant(S), S = given: shared by every pair, computed once.
+    given_closure = Set{Symbol}(given)
+    for v in given
+        haskey(ant_dict, v) && union!(given_closure, ant_dict[v])
     end
     full_ant = Dict{Symbol,Set{Symbol}}()
     for v in remaining
         s = Set{Symbol}((v,))
         haskey(ant_dict, v) && union!(s, ant_dict[v])
-        union!(s, cond_closure)
+        union!(s, given_closure)
         full_ant[v] = s
     end
 
     # Scratch buffer for the `restrict` argument passed to minimal_separator:
-    # remaining \ {a, b} followed by cond_vars.
-    cond_vec = collect(cond_vars)
-    n_cond = length(cond_vec)
-    restrict_buf = Vector{Symbol}(undef, n_rem - 2 + n_cond)
-    restrict_buf[(n_rem-1):end] = cond_vec
+    # remaining \ {a, b} followed by given.
+    given_vec = collect(given)
+    n_given = length(given_vec)
+    restrict_buf = Vector{Symbol}(undef, n_rem - 2 + n_given)
+    restrict_buf[(n_rem-1):end] = given_vec
 
     new_edges = CausalEdge[]
     for i = 1:(n_rem-1)
@@ -149,20 +146,14 @@ function condition_marginalize(
                 true
             else
                 # a, b are adjacent in the margin iff no separator exists among
-                # the other remaining nodes (plus cond_vars, always included).
+                # the other remaining nodes (plus `given`, always included).
                 idx = 0
                 for k = 1:n_rem
                     (k == i || k == j) && continue
                     idx += 1
                     restrict_buf[idx] = remaining[k]
                 end
-                sep = minimal_separator(
-                    cg,
-                    a,
-                    b;
-                    include = cond_vars,
-                    restrict = restrict_buf,
-                )
+                sep = minimal_separator(cg, a, b; include = given, restrict = restrict_buf)
                 sep === nothing
             end
 
