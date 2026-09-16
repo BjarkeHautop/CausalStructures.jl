@@ -62,10 +62,10 @@ For a project-wide default you can use a
 Makie.set_theme!(CausalGraphPlot = (node_color = :lightblue, linewidth = 2))
 ```
 
-`edge_color`/`elabel_color` also pick up the active theme's
-`linecolor`/`textcolor`; `node_color`/`label_color` stay fixed and should be
+`edge_color`/`edge_label_color` also pick up the active theme's
+`linecolor`/`textcolor`; `node_color`/`node_label_color` stay fixed and should be
 set together if you want a dark node/label pairing, e.g.
-`Makie.set_theme!(CausalGraphPlot = (node_color = :gray10, label_color = :white))`.
+`Makie.set_theme!(CausalGraphPlot = (node_color = :gray10, node_label_color = :white))`.
 
 ## [Layout](@id plot-layouts)
 
@@ -288,19 +288,19 @@ plot(dag;
 Each label style argument accepts either a scalar or a `Dict{Symbol, <value>}` keyed by node name,
 with `:default` as a fallback (same resolution rules as node styling).
 
-| Keyword          | Default    | Controls                |
-| ---------------- | ---------- | ------------------------ |
-| `labels`         | `nothing`  | text drawn in each node   |
-| `label_color`    | `:black`   | node label text color     |
-| `label_fontsize` | `14.0`     | node label font size      |
-| `label_font`     | `:regular` | node label font           |
+| Keyword               | Default    | Controls                |
+| --------------------- | ---------- | ------------------------ |
+| `node_labels`         | `nothing`  | text drawn in each node   |
+| `node_label_color`    | `:black`   | node label text color     |
+| `node_label_fontsize` | `14.0`     | node label font size      |
+| `node_label_font`     | `:regular` | node label font           |
 
-By default each node is labelled with its own name. `labels` can be
+By default each node is labelled with its own name. `node_labels` can be
 used to overwrite this; node sizing accounts for multi-line labels, so the nodes grow to fit:
 
 ```@example plot
 plot(DAG("A0 --> L1 --> A1 --> Y, A0 --> Y + A1");
-    labels = Dict(
+    node_labels = Dict(
         :A0 => "Treatment\nat baseline",
         :L1 => "Confounder\nat time 1",
         :A1 => "Treatment\nat time 1",
@@ -308,12 +308,12 @@ plot(DAG("A0 --> L1 --> A1 --> Y, A0 --> Y + A1");
 )
 ```
 
-`label_color` and `label_fontsize` style the label text itself:
+`node_label_color` and `node_label_fontsize` style the label text itself:
 
 ```@example plot
 plot(dag;
-    label_color = Dict(:A => :crimson, :default => :black),
-    label_fontsize = 18,
+    node_label_color = Dict(:A => :crimson, :default => :black),
+    node_label_fontsize = 18,
 )
 ```
 
@@ -323,37 +323,37 @@ Each edge label style argument accepts either a scalar or a `Dict` for
 per-edge overrides, using the same keying rules as other edge styling (a
 `CausalEdge`, a `(src, dst)` tuple, an edge-type symbol, or `:default`).
 
-| Keyword            | Default    | Controls                                              |
-| ------------------- | ---------- | ------------------------------------------------------ |
-| `elabels`          | `nothing`  | text drawn along each edge                             |
-| `elabel_color`     | `:black`   | edge label text color                                  |
-| `elabel_fontsize`  | `12.0`     | edge label font size                                   |
-| `elabel_font`      | `:regular` | edge label font                                        |
-| `elabel_shift`     | `0.5`      | position along the edge, 0 (source) to 1 (destination) |
-| `elabel_distance`  | `nothing`  | perpendicular gap (pixels) from the edge; `nothing` scales with `elabel_fontsize` |
-| `elabel_rotation`  | `nothing`  | text angle in radians; `nothing` follows the edge's own angle |
+| Keyword                | Default    | Controls                                              |
+| ----------------------- | ---------- | ------------------------------------------------------ |
+| `edge_labels`          | `nothing`  | text drawn along each edge                             |
+| `edge_label_color`     | `:black`   | edge label text color                                  |
+| `edge_label_fontsize`  | `12.0`     | edge label font size                                   |
+| `edge_label_font`      | `:regular` | edge label font                                        |
+| `edge_label_shift`     | `0.5`      | position along the edge, 0 (source) to 1 (destination) |
+| `edge_label_distance`  | `nothing`  | perpendicular gap (pixels) from the edge; `nothing` scales with `edge_label_fontsize` |
+| `edge_label_rotation`  | `nothing`  | text angle in radians; `nothing` follows the edge's own angle |
 
 ```@example plot
-plot(dag; elabels = Dict(directed(:K, :Y) => "hello"))
+plot(dag; edge_labels = Dict(directed(:K, :Y) => "hello"))
 ```
 
-By default the label follows the edge's own angle, while `elabel_shift`/`elabel_distance` move it along/off that path:
+By default the label follows the edge's own angle, while `edge_label_shift`/`edge_label_distance` move it along/off that path:
 
 ```@example plot
 plot(dag;
-    elabels = Dict(directed(:K, :Y) => "hi"),
-    elabel_shift = 0.75,
-    elabel_distance = 12,
+    edge_labels = Dict(directed(:K, :Y) => "hi"),
+    edge_label_shift = 0.75,
+    edge_label_distance = 12,
 )
 ```
 
 For a steep or curved edge, following the edge's angle can leave the label hard to
-read; `elabel_rotation` overrides it with a fixed angle instead:
+read; `edge_label_rotation` overrides it with a fixed angle instead:
 
 ```@example plot
 plot(dag;
-    elabels = Dict(directed(:A, :X) => "steep"),
-    elabel_rotation = 0.0,
+    edge_labels = Dict(directed(:A, :X) => "steep"),
+    edge_label_rotation = 0.0,
 )
 ```
 
@@ -384,7 +384,7 @@ plot(dag; fig_size = (800, 600))
 !!! tip "Large graphs need a bigger `fig_size`"
     The default `(600, 450)` is sized for small examples. As the number of
     nodes grows, labels and edges get cramped and can overlap; increase
-    `fig_size` (and `node_radius`/`label_fontsize` if needed) to keep larger
+    `fig_size` (and `node_radius`/`node_label_fontsize` if needed) to keep larger
     causal graphs readable.
 
 !!! tip "Uneven `fig_size` and `stretch_to_fig_size`"
@@ -430,8 +430,8 @@ plot(
     edge_color       = Dict(:partially_directed => :royalblue, :default => :darkslategray),
     edge_linestyle   = Dict(:partially_directed => :dash),
     curvature        = Dict((:K, :Y) => 0.3),
-    elabels          = Dict((:K, :X) => "cool"),
-    label_color      = Dict(:X => :navy, :Y => :saddlebrown, :default => :black),
+    edge_labels      = Dict((:K, :X) => "cool"),
+    node_label_color = Dict(:X => :navy, :Y => :saddlebrown, :default => :black),
     title            = "A cool PAG",
     title_fontsize   = 18,
     title_color      = :navy,

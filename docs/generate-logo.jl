@@ -23,7 +23,7 @@ function make_logo(filename, ink)
         arrow_fill = ink,
         linewidth = 3.0,
         arrow_size = 0.16,
-        label_color = node_color,
+        node_label_color = node_color,
         fig_size = (480, 460),
         outer_margin = 20,
     )

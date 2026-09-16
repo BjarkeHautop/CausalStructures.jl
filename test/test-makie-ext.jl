@@ -49,9 +49,9 @@ end
         node_color = Dict(:X => :pink, :default => :white),
         node_strokecolor = Dict(:X => :orange),
         node_strokewidth = Dict(:X => 3.0),
-        label_color = Dict(:Y => :navy),
-        label_fontsize = Dict(:Y => 20.0),
-        label_font = Dict(:Y => :bold),
+        node_label_color = Dict(:Y => :navy),
+        node_label_fontsize = Dict(:Y => 20.0),
+        node_label_font = Dict(:Y => :bold),
     )
     @test fig isa Makie.FigureAxisPlot
 
@@ -60,7 +60,7 @@ end
     @test fig_fallback isa Makie.FigureAxisPlot
 end
 
-@testitem "Makie.plot: edge_color/elabel_color inherit the active Makie theme, node_color/label_color don't" tags =
+@testitem "Makie.plot: edge_color/edge_label_color inherit the active Makie theme, node_color/node_label_color don't" tags =
     [:unit, :plot] begin
     using Makie
     using NetworkLayout
@@ -69,20 +69,20 @@ end
 
     _, _, plt_default = Makie.plot(dag; layout = :stress)
     @test plt_default.edge_color[] == :black
-    @test plt_default.elabel_color[] == :black
+    @test plt_default.edge_label_color[] == :black
     @test plt_default.node_color[] == :white
-    @test plt_default.label_color[] == :black
+    @test plt_default.node_label_color[] == :black
 
     Makie.with_theme(Makie.theme_black()) do
         # `linecolor`/`textcolor`-backed marks pick up the dark theme...
         _, _, plt_black = Makie.plot(dag; layout = :stress)
         @test plt_black.edge_color[] == :white
-        @test plt_black.elabel_color[] == :white
+        @test plt_black.edge_label_color[] == :white
 
         # ...but node fill/label stay fixed, so a label is never rendered
         # in the same color as the node it sits on.
         @test plt_black.node_color[] == :white
-        @test plt_black.label_color[] == :black
+        @test plt_black.node_label_color[] == :black
 
         # An explicit color still overrides the inherited theme color.
         _, _, plt_override = Makie.plot(dag; layout = :stress, edge_color = :red)
@@ -93,7 +93,7 @@ end
     _, _, plt_after = Makie.plot(dag; layout = :stress)
     @test plt_after.edge_color[] == :black
     @test plt_after.node_color[] == :white
-    @test plt_after.label_color[] == :black
+    @test plt_after.node_label_color[] == :black
 end
 
 @testitem "Makie.plot: title options" tags = [:unit, :plot] begin
@@ -347,12 +347,12 @@ end
         dag;
         layout = :stress,
         node_shape = :square,
-        labels = Dict(:A0 => "Treatment\nat baseline", :L1 => "Confounder"),
+        node_labels = Dict(:A0 => "Treatment\nat baseline", :L1 => "Confounder"),
     )
     @test fig isa Makie.FigureAxisPlot
 
     # Nodes with no entry keep their own name; :default covers the rest.
-    fig_default = Makie.plot(dag; layout = :stress, labels = Dict(:default => "?"))
+    fig_default = Makie.plot(dag; layout = :stress, node_labels = Dict(:default => "?"))
     @test fig_default isa Makie.FigureAxisPlot
 end
 
@@ -698,7 +698,7 @@ end
     plt.curvature[] = 0.3
     @test length(plt.plots) == n_before
 
-    plt.labels[] = Dict(:A => "Treated")
+    plt.node_labels[] = Dict(:A => "Treated")
     @test length(plt.plots) == n_before
 end
 
@@ -740,7 +740,8 @@ end
     @test result isa Makie.FigureAxisPlot
 end
 
-@testitem "Makie.plot: elabels draws a text plot per labelled edge" tags = [:unit, :plot] begin
+@testitem "Makie.plot: edge_labels draws a text plot per labelled edge" tags =
+    [:unit, :plot] begin
     using Makie
     using NetworkLayout
 
@@ -748,93 +749,93 @@ end
     fig, ax, plt_none = Makie.plot(dag; layout = :stress)
     n_unlabelled = length(plt_none.plots)
 
-    # A scalar elabels value applies to every edge: 2 extra text plots.
-    fig2, ax2, plt_all = Makie.plot(dag; layout = :stress, elabels = "e")
+    # A scalar edge_labels value applies to every edge: 2 extra text plots.
+    fig2, ax2, plt_all = Makie.plot(dag; layout = :stress, edge_labels = "e")
     @test length(plt_all.plots) == n_unlabelled + 2
 
     # A Dict labels only the edges it names.
     fig3, ax3, plt_one =
-        Makie.plot(dag; layout = :stress, elabels = Dict((:A, :B) => "direct"))
+        Makie.plot(dag; layout = :stress, edge_labels = Dict((:A, :B) => "direct"))
     @test length(plt_one.plots) == n_unlabelled + 1
 
-    # elabel_color/elabel_fontsize/elabel_font accept scalars and Dicts too.
+    # edge_label_color/edge_label_fontsize/edge_label_font accept scalars and Dicts too.
     fig4 = Makie.plot(
         dag;
         layout = :stress,
-        elabels = "e",
-        elabel_color = Dict((:A, :B) => :red, :default => :black),
-        elabel_fontsize = 10.0,
-        elabel_font = :bold,
+        edge_labels = "e",
+        edge_label_color = Dict((:A, :B) => :red, :default => :black),
+        edge_label_fontsize = 10.0,
+        edge_label_font = :bold,
     )
     @test fig4 isa Makie.FigureAxisPlot
 end
 
-@testitem "Makie.plot: elabel_shift/elabel_distance move the label along/off the edge" tags =
+@testitem "Makie.plot: edge_label_shift/edge_label_distance move the label along/off the edge" tags =
     [:unit, :plot] begin
     using Makie
 
-    # A straight horizontal A --> B edge: the elabel Text plot is plots[3]
-    # (Lines, arrowhead Poly, Text), and its perpendicular offset is a pure
-    # y-shift while its along-edge position is a pure x-shift.
+    # A straight horizontal A --> B edge: the edge label Text plot is
+    # plots[3] (Lines, arrowhead Poly, Text), and its perpendicular offset is
+    # a pure y-shift while its along-edge position is a pure x-shift.
     dag = DAG(directed(:A, :B))
     label_pos(; kwargs...) =
-        Makie.plot(dag; layout = [(0.0, 0.0), (2.0, 0.0)], elabels = "e", kwargs...).plot.plots[3][1][][1]
+        Makie.plot(dag; layout = [(0.0, 0.0), (2.0, 0.0)], edge_labels = "e", kwargs...).plot.plots[3][1][][1]
 
-    # Higher elabel_shift moves the label further toward the destination.
-    x_early = label_pos(; elabel_shift = 0.25)[1]
-    x_late = label_pos(; elabel_shift = 0.75)[1]
+    # Higher edge_label_shift moves the label further toward the destination.
+    x_early = label_pos(; edge_label_shift = 0.25)[1]
+    x_late = label_pos(; edge_label_shift = 0.75)[1]
     @test x_late > x_early
 
-    # elabel_shift outside [0, 1] clamps rather than extrapolating past an
-    # endpoint.
-    @test label_pos(; elabel_shift = -1.0)[1] == label_pos(; elabel_shift = 0.0)[1]
-    @test label_pos(; elabel_shift = 2.0)[1] == label_pos(; elabel_shift = 1.0)[1]
+    # edge_label_shift outside [0, 1] clamps rather than extrapolating past
+    # an endpoint.
+    @test label_pos(; edge_label_shift = -1.0)[1] == label_pos(; edge_label_shift = 0.0)[1]
+    @test label_pos(; edge_label_shift = 2.0)[1] == label_pos(; edge_label_shift = 1.0)[1]
 
-    # A larger elabel_distance pushes the label further from the (horizontal)
-    # line, i.e. a bigger |y|.
-    y_near = abs(label_pos(; elabel_distance = 5.0)[2])
-    y_far = abs(label_pos(; elabel_distance = 50.0)[2])
+    # A larger edge_label_distance pushes the label further from the
+    # (horizontal) line, i.e. a bigger |y|.
+    y_near = abs(label_pos(; edge_label_distance = 5.0)[2])
+    y_far = abs(label_pos(; edge_label_distance = 50.0)[2])
     @test y_far > y_near
 
-    # With elabel_distance left as `nothing` (the default), the gap scales
-    # with elabel_fontsize instead of staying fixed.
-    y_small_font = abs(label_pos(; elabel_fontsize = 8.0)[2])
-    y_big_font = abs(label_pos(; elabel_fontsize = 40.0)[2])
+    # With edge_label_distance left as `nothing` (the default), the gap
+    # scales with edge_label_fontsize instead of staying fixed.
+    y_small_font = abs(label_pos(; edge_label_fontsize = 8.0)[2])
+    y_big_font = abs(label_pos(; edge_label_fontsize = 40.0)[2])
     @test y_big_font > y_small_font
 
     # Both accept a per-edge Dict too.
     fig = Makie.plot(
         dag;
         layout = [(0.0, 0.0), (2.0, 0.0)],
-        elabels = "e",
-        elabel_shift = Dict((:A, :B) => 0.75, :default => 0.5),
-        elabel_distance = Dict((:A, :B) => 20.0, :default => 10.0),
+        edge_labels = "e",
+        edge_label_shift = Dict((:A, :B) => 0.75, :default => 0.5),
+        edge_label_distance = Dict((:A, :B) => 20.0, :default => 10.0),
     )
     @test fig isa Makie.FigureAxisPlot
 end
 
-@testitem "Makie.plot: elabel_rotation overrides the default follow-the-edge angle" tags =
+@testitem "Makie.plot: edge_label_rotation overrides the default follow-the-edge angle" tags =
     [:unit, :plot] begin
     using Makie
 
-    # A vertical A --> B edge: the elabel Text plot is plots[3] (Lines,
+    # A vertical A --> B edge: the edge label Text plot is plots[3] (Lines,
     # arrowhead Poly, Text). Left at the default `nothing`, the label follows
-    # the edge's own (vertical) angle; `elabel_rotation` overrides it.
+    # the edge's own (vertical) angle; `edge_label_rotation` overrides it.
     dag = DAG(directed(:A, :B))
     rotation(; kwargs...) =
-        Makie.plot(dag; layout = [(0.0, 0.0), (0.0, 2.0)], elabels = "e", kwargs...).plot.plots[3].rotation[]
+        Makie.plot(dag; layout = [(0.0, 0.0), (0.0, 2.0)], edge_labels = "e", kwargs...).plot.plots[3].rotation[]
 
     # `rotation` is stored as a Quaternion; compare against `to_rotation` of
     # the expected angle rather than a raw Float32.
     @test rotation() != Makie.to_rotation(0.0f0)
-    @test rotation(; elabel_rotation = 0.0) == Makie.to_rotation(0.0f0)
+    @test rotation(; edge_label_rotation = 0.0) == Makie.to_rotation(0.0f0)
 
     # Accepts a per-edge Dict too.
     fig = Makie.plot(
         dag;
         layout = [(0.0, 0.0), (0.0, 2.0)],
-        elabels = "e",
-        elabel_rotation = Dict((:A, :B) => 0.0, :default => nothing),
+        edge_labels = "e",
+        edge_label_rotation = Dict((:A, :B) => 0.0, :default => nothing),
     )
     @test fig isa Makie.FigureAxisPlot
 end

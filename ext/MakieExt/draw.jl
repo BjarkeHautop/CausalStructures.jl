@@ -304,13 +304,13 @@ end
 # The Makie.plot/Makie.plot! recipe for a CausalGraph - see the Makie.plot
 # docstring below for the full keyword reference.
 #
-# `edge_color`/`elabel_color` inherit `linecolor`/`textcolor` from the active
-# Makie theme; `node_color`/`label_color` stay fixed so a themed textcolor
-# can't land on a same-color node fill.
+# `edge_color`/`edge_label_color` inherit `linecolor`/`textcolor` from the
+# active Makie theme; `node_color`/`node_label_color` stay fixed so a themed
+# textcolor can't land on a same-color node fill.
 Makie.@recipe CausalGraphPlot (graph,) begin
     layout = Makie.automatic
     layout_kwargs = (;)
-    labels = nothing
+    node_labels = nothing
     node_shape = :circle
     node_radius = nothing
     node_padding = 10.0
@@ -326,16 +326,16 @@ Makie.@recipe CausalGraphPlot (graph,) begin
     edge_linestyle = nothing
     curvature = nothing
     edge_paths = nothing
-    label_color = :black
-    label_fontsize = 14.0
-    label_font = :regular
-    elabels = nothing
-    elabel_color = @inherit textcolor :black
-    elabel_fontsize = 12.0
-    elabel_font = :regular
-    elabel_shift = 0.5
-    elabel_distance = nothing
-    elabel_rotation = nothing
+    node_label_color = :black
+    node_label_fontsize = 14.0
+    node_label_font = :regular
+    edge_labels = nothing
+    edge_label_color = @inherit textcolor :black
+    edge_label_fontsize = 12.0
+    edge_label_font = :regular
+    edge_label_shift = 0.5
+    edge_label_distance = nothing
+    edge_label_rotation = nothing
 end
 
 # The graph's topology (node/edge count, each edge's src_end/dst_end) is
@@ -351,7 +351,7 @@ function Makie.plot!(plot::CausalGraphPlot)
         cg,
         layout,
         layout_kwargs,
-        labels,
+        node_labels,
         node_shape,
         node_radius,
         node_padding,
@@ -367,16 +367,16 @@ function Makie.plot!(plot::CausalGraphPlot)
         edge_linestyle,
         curvature,
         edge_paths,
-        label_color,
-        label_fontsize,
-        label_font,
-        elabels,
-        elabel_color,
-        elabel_fontsize,
-        elabel_font,
-        elabel_shift,
-        elabel_distance,
-        elabel_rotation,
+        node_label_color,
+        node_label_fontsize,
+        node_label_font,
+        edge_labels,
+        edge_label_color,
+        edge_label_fontsize,
+        edge_label_font,
+        edge_label_shift,
+        edge_label_distance,
+        edge_label_rotation,
         viewport,
     )
         empty!(plot.plots)
@@ -416,9 +416,9 @@ function Makie.plot!(plot::CausalGraphPlot)
             )
         end
 
-        node_labels = [
-            labels === nothing ? string(nd) : _resolve_node(labels, nd, string(nd)) for
-            nd in node_names
+        label_texts = [
+            node_labels === nothing ? string(nd) :
+            _resolve_node(node_labels, nd, string(nd)) for nd in node_names
         ]
 
         # Text is fixed-pixel-sized regardless of zoom, so node sizes (data
@@ -439,10 +439,10 @@ function Makie.plot!(plot::CausalGraphPlot)
                 max.(
                     6.0f0,
                     _text_fit_pixel_size(
-                        node_labels[i],
+                        label_texts[i],
                         shapes[i],
-                        _resolve_node(label_fontsize, node_names[i], 14.0f0),
-                        _resolve_node(label_font, node_names[i], :regular),
+                        _resolve_node(node_label_fontsize, node_names[i], 14.0f0),
+                        _resolve_node(node_label_font, node_names[i], :regular),
                         node_padding,
                     ),
                 ) for i = 1:n
@@ -523,13 +523,16 @@ function Makie.plot!(plot::CausalGraphPlot)
                 linestyle = _resolve_edge(edge_linestyle, e, nothing),
             )
 
-            if elabels !== nothing && path !== nothing
-                text = _resolve_edge(elabels, e, nothing)
+            if edge_labels !== nothing && path !== nothing
+                text = _resolve_edge(edge_labels, e, nothing)
                 if text !== nothing
-                    resolved_elabel_fontsize =
-                        Float32(_resolve_edge(elabel_fontsize, e, 12.0f0))
-                    shift =
-                        clamp(Float32(_resolve_edge(elabel_shift, e, 0.5f0)), 0.0f0, 1.0f0)
+                    resolved_edge_label_fontsize =
+                        Float32(_resolve_edge(edge_label_fontsize, e, 12.0f0))
+                    shift = clamp(
+                        Float32(_resolve_edge(edge_label_shift, e, 0.5f0)),
+                        0.0f0,
+                        1.0f0,
+                    )
                     mid = _path_point_at_fraction(path, shift)
                     # Offset perpendicular to the path's local tangent (taken
                     # near `shift`, not always the midpoint) so the label
@@ -544,13 +547,13 @@ function Makie.plot!(plot::CausalGraphPlot)
                     perp = Point2f(-tan[2], tan[1])
                     # Scaled to the label's own fontsize by default, so it
                     # clears the line's stroke by roughly a full line height,
-                    # whatever the font size; `elabel_distance` overrides it.
-                    resolved_distance = _resolve_edge(elabel_distance, e, nothing)
+                    # whatever the font size; `edge_label_distance` overrides it.
+                    resolved_distance = _resolve_edge(edge_label_distance, e, nothing)
                     gap_px =
-                        resolved_distance === nothing ? resolved_elabel_fontsize :
+                        resolved_distance === nothing ? resolved_edge_label_fontsize :
                         Float32(resolved_distance)
                     pos = mid + (gap_px / px_per_data_unit) * perp
-                    resolved_rotation = _resolve_edge(elabel_rotation, e, nothing)
+                    resolved_rotation = _resolve_edge(edge_label_rotation, e, nothing)
                     Makie.text!(
                         plot,
                         pos[1],
@@ -559,9 +562,9 @@ function Makie.plot!(plot::CausalGraphPlot)
                         align = (:center, :center),
                         rotation = resolved_rotation === nothing ? _upright_angle(tan) :
                                    Float32(resolved_rotation),
-                        color = _resolve_edge(elabel_color, e, :black),
-                        fontsize = resolved_elabel_fontsize,
-                        font = _resolve_edge(elabel_font, e, :regular),
+                        color = _resolve_edge(edge_label_color, e, :black),
+                        fontsize = resolved_edge_label_fontsize,
+                        font = _resolve_edge(edge_label_font, e, :regular),
                     )
                 end
             end
@@ -581,11 +584,11 @@ function Makie.plot!(plot::CausalGraphPlot)
                 plot,
                 positions[i][1],
                 positions[i][2];
-                text = node_labels[i],
+                text = label_texts[i],
                 align = (:center, :center),
-                color = _resolve_node(label_color, nd, :black),
-                fontsize = Float32(_resolve_node(label_fontsize, nd, 14.0f0)),
-                font = _resolve_node(label_font, nd, :regular),
+                color = _resolve_node(node_label_color, nd, :black),
+                fontsize = Float32(_resolve_node(node_label_fontsize, nd, 14.0f0)),
+                font = _resolve_node(node_label_font, nd, :regular),
             )
         end
         return
@@ -601,7 +604,7 @@ function Makie.plot!(plot::CausalGraphPlot)
         plot.graph,
         plot.layout,
         plot.layout_kwargs,
-        plot.labels,
+        plot.node_labels,
         plot.node_shape,
         plot.node_radius,
         plot.node_padding,
@@ -617,16 +620,16 @@ function Makie.plot!(plot::CausalGraphPlot)
         plot.edge_linestyle,
         plot.curvature,
         plot.edge_paths,
-        plot.label_color,
-        plot.label_fontsize,
-        plot.label_font,
-        plot.elabels,
-        plot.elabel_color,
-        plot.elabel_fontsize,
-        plot.elabel_font,
-        plot.elabel_shift,
-        plot.elabel_distance,
-        plot.elabel_rotation,
+        plot.node_label_color,
+        plot.node_label_fontsize,
+        plot.node_label_font,
+        plot.edge_labels,
+        plot.edge_label_color,
+        plot.edge_label_fontsize,
+        plot.edge_label_font,
+        plot.edge_label_shift,
+        plot.edge_label_distance,
+        plot.edge_label_rotation,
         viewport;
         update = true,
     )
@@ -646,13 +649,13 @@ Every keyword below (except the figure-level ones noted last) is one of its
 reactive attributes, so e.g. `plt.node_color[] = :red` restyles the existing
 plot in place.
 
-Keyword arguments: `layout`, `layout_kwargs`, `labels`, `node_shape`,
+Keyword arguments: `layout`, `layout_kwargs`, `node_labels`, `node_shape`,
 `node_radius`, `node_padding`, `arrow_size`, `circle_size`, `node_color`,
 `node_strokecolor`, `node_strokewidth`, `node_linestyle`, `edge_color`,
 `arrow_fill`, `linewidth`, `edge_linestyle`, `curvature`, `edge_paths`,
-`label_color`, `label_fontsize`, `label_font`, `elabels`, `elabel_color`,
-`elabel_fontsize`, `elabel_font`, `elabel_shift`, `elabel_distance`,
-`elabel_rotation` are shared by both `plot` and
+`node_label_color`, `node_label_fontsize`, `node_label_font`, `edge_labels`,
+`edge_label_color`, `edge_label_fontsize`, `edge_label_font`, `edge_label_shift`,
+`edge_label_distance`, `edge_label_rotation` are shared by both `plot` and
 `plot!`. Style keywords accept either a scalar (applied to everything) or a `Dict` for
 per-node/per-edge overrides; a per-edge `Dict` may be keyed by a
 `CausalEdge`, a `(src, dst)` tuple, an edge-type symbol, or `:default`.
@@ -664,8 +667,8 @@ the chosen layout algorithm, e.g. `layout_kwargs = (; seed = 1)`.
 
 For a project-wide default, use a Makie theme, e.g.
 `Makie.set_theme!(CausalGraphPlot = (node_color = :lightblue,))`. `edge_color`
-and `elabel_color` also inherit the active theme's `linecolor`/`textcolor`;
-`node_color`/`label_color` stay fixed and should be set together if changed.
+and `edge_label_color` also inherit the active theme's `linecolor`/`textcolor`;
+`node_color`/`node_label_color` stay fixed and should be set together if changed.
 
 `edge_paths` can be used to override an edge's drawn route directly: a
 `Dict` (same keying as other per-edge overrides) from an edge to a vector
@@ -686,7 +689,7 @@ Makie.plot(dag; node_color = :lightblue, edge_color = :gray40)
 Makie.plot(dag; edge_color = Dict((:A, :X) => :red, :default => :black))
 Makie.plot(dag; edge_color = Dict(directed(:A, :X) => :red, :default => :black))
 Makie.plot(dag; node_shape = Dict(:A => :square, :default => :circle))
-Makie.plot(dag; node_shape = :rect, labels = Dict(:A => "Age at\\nbaseline"))
+Makie.plot(dag; node_shape = :rect, node_labels = Dict(:A => "Age at\\nbaseline"))
 Makie.plot(dag; curvature = Dict((:A, :Y) => 0.3))
 Makie.plot(dag; title = "My DAG", layout = :spring, layout_kwargs = (; seed = 1))
 

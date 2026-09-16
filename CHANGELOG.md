@@ -17,9 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   name as "every edge touching this node"; it now only matches a `CausalEdge`,
   a `(src, dst)` tuple, an edge-type symbol, or `:default`.
 
+- `plot`'s node-label keywords `labels`, `label_color`, `label_fontsize`, and `label_font`
+  are renamed to `node_labels`, `node_label_color`, `node_label_fontsize`, and
+  `node_label_font`, for consistency with the `node_*`/`edge_*` naming used elsewhere.
+
 ### New features
 
-- Support of Makie themes: `plot`'s `edge_color` and `elabel_color` now inherit the active Makie theme's
+- Support of Makie themes: `plot`'s `edge_color` and `edge_label_color` now inherit the active Makie theme's
   `linecolor`/`textcolor` when not given explicitly, so e.g.
   `Makie.set_theme!(Makie.theme_dark())` keeps edges and edge labels visible against a
   dark figure.
@@ -30,8 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `plot` gains `edge_linestyle`, styling an edge's own line (e.g. dashing `<->` edges to mark latent confounding, as is common in the literature).
 
-- `plot` gains `elabels`, `elabel_color`, `elabel_fontsize`, `elabel_font`, `elabel_shift`,
-  and `elabel_distance` for drawing text along each edge, following its own angle.
+- `plot` gains `edge_labels`, `edge_label_color`, `edge_label_fontsize`, `edge_label_font`,
+  `edge_label_shift`, and `edge_label_distance` for drawing text along each edge, following
+  its own angle.
 
 ## [0.6.0] - 2026-09-14
 
