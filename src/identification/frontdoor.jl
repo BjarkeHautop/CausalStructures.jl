@@ -208,6 +208,9 @@ _has_incoming_arrowhead(B::ADMGBackend, v::Int) =
 # Scratch buffers shared across the whole `_listfdsets!` recursion tree.
 # `_get_dep` is called once per remaining candidate at every recursion node.
 # Safe to share because every call fully consumes its buffers before returning.
+# `nr_mask`/`n_set` are dirty-tracked per BFS step via `nr_list`/`n_list`
+# (set true, used, reset false through the list) rather than `fill!`-ed over
+# the whole array every step, so a BFS step costs O(degree(u)), not O(n).
 struct _FDBuffers
     adj::Vector{Vector{Int}}
     pa_buf::Vector{Int}
@@ -221,6 +224,8 @@ struct _FDBuffers
     n_set::BitVector
     seeds::Vector{Int}
     t_mask::BitVector
+    nr_list::Vector{Int}
+    n_list::Vector{Int}
 end
 
 _FDBuffers(n::Int) = _FDBuffers(
@@ -236,6 +241,8 @@ _FDBuffers(n::Int) = _FDBuffers(
     falses(n),
     Int[],
     falses(n),
+    Int[],
+    Int[],
 )
 
 # GETDEP, Jeong, Tian & Bareinboim (2022) Algorithm 4, helper for Step 2 of
@@ -281,6 +288,11 @@ function _get_dep(
         end
     end
 
+    nr_mask = buf.nr_mask
+    n_mask = buf.n_set
+    nr_list = buf.nr_list
+    n_list = buf.n_list
+
     head = 1
     while head <= length(queue)
         u = queue[head]
@@ -288,40 +300,54 @@ function _get_dep(
 
         y_mask[u] && return nothing  # Y reachable => no valid Z' exists
 
-        # NR = unvisited neighbors of u in current M that are in R'
-        nr_mask = fill!(buf.nr_mask, false)
+        # NR = unvisited neighbors of u in current M that are in R'. Only
+        # adj[u] (u's actual neighbors) is relevant, so this is O(degree(u)).
+        empty!(nr_list)
         for w in adj[u]
-            (r_prime_mask[w] && !visited[w]) && (nr_mask[w] = true)
+            (r_prime_mask[w] && !visited[w] && !nr_mask[w]) || continue
+            nr_mask[w] = true
+            push!(nr_list, w)
         end
 
         # Update G'' (add NR to removed_mask) and recompute M
-        updated = false
-        for v = 1:n
-            if nr_mask[v]
+        if !isempty(nr_list)
+            for v in nr_list
                 removed_mask[v] = true
                 z_prime[v] = true
-                updated = true
             end
+            adj = _moral_adj_gx!(buf.adj, B, buf.an_mask, removed_mask, buf.pa_buf)
         end
-        updated && (adj = _moral_adj_gx!(buf.adj, B, buf.an_mask, removed_mask, buf.pa_buf))
 
-        # N' = unvisited neighbors of u in new M (includes latent nodes)
-        n_set = fill!(buf.n_set, false)
+        # N' = unvisited neighbors of u in the now-updated M (includes latent nodes)
+        empty!(n_list)
         for w in adj[u]
-            !visited[w] && (n_set[w] = true)
+            (!visited[w] && !n_mask[w]) || continue
+            n_mask[w] = true
+            push!(n_list, w)
         end
 
         # NR' = {w ∈ NR | w has an incoming arrow in G}; must also be BFS-ed
-        for v = 1:n
-            (nr_mask[v] && _has_incoming_arrowhead(B, v)) && (n_set[v] = true)
+        for v in nr_list
+            if _has_incoming_arrowhead(B, v) && !n_mask[v]
+                n_mask[v] = true
+                push!(n_list, v)
+            end
         end
 
         # Insert N = N' ∪ NR' into queue
-        for v = 1:n
-            if n_set[v] && !visited[v]
+        for v in n_list
+            if !visited[v]
                 visited[v] = true
                 push!(queue, v)
             end
+        end
+
+        # Reset the dirty masks for the next BFS step (only the touched entries).
+        for v in nr_list
+            nr_mask[v] = false
+        end
+        for v in n_list
+            n_mask[v] = false
         end
     end
 
