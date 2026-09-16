@@ -802,6 +802,192 @@ function _listfdsets!(
     r_mask[v] = true
 end
 
+# Threaded LISTFDSETS: fork the include/exclude recursion into independent
+# branches up front, each with its own `(i_mask, r_mask)` copy and its own
+# `_FDBuffers`/`_FD2ndBuffers`, then hand each to `_listfdsets!` unchanged.
+# Unlike `enumerate-subsets.jl`'s brute-force subset search, the size of this
+# search tree isn't knowable cheaply in advance (Steps 1-3 pruning can cut it
+# down to a handful of nodes or leave it exponential, depending on graph
+# structure, even for realistic sparse random DAGs), so there's no
+# candidate-count threshold to gate on the way `_SUBSET_SEARCH_PARALLEL_THRESHOLD`
+# does; `enumerate_dags`/`count_dags` (enumerate-dags.jl) face the same
+# "unknowable in advance" issue and use the same frontier pattern for the
+# same reason.
+
+# Branches per thread to fork, since front-door search subtrees can be wildly
+# uneven in size.
+const _FD_ENUM_FRONTIER_MULTIPLIER = 4
+
+# One branching step on copies of `(i_mask, r_mask)` rather than the shared
+# mutate-and-restore `_listfdsets!` uses, so each child can go to its own
+# task. Returns:
+# - `Tuple{BitVector,BitVector}[]` (empty) if Steps 1-3 prune this state
+#   entirely.
+# - `nothing` if this state is already a complete valid front-door set
+#   (`I == R`): kept in the frontier unexpanded; the eventual `_listfdsets!`
+#   dispatch re-derives the same Steps 1-3 result and emits it.
+# - the two child `(i_mask, r_mask)` states otherwise.
+function _fd_fork_children(
+    buf,
+    buf2,
+    gx,
+    xs,
+    B,
+    x_set,
+    y_mask,
+    i_mask,
+    r_mask,
+    cpg_children,
+)
+    n = length(B.nodes)
+
+    r_prime = _getcand2ndfdc(buf2, gx, xs, n, i_mask, r_mask)
+    r_prime === nothing && return Tuple{BitVector,BitVector}[]
+
+    r_dbl_prime = _getcand3rdfdc(buf, B, x_set, y_mask, i_mask, r_prime)
+    r_dbl_prime === nothing && return Tuple{BitVector,BitVector}[]
+
+    visited = fill!(buf.visited, false)
+    queue = empty!(buf.queue)
+    for v = 1:n
+        if x_set[v] && !visited[v]
+            visited[v] = true
+            push!(queue, v)
+        end
+    end
+    head = 1
+    while head <= length(queue)
+        u = queue[head]
+        head += 1
+        for c in cpg_children[u]
+            r_dbl_prime[c] && continue
+            y_mask[c] && return Tuple{BitVector,BitVector}[]
+            visited[c] && continue
+            visited[c] = true
+            push!(queue, c)
+        end
+    end
+
+    v = 0
+    for j = 1:n
+        if r_mask[j] && !i_mask[j]
+            v = j
+            break
+        end
+    end
+    v == 0 && return nothing
+
+    i1 = copy(i_mask)
+    i1[v] = true
+    r1 = copy(r_mask)
+
+    i2 = copy(i_mask)
+    r2 = copy(r_mask)
+    r2[v] = false
+
+    return [(i1, r1), (i2, r2)]
+end
+
+# Level-synchronized BFS over the fork tree, expanding until the frontier holds
+# at least `target` states or the whole tree is resolved (mirrors
+# `_dag_enum_frontier` in enumerate-dags.jl). BFS rather than DFS so uneven
+# subtrees can't leave one huge unexpanded sibling dominating a single task.
+function _fd_enum_frontier(
+    buf,
+    buf2,
+    gx,
+    xs,
+    B,
+    x_set,
+    y_mask,
+    cpg_children,
+    i_mask0,
+    r_mask0,
+    target::Int,
+)
+    frontier = [(i_mask0, r_mask0)]
+    while length(frontier) < target
+        next = similar(frontier, 0)
+        expanded_any = false
+        for (i_mask, r_mask) in frontier
+            children = _fd_fork_children(
+                buf,
+                buf2,
+                gx,
+                xs,
+                B,
+                x_set,
+                y_mask,
+                i_mask,
+                r_mask,
+                cpg_children,
+            )
+            if children === nothing
+                push!(next, (i_mask, r_mask))
+            elseif !isempty(children)
+                append!(next, children)
+                expanded_any = true
+            else
+                expanded_any = true
+            end
+        end
+        frontier = next
+        expanded_any || break
+    end
+    return frontier
+end
+
+function _all_frontdoor_sets_threaded(
+    gx,
+    xs,
+    B,
+    x_set,
+    y_mask,
+    i_mask,
+    r_mask,
+    cpg_children,
+)
+    n = length(B.nodes)
+    buf = _FDBuffers(n)
+    buf2 = _FD2ndBuffers(n)
+    frontier = _fd_enum_frontier(
+        buf,
+        buf2,
+        gx,
+        xs,
+        B,
+        x_set,
+        y_mask,
+        cpg_children,
+        i_mask,
+        r_mask,
+        _FD_ENUM_FRONTIER_MULTIPLIER * Threads.nthreads(),
+    )
+    isempty(frontier) && return Vector{Vector{Symbol}}()
+
+    nt = length(frontier)
+    per_task = [Vector{Vector{Symbol}}() for _ = 1:nt]
+    Threads.@threads for t = 1:nt
+        i_t, r_t = frontier[t]
+        buf_t = _FDBuffers(n)
+        buf2_t = _FD2ndBuffers(n)
+        _listfdsets!(
+            per_task[t],
+            buf_t,
+            buf2_t,
+            gx,
+            xs,
+            B,
+            x_set,
+            y_mask,
+            i_t,
+            r_t,
+            cpg_children,
+        )
+    end
+    return reduce(vcat, per_task)
+end
+
 """
     all_frontdoor_sets(cg::Union{DAG,ADMG}, x, y; include=[], restrict=nothing)
         -> Vector{Vector{Symbol}}
@@ -908,9 +1094,33 @@ function all_frontdoor_sets(
     gx = _build_gx(cg, x)
     _, cpg_children = _get_causal_path_graph(B, x_set, y_mask)
 
-    buf = _FDBuffers(n)
-    buf2 = _FD2ndBuffers(n)
-    results = Vector{Vector{Symbol}}()
-    _listfdsets!(results, buf, buf2, gx, xs, B, x_set, y_mask, i_mask, r_mask, cpg_children)
-    return results
+    if Threads.nthreads() == 1
+        buf = _FDBuffers(n)
+        buf2 = _FD2ndBuffers(n)
+        results = Vector{Vector{Symbol}}()
+        _listfdsets!(
+            results,
+            buf,
+            buf2,
+            gx,
+            xs,
+            B,
+            x_set,
+            y_mask,
+            i_mask,
+            r_mask,
+            cpg_children,
+        )
+        return results
+    end
+    return _all_frontdoor_sets_threaded(
+        gx,
+        xs,
+        B,
+        x_set,
+        y_mask,
+        i_mask,
+        r_mask,
+        cpg_children,
+    )
 end

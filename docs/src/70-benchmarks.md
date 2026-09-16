@@ -139,6 +139,8 @@ end
 
 !!! tip "Parallel search"
     [`count_dags`](@ref), [`enumerate_dags`](@ref), [`enumerate_mags`](@ref),
-    [`pagcauses`](@ref), and the whole `all_*_sets` family all parallelize
+    [`pagcauses`](@ref), and the whole `all_*_sets`[^1] family all parallelize
     their search across `Threads.nthreads()` automatically once the problem is
     large enough to benefit.
+
+[^1]: Except for [`all_iv_sets`](@ref), since the candidate check for IV is a trivial lookup, and thus not worth it.
