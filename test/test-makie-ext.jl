@@ -60,6 +60,42 @@ end
     @test fig_fallback isa Makie.FigureAxisPlot
 end
 
+@testitem "Makie.plot: edge_color/elabel_color inherit the active Makie theme, node_color/label_color don't" tags =
+    [:unit, :plot] begin
+    using Makie
+    using NetworkLayout
+
+    dag = DAG(directed(:A, :B))
+
+    _, _, plt_default = Makie.plot(dag; layout = :stress)
+    @test plt_default.edge_color[] == :black
+    @test plt_default.elabel_color[] == :black
+    @test plt_default.node_color[] == :white
+    @test plt_default.label_color[] == :black
+
+    Makie.with_theme(Makie.theme_black()) do
+        # `linecolor`/`textcolor`-backed marks pick up the dark theme...
+        _, _, plt_black = Makie.plot(dag; layout = :stress)
+        @test plt_black.edge_color[] == :white
+        @test plt_black.elabel_color[] == :white
+
+        # ...but node fill/label stay fixed, so a label is never rendered
+        # in the same color as the node it sits on.
+        @test plt_black.node_color[] == :white
+        @test plt_black.label_color[] == :black
+
+        # An explicit color still overrides the inherited theme color.
+        _, _, plt_override = Makie.plot(dag; layout = :stress, edge_color = :red)
+        @test plt_override.edge_color[] == :red
+    end
+
+    # Reverts once the theme block exits.
+    _, _, plt_after = Makie.plot(dag; layout = :stress)
+    @test plt_after.edge_color[] == :black
+    @test plt_after.node_color[] == :white
+    @test plt_after.label_color[] == :black
+end
+
 @testitem "Makie.plot: title options" tags = [:unit, :plot] begin
     using Makie
     using NetworkLayout

@@ -62,6 +62,11 @@ For a project-wide default you can use a
 Makie.set_theme!(CausalGraphPlot = (node_color = :lightblue, linewidth = 2))
 ```
 
+`edge_color`/`elabel_color` also pick up the active theme's
+`linecolor`/`textcolor`; `node_color`/`label_color` stay fixed and should be
+set together if you want a dark node/label pairing, e.g.
+`Makie.set_theme!(CausalGraphPlot = (node_color = :gray10, label_color = :white))`.
+
 ## [Layout](@id plot-layouts)
 
 The `layout` keyword controls node placement and defaults to `:sugiyama:` for a DAG if Sugiyama.jl is loaded, else `:stress`.

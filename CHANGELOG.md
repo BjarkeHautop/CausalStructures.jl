@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+- Support of Makie themes: `plot`'s `edge_color` and `elabel_color` now inherit the active Makie theme's
+  `linecolor`/`textcolor` when not given explicitly, so e.g.
+  `Makie.set_theme!(Makie.theme_dark())` keeps edges and edge labels visible against a
+  dark figure.
+
 - Automatic edge routing via dummy nodes (from Sugiyama) now work with `stretch_to_fig=true`.
 
 - Implement idp and cidp for identifying causal effects from PAGs (Jaber et al. 2022), generalizing id/idc from ADMGs.

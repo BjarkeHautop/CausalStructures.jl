@@ -303,36 +303,38 @@ end
 
 # The Makie.plot/Makie.plot! recipe for a CausalGraph - see the Makie.plot
 # docstring below for the full keyword reference.
-Makie.@recipe(CausalGraphPlot, graph) do scene
-    Makie.Attributes(
-        layout = Makie.automatic,
-        layout_kwargs = (;),
-        labels = nothing,
-        node_shape = :circle,
-        node_radius = nothing,
-        node_padding = 10.0,
-        arrow_size = nothing,
-        circle_size = nothing,
-        node_color = :white,
-        node_strokecolor = :black,
-        node_strokewidth = 2.0,
-        node_linestyle = nothing,
-        edge_color = :black,
-        arrow_fill = nothing,
-        linewidth = 1.5,
-        edge_linestyle = nothing,
-        curvature = nothing,
-        edge_paths = nothing,
-        label_color = :black,
-        label_fontsize = 14.0,
-        label_font = :regular,
-        elabels = nothing,
-        elabel_color = :black,
-        elabel_fontsize = 12.0,
-        elabel_font = :regular,
-        elabel_shift = 0.5,
-        elabel_distance = nothing,
-    )
+#
+# `edge_color`/`elabel_color` inherit `linecolor`/`textcolor` from the active
+# Makie theme; `node_color`/`label_color` stay fixed so a themed textcolor
+# can't land on a same-color node fill.
+Makie.@recipe CausalGraphPlot (graph,) begin
+    layout = Makie.automatic
+    layout_kwargs = (;)
+    labels = nothing
+    node_shape = :circle
+    node_radius = nothing
+    node_padding = 10.0
+    arrow_size = nothing
+    circle_size = nothing
+    node_color = :white
+    node_strokecolor = :black
+    node_strokewidth = 2.0
+    node_linestyle = nothing
+    edge_color = @inherit linecolor :black
+    arrow_fill = nothing
+    linewidth = 1.5
+    edge_linestyle = nothing
+    curvature = nothing
+    edge_paths = nothing
+    label_color = :black
+    label_fontsize = 14.0
+    label_font = :regular
+    elabels = nothing
+    elabel_color = @inherit textcolor :black
+    elabel_fontsize = 12.0
+    elabel_font = :regular
+    elabel_shift = 0.5
+    elabel_distance = nothing
 end
 
 # The graph's topology (node/edge count, each edge's src_end/dst_end) is
@@ -656,7 +658,9 @@ the chosen layout algorithm, e.g. `layout_kwargs = (; seed = 1)`.
 `fig_size`, `stretch_to_fig_size` only apply to `Makie.plot`.
 
 For a project-wide default, use a Makie theme, e.g.
-`Makie.set_theme!(CausalGraphPlot = (node_color = :lightblue,))`.
+`Makie.set_theme!(CausalGraphPlot = (node_color = :lightblue,))`. `edge_color`
+and `elabel_color` also inherit the active theme's `linecolor`/`textcolor`;
+`node_color`/`label_color` stay fixed and should be set together if changed.
 
 `edge_paths` can be used to override an edge's drawn route directly: a
 `Dict` (same keying as other per-edge overrides) from an edge to a vector
