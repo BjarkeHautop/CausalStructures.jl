@@ -211,6 +211,9 @@ _has_incoming_arrowhead(B::ADMGBackend, v::Int) =
 # `nr_mask`/`n_set` are dirty-tracked per BFS step via `nr_list`/`n_list`
 # (set true, used, reset false through the list) rather than `fill!`-ed over
 # the whole array every step, so a BFS step costs O(degree(u)), not O(n).
+# `visited`/`queue` are also reused by `_listfdsets!`'s own Step-3 CPG BFS
+# (and `frontdoor_set`'s): by the time that runs, `_get_dep` has already
+# returned (from inside `_getcand3rdfdc`) and is done with them for this call.
 struct _FDBuffers
     adj::Vector{Vector{Int}}
     pa_buf::Vector{Int}
@@ -226,6 +229,7 @@ struct _FDBuffers
     t_mask::BitVector
     nr_list::Vector{Int}
     n_list::Vector{Int}
+    r_dbl_prime_buf::BitVector
 end
 
 _FDBuffers(n::Int) = _FDBuffers(
@@ -243,6 +247,7 @@ _FDBuffers(n::Int) = _FDBuffers(
     falses(n),
     Int[],
     Int[],
+    falses(n),
 )
 
 # GETDEP, Jeong, Tian & Bareinboim (2022) Algorithm 4, helper for Step 2 of
@@ -447,7 +452,8 @@ function _getcand3rdfdc(
     r_prime_mask::BitVector,
 )
     n = length(B.nodes)
-    r_dbl_prime = copy(r_prime_mask)
+    r_dbl_prime = buf.r_dbl_prime_buf
+    r_dbl_prime .= r_prime_mask
     t_mask = buf.t_mask
     for v = 1:n
         r_prime_mask[v] || continue
@@ -473,6 +479,7 @@ struct _FD2ndBuffers
     visited::BitMatrix
     queue::Vector{Tuple{Int,Int}}
     reached::BitVector
+    r_prime_buf::BitVector
 end
 
 _FD2ndBuffers(n::Int) = _FD2ndBuffers(
@@ -482,6 +489,7 @@ _FD2ndBuffers(n::Int) = _FD2ndBuffers(
     falses(n),
     falses(n, 2),
     Tuple{Int,Int}[],
+    falses(n),
     falses(n),
 )
 
@@ -532,7 +540,8 @@ function _getcand2ndfdc(
     i_mask::BitVector,
     r_mask::BitVector,
 )
-    r_prime = copy(r_mask)
+    r_prime = buf.r_prime_buf
+    r_prime .= r_mask
     for v = 1:n
         r_mask[v] || continue
         if !_testsep!(buf, gx, xs, v)
@@ -675,8 +684,8 @@ function frontdoor_set(
     # R'' blocks all directed X --> Y paths iff Y is not reachable from X in CPG
     # after treating R'' nodes as walls.
     _, cpg_children = _get_causal_path_graph(B, x_set, y_mask)
-    visited = falses(n)
-    queue = Int[]
+    visited = fill!(buf.visited, false)
+    queue = empty!(buf.queue)
     for xi in xs
         if !visited[xi]
             visited[xi] = true
@@ -725,8 +734,8 @@ function _listfdsets!(
     r_dbl_prime === nothing && return
 
     # Step 3: condition 1 — R'' must block all directed X --> Y paths in CPG
-    visited = falses(n)
-    queue = Int[]
+    visited = fill!(buf.visited, false)
+    queue = empty!(buf.queue)
     for v = 1:n
         if x_set[v] && !visited[v]
             visited[v] = true
