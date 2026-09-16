@@ -42,7 +42,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `edge_label_shift`, and `edge_label_distance` for drawing text along each edge, following
   its own angle.
 
-- `uniform_dag` gains a `counts` keyword (paired with the new `uniform_dag_counts`) to reuse a precomputed DP table across repeated draws at the same `n` (or smaller).
+- `uniform_dag` gains a `counts` keyword (paired with the new
+  `uniform_dag_counts`) to reuse a precomputed DP table across repeated
+  draws at the same `n` (or smaller).
+
+### Performance improvements
+
+- Improved performance of `all_frontdoor_sets`/`frontdoor_set` by reusing scratch buffers
+  across recursive calls and scanning only each node's actual neighbors.
+- Improved performance of `all_iv_sets` by testing membership per candidate node instead
+  of per combinatorial subset.
+- Improved performance of `possible_joint_parent_sets`/`possible_parent_sets` by avoiding
+  an expensive graph rebuild-and-validate per candidate orientation.
+- Improved performance of `condition_marginalize` and `ag_to_mag` by using a single-pass
+  separator-existence check instead of `minimal_separator`'s full two-pass search.
 
 ## [0.6.0] - 2026-09-14
 
