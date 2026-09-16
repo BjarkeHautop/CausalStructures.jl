@@ -171,9 +171,8 @@ Each edge style argument accepts either a scalar or a `Dict` keyed by (and follo
 
  1. a `CausalEdge` for one exact edge, e.g. `bidirected(:X, :Y)`
  2. a `(src, dst)` tuple for the node pair, in either order
- 3. a node name (`Symbol`), applying to every edge touching that node
- 4. an edge-type symbol (`:directed`, `:undirected`, `:bidirected`, `:partially_directed`, `:partially_undirected`, `:partial`)
- 5. `:default` as a fallback
+ 3. an edge-type symbol (`:directed`, `:undirected`, `:bidirected`, `:partially_directed`, `:partially_undirected`, `:partial`)
+ 4. `:default` as a fallback
 
 | Keyword          | Default   | Controls               |
 | ---------------- | --------- | ----------------------- |
@@ -321,8 +320,7 @@ plot(dag;
 
 Each edge label style argument accepts either a scalar or a `Dict` for
 per-edge overrides, using the same keying rules as other edge styling (a
-`CausalEdge`, a `(src, dst)` tuple, a node name, an edge-type symbol, or
-`:default`).
+`CausalEdge`, a `(src, dst)` tuple, an edge-type symbol, or `:default`).
 
 | Keyword            | Default    | Controls                                              |
 | ------------------- | ---------- | ------------------------------------------------------ |

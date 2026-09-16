@@ -184,38 +184,6 @@ end
     @test xs2 == [-2.0f0, 2.0f0]
 end
 
-@testitem "Makie.plot: node-wide edge_color/arrow_fill Dict overrides every edge touching a node" tags =
-    [:unit, :plot] begin
-    using Makie
-    using NetworkLayout
-
-    ext = Base.get_extension(CausalStructures, :MakieExt)
-    e_ax = CausalStructures.directed(:A, :X)
-    e_ay = CausalStructures.directed(:A, :Y)
-    e_xy = CausalStructures.directed(:X, :Y)
-
-    val = Dict(:A => :red, :default => :black)
-    # Both edges touching A resolve to the node-wide override...
-    @test ext._resolve_edge(val, e_ax, :fallback) == :red
-    @test ext._resolve_edge(val, e_ay, :fallback) == :red
-    # ...an edge not touching A falls through to :default.
-    @test ext._resolve_edge(val, e_xy, :fallback) == :black
-
-    # A specific (src, dst) pair still wins over a node-wide override.
-    val_pair = Dict((:A, :X) => :blue, :A => :red, :default => :black)
-    @test ext._resolve_edge(val_pair, e_ax, :fallback) == :blue
-    @test ext._resolve_edge(val_pair, e_ay, :fallback) == :red
-
-    # A reserved edge-type symbol is never treated as a node-wide key, even
-    # if a node happens to share its name.
-    val_type = Dict(:directed => :green, :default => :black)
-    @test ext._resolve_edge(val_type, e_ax, :fallback) == :green
-
-    dag = DAG(e_ax, e_ay, e_xy)
-    fig = Makie.plot(dag; layout = :stress, edge_color = val)
-    @test fig isa Makie.FigureAxisPlot
-end
-
 @testitem "Makie.plot: arrow_fill defaults to edge color and accepts hollow arrowheads" tags =
     [:unit, :plot] begin
     using Makie
@@ -591,8 +559,8 @@ end
     @test ext._resolve_edge(val, e_dir, :fallback) == :red
     @test ext._resolve_edge(val, CausalStructures.directed(:Y, :X), :fallback) == :blue
 
-    # An exact edge outranks the pair, the node, and the type.
-    val = Dict(e_bi => :crimson, (:X, :Y) => :red, :X => :green, :bidirected => :navy)
+    # An exact edge outranks the pair and the type.
+    val = Dict(e_bi => :crimson, (:X, :Y) => :red, :bidirected => :navy)
     @test ext._resolve_edge(val, e_bi, :fallback) == :crimson
 end
 
@@ -618,8 +586,8 @@ end
     @test ext._resolve_edge(val, CausalStructures.directed(:X, :Y), :fallback) == :red
     @test ext._resolve_edge(val, CausalStructures.bidirected(:X, :Y), :fallback) == :red
 
-    # A tuple in either order still outranks a node-wide key.
-    val = Dict((:X, :A) => :blue, :A => :red, :default => :black)
+    # A tuple still outranks the type and the default.
+    val = Dict((:A, :X) => :blue, :directed => :red, :default => :black)
     @test ext._resolve_edge(val, e_ax, :fallback) == :blue
 end
 

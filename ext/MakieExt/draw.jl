@@ -254,17 +254,8 @@ function _edge_type(e::CausalEdge)
     return :unknown
 end
 
-const _EDGE_TYPE_SYMBOLS = (
-    :directed,
-    :undirected,
-    :bidirected,
-    :partially_directed,
-    :partially_undirected,
-    :partial,
-)
-
 # Resolve a per-edge style attribute: a scalar, or a Dict keyed by CausalEdge,
-# (src, dst) tuple, node name, edge type, or :default, most specific first.
+# (src, dst) tuple, edge type, or :default, most specific first.
 function _resolve_edge(val, e::CausalEdge, fallback)
     val isa AbstractDict || return val
     haskey(val, e) && return val[e]
@@ -272,12 +263,6 @@ function _resolve_edge(val, e::CausalEdge, fallback)
     haskey(val, key) && return val[key]
     rev = (e.dst, e.src)
     haskey(val, rev) && return val[rev]
-    if !(e.dst in _EDGE_TYPE_SYMBOLS) && haskey(val, e.dst)
-        return val[e.dst]
-    end
-    if !(e.src in _EDGE_TYPE_SYMBOLS) && haskey(val, e.src)
-        return val[e.src]
-    end
     key = _edge_type(e)
     haskey(val, key) && return val[key]
     haskey(val, :default) && return val[:default]
@@ -663,8 +648,8 @@ Keyword arguments: `layout`, `layout_kwargs`, `labels`, `node_shape`,
 shared by both `plot` and
 `plot!`. Style keywords accept either a scalar (applied to everything) or a `Dict` for
 per-node/per-edge overrides; a per-edge `Dict` may be keyed by a
-`CausalEdge`, a `(src, dst)` tuple, a node name, an edge-type symbol, or
-`:default`. `layout_kwargs` is a `NamedTuple` of extra keywords forwarded to
+`CausalEdge`, a `(src, dst)` tuple, an edge-type symbol, or `:default`.
+`layout_kwargs` is a `NamedTuple` of extra keywords forwarded to
 the chosen layout algorithm, e.g. `layout_kwargs = (; seed = 1)`.
 
 `title`, `title_fontsize`, `title_color`, `title_gap`, `outer_margin`,

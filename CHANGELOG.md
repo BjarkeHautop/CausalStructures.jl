@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   longer configurable via `Preferences.jl`. Instead, set a project-wide default with a Makie theme,
   e.g. `Makie.set_theme!(CausalGraphPlot = (node_color = :lightblue,))`.
 
+- A per-edge style `Dict` (e.g. `edge_color`) no longer treats a bare node
+  name as "every edge touching this node"; it now only matches a `CausalEdge`,
+  a `(src, dst)` tuple, an edge-type symbol, or `:default`.
+
 ### New features
 
 - Automatic edge routing via dummy nodes (from Sugiyama) now work with `stretch_to_fig=true`.
