@@ -35,6 +35,18 @@ end
 
 const _makie_ext = Base.get_extension(CausalStructures, :MakieExt)
 
+# `Makie.@recipe` attaches its auto-generated docstrings (for `CausalGraphPlot`,
+# `causalgraphplot`, `causalgraphplot!`) from inside Makie's own source, so
+# Documenter needs an explicit remote to build their source links - CI runners
+# can't always auto-detect this via the package registry the way a local
+# checkout can.
+const _makie_remotes = Dict(
+    pkgdir(_makie_ext.Makie) => (
+        Documenter.Remotes.GitHub("MakieOrg", "Makie.jl"),
+        "v$(pkgversion(_makie_ext.Makie))",
+    ),
+)
+
 DocMeta.setdocmeta!(
     CausalStructures,
     :DocTestSetup,
@@ -120,6 +132,7 @@ makedocs(;
     checkdocs_ignored_modules = [_makie_ext],
     authors = "Bjarke Hautop Kristensen <bjarke.hautop@gmail.com>",
     repo = "https://github.com/BjarkeHautop/CausalStructures.jl/blob/{commit}{path}#{line}",
+    remotes = _makie_remotes,
     sitename = "CausalStructures.jl",
     format = Documenter.HTML(;
         canonical = "https://BjarkeHautop.github.io/CausalStructures.jl",
