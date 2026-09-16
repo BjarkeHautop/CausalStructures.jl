@@ -301,13 +301,6 @@ function _resolve_node(val, node::Symbol, fallback)
     return fallback
 end
 
-"""
-    causalgraphplot(cg::CausalGraph; kwargs...) -> CausalGraphPlot
-    causalgraphplot!(ax, cg::CausalGraph; kwargs...) -> CausalGraphPlot
-
-Recipe-native aliases for [`Makie.plot`](@ref)/`Makie.plot!` on a
-[`CausalGraph`](@ref); see that docstring for the full keyword reference.
-"""
 Makie.@recipe CausalGraphPlot (graph,) begin
     """Node position layout: `Makie.automatic`, a layout method `Symbol` (see [`layout`](@ref)), or precomputed positions."""
     layout = Makie.automatic
@@ -374,6 +367,14 @@ The [`Makie.@recipe`](https://docs.makie.org/stable/explanations/recipes)
 plot type backing [`causalgraphplot`](@ref)/`causalgraphplot!`.
 """
 CausalGraphPlot
+
+"""
+    causalgraphplot(cg::CausalGraph; kwargs...) -> CausalGraphPlot
+
+Recipe-native alias for [`Makie.plot`](@ref) on a [`CausalGraph`](@ref); see
+that docstring for the full keyword reference.
+"""
+causalgraphplot
 
 """
     causalgraphplot!(ax, cg::CausalGraph; kwargs...) -> CausalGraphPlot
