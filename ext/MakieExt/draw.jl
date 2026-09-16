@@ -301,6 +301,13 @@ function _resolve_node(val, node::Symbol, fallback)
     return fallback
 end
 
+"""
+    causalgraphplot(cg::CausalGraph; kwargs...) -> CausalGraphPlot
+    causalgraphplot!(ax, cg::CausalGraph; kwargs...) -> CausalGraphPlot
+
+Recipe-native aliases for [`Makie.plot`](@ref)/`Makie.plot!` on a
+[`CausalGraph`](@ref); see that docstring for the full keyword reference.
+"""
 Makie.@recipe CausalGraphPlot (graph,) begin
     """Node position layout: `Makie.automatic`, a layout method `Symbol` (see [`layout`](@ref)), or precomputed positions."""
     layout = Makie.automatic
@@ -359,29 +366,6 @@ Makie.@recipe CausalGraphPlot (graph,) begin
     """Edge label rotation angle; defaults to following the edge's local tangent."""
     edge_label_rotation = nothing
 end
-
-"""
-    CausalGraphPlot
-
-The [`Makie.@recipe`](https://docs.makie.org/stable/explanations/recipes)
-plot type backing [`causalgraphplot`](@ref)/`causalgraphplot!`.
-"""
-CausalGraphPlot
-
-"""
-    causalgraphplot(cg::CausalGraph; kwargs...) -> CausalGraphPlot
-
-Recipe-native alias for [`Makie.plot`](@ref) on a [`CausalGraph`](@ref); see
-that docstring for the full keyword reference.
-"""
-causalgraphplot
-
-"""
-    causalgraphplot!(ax, cg::CausalGraph; kwargs...) -> CausalGraphPlot
-
-The mutating variant of [`causalgraphplot`](@ref).
-"""
-causalgraphplot!
 
 # The graph's topology (node/edge count, each edge's src_end/dst_end) is
 # fixed for this plot's lifetime, so the set of child subplots never changes;
