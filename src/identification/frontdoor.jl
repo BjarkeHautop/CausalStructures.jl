@@ -493,39 +493,52 @@ _FD2ndBuffers(n::Int) = _FD2ndBuffers(
     falses(n),
 )
 
-_reachable_single!(buf::_FD2ndBuffers, B::DAGBackend, seed::Int) = _reachable_dag_single!(
-    buf.visited,
-    buf.queue,
-    buf.reached,
-    B,
-    seed,
-    buf.an_mask,
-    buf.z_mask,
-)
-_reachable_single!(buf::_FD2ndBuffers, B::ADMGBackend, seed::Int) = _reachable_admg_single!(
-    buf.visited,
-    buf.queue,
-    buf.reached,
-    B,
-    seed,
-    buf.an_mask,
-    buf.z_mask,
-)
+# Spouses of `v`, or nothing for a DAGBackend.
+_maybe_spouses_slice(::DAGBackend, ::Int) = ()
+_maybe_spouses_slice(B::ADMGBackend, v::Int) = _spouses_slice(B, v)
 
-# TESTSEP(G_X, X, v, ∅): X ⊥ v | ∅ in G_X. Equivalent to d_separated/m_separated
-# with an empty conditioning set, computed via a per-xi single-seed reachability
-# (valid since reachability from a seed set is the union of per-seed reachability).
-function _testsep!(buf::_FD2ndBuffers, gx::Union{DAG,ADMG}, xs::Vector{Int}, v::Int)
-    B = gx.backend
-    empty!(buf.seeds)
-    append!(buf.seeds, xs)
-    push!(buf.seeds, v)
-    _ancestors_bitmask!(buf.an_mask, buf.an_stack, B, buf.seeds)
-    for xi in xs
-        reached = _reachable_single!(buf, B, xi)
-        reached[v] && return false
+# Reachability from all of `xs` at once (in G_X, empty conditioning set),
+# reusing `_FD2ndBuffers`' single-seed scratch matrix/queue/mask. A backdoor
+# path from X to some v exists iff v is in the returned set.
+function _reachable_from_x!(
+    buf::_FD2ndBuffers,
+    B::Union{DAGBackend,ADMGBackend},
+    xs::Vector{Int},
+)
+    visited = fill!(buf.visited, false)
+    q = empty!(buf.queue)
+    a_mask = buf.an_mask
+    z_mask = buf.z_mask
+    for x in xs
+        a_mask[x] || continue
+        for m = 1:2
+            if !visited[x, m]
+                visited[x, m] = true
+                push!(q, (x, m))
+            end
+        end
     end
-    return true
+    head = 1
+    while head <= length(q)
+        v, in_m = q[head]
+        head += 1
+        v_in_z = z_mask[v]
+        for p in _parents_slice(B, v)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, p, 1)
+        end
+        for c in _children_slice(B, v)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 1, c, 2)
+        end
+        for s in _maybe_spouses_slice(B, v)
+            _relax_mixed!(q, visited, a_mask, v_in_z, in_m, 2, s, 2)
+        end
+    end
+    reached = fill!(buf.reached, false)
+    n = size(visited, 1)
+    for v = 1:n
+        reached[v] = visited[v, 1] || visited[v, 2]
+    end
+    return reached
 end
 
 # GETCAND2NDFDC, Jeong, Tian & Bareinboim (2022), Step 1 of FindFDSet. Returns
@@ -540,11 +553,20 @@ function _getcand2ndfdc(
     i_mask::BitVector,
     r_mask::BitVector,
 )
+    B = gx.backend
+    seeds = empty!(buf.seeds)
+    append!(seeds, xs)
+    for v = 1:n
+        r_mask[v] && push!(seeds, v)
+    end
+    _ancestors_bitmask!(buf.an_mask, buf.an_stack, B, seeds)
+    reached = _reachable_from_x!(buf, B, xs)
+
     r_prime = buf.r_prime_buf
     r_prime .= r_mask
     for v = 1:n
         r_mask[v] || continue
-        if !_testsep!(buf, gx, xs, v)
+        if reached[v]
             if i_mask[v]
                 return nothing  # v ∈ I must be included but has a backdoor path
             end
