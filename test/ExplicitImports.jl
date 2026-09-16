@@ -16,6 +16,10 @@
     # The plotting extensions necessarily reach into non-public recipe/theming
     # internals of Makie (e.g. `current_default_theme`, `text_bb`, `plottype`) and
     # into our own underscore-prefixed extension points (e.g. `_layout_impl`).
+    #
+    # `default_rng`, `get_extension`, and `Iterators.reverse` were only declared
+    # `public` (rather than merely exported) starting in Julia 1.11, so they must
+    # stay ignored to keep this check passing on the LTS (1.10) release too.
     ignore_names = (
         :Arrow,
         :Automatic,
@@ -26,8 +30,11 @@
         :_layout_edge_paths_impl,
         :_layout_impl,
         :automatic,
+        :default_rng,
+        :get_extension,
         :layout,
         :plottype,
+        :reverse,
         :text_bb,
         :validate,
     )
