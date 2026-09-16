@@ -11,6 +11,7 @@ on:
     paths:
       - "src/**"
       - "trim-check/**"
+      - "ext/**"
       - "*.toml"
   workflow_dispatch:
 

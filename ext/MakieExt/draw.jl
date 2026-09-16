@@ -301,6 +301,13 @@ function _resolve_node(val, node::Symbol, fallback)
     return fallback
 end
 
+"""
+    causalgraphplot(cg::CausalGraph; kwargs...) -> CausalGraphPlot
+    causalgraphplot!(ax, cg::CausalGraph; kwargs...) -> CausalGraphPlot
+
+Recipe-native aliases for [`Makie.plot`](@ref)/`Makie.plot!` on a
+[`CausalGraph`](@ref); see that docstring for the full keyword reference.
+"""
 Makie.@recipe CausalGraphPlot (graph,) begin
     """Node position layout: `Makie.automatic`, a layout method `Symbol` (see [`layout`](@ref)), or precomputed positions."""
     layout = Makie.automatic
@@ -359,29 +366,6 @@ Makie.@recipe CausalGraphPlot (graph,) begin
     """Edge label rotation angle; defaults to following the edge's local tangent."""
     edge_label_rotation = nothing
 end
-
-"""
-    CausalGraphPlot
-
-The [`Makie.@recipe`](https://docs.makie.org/stable/explanations/recipes)
-plot type backing [`causalgraphplot`](@ref)/`causalgraphplot!`.
-"""
-CausalGraphPlot
-
-"""
-    causalgraphplot(cg::CausalGraph; kwargs...) -> CausalGraphPlot
-
-Recipe-native alias for [`Makie.plot`](@ref) on a [`CausalGraph`](@ref); see
-that docstring for the full keyword reference.
-"""
-causalgraphplot
-
-"""
-    causalgraphplot!(ax, cg::CausalGraph; kwargs...) -> CausalGraphPlot
-
-The mutating variant of [`causalgraphplot`](@ref).
-"""
-causalgraphplot!
 
 # The graph's topology (node/edge count, each edge's src_end/dst_end) is
 # fixed for this plot's lifetime, so the set of child subplots never changes;
@@ -694,18 +678,13 @@ Every keyword below (except the figure-level ones noted last) is one of its
 reactive attributes, so e.g. `plt.node_color[] = :red` restyles the existing
 plot in place.
 
-Keyword arguments: `layout`, `layout_kwargs`, `node_labels`, `node_shape`,
-`node_radius`, `node_padding`, `arrow_size`, `circle_size`, `node_color`,
-`node_strokecolor`, `node_strokewidth`, `node_linestyle`, `edge_color`,
-`arrow_fill`, `linewidth`, `edge_linestyle`, `curvature`, `edge_paths`,
-`node_label_color`, `node_label_fontsize`, `node_label_font`, `edge_labels`,
-`edge_label_color`, `edge_label_fontsize`, `edge_label_font`, `edge_label_shift`,
-`edge_label_distance`, `edge_label_rotation` are shared by both `plot` and
-`plot!`. Style keywords accept either a scalar (applied to everything) or a `Dict` for
-per-node/per-edge overrides; a per-edge `Dict` may be keyed by a
-`CausalEdge`, a `(src, dst)` tuple, an edge-type symbol, or `:default`.
-`layout_kwargs` is a `NamedTuple` of extra keywords forwarded to
-the chosen layout algorithm, e.g. `layout_kwargs = (; seed = 1)`.
+See [`causalgraphplot`](@ref) for the full list of attributes, all of which
+are shared by both `plot` and `plot!`. Style keywords accept either a scalar
+(applied to everything) or a `Dict` for per-node/per-edge overrides; a
+per-edge `Dict` may be keyed by a `CausalEdge`, a `(src, dst)` tuple, an
+edge-type symbol, or `:default`. `layout_kwargs` is a `NamedTuple` of extra
+keywords forwarded to the chosen layout algorithm, e.g.
+`layout_kwargs = (; seed = 1)`.
 
 `title`, `title_fontsize`, `title_color`, `title_gap`, `outer_margin`,
 `fig_size`, `stretch_to_fig_size` only apply to `Makie.plot`.
