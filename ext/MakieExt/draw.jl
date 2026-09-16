@@ -301,42 +301,86 @@ function _resolve_node(val, node::Symbol, fallback)
     return fallback
 end
 
-# The Makie.plot/Makie.plot! recipe for a CausalGraph - see the Makie.plot
-# docstring below for the full keyword reference.
-#
-# `edge_color`/`edge_label_color` inherit `linecolor`/`textcolor` from the
-# active Makie theme; `node_color`/`node_label_color` stay fixed so a themed
-# textcolor can't land on a same-color node fill.
+"""
+    causalgraphplot(cg::CausalGraph; kwargs...) -> CausalGraphPlot
+    causalgraphplot!(ax, cg::CausalGraph; kwargs...) -> CausalGraphPlot
+
+Recipe-native aliases for [`Makie.plot`](@ref)/`Makie.plot!` on a
+[`CausalGraph`](@ref); see that docstring for the full keyword reference.
+"""
 Makie.@recipe CausalGraphPlot (graph,) begin
+    """Node position layout: `Makie.automatic`, a layout method `Symbol` (see [`layout`](@ref)), or precomputed positions."""
     layout = Makie.automatic
+    """Extra keywords forwarded to the chosen layout algorithm."""
     layout_kwargs = (;)
+    """Per-node label text; defaults to the node's name."""
     node_labels = nothing
+    """Per-node marker shape: `:circle`, `:square`, `:ellipse`, or `:rect`."""
     node_shape = :circle
+    """Fixed node radius, overriding automatic label-fit sizing."""
     node_radius = nothing
+    """Padding around a node's label used when sizing the node automatically."""
     node_padding = 10.0
+    """Arrowhead size; defaults to a fraction of the typical node radius."""
     arrow_size = nothing
+    """Bidirected/undirected-edge circle marker size; defaults to a fraction of the typical node radius."""
     circle_size = nothing
+    """Node fill color."""
     node_color = :white
+    """Node outline color."""
     node_strokecolor = :black
+    """Node outline width."""
     node_strokewidth = 2.0
+    """Node outline line style."""
     node_linestyle = nothing
+    """Edge line color; inherits the active theme's `linecolor` by default."""
     edge_color = @inherit linecolor :black
+    """Arrowhead fill color; defaults to the edge's own color."""
     arrow_fill = nothing
+    """Edge line width."""
     linewidth = 1.5
+    """Edge line style."""
     edge_linestyle = nothing
+    """Per-edge curvature amount for curved edge routing."""
     curvature = nothing
+    """Explicit waypoints overriding an edge's drawn route."""
     edge_paths = nothing
+    """Node label text color."""
     node_label_color = :black
+    """Node label font size."""
     node_label_fontsize = 14.0
+    """Node label font."""
     node_label_font = :regular
+    """Per-edge label text."""
     edge_labels = nothing
+    """Edge label text color; inherits the active theme's `textcolor` by default."""
     edge_label_color = @inherit textcolor :black
+    """Edge label font size."""
     edge_label_fontsize = 12.0
+    """Edge label font."""
     edge_label_font = :regular
+    """Fractional position of an edge label along its path (0 = source, 1 = destination)."""
     edge_label_shift = 0.5
+    """Perpendicular offset (in pixels) of an edge label from its edge; defaults to the label's own font size."""
     edge_label_distance = nothing
+    """Edge label rotation angle; defaults to following the edge's local tangent."""
     edge_label_rotation = nothing
 end
+
+"""
+    CausalGraphPlot
+
+The [`Makie.@recipe`](https://docs.makie.org/stable/explanations/recipes)
+plot type backing [`causalgraphplot`](@ref)/`causalgraphplot!`.
+"""
+CausalGraphPlot
+
+"""
+    causalgraphplot!(ax, cg::CausalGraph; kwargs...) -> CausalGraphPlot
+
+The mutating variant of [`causalgraphplot`](@ref).
+"""
+causalgraphplot!
 
 # The graph's topology (node/edge count, each edge's src_end/dst_end) is
 # fixed for this plot's lifetime, so the set of child subplots never changes;
