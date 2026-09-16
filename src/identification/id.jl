@@ -288,9 +288,10 @@ function _idc(y::Vector{Symbol}, x::Vector{Symbol}, z::Vector{Symbol}, cg::ADMG)
     # the graph with edges into X and out of Z_i cut, then conditioning on Z_i
     # is the same as intervening on it. Moving it across shrinks the
     # conditioning set, so the loop terminates.
+    cg_x = _remove_incoming(cg, x)
     for z_i in z
         rest = setdiff(z, [z_i])
-        mutilated = _remove_outgoing(_remove_incoming(cg, x), [z_i])
+        mutilated = _remove_outgoing(cg_x, [z_i])
         if m_separated(mutilated, y, [z_i], vcat(x, rest))
             return _idc(y, sort(union(x, [z_i])), rest, cg)
         end
