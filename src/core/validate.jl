@@ -16,24 +16,20 @@ struct MPDAGConstraints <: GraphConstraints end
 struct PAGConstraints <: GraphConstraints end
 struct UNKNOWNConstraints <: GraphConstraints end
 
-function directed_cycle_detected(cg::CausalGraph)
-    index = cg.backend.index
-    n = length(cg.backend.nodes)
-    edges = cg.edges
-
-    indegree = zeros(Int, n)
-    children = [Int[] for _ = 1:n]
-    for edge in edges
-        if is_directed(edge)
-            si = index[edge.src]
-            di = index[edge.dst]
-            push!(children[si], di)
-            indegree[di] += 1
-        end
+# Kahn's algorithm on an explicit adjacency list (`children[i]` = i's
+# out-neighbors), using caller-provided `indegree`/`queue` scratch buffers
+# (both length `length(children)`, contents overwritten).
+function _kahn_acyclic!(
+    children::Vector{Vector{Int}},
+    indegree::Vector{Int},
+    queue::Vector{Int},
+)
+    n = length(children)
+    fill!(indegree, 0)
+    for i = 1:n, c in children[i]
+        indegree[c] += 1
     end
 
-    # Kahn's algorithm with a preallocated array queue
-    queue = Vector{Int}(undef, n)
     qlen = 0
     for i = 1:n
         if indegree[i] == 0
@@ -58,7 +54,23 @@ function directed_cycle_detected(cg::CausalGraph)
         end
     end
 
-    return visited != n
+    return visited == n
+end
+
+function directed_cycle_detected(cg::CausalGraph)
+    index = cg.backend.index
+    n = length(cg.backend.nodes)
+
+    children = [Int[] for _ = 1:n]
+    for edge in cg.edges
+        if is_directed(edge)
+            push!(children[index[edge.src]], index[edge.dst])
+        end
+    end
+
+    indegree = Vector{Int}(undef, n)
+    queue = Vector{Int}(undef, n)
+    return !_kahn_acyclic!(children, indegree, queue)
 end
 
 # At most one edge may connect a given pair of nodes. Two exceptions are not

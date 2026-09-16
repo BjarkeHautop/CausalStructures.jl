@@ -37,17 +37,30 @@ function _no_new_collider(cg::AbstractPDAG, gained::Dict{Symbol,Vector{Symbol}})
     return true
 end
 
-function _acyclic_extension_exists(cg::AbstractPDAG, gained::Dict{Symbol,Vector{Symbol}})
-    isempty(gained) && return true
-    items = RequiredEdge[]
-    for (v, newps) in gained, p in newps
-        push!(items, required_directed(p, v))
-    end
-    try
-        apply_background_knowledge(cg, BackgroundKnowledge(items, ForbiddenEdge[]))
-        return true
-    catch
-        return false
+# Whether orienting `gained` (p --> v for each (v, newps) ∈ gained, p ∈ newps)
+# on top of `cg`'s existing directed edges keeps the directed-edges-only
+# subgraph acyclic.
+function _make_acyclic_checker(cg::AbstractPDAG)
+    B = cg.backend
+    n = length(B.nodes)
+    base_children = [collect(_children_slice(B, i)) for i = 1:n]
+
+    children = [Int[] for _ = 1:n]
+    indegree = Vector{Int}(undef, n)
+    queue = Vector{Int}(undef, n)
+
+    return function acyclic!(gained_pairs::Vector{Tuple{Int,Int}})
+        isempty(gained_pairs) && return true
+
+        for i = 1:n
+            empty!(children[i])
+            append!(children[i], base_children[i])
+        end
+        for (p, v) in gained_pairs
+            push!(children[p], v)
+        end
+
+        return _kahn_acyclic!(children, indegree, queue)
     end
 end
 
@@ -115,11 +128,20 @@ function possible_joint_parent_sets(
     m = length(touched)
     pa0 = Dict(x => parents(cg, x) for x in xs)
 
+    acyclic! = _make_acyclic_checker(cg)
+    gained_pairs = Tuple{Int,Int}[]
+
     results = Vector{Vector{Vector{Symbol}}}()
     for mask = 0:(2^m-1)
         gained = _gained_parents(touched, mask)
         _no_new_collider(cg, gained) || continue
-        _acyclic_extension_exists(cg, gained) || continue
+
+        empty!(gained_pairs)
+        for (v, newps) in gained, p in newps
+            push!(gained_pairs, (node_index(cg, p), node_index(cg, v)))
+        end
+        acyclic!(gained_pairs) || continue
+
         push!(results, [sort([pa0[x]; get(gained, x, Symbol[])]) for x in xs])
     end
     return results
