@@ -813,6 +813,32 @@ end
     @test fig isa Makie.FigureAxisPlot
 end
 
+@testitem "Makie.plot: elabel_rotation overrides the default follow-the-edge angle" tags =
+    [:unit, :plot] begin
+    using Makie
+
+    # A vertical A --> B edge: the elabel Text plot is plots[3] (Lines,
+    # arrowhead Poly, Text). Left at the default `nothing`, the label follows
+    # the edge's own (vertical) angle; `elabel_rotation` overrides it.
+    dag = DAG(directed(:A, :B))
+    rotation(; kwargs...) =
+        Makie.plot(dag; layout = [(0.0, 0.0), (0.0, 2.0)], elabels = "e", kwargs...).plot.plots[3].rotation[]
+
+    # `rotation` is stored as a Quaternion; compare against `to_rotation` of
+    # the expected angle rather than a raw Float32.
+    @test rotation() != Makie.to_rotation(0.0f0)
+    @test rotation(; elabel_rotation = 0.0) == Makie.to_rotation(0.0f0)
+
+    # Accepts a per-edge Dict too.
+    fig = Makie.plot(
+        dag;
+        layout = [(0.0, 0.0), (0.0, 2.0)],
+        elabels = "e",
+        elabel_rotation = Dict((:A, :B) => 0.0, :default => nothing),
+    )
+    @test fig isa Makie.FigureAxisPlot
+end
+
 @testitem "MakieExt: _path_point_at_fraction interpolates along a polyline's arc length" tags =
     [:unit, :plot] begin
     using Makie

@@ -167,7 +167,7 @@ plot(longlabels; node_shape = Dict(:Exposure => :ellipse))
 Alternatively, you can pass `node_radius` explicitly to control the size yourself:
 
 ```@example plot
-plot(dag; node_radius = 0.18)
+plot(dag; node_radius = 0.06)
 ```
 
 ## Styling edges
@@ -206,8 +206,7 @@ transparent color for a hollow, outline-only arrowhead:
 plot(dag; arrow_fill = :transparent)
 ```
 
-`edge_linestyle` styles the line itself, e.g. to dash `<->` edges the way
-some of the literature marks latent confounding:
+`edge_linestyle` styles the line itself, e.g. to dash `<->` edges:
 
 ```@example plot
 plot(admg; edge_linestyle = Dict(:bidirected => :dash))
@@ -215,8 +214,7 @@ plot(admg; edge_linestyle = Dict(:bidirected => :dash))
 
 ### Targeting specific edges
 
-A tuple key highlights a single edge, and a node-name key highlights every edge touching
-that node — both use the same `Dict` mechanism as node styling:
+A tuple key can be used to change something for a specific edge:
 
 ```@example plot
 plot(dag;
@@ -226,7 +224,7 @@ plot(dag;
 
 A tuple key uses an unordered node pair. However, an `ADMG`
 may carry both `X --> Y` and `X <-> Y`, and a tuple key would then
-apply to both of them. To distinguish them a `CausalEdge` can be used:
+apply to both of them. To distinguish them a [`CausalEdge`](@ref) can be used instead:
 
 ```@example plot
 shared = ADMG("X --> Y, X <-> Y")
@@ -236,8 +234,10 @@ plot(shared;
 )
 ```
 
-Symmetric edges are stored in a canonical order, so `bidirected(:Y, :X)` is
-the same key as `bidirected(:X, :Y)`.
+!!! tip "Symmetric edges"
+    Symmetric edges are stored in a canonical order, so `bidirected(:Y, :X)` is the same key as `bidirected(:X, :Y)`.
+
+Notice the automatic routing of the edges above! See more about it below.
 
 ### Curvature and automatic routing
 
@@ -256,13 +256,10 @@ always drawn straight.
 ```@example plot
 detour = DAG("A --> X + Y, X --> Y")
 
-# A, X, Y placed in a line, so the straight A --> Y edge would cross X.
 plot(detour; layout = [(0, 0), (1, 0), (2, 0)])
 ```
 
-Because the key can be a specific edge, `curvature` can also be used as a
-manual override if the automatic routing picks an awkward path — an explicit
-`curvature` of `0.0` forces a straight line:
+`curvature` can also be used to disable this behavior:
 
 ```@example plot
 plot(detour;
@@ -273,7 +270,7 @@ plot(detour;
 
 ### Explicit edge paths
 
-`edge_paths` can be used to override an edge's drawn route:
+Normally, edges are drawn as straight lines, except when automatic curvature is needed. You can override the edge path explicitly with `edge_paths` by providing intermediate points for an edge. For example, the edge `K --> Y` below is drawn through the point `(0.5, -0.25)`:
 
 ```@example plot
 positions = layout(dag, :spring)
@@ -299,8 +296,7 @@ with `:default` as a fallback (same resolution rules as node styling).
 | `label_font`     | `:regular` | node label font           |
 
 By default each node is labelled with its own name. `labels` can be
-used to overwrite this; node sizing accounts for multi-line labels, so the
-nodes grow to fit:
+used to overwrite this; node sizing accounts for multi-line labels, so the nodes grow to fit:
 
 ```@example plot
 plot(DAG("A0 --> L1 --> A1 --> Y, A0 --> Y + A1");
@@ -335,18 +331,29 @@ per-edge overrides, using the same keying rules as other edge styling (a
 | `elabel_font`      | `:regular` | edge label font                                        |
 | `elabel_shift`     | `0.5`      | position along the edge, 0 (source) to 1 (destination) |
 | `elabel_distance`  | `nothing`  | perpendicular gap (pixels) from the edge; `nothing` scales with `elabel_fontsize` |
+| `elabel_rotation`  | `nothing`  | text angle in radians; `nothing` follows the edge's own angle |
 
 ```@example plot
 plot(dag; elabels = Dict(directed(:K, :Y) => "hello"))
 ```
 
-The label follows the edge's own angle, while `elabel_shift`/`elabel_distance` move it along/off that path:
+By default the label follows the edge's own angle, while `elabel_shift`/`elabel_distance` move it along/off that path:
 
 ```@example plot
 plot(dag;
     elabels = Dict(directed(:K, :Y) => "hi"),
     elabel_shift = 0.75,
     elabel_distance = 12,
+)
+```
+
+For a steep or curved edge, following the edge's angle can leave the label hard to
+read; `elabel_rotation` overrides it with a fixed angle instead:
+
+```@example plot
+plot(dag;
+    elabels = Dict(directed(:A, :X) => "steep"),
+    elabel_rotation = 0.0,
 )
 ```
 
@@ -405,8 +412,8 @@ fig
 
 ## Combining options
 
-Here we plot a PAG where we combine a bunch of different
-styling options:
+Here we plot a PAG where we combine a bunch of the styling options from
+above:
 
 ```@example plot
 pag = PAG(
@@ -415,14 +422,19 @@ pag = PAG(
 
 plot(
     pag;
-    node_color       = Dict(:X => "#dbeafe", :Y => "#fef3c7", :default => "#f8fafc"),
-    node_strokecolor = Dict(:X => "#2563eb", :Y => "#d97706", :default => "#64748b"),
+    layout           = :spring,
+    node_color       = Dict(:X => :skyblue, :Y => :gold, :default => :whitesmoke),
+    node_strokecolor = Dict(:X => :royalblue, :Y => :darkorange, :default => :slategray),
+    node_shape       = Dict(:K => :square, :default => :circle),
     node_linestyle   = Dict(:K => :dash, :default => nothing),
-    edge_color       = Dict(:partially_directed => "#2563eb", :default => "#334155"),
-    label_color      = Dict(:X => "#1e3a8a", :Y => "#92400e", :default => "#1e293b"),
-    label_fontsize   = 16,
-    title            = "A PAG",
+    edge_color       = Dict(:partially_directed => :royalblue, :default => :darkslategray),
+    edge_linestyle   = Dict(:partially_directed => :dash),
+    curvature        = Dict((:K, :Y) => 0.3),
+    elabels          = Dict((:K, :X) => "cool"),
+    label_color      = Dict(:X => :navy, :Y => :saddlebrown, :default => :black),
+    title            = "A cool PAG",
     title_fontsize   = 18,
-    title_color      = "#1e293b",
+    title_color      = :navy,
+    fig_size         = (700, 500),
 )
 ```

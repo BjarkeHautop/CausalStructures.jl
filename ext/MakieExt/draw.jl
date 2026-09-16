@@ -335,6 +335,7 @@ Makie.@recipe CausalGraphPlot (graph,) begin
     elabel_font = :regular
     elabel_shift = 0.5
     elabel_distance = nothing
+    elabel_rotation = nothing
 end
 
 # The graph's topology (node/edge count, each edge's src_end/dst_end) is
@@ -375,6 +376,7 @@ function Makie.plot!(plot::CausalGraphPlot)
         elabel_font,
         elabel_shift,
         elabel_distance,
+        elabel_rotation,
         viewport,
     )
         empty!(plot.plots)
@@ -548,13 +550,15 @@ function Makie.plot!(plot::CausalGraphPlot)
                         resolved_distance === nothing ? resolved_elabel_fontsize :
                         Float32(resolved_distance)
                     pos = mid + (gap_px / px_per_data_unit) * perp
+                    resolved_rotation = _resolve_edge(elabel_rotation, e, nothing)
                     Makie.text!(
                         plot,
                         pos[1],
                         pos[2];
                         text = string(text),
                         align = (:center, :center),
-                        rotation = _upright_angle(tan),
+                        rotation = resolved_rotation === nothing ? _upright_angle(tan) :
+                                   Float32(resolved_rotation),
                         color = _resolve_edge(elabel_color, e, :black),
                         fontsize = resolved_elabel_fontsize,
                         font = _resolve_edge(elabel_font, e, :regular),
@@ -622,6 +626,7 @@ function Makie.plot!(plot::CausalGraphPlot)
         plot.elabel_font,
         plot.elabel_shift,
         plot.elabel_distance,
+        plot.elabel_rotation,
         viewport;
         update = true,
     )
@@ -646,8 +651,8 @@ Keyword arguments: `layout`, `layout_kwargs`, `labels`, `node_shape`,
 `node_strokecolor`, `node_strokewidth`, `node_linestyle`, `edge_color`,
 `arrow_fill`, `linewidth`, `edge_linestyle`, `curvature`, `edge_paths`,
 `label_color`, `label_fontsize`, `label_font`, `elabels`, `elabel_color`,
-`elabel_fontsize`, `elabel_font`, `elabel_shift`, `elabel_distance` are
-shared by both `plot` and
+`elabel_fontsize`, `elabel_font`, `elabel_shift`, `elabel_distance`,
+`elabel_rotation` are shared by both `plot` and
 `plot!`. Style keywords accept either a scalar (applied to everything) or a `Dict` for
 per-node/per-edge overrides; a per-edge `Dict` may be keyed by a
 `CausalEdge`, a `(src, dst)` tuple, an edge-type symbol, or `:default`.
