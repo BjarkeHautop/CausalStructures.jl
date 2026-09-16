@@ -13,16 +13,16 @@ using Sugiyama
 ```
 
 !!! note "General-purpose by design"
-    `plot` deliberately imposes no conventions of its own. There are many conventions
-    in the literature, such as boxing conditioned variables, dashing latent variables,
-    representing `<->` as an arc, or colouring exposures and outcomes. These conventions
-    also sometimes disagree with one another. Rather than imposing a particular convention,
-    we provide the capabilities and leave these choices to the caller. Downstream packages
-    are encouraged to build an opinionated layer on top.
+    [`plot`](@ref) deliberately imposes no domain conventions of its own. There are many
+    conventions in the literature, such as boxing conditioned variables, dashing latent
+    variables, representing `<->` as a dashed arc, or colouring exposures and outcomes.
+    Rather than supporting any particular convention by default, `plot` exposes the
+    underlying capabilities (styling, Makie themes, layouts) and leaves the choice of
+    convention to the caller or a downstream package.
 
 ## Basic usage
 
-Pass any `CausalGraph` to `plot`. Every edge mark is supported natively:
+Pass any [`CausalGraph`](@ref) to [`plot`](@ref). Every edge mark is supported natively:
 
 ```@example plot
 unknown = UNKNOWN("A <-> B o-> C o-- A")
