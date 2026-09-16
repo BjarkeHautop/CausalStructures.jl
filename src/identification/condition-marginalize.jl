@@ -153,8 +153,7 @@ function condition_marginalize(
                     idx += 1
                     restrict_buf[idx] = remaining[k]
                 end
-                sep = minimal_separator(cg, a, b; include = given, restrict = restrict_buf)
-                sep === nothing
+                !_separator_exists(cg, a, b; include = given, restrict = restrict_buf)
             end
 
             if is_adj

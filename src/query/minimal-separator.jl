@@ -94,6 +94,111 @@ function _d_connected_restricted_mask(
     return reached
 end
 
+# FINDNEARESTSEP's first pass for a DAG: the ancestor/candidate restriction
+# plus the Bayes-ball reachability mask from `xs`. Returns `nothing` if
+# `inc_idxs` isn't a subset of `res_idxs` (infeasible window), else
+# `(ancestor_mask, z0_mask, x_star_mask)`.
+function _dag_nearest_sep_from_x(
+    B::DAGBackend,
+    xs::Vector{Int},
+    ys::Vector{Int},
+    inc_idxs::Vector{Int},
+    res_idxs::Vector{Int},
+)
+    n = length(B.nodes)
+    if !isempty(inc_idxs)
+        res_set = Set(res_idxs)
+        for v in inc_idxs
+            v ∈ res_set || return nothing
+        end
+    end
+
+    xs_mask = falses(n)
+    for xi in xs
+        xs_mask[xi] = true
+    end
+    ys_mask = falses(n)
+    for yi in ys
+        ys_mask[yi] = true
+    end
+
+    seeds = unique([xs; ys; inc_idxs])
+    ancestor_mask = _ancestors_bitmask(B, seeds)
+
+    z0_mask = falses(n)
+    for r in res_idxs
+        if ancestor_mask[r] && !xs_mask[r] && !ys_mask[r]
+            z0_mask[r] = true
+        end
+    end
+
+    x_star_mask = _d_connected_restricted_mask(B, xs, z0_mask, ancestor_mask)
+    return (ancestor_mask, z0_mask, x_star_mask)
+end
+
+# Whether *any* separator exists with `include ⊆ Z ⊆ restrict`, via a single
+# FINDNEARESTSEP pass from `x` (see `_ag_msep_exists!` for the same
+# single-pass existence trick applied to MAG maximality).
+function _separator_exists(
+    cg::DAG,
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}};
+    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
+)
+    B = cg.backend
+    n = length(B.nodes)
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
+    inc_idxs = _node_indices(cg, include)
+    res_idxs = if restrict === nothing
+        xs_mask = falses(n)
+        for xi in xs
+            xs_mask[xi] = true
+        end
+        ys_mask = falses(n)
+        for yi in ys
+            ys_mask[yi] = true
+        end
+        [i for i = 1:n if !xs_mask[i] && !ys_mask[i]]
+    else
+        _node_indices(cg, restrict)
+    end
+
+    pass1 = _dag_nearest_sep_from_x(B, xs, ys, inc_idxs, res_idxs)
+    pass1 === nothing && return false
+    (_, _, x_star_mask) = pass1
+    return !any(x_star_mask[yi] for yi in ys)
+end
+
+function _separator_exists(
+    cg::Union{ADMG,AbstractAG,PAG,AbstractPDAG},
+    x::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}};
+    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
+)
+    B = cg.backend
+    n = length(B.nodes)
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
+    xs_mask = falses(n)
+    for xi in xs
+        xs_mask[xi] = true
+    end
+    ys_mask = falses(n)
+    for yi in ys
+        ys_mask[yi] = true
+    end
+    inc_idxs = _node_indices(cg, include)
+    res_idxs = if restrict === nothing
+        [i for i = 1:n if !xs_mask[i] && !ys_mask[i]]
+    else
+        _node_indices(cg, restrict)
+    end
+    return _find_nearest_sep(B, xs, ys, inc_idxs, res_idxs) !== nothing
+end
+
 """
     minimal_separator(cg::Union{DAG,ADMG,AbstractAG,PAG,AbstractPDAG}, x, y; include=Symbol[], restrict=nothing)
 
@@ -211,39 +316,24 @@ function minimal_separator(
     n = length(B.nodes)
     xs = _node_indices(cg, x)
     ys = _node_indices(cg, y)
-    xs_mask = falses(n)
-    for xi in xs
-        xs_mask[xi] = true
-    end
-    ys_mask = falses(n)
-    for yi in ys
-        ys_mask[yi] = true
-    end
     inc_idxs = _node_indices(cg, include)
     res_idxs = if restrict === nothing
+        xs_mask = falses(n)
+        for xi in xs
+            xs_mask[xi] = true
+        end
+        ys_mask = falses(n)
+        for yi in ys
+            ys_mask[yi] = true
+        end
         [i for i = 1:n if !xs_mask[i] && !ys_mask[i]]
     else
         _node_indices(cg, restrict)
     end
 
-    if !isempty(inc_idxs)
-        res_set = Set(res_idxs)
-        for v in inc_idxs
-            v ∈ res_set || return nothing
-        end
-    end
-
-    seeds = unique([xs; ys; inc_idxs])
-    ancestor_mask = _ancestors_bitmask(B, seeds)
-
-    z0_mask = falses(n)
-    for r in res_idxs
-        if ancestor_mask[r] && !xs_mask[r] && !ys_mask[r]
-            z0_mask[r] = true
-        end
-    end
-
-    x_star_mask = _d_connected_restricted_mask(B, xs, z0_mask, ancestor_mask)
+    pass1 = _dag_nearest_sep_from_x(B, xs, ys, inc_idxs, res_idxs)
+    pass1 === nothing && return nothing
+    (ancestor_mask, z0_mask, x_star_mask) = pass1
     any(x_star_mask[yi] for yi in ys) && return nothing
 
     zx_mask = falses(n)
