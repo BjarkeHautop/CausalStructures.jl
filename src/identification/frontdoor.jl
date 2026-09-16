@@ -127,10 +127,19 @@ end
 
 # Moral adjacency restricted to mask, with removed_mask nodes' outgoing edges
 # omitted. Used by _get_dep (condition 3), which grows removed_mask during BFS.
-function _moral_adj_gx(B::DAGBackend, mask::BitVector, removed_mask::BitVector)
+# Mutates (and returns) `adj` in place, clearing it first, so callers can reuse
+# the same buffer across the many rebuilds triggered by `_get_dep`/`_getcand3rdfdc`.
+function _moral_adj_gx!(
+    adj::Vector{Vector{Int}},
+    B::DAGBackend,
+    mask::BitVector,
+    removed_mask::BitVector,
+    pa_buf::Vector{Int},
+)
     n = length(B.nodes)
-    adj = [Int[] for _ = 1:n]
-    pa_buf = Int[]
+    for v = 1:n
+        empty!(adj[v])
+    end
     for ch = 1:n
         mask[ch] || continue
         empty!(pa_buf)
@@ -155,10 +164,17 @@ end
 # arrowhead into `ch` -- directed parents AND bidirected spouses. Bidirected
 # edges have no "outgoing" endpoint, so unlike parents they are never filtered
 # by removed_mask.
-function _moral_adj_gx(B::ADMGBackend, mask::BitVector, removed_mask::BitVector)
+function _moral_adj_gx!(
+    adj::Vector{Vector{Int}},
+    B::ADMGBackend,
+    mask::BitVector,
+    removed_mask::BitVector,
+    pa_buf::Vector{Int},
+)
     n = length(B.nodes)
-    adj = [Int[] for _ = 1:n]
-    pa_buf = Int[]
+    for v = 1:n
+        empty!(adj[v])
+    end
     for ch = 1:n
         mask[ch] || continue
         empty!(pa_buf)
@@ -189,6 +205,39 @@ _has_incoming_arrowhead(B::DAGBackend, v::Int) = !isempty(_parents_slice(B, v))
 _has_incoming_arrowhead(B::ADMGBackend, v::Int) =
     !isempty(_parents_slice(B, v)) || !isempty(_spouses_slice(B, v))
 
+# Scratch buffers shared across the whole `_listfdsets!` recursion tree.
+# `_get_dep` is called once per remaining candidate at every recursion node.
+# Safe to share because every call fully consumes its buffers before returning.
+struct _FDBuffers
+    adj::Vector{Vector{Int}}
+    pa_buf::Vector{Int}
+    an_mask::BitVector
+    an_stack::Vector{Int}
+    removed_mask::BitVector
+    z_prime::BitVector
+    visited::BitVector
+    queue::Vector{Int}
+    nr_mask::BitVector
+    n_set::BitVector
+    seeds::Vector{Int}
+    t_mask::BitVector
+end
+
+_FDBuffers(n::Int) = _FDBuffers(
+    [Int[] for _ = 1:n],
+    Int[],
+    falses(n),
+    Int[],
+    falses(n),
+    falses(n),
+    falses(n),
+    Int[],
+    falses(n),
+    falses(n),
+    Int[],
+    falses(n),
+)
+
 # GETDEP, Jeong, Tian & Bareinboim (2022) Algorithm 4, helper for Step 2 of
 # FindFDSet. Given T (a candidate set), R' (the filtered pool from Step 1), X,
 # and Y, finds Z' ⊆ R' \ T such that T ∪ Z' satisfies the third FD condition
@@ -197,6 +246,7 @@ _has_incoming_arrowhead(B::ADMGBackend, v::Int) =
 # traversed (BD paths can route through them) but only R' nodes are candidates
 # for Z'.
 function _get_dep(
+    buf::_FDBuffers,
     B::Union{DAGBackend,ADMGBackend},
     x_set::BitVector,
     y_mask::BitVector,
@@ -206,20 +256,21 @@ function _get_dep(
     n = length(B.nodes)
 
     # G' = G restricted to An(T ∪ X ∪ Y) in G (full graph, no edges removed for ancestors)
-    seeds = Int[]
+    seeds = empty!(buf.seeds)
     for v = 1:n
         (t_mask[v] || x_set[v] || y_mask[v]) && push!(seeds, v)
     end
-    an_mask = _ancestors_bitmask(B, seeds)
+    _ancestors_bitmask!(buf.an_mask, buf.an_stack, B, seeds)
 
     # G'' = G'_T initially; removed_mask grows with Z' as the BFS adds nodes
-    removed_mask = copy(t_mask)
-    adj = _moral_adj_gx(B, an_mask, removed_mask)
+    removed_mask = buf.removed_mask
+    removed_mask .= t_mask
+    adj = _moral_adj_gx!(buf.adj, B, buf.an_mask, removed_mask, buf.pa_buf)
 
     # BFS: visited includes X (removed from M) and all T nodes (starting queue)
-    z_prime = falses(n)
-    visited = falses(n)
-    queue = Int[]
+    z_prime = fill!(buf.z_prime, false)
+    visited = fill!(buf.visited, false)
+    queue = empty!(buf.queue)
     for v = 1:n
         x_set[v] && (visited[v] = true)
     end
@@ -238,7 +289,7 @@ function _get_dep(
         y_mask[u] && return nothing  # Y reachable => no valid Z' exists
 
         # NR = unvisited neighbors of u in current M that are in R'
-        nr_mask = falses(n)
+        nr_mask = fill!(buf.nr_mask, false)
         for w in adj[u]
             (r_prime_mask[w] && !visited[w]) && (nr_mask[w] = true)
         end
@@ -252,10 +303,10 @@ function _get_dep(
                 updated = true
             end
         end
-        updated && (adj = _moral_adj_gx(B, an_mask, removed_mask))
+        updated && (adj = _moral_adj_gx!(buf.adj, B, buf.an_mask, removed_mask, buf.pa_buf))
 
         # N' = unvisited neighbors of u in new M (includes latent nodes)
-        n_set = falses(n)
+        n_set = fill!(buf.n_set, false)
         for w in adj[u]
             !visited[w] && (n_set[w] = true)
         end
@@ -362,6 +413,7 @@ end
 # some Z' ⊆ R' \ {v} makes {v} ∪ Z' satisfy the third FD condition. Returns
 # nothing if some v ∈ I fails (I must be included but cannot satisfy it).
 function _getcand3rdfdc(
+    buf::_FDBuffers,
     B::Union{DAGBackend,ADMGBackend},
     x_set::BitVector,
     y_mask::BitVector,
@@ -370,12 +422,12 @@ function _getcand3rdfdc(
 )
     n = length(B.nodes)
     r_dbl_prime = copy(r_prime_mask)
-    t_mask = falses(n)
+    t_mask = buf.t_mask
     for v = 1:n
         r_prime_mask[v] || continue
         t_mask .= false
         t_mask[v] = true
-        if _get_dep(B, x_set, y_mask, t_mask, r_prime_mask) === nothing
+        if _get_dep(buf, B, x_set, y_mask, t_mask, r_prime_mask) === nothing
             if i_mask[v]
                 return nothing  # v in I must be included but fails condition 3
             end
@@ -385,29 +437,79 @@ function _getcand3rdfdc(
     return r_dbl_prime
 end
 
-# TESTSEP(G_X, X, v, ∅): X ⊥ v | ∅ in G_X, dispatched per graph class (d- vs
-# m-separation).
-_testsep(gx::DAG, x::Union{Symbol,AbstractVector{Symbol}}, v::Symbol) =
-    d_separated(gx, x, v, Symbol[])
-_testsep(gx::ADMG, x::Union{Symbol,AbstractVector{Symbol}}, v::Symbol) =
-    m_separated(gx, x, v, Symbol[])
+# Scratch buffers for TESTSEP(G_X, X, v, ∅) in `_getcand2ndfdc`'s hot loop
+# (called once per remaining candidate at every `_listfdsets!` recursion node).
+struct _FD2ndBuffers
+    an_mask::BitVector
+    an_stack::Vector{Int}
+    seeds::Vector{Int}
+    z_mask::BitVector
+    visited::BitMatrix
+    queue::Vector{Tuple{Int,Int}}
+    reached::BitVector
+end
+
+_FD2ndBuffers(n::Int) = _FD2ndBuffers(
+    falses(n),
+    Int[],
+    Int[],
+    falses(n),
+    falses(n, 2),
+    Tuple{Int,Int}[],
+    falses(n),
+)
+
+_reachable_single!(buf::_FD2ndBuffers, B::DAGBackend, seed::Int) = _reachable_dag_single!(
+    buf.visited,
+    buf.queue,
+    buf.reached,
+    B,
+    seed,
+    buf.an_mask,
+    buf.z_mask,
+)
+_reachable_single!(buf::_FD2ndBuffers, B::ADMGBackend, seed::Int) = _reachable_admg_single!(
+    buf.visited,
+    buf.queue,
+    buf.reached,
+    B,
+    seed,
+    buf.an_mask,
+    buf.z_mask,
+)
+
+# TESTSEP(G_X, X, v, ∅): X ⊥ v | ∅ in G_X. Equivalent to d_separated/m_separated
+# with an empty conditioning set, computed via a per-xi single-seed reachability
+# (valid since reachability from a seed set is the union of per-seed reachability).
+function _testsep!(buf::_FD2ndBuffers, gx::Union{DAG,ADMG}, xs::Vector{Int}, v::Int)
+    B = gx.backend
+    empty!(buf.seeds)
+    append!(buf.seeds, xs)
+    push!(buf.seeds, v)
+    _ancestors_bitmask!(buf.an_mask, buf.an_stack, B, buf.seeds)
+    for xi in xs
+        reached = _reachable_single!(buf, B, xi)
+        reached[v] && return false
+    end
+    return true
+end
 
 # GETCAND2NDFDC, Jeong, Tian & Bareinboim (2022), Step 1 of FindFDSet. Returns
 # R' ⊆ R: all v ∈ R for which TESTSEP(G_X, X, v, ∅) = true (no unblocked
 # backdoor path from X to v), so every Z with I ⊆ Z ⊆ R' satisfies the 2nd
 # front-door condition. Returns nothing if some v ∈ I has a backdoor path from X.
 function _getcand2ndfdc(
+    buf::_FD2ndBuffers,
     gx::Union{DAG,ADMG},
-    x::Union{Symbol,AbstractVector{Symbol}},
-    nodes::Vector{Symbol},
+    xs::Vector{Int},
+    n::Int,
     i_mask::BitVector,
     r_mask::BitVector,
 )
-    n = length(nodes)
     r_prime = copy(r_mask)
     for v = 1:n
         r_mask[v] || continue
-        if !_testsep(gx, x, nodes[v])
+        if !_testsep!(buf, gx, xs, v)
             if i_mask[v]
                 return nothing  # v ∈ I must be included but has a backdoor path
             end
@@ -534,11 +636,13 @@ function frontdoor_set(
 
     # Step 1: filter out candidates with a backdoor path from X (condition 2)
     gx = _build_gx(cg, x)
-    r_prime = _getcand2ndfdc(gx, x, B.nodes, i_mask, r_mask)
+    buf2 = _FD2ndBuffers(n)
+    r_prime = _getcand2ndfdc(buf2, gx, xs, n, i_mask, r_mask)
     r_prime === nothing && return nothing
 
     # Step 2: filter out candidates for which condition 3 cannot be satisfied
-    r_dbl_prime = _getcand3rdfdc(B, x_set, y_mask, i_mask, r_prime)
+    buf = _FDBuffers(n)
+    r_dbl_prime = _getcand3rdfdc(buf, B, x_set, y_mask, i_mask, r_prime)
     r_dbl_prime === nothing && return nothing
 
     # Step 3: check condition 1 via forward reachability in the causal path graph.
@@ -573,8 +677,10 @@ end
 # Mutates i_mask and r_mask in place, restoring them before returning.
 function _listfdsets!(
     results::Vector{Vector{Symbol}},
+    buf::_FDBuffers,
+    buf2::_FD2ndBuffers,
     gx::Union{DAG,ADMG},
-    x::Union{Symbol,AbstractVector{Symbol}},
+    xs::Vector{Int},
     B::Union{DAGBackend,ADMGBackend},
     x_set::BitVector,
     y_mask::BitVector,
@@ -585,11 +691,11 @@ function _listfdsets!(
     n = length(B.nodes)
 
     # Step 1: condition 2 — drop candidates with a BD path from X
-    r_prime = _getcand2ndfdc(gx, x, B.nodes, i_mask, r_mask)
+    r_prime = _getcand2ndfdc(buf2, gx, xs, n, i_mask, r_mask)
     r_prime === nothing && return
 
     # Step 2: condition 3 feasibility
-    r_dbl_prime = _getcand3rdfdc(B, x_set, y_mask, i_mask, r_prime)
+    r_dbl_prime = _getcand3rdfdc(buf, B, x_set, y_mask, i_mask, r_prime)
     r_dbl_prime === nothing && return
 
     # Step 3: condition 1 — R'' must block all directed X --> Y paths in CPG
@@ -630,12 +736,12 @@ function _listfdsets!(
 
     # Branch 1: include v (I ∪ {v}, R)
     i_mask[v] = true
-    _listfdsets!(results, gx, x, B, x_set, y_mask, i_mask, r_mask, cpg_children)
+    _listfdsets!(results, buf, buf2, gx, xs, B, x_set, y_mask, i_mask, r_mask, cpg_children)
     i_mask[v] = false
 
     # Branch 2: exclude v (I, R \ {v})
     r_mask[v] = false
-    _listfdsets!(results, gx, x, B, x_set, y_mask, i_mask, r_mask, cpg_children)
+    _listfdsets!(results, buf, buf2, gx, xs, B, x_set, y_mask, i_mask, r_mask, cpg_children)
     r_mask[v] = true
 end
 
@@ -745,7 +851,9 @@ function all_frontdoor_sets(
     gx = _build_gx(cg, x)
     _, cpg_children = _get_causal_path_graph(B, x_set, y_mask)
 
+    buf = _FDBuffers(n)
+    buf2 = _FD2ndBuffers(n)
     results = Vector{Vector{Symbol}}()
-    _listfdsets!(results, gx, x, B, x_set, y_mask, i_mask, r_mask, cpg_children)
+    _listfdsets!(results, buf, buf2, gx, xs, B, x_set, y_mask, i_mask, r_mask, cpg_children)
     return results
 end

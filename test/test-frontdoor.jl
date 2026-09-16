@@ -186,7 +186,9 @@ end
         r_mask[CausalStructures.node_index(cg, s)] = true
     end
 
-    r_prime = CausalStructures._getcand2ndfdc(gx, :X, B.nodes, i_mask, r_mask)
+    xs = CausalStructures._node_indices(cg, :X)
+    buf2 = CausalStructures._FD2ndBuffers(n)
+    r_prime = CausalStructures._getcand2ndfdc(buf2, gx, xs, n, i_mask, r_mask)
 
     @test r_prime !== nothing
     @test Set(B.nodes[v] for v = 1:n if r_prime[v]) == Set([:A, :B, :C])
@@ -208,7 +210,9 @@ end
         r_mask[CausalStructures.node_index(cg, s)] = true
     end
 
-    @test CausalStructures._getcand2ndfdc(gx, :X, B.nodes, i_mask, r_mask) === nothing
+    xs = CausalStructures._node_indices(cg, :X)
+    buf2 = CausalStructures._FD2ndBuffers(n)
+    @test CausalStructures._getcand2ndfdc(buf2, gx, xs, n, i_mask, r_mask) === nothing
 end
 
 # ── Example 3: GETCAND3RDFDC ─────────────────────────────────────────────────
@@ -235,7 +239,9 @@ end
         r_prime_mask[CausalStructures.node_index(cg, s)] = true
     end
 
-    r_dbl_prime = CausalStructures._getcand3rdfdc(B, x_set, y_mask, i_mask, r_prime_mask)
+    buf = CausalStructures._FDBuffers(n)
+    r_dbl_prime =
+        CausalStructures._getcand3rdfdc(buf, B, x_set, y_mask, i_mask, r_prime_mask)
 
     @test r_dbl_prime !== nothing
     @test Set(B.nodes[v] for v = 1:n if r_dbl_prime[v]) == Set([:A, :B, :C])
@@ -264,7 +270,8 @@ end
         r_prime_mask[CausalStructures.node_index(cg, s)] = true
     end
 
-    @test CausalStructures._getcand3rdfdc(B, x_set, y_mask, i_mask, r_prime_mask) ===
+    buf = CausalStructures._FDBuffers(n)
+    @test CausalStructures._getcand3rdfdc(buf, B, x_set, y_mask, i_mask, r_prime_mask) ===
           nothing
 end
 
@@ -296,7 +303,8 @@ end
     t_mask = falses(n)
     t_mask[CausalStructures.node_index(cg, :A)] = true
 
-    z_prime = CausalStructures._get_dep(B, x_set, y_mask, t_mask, r_prime_mask)
+    buf = CausalStructures._FDBuffers(n)
+    z_prime = CausalStructures._get_dep(buf, B, x_set, y_mask, t_mask, r_prime_mask)
 
     @test z_prime !== nothing
     @test Set(B.nodes[v] for v = 1:n if z_prime[v]) == Set{Symbol}()
@@ -323,7 +331,8 @@ end
     t_mask = falses(n)
     t_mask[CausalStructures.node_index(cg, :B)] = true
 
-    z_prime = CausalStructures._get_dep(B, x_set, y_mask, t_mask, r_prime_mask)
+    buf = CausalStructures._FDBuffers(n)
+    z_prime = CausalStructures._get_dep(buf, B, x_set, y_mask, t_mask, r_prime_mask)
 
     @test z_prime !== nothing
     @test Set(B.nodes[v] for v = 1:n if z_prime[v]) == Set([:A])
@@ -350,7 +359,8 @@ end
     t_mask = falses(n)
     t_mask[CausalStructures.node_index(cg, :C)] = true
 
-    z_prime = CausalStructures._get_dep(B, x_set, y_mask, t_mask, r_prime_mask)
+    buf = CausalStructures._FDBuffers(n)
+    z_prime = CausalStructures._get_dep(buf, B, x_set, y_mask, t_mask, r_prime_mask)
 
     @test z_prime !== nothing
     @test Set(B.nodes[v] for v = 1:n if z_prime[v]) == Set([:A])
@@ -394,7 +404,8 @@ end
     t_mask = falses(n)
     t_mask[CausalStructures.node_index(cg, :B)] = true
 
-    @test CausalStructures._get_dep(B, x_set, y_mask, t_mask, r_prime_mask) === nothing
+    buf = CausalStructures._FDBuffers(n)
+    @test CausalStructures._get_dep(buf, B, x_set, y_mask, t_mask, r_prime_mask) === nothing
 end
 
 # ── Example 7: GETCAUSALPATHGRAPH ────────────────────────────────────────────
