@@ -10,8 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Breaking changes
 
 - `plot`'s visual defaults (colors, linewidths, etc) are no
-longer configurable via `Preferences.jl`. Instead, set a project-wide default with a Makie theme,
-e.g. `Makie.set_theme!(CausalGraphPlot = (node_color = :lightblue,))`.
+  longer configurable via `Preferences.jl`. Instead, set a project-wide default with a Makie theme,
+  e.g. `Makie.set_theme!(CausalGraphPlot = (node_color = :lightblue,))`.
 
 ### New features
 
@@ -22,15 +22,15 @@ e.g. `Makie.set_theme!(CausalGraphPlot = (node_color = :lightblue,))`.
 - `plot` gains `edge_linestyle`, styling an edge's own line (e.g. dashing `<->` edges to mark latent confounding, as is common in the literature).
 
 - `plot` gains `elabels`, `elabel_color`, `elabel_fontsize`, `elabel_font`, `elabel_shift`,
-and `elabel_distance` for drawing text along each edge, following its own angle.
+  and `elabel_distance` for drawing text along each edge, following its own angle.
 
 ## [0.6.0] - 2026-09-14
 
 ### Breaking changes
 
 - `plot`'s layout-algorithm keywords (e.g. `seed`, `iterations`) must now be passed as
-`layout_kwargs = (; seed = 1)` instead of directly, since `plot` is now backed by a proper
-Makie recipe with a fixed set of attributes.
+  `layout_kwargs = (; seed = 1)` instead of directly, since `plot` is now backed by a proper
+  Makie recipe with a fixed set of attributes.
 - `plot` now returns a `FigureAxisPlot` instead of a `Figure`.
 
 ### New features
@@ -38,22 +38,22 @@ Makie recipe with a fixed set of attributes.
 - Added `backdoor_set` (Generalized Backdoor Criterion) for `ADMG`.
 
 - `CausalGraph` now supports `==` and `hash`, comparing graphs structurally (same class,
-nodes, and edges).
+  nodes, and edges).
 
 - `plot!(ax, cg)` draws a `CausalGraph` into an `Axis` you already own, so multiple graphs
-(or a graph and other plots) can share one `Figure`.
+  (or a graph and other plots) can share one `Figure`.
 
 - `plot`/`plot!`'s returned plot is fully reactive: `plt.node_color[] = :red` restyles it
-in place, and node/label sizing keeps fitting the containing `Axis` live, including as
-it's resized.
+  in place, and node/label sizing keeps fitting the containing `Axis` live, including as
+  it's resized.
 
 ### Bug fixes
 
 - `is_valid_adjustment`/`all_adjustment_sets` on `ADMG` and `PAG` could wrongly validate an
-adjustment set when a node had two or more bidirected/circle edges to distinct confounders.
+  adjustment set when a node had two or more bidirected/circle edges to distinct confounders.
 
 - `plot`'s `edge_paths` override for one edge no longer discards automatic per-edge routing
-(e.g. from `layout = :sugiyama`) for the rest of the graph's edges.
+  (e.g. from `layout = :sugiyama`) for the rest of the graph's edges.
 
 ### Other changes
 
@@ -64,7 +64,7 @@ adjustment set when a node had two or more bidirected/circle edges to distinct c
 ### New features
 
 - Node-set arguments across the package (`x`/`y`/`z`, `include`/`restrict`, `latents`,
-`nodes`, etc.) now also accept a single `Symbol`, not just `Vector{Symbol}`.
+  `nodes`, etc.) now also accept a single `Symbol`, not just `Vector{Symbol}`.
 
 ### Bug fixes
 
@@ -97,13 +97,13 @@ adjustment set when a node had two or more bidirected/circle edges to distinct c
 ### Breaking changes
 
 - `cgraph(...; class = T)` is removed. Construct graphs by calling the graph type
-directly instead, e.g. `DAG("A --> B")`, `ADMG("A --> B, A <-> B)`.
+  directly instead, e.g. `DAG("A --> B")`, `ADMG("A --> B, A <-> B)`.
 
 ### New features
 
 - `plot` now supports `edge_paths`, a `Dict` overriding an edge's drawn route with an explicit polyline instead of `curvature`/automatic routing.
 - Added a `:sugiyama` layout method for DAGs. Requries `using Sugiyama`,
-and if loaded is the default for DAGs.
+  and if loaded is the default for DAGs.
 
 ## [0.4.0] - 2026-08-24
 
@@ -115,7 +115,7 @@ and if loaded is the default for DAGs.
 
 - `plot`'s `node_shape` now supports `:ellipse`/`:rect` for label-fit stretching.
 - `plot` now supports a `stretch_to_fig_size` to stretch the layout to fill `fig_size`
-instead of following the aspect of the layout.
+  instead of following the aspect of the layout.
 
 ### Bug fixes
 
@@ -162,7 +162,7 @@ instead of following the aspect of the layout.
 - Added `anteriors`/`posteriors` methods for `ADMG`.
 - Extended `condition_marginalize` to accept `ADMG`.
 - Added `check_cycles` and `r4` as keyword arguments to `meek_closure`, which can be
-set to help speed it up.
+  set to help speed it up.
 - Added `node_padding` (and `"plot_node_padding"` preference) to control the padding between a node's label and its circle edge.
 - Added `arrow_fill` (and `"plot_edge_arrow_fill"` preference) to style arrowheads independently of `edge_color`, including hollow/outline-only arrowheads.
 - Added `fig_size` to set the plot's figure size.
@@ -170,7 +170,7 @@ set to help speed it up.
 ### Bug fixes
 
 - `dag_from_pdag` could pick a sink whose undirected neighbors were adjacent to each other but not to the sink's existing parents, which could make it introduce a
-v-structure absent from the input PDAG.
+  v-structure absent from the input PDAG.
 
 ## [0.2.0] - 2026-08-04
 
