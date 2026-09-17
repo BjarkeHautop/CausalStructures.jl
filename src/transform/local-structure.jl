@@ -5,15 +5,19 @@
 
 # PossDe(seeds, graph), closed (includes seeds), with `excluded` nodes
 # removed from the graph entirely. Mirrors `possible_descendants(cg::PAG, ...)`.
+# `reach`/`stack` may be reused scratch buffers: safe whenever the caller's
+# use of the returned mask ends before the buffer is handed to another call.
 function _possde_mask(
     adj::BitMatrix,
     mark::Matrix{Endpoint},
     n::Int,
     seeds,
     excluded::BitVector,
+    reach::BitVector = falses(n),
+    stack::Vector{Int} = Int[],
 )
-    reach = falses(n)
-    stack = Int[]
+    fill!(reach, false)
+    empty!(stack)
     for s in seeds
         (excluded[s] || reach[s]) && continue
         reach[s] = true
@@ -33,8 +37,14 @@ function _possde_mask(
 end
 
 # Directed parents (in the whole graph) of any node in `targets`.
-function _pa_mask(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int, targets)
-    pa = falses(n)
+function _pa_mask(
+    adj::BitMatrix,
+    mark::Matrix{Endpoint},
+    n::Int,
+    targets,
+    pa::BitVector = falses(n),
+)
+    fill!(pa, false)
     for t in targets
         for p = 1:n
             adj[p, t] || continue
