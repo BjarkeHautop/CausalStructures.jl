@@ -275,113 +275,14 @@ end
           nothing
 end
 
-# ── Example 4: GETDEP ────────────────────────────────────────────────────────
+# ── Example 4/5: GETCAND3RDFDC with a smaller R' ─────────────────────────────
 #
-# G' from Fig. 1b, I = {}, R' = {A, B, C} (output of GETCAND2NDFDC).
-#   v = A => T = {A}, GETDEP returns Z' = {}
-#   v = B => T = {B}, GETDEP returns Z' = {A}   (Example 4 in the paper)
-#   v = C => T = {C}, GETDEP returns Z' = {A}
+# G' from Fig. 1b. With R' = {A, B, C}, B and C each need A to satisfy the
+# third FD condition (Example 4 in the paper: GETDEP(T={B}) and GETDEP(T={C})
+# both witness Z' = {A}); with A unavailable (R' = {B, C}), neither can
+# complete, so R'' is empty.
 
-@testitem "GETDEP: Jeong (2022) Example 4 - T={A}" setup=[JeongGraphs] tags =
-    [:unit, :frontdoor] begin
-    cg = _jeong2022_fig1b()
-    B = cg.backend
-    n = length(B.nodes)
-
-    x_idx = CausalStructures.node_index(cg, :X)
-    x_set = falses(n)
-    x_set[x_idx] = true
-
-    y_mask = falses(n)
-    y_mask[CausalStructures.node_index(cg, :Y)] = true
-
-    r_prime_mask = falses(n)
-    for s in [:A, :B, :C]
-        r_prime_mask[CausalStructures.node_index(cg, s)] = true
-    end
-
-    t_mask = falses(n)
-    t_mask[CausalStructures.node_index(cg, :A)] = true
-
-    buf = CausalStructures._FDBuffers(n)
-    z_prime = CausalStructures._get_dep(buf, B, x_set, y_mask, t_mask, r_prime_mask)
-
-    @test z_prime !== nothing
-    @test Set(B.nodes[v] for v = 1:n if z_prime[v]) == Set{Symbol}()
-end
-
-@testitem "GETDEP: Jeong (2022) Example 4 - T={B}" setup=[JeongGraphs] tags =
-    [:unit, :frontdoor] begin
-    cg = _jeong2022_fig1b()
-    B = cg.backend
-    n = length(B.nodes)
-
-    x_idx = CausalStructures.node_index(cg, :X)
-    x_set = falses(n)
-    x_set[x_idx] = true
-
-    y_mask = falses(n)
-    y_mask[CausalStructures.node_index(cg, :Y)] = true
-
-    r_prime_mask = falses(n)
-    for s in [:A, :B, :C]
-        r_prime_mask[CausalStructures.node_index(cg, s)] = true
-    end
-
-    t_mask = falses(n)
-    t_mask[CausalStructures.node_index(cg, :B)] = true
-
-    buf = CausalStructures._FDBuffers(n)
-    z_prime = CausalStructures._get_dep(buf, B, x_set, y_mask, t_mask, r_prime_mask)
-
-    @test z_prime !== nothing
-    @test Set(B.nodes[v] for v = 1:n if z_prime[v]) == Set([:A])
-end
-
-@testitem "GETDEP: Jeong (2022) Example 4 - T={C}" setup=[JeongGraphs] tags =
-    [:unit, :frontdoor] begin
-    cg = _jeong2022_fig1b()
-    B = cg.backend
-    n = length(B.nodes)
-
-    x_idx = CausalStructures.node_index(cg, :X)
-    x_set = falses(n)
-    x_set[x_idx] = true
-
-    y_mask = falses(n)
-    y_mask[CausalStructures.node_index(cg, :Y)] = true
-
-    r_prime_mask = falses(n)
-    for s in [:A, :B, :C]
-        r_prime_mask[CausalStructures.node_index(cg, s)] = true
-    end
-
-    t_mask = falses(n)
-    t_mask[CausalStructures.node_index(cg, :C)] = true
-
-    buf = CausalStructures._FDBuffers(n)
-    z_prime = CausalStructures._get_dep(buf, B, x_set, y_mask, t_mask, r_prime_mask)
-
-    @test z_prime !== nothing
-    @test Set(B.nodes[v] for v = 1:n if z_prime[v]) == Set([:A])
-end
-
-# ── Example 5: GETDEP with smaller R' => returns nothing ─────────────────────
-#
-# With R' = {B, C} and T = {B}, GETDEP cannot disconnect all BD paths from T to
-# Y while staying within R' \ T = {C}.  The BFS reaches Y (through D --> Y in M)
-# before exhausting the queue, so GETDEP returns nothing.
-#
-# BFS trace (explicit latent-node DAG):
-#   u=B  => NR={} (A not in R'), N'={A}              => Q=[A]
-#   u=A  => NR={C}, update M to G'_{B,C},
-#           N'={C,D,U2}, NR'={C}                     => Q=[C,D,U2]
-#   u=C  => NR={}, N'={}
-#   u=D  => NR={} (Y,U1 not in R'), N'={Y,U1}        => Q grows
-#   u=U2 => all neighbors visited
-#   u=Y  => u in Y => return nothing
-
-@testitem "GETDEP: Jeong (2022) Example 5 - R'={B,C}, T={B} returns nothing" setup=[
+@testitem "GETCAND3RDFDC: Jeong (2022) Example 5 - R'={B,C} with A unavailable empties R''" setup=[
     JeongGraphs,
 ] tags = [:unit, :frontdoor] begin
     cg = _jeong2022_fig1b()
@@ -395,17 +296,18 @@ end
     y_mask = falses(n)
     y_mask[CausalStructures.node_index(cg, :Y)] = true
 
-    # R' = {B, C} — smaller candidate pool than Example 4
+    i_mask = falses(n)
     r_prime_mask = falses(n)
     for s in [:B, :C]
         r_prime_mask[CausalStructures.node_index(cg, s)] = true
     end
 
-    t_mask = falses(n)
-    t_mask[CausalStructures.node_index(cg, :B)] = true
-
     buf = CausalStructures._FDBuffers(n)
-    @test CausalStructures._get_dep(buf, B, x_set, y_mask, t_mask, r_prime_mask) === nothing
+    r_dbl_prime =
+        CausalStructures._getcand3rdfdc(buf, B, x_set, y_mask, i_mask, r_prime_mask)
+
+    @test r_dbl_prime !== nothing
+    @test Set(B.nodes[v] for v = 1:n if r_dbl_prime[v]) == Set{Symbol}()
 end
 
 # ── Example 7: GETCAUSALPATHGRAPH ────────────────────────────────────────────

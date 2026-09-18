@@ -50,6 +50,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Improved performance of `all_frontdoor_sets`/`frontdoor_set` by reusing scratch buffers
   across recursive calls and scanning only each node's actual neighbors.
+- Improved performance of `all_frontdoor_sets`/`frontdoor_set`'s step that filters out
+  candidate nodes unable to satisfy the front-door criterion's third condition, by replacing
+  its per-candidate reachability search with a single combined pass, for both `DAG` and `ADMG`.
 - Improved performance of `all_iv_sets` by testing membership per candidate node instead
   of per combinatorial subset.
 - Improved performance of `possible_joint_parent_sets`/`possible_parent_sets` by avoiding

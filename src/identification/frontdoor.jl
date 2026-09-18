@@ -125,238 +125,43 @@ function _build_gx(cg::ADMG, x::Union{Symbol,AbstractVector{Symbol}})
     )
 end
 
-# Moral adjacency restricted to mask, with removed_mask nodes' outgoing edges
-# omitted. Used by _get_dep (condition 3), which grows removed_mask during BFS.
-# Mutates (and returns) `adj` in place, clearing it first, so callers can reuse
-# the same buffer across the many rebuilds triggered by `_get_dep`/`_getcand3rdfdc`.
-function _moral_adj_gx!(
-    adj::Vector{Vector{Int}},
-    B::DAGBackend,
-    mask::BitVector,
-    removed_mask::BitVector,
-    pa_buf::Vector{Int},
-)
-    n = length(B.nodes)
-    for v = 1:n
-        empty!(adj[v])
-    end
-    for ch = 1:n
-        mask[ch] || continue
-        empty!(pa_buf)
-        for p in _parents_slice(B, ch)
-            (mask[p] && !removed_mask[p]) && push!(pa_buf, p)
-        end
-        for p in pa_buf
-            push!(adj[p], ch)
-            push!(adj[ch], p)
-        end
-        for i in eachindex(pa_buf)
-            for j = (i+1):lastindex(pa_buf)
-                push!(adj[pa_buf[i]], pa_buf[j])
-                push!(adj[pa_buf[j]], pa_buf[i])
-            end
-        end
-    end
-    return adj
-end
-
-# Like the DAGBackend version above, but marries every pair of nodes with an
-# arrowhead into `ch` -- directed parents AND bidirected spouses. Bidirected
-# edges have no "outgoing" endpoint, so unlike parents they are never filtered
-# by removed_mask.
-function _moral_adj_gx!(
-    adj::Vector{Vector{Int}},
-    B::ADMGBackend,
-    mask::BitVector,
-    removed_mask::BitVector,
-    pa_buf::Vector{Int},
-)
-    n = length(B.nodes)
-    for v = 1:n
-        empty!(adj[v])
-    end
-    for ch = 1:n
-        mask[ch] || continue
-        empty!(pa_buf)
-        for p in _parents_slice(B, ch)
-            (mask[p] && !removed_mask[p]) && push!(pa_buf, p)
-        end
-        for s in _spouses_slice(B, ch)
-            mask[s] && push!(pa_buf, s)
-        end
-        for p in pa_buf
-            push!(adj[p], ch)
-            push!(adj[ch], p)
-        end
-        for i in eachindex(pa_buf)
-            for j = (i+1):lastindex(pa_buf)
-                push!(adj[pa_buf[i]], pa_buf[j])
-                push!(adj[pa_buf[j]], pa_buf[i])
-            end
-        end
-    end
-    return adj
-end
-
-# Whether `v` has any arrowhead pointing into it (a directed parent, or for
-# ADMGs a bidirected spouse) -- used by `_get_dep` to decide whether a newly
-# removed node must keep propagating the BFS.
-_has_incoming_arrowhead(B::DAGBackend, v::Int) = !isempty(_parents_slice(B, v))
-_has_incoming_arrowhead(B::ADMGBackend, v::Int) =
-    !isempty(_parents_slice(B, v)) || !isempty(_spouses_slice(B, v))
-
-# Scratch buffers shared across the whole `_listfdsets!` recursion tree.
-# `_get_dep` is called once per remaining candidate at every recursion node.
-# Safe to share because every call fully consumes its buffers before returning.
-# `nr_mask`/`n_set` are dirty-tracked per BFS step via `nr_list`/`n_list`
-# (set true, used, reset false through the list) rather than `fill!`-ed over
-# the whole array every step, so a BFS step costs O(degree(u)), not O(n).
-# `visited`/`queue` are also reused by `_listfdsets!`'s own Step-3 CPG BFS
-# (and `frontdoor_set`'s): by the time that runs, `_get_dep` has already
-# returned (from inside `_getcand3rdfdc`) and is done with them for this call.
+# Scratch buffers for the whole `_listfdsets!` recursion tree, safe to share
+# under the buffer-reuse rule: `an_mask`/`an_stack`/`dep_visited`/`dep_queue`
+# live only inside one `_getcand3rdfdc` call, and `visited`/`queue` are
+# reused afterward for the Step-3 CPG BFS (here and in `frontdoor_set`).
 struct _FDBuffers
-    adj::Vector{Vector{Int}}
-    pa_buf::Vector{Int}
-    an_mask::BitVector
-    an_stack::Vector{Int}
-    removed_mask::BitVector
-    z_prime::BitVector
     visited::BitVector
     queue::Vector{Int}
-    nr_mask::BitVector
-    n_set::BitVector
-    seeds::Vector{Int}
-    t_mask::BitVector
-    nr_list::Vector{Int}
-    n_list::Vector{Int}
+    an_mask::BitVector
+    an_stack::Vector{Int}
+    an_seeds::Vector{Int}
+    dep_visited::BitMatrix
+    dep_queue::Vector{Tuple{Int,Int}}
     r_dbl_prime_buf::BitVector
 end
 
 _FDBuffers(n::Int) = _FDBuffers(
-    [Int[] for _ = 1:n],
-    Int[],
-    falses(n),
-    Int[],
-    falses(n),
-    falses(n),
-    falses(n),
-    Int[],
-    falses(n),
     falses(n),
     Int[],
     falses(n),
     Int[],
     Int[],
+    falses(n, 2),
+    Tuple{Int,Int}[],
     falses(n),
 )
 
-# GETDEP, Jeong, Tian & Bareinboim (2022) Algorithm 4, helper for Step 2 of
-# FindFDSet. Given T (a candidate set), R' (the filtered pool from Step 1), X,
-# and Y, finds Z' ⊆ R' \ T such that T ∪ Z' satisfies the third FD condition
-# relative to (X, Y), or returns nothing if no such Z' exists. The BFS
-# traverses the moralized graph of G'_T with X blocked; latent nodes are
-# traversed (BD paths can route through them) but only R' nodes are candidates
-# for Z'.
-function _get_dep(
-    buf::_FDBuffers,
-    B::Union{DAGBackend,ADMGBackend},
-    x_set::BitVector,
-    y_mask::BitVector,
-    t_mask::BitVector,
-    r_prime_mask::BitVector,
-)
-    n = length(B.nodes)
-
-    # G' = G restricted to An(T ∪ X ∪ Y) in G (full graph, no edges removed for ancestors)
-    seeds = empty!(buf.seeds)
-    for v = 1:n
-        (t_mask[v] || x_set[v] || y_mask[v]) && push!(seeds, v)
-    end
-    _ancestors_bitmask!(buf.an_mask, buf.an_stack, B, seeds)
-
-    # G'' = G'_T initially; removed_mask grows with Z' as the BFS adds nodes
-    removed_mask = buf.removed_mask
-    removed_mask .= t_mask
-    adj = _moral_adj_gx!(buf.adj, B, buf.an_mask, removed_mask, buf.pa_buf)
-
-    # BFS: visited includes X (removed from M) and all T nodes (starting queue)
-    z_prime = fill!(buf.z_prime, false)
-    visited = fill!(buf.visited, false)
-    queue = empty!(buf.queue)
-    for v = 1:n
-        x_set[v] && (visited[v] = true)
-    end
-    for v = 1:n
-        if t_mask[v] && !visited[v]
-            visited[v] = true
-            push!(queue, v)
+# Spouses of `v`, visited with mark 2 (head). Gated the same as the parent
+# loop beside it: a spousal edge has an arrowhead at both ends, so crossing
+# it is a backward-type step, not a forward one.
+_fd_dep_spouses!(queue, visited, ::DAGBackend, ::Int) = nothing
+function _fd_dep_spouses!(queue, visited, B::ADMGBackend, v::Int)
+    for s in _spouses_slice(B, v)
+        if !visited[s, 2]
+            visited[s, 2] = true
+            push!(queue, (s, 2))
         end
     end
-
-    nr_mask = buf.nr_mask
-    n_mask = buf.n_set
-    nr_list = buf.nr_list
-    n_list = buf.n_list
-
-    head = 1
-    while head <= length(queue)
-        u = queue[head]
-        head += 1
-
-        y_mask[u] && return nothing  # Y reachable => no valid Z' exists
-
-        # NR = unvisited neighbors of u in current M that are in R'. Only
-        # adj[u] (u's actual neighbors) is relevant, so this is O(degree(u)).
-        empty!(nr_list)
-        for w in adj[u]
-            (r_prime_mask[w] && !visited[w] && !nr_mask[w]) || continue
-            nr_mask[w] = true
-            push!(nr_list, w)
-        end
-
-        # Update G'' (add NR to removed_mask) and recompute M
-        if !isempty(nr_list)
-            for v in nr_list
-                removed_mask[v] = true
-                z_prime[v] = true
-            end
-            adj = _moral_adj_gx!(buf.adj, B, buf.an_mask, removed_mask, buf.pa_buf)
-        end
-
-        # N' = unvisited neighbors of u in the now-updated M (includes latent nodes)
-        empty!(n_list)
-        for w in adj[u]
-            (!visited[w] && !n_mask[w]) || continue
-            n_mask[w] = true
-            push!(n_list, w)
-        end
-
-        # NR' = {w ∈ NR | w has an incoming arrow in G}; must also be BFS-ed
-        for v in nr_list
-            if _has_incoming_arrowhead(B, v) && !n_mask[v]
-                n_mask[v] = true
-                push!(n_list, v)
-            end
-        end
-
-        # Insert N = N' ∪ NR' into queue
-        for v in n_list
-            if !visited[v]
-                visited[v] = true
-                push!(queue, v)
-            end
-        end
-
-        # Reset the dirty masks for the next BFS step (only the touched entries).
-        for v in nr_list
-            nr_mask[v] = false
-        end
-        for v in n_list
-            n_mask[v] = false
-        end
-    end
-
-    return z_prime
 end
 
 # GETCAUSALPATHGRAPH, Jeong, Tian & Bareinboim (2022), helper for Step 3 of
@@ -439,10 +244,20 @@ function _get_causal_path_graph(
     return cpg_mask, cpg_children
 end
 
-# GETCAND3RDFDC, Jeong, Tian & Bareinboim (2022), Step 2 of FindFDSet. Returns
-# R'' ⊆ R': all v ∈ R' for which GETDEP(G, X, Y, {v}, R') != nothing, meaning
-# some Z' ⊆ R' \ {v} makes {v} ∪ Z' satisfy the third FD condition. Returns
-# nothing if some v ∈ I fails (I must be included but cannot satisfy it).
+# GETCAND3RDFDC, Step 2 of FindFDSet (Jeong, Tian & Bareinboim 2022). Returns
+# R'' ⊆ R': all v ∈ R' for which some Z with {v} ⊆ Z ⊆ R' satisfies the third
+# FD condition (all back-door paths from Z to Y blocked by X in G_Z). Returns
+# nothing if some v ∈ I fails.
+#
+# The paper's GETDEP (Algorithm 4) answers this once per candidate via its
+# own moralized-graph BFS: O(|R'|) passes. This does it in a single O(n+m)
+# pass, tracking whether each visited vertex was reached by a forward step
+# (mark 2/head, landing on an arrowhead) or a backward step (mark 1/tail):
+#   - Forward (to a child, or an ADMG spouse) is always allowed.
+#   - Backward (to a parent that isn't itself a candidate) is allowed after
+#     a tail entry unconditionally, and after a head entry only if the
+#     current vertex is an ancestor of Y.
+# X always blocks further traversal, being condition 3's fixed conditioning set.
 function _getcand3rdfdc(
     buf::_FDBuffers,
     B::Union{DAGBackend,ADMGBackend},
@@ -452,18 +267,53 @@ function _getcand3rdfdc(
     r_prime_mask::BitVector,
 )
     n = length(B.nodes)
-    r_dbl_prime = buf.r_dbl_prime_buf
-    r_dbl_prime .= r_prime_mask
-    t_mask = buf.t_mask
+
+    seeds = empty!(buf.an_seeds)
+    for v = 1:n
+        y_mask[v] && push!(seeds, v)
+    end
+    a_mask = _ancestors_bitmask!(buf.an_mask, buf.an_stack, B, seeds)
+
+    visited = fill!(buf.dep_visited, false)
+    queue = empty!(buf.dep_queue)
+    for v = 1:n
+        if y_mask[v] && !visited[v, 1]
+            visited[v, 1] = true
+            push!(queue, (v, 1))
+        end
+    end
+
+    head = 1
+    while head <= length(queue)
+        v, pe = queue[head]
+        head += 1
+        x_set[v] && continue
+
+        for c in _children_slice(B, v)
+            if !visited[c, 2]
+                visited[c, 2] = true
+                push!(queue, (c, 2))
+            end
+        end
+
+        if pe == 1 || (pe == 2 && a_mask[v])
+            for p in _parents_slice(B, v)
+                if !r_prime_mask[p] && !visited[p, 1]
+                    visited[p, 1] = true
+                    push!(queue, (p, 1))
+                end
+            end
+            _fd_dep_spouses!(queue, visited, B, v)  # no-op for DAGBackend
+        end
+    end
+
+    r_dbl_prime = fill!(buf.r_dbl_prime_buf, false)
     for v = 1:n
         r_prime_mask[v] || continue
-        t_mask .= false
-        t_mask[v] = true
-        if _get_dep(buf, B, x_set, y_mask, t_mask, r_prime_mask) === nothing
-            if i_mask[v]
-                return nothing  # v in I must be included but fails condition 3
-            end
-            r_dbl_prime[v] = false
+        if visited[v, 1] || visited[v, 2]
+            i_mask[v] && return nothing  # v in I must be included but fails condition 3
+        else
+            r_dbl_prime[v] = true
         end
     end
     return r_dbl_prime
@@ -747,7 +597,7 @@ function _listfdsets!(
 )
     n = length(B.nodes)
 
-    # Step 1: condition 2 — drop candidates with a BD path from X
+    # Step 1: condition 2, drop candidates with a BD path from X
     r_prime = _getcand2ndfdc(buf2, gx, xs, n, i_mask, r_mask)
     r_prime === nothing && return
 
@@ -755,7 +605,7 @@ function _listfdsets!(
     r_dbl_prime = _getcand3rdfdc(buf, B, x_set, y_mask, i_mask, r_prime)
     r_dbl_prime === nothing && return
 
-    # Step 3: condition 1 — R'' must block all directed X --> Y paths in CPG
+    # Step 3: condition 1, R'' must block all directed X --> Y paths in CPG
     visited = fill!(buf.visited, false)
     queue = empty!(buf.queue)
     for v = 1:n
@@ -805,13 +655,11 @@ end
 # Threaded LISTFDSETS: fork the include/exclude recursion into independent
 # branches up front, each with its own `(i_mask, r_mask)` copy and its own
 # `_FDBuffers`/`_FD2ndBuffers`, then hand each to `_listfdsets!` unchanged.
-# Unlike `enumerate-subsets.jl`'s brute-force subset search, the size of this
-# search tree isn't knowable cheaply in advance (Steps 1-3 pruning can cut it
-# down to a handful of nodes or leave it exponential, depending on graph
-# structure, even for realistic sparse random DAGs), so there's no
-# candidate-count threshold to gate on the way `_SUBSET_SEARCH_PARALLEL_THRESHOLD`
-# does; `enumerate_dags`/`count_dags` (enumerate-dags.jl) face the same
-# "unknowable in advance" issue and use the same frontier pattern for the
+# The search tree's size isn't knowable in advance, unlike
+# `enumerate-subsets.jl`'s candidate count (Steps 1-3 pruning can cut it to a
+# handful of nodes or leave it exponential, even for sparse random DAGs), so
+# there's no threshold to gate on the way `_SUBSET_SEARCH_PARALLEL_THRESHOLD`
+# does; `enumerate_dags`/`count_dags` use the same frontier pattern for the
 # same reason.
 
 # Branches per thread to fork, since front-door search subtrees can be wildly
