@@ -14,9 +14,10 @@ Status](https://github.com/BjarkeHautop/CausalStructures.jl/actions/workflows/Do
 [![BestieTemplate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JuliaBesties/BestieTemplate.jl/main/docs/src/assets/badge.json)](https://github.com/JuliaBesties/BestieTemplate.jl)
 [![Aqua QA](https://juliatesting.github.io/Aqua.jl/dev/assets/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
-CausalStructures.jl is a causality-first graph package for Julia, built for
-performance and flexibility. Each graph class is its own type, validated on
-construction. It aims to serve both experts and novices in causal inference.
+CausalStructures.jl is a Julia package for causal graphs and causal
+inference. It provides graph representations for the structures used in
+causal inference, along with algorithms for graphical queries, causal
+identification, and transformations between graph classes.
 
 ## Installation
 
@@ -27,9 +28,45 @@ In the Julia REPL, press `]` to enter the Pkg mode, then run:
 pkg> add CausalStructures
 ```
 
-## Graph types
+## Quick Start
 
-The following graph types are supported:
+Construct graphs by specifying edges and the desired graph class. The
+quickest way is to write edges directly as a string, using markers such as
+`-->` for directed edges (`+` fans a marker out to, or in from, several
+nodes at once); edges can equivalently be built up from constructor calls
+like `directed(:A, :B)`, which is useful when composing them programmatically.
+
+```julia
+using CausalStructures
+
+dag = DAG("C --> X, A --> X + K, X --> F + D, K --> Y, D --> Y + G, Y --> H")
+```
+
+`adjustment_set` finds a set of variables that identifies the causal effect
+of `X` on `Y`, here via the O-set, which minimizes the asymptotic variance
+of the effect estimator:
+
+```julia
+adjustment_set(dag, :X, :Y; type = :optimal)
+#> 1-element Vector{Symbol}:
+#>  :K
+```
+
+If `K` is unobserved, we can project it out to obtain an ADMG over the observed variables. We can then enumerate all valid adjustment sets under the generalized adjustment criterion:
+
+```julia
+admg = latent_project(dag, :K)
+all_adjustment_sets(admg, :X, :Y)
+```
+
+See the [Getting Started guide](https://bjarkehautop.github.io/CausalStructures.jl/stable/05-quick-guide/)
+for a full walkthrough, and the [Causal Identification guide](https://bjarkehautop.github.io/CausalStructures.jl/stable/20-causal-identification/)
+for frontdoor adjustment, instrumental variables, and minimal separators.
+
+## Graph classes
+
+Each causal graph class is its own type, structurally validated on
+construction:
 
     CausalGraph
     ├─ DAG            Directed Acyclic Graph
@@ -45,39 +82,25 @@ The following graph types are supported:
     ├─ PAG            Partial Ancestral Graph
     └─ UNKNOWN        No structural constraints
 
-Each graph class encodes structural constraints, such as no cycles,
-closed under Meek’s rules, etc., and these constraints are verified on
-construction.
+The package provides methods to work with these graphs:
 
-## Quick Start
+- graphical queries and separation criteria, such as ancestors, Markov
+  blankets, and d-/m-separation
+  ([reference](https://bjarkehautop.github.io/CausalStructures.jl/stable/95-reference/20-queries/));
+- graph-to-graph transformations, including latent projection, moralization,
+  and DAG-to-CPDAG/MPDAG conversion
+  ([reference](https://bjarkehautop.github.io/CausalStructures.jl/stable/95-reference/30-operations/));
+- Markov equivalence class algorithms, such as enumerating the DAGs
+  consistent with a CPDAG or the MAGs consistent with a PAG
+  ([guide](https://bjarkehautop.github.io/CausalStructures.jl/stable/15-equivalence-classes/));
+- random graph generation and data simulation
+  ([reference](https://bjarkehautop.github.io/CausalStructures.jl/stable/95-reference/50-simulation/));
+- and visualization of any graph class via Makie
+  ([guide](https://bjarkehautop.github.io/CausalStructures.jl/stable/40-plotting/)).
 
-Construct graphs by specifying edges and the desired graph class. The
-quickest way is to write edges directly as a string, using the markers above
-(`+` fans a marker out to, or in from, several nodes at once):
+## Performance
 
-```julia
-using CausalStructures
-
-dag = DAG("U --> X + Y, X --> Y")
-```
-
-Edges can equivalently be built up from constructor calls, which is useful
-when composing edges programmatically:
-
-```julia
-dag = DAG(
-    directed(:U, :X),
-    directed(:U, :Y),
-    directed(:X, :Y),
-)
-```
-
-You can then run a variety of causal graph queries, transformations,
-adjustment-set computations, and separation criteria. For example, if `U` is unobserved, we can project it out to obtain an `ADMG`.
-
-```julia
-admg = latent_project(dag, :U)
-```
+Graphs are stored in a packed CSR (compressed sparse row) representation, supporting efficient graph queries and higher-level algorithms. See the [Benchmarks page](https://bjarkehautop.github.io/CausalStructures.jl/stable/70-benchmarks/) for measurements of query and algorithm performance, including comparisons with [CausalInference.jl](https://github.com/mschauer/CausalInference.jl).
 
 ## Contributing
 
@@ -86,5 +109,4 @@ Contributions of all kinds are very welcome!
 ## Attribution
 
 The package is inspired by the design principles of the R package
-[caugi](https://caugi.org/). Several algorithms and tests are adapted from
-caugi.
+[caugi](https://caugi.org/). Several algorithms and tests are adapted from caugi.
