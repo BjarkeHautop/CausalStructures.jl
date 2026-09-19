@@ -1,6 +1,6 @@
 # Developer Docs
 
-Some notes on performance. Before doing any of these, please profile the code, to see if it affects the performance.
+Some notes on performance. Before doing any of these, please benchmark/profile the code, to see if it affects the performance.
 
 ## Skipping validation
 

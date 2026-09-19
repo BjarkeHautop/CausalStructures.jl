@@ -144,3 +144,11 @@ end
     large enough to benefit.
 
 [^1]: Except for [`all_iv_sets`](@ref), since the candidate check for IV is a trivial lookup, and thus not worth it.
+
+## Comparison to CausalInference.jl
+
+[CausalInference.jl](https://github.com/mschauer/CausalInference.jl) is another Julia
+package implementing some of the same identification criteria (DAGs only): the generalized
+adjustment criterion, the backdoor criterion, and the frontdoor criterion.
+
+On the tested graphs, CausalStructures enumerates all valid adjustment and backdoor sets approximately 50× faster, and frontdoor sets approximately 14× faster. See [`benchmark/README.md`](https://github.com/BjarkeHautop/CausalStructures.jl/blob/main/benchmark/README.md) for the full setup and numbers.

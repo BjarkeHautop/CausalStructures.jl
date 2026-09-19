@@ -1,0 +1,15 @@
+[deps]
+CausalInference = "8e462317-f959-576b-b3c1-403f26cec956"
+CausalStructures = "b41ab49a-79bc-5eac-acbb-517b17bd5c16"
+Chairmarks = "0ca39b1e-fe0b-4e98-acfc-b1656634c4de"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+
+[sources]
+CausalStructures = {path = ".."}
+
+[compat]
+CausalInference = "0.19"
+Chairmarks = "1"
+Graphs = "1"
+Random = "1"

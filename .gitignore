@@ -13,6 +13,5 @@ node_modules
 .vscode/
 .claude/
 .JETLSConfig.toml
-benchmark/
 *.pdf
 *.txt
