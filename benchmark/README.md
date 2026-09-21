@@ -27,7 +27,7 @@ Done on a 21-node DAG `(x,y)` pair with 524,288 valid sets:
 
 CausalStructures is ~55x faster and allocates ~144x less.
 
-**Enumerate all valid backdoor sets (uncapped)**
+**Enumerate all valid backdoor sets**
 A different 21-node DAG/pair with 512,128 valid sets:
 
 | | CS `all_backdoor_sets` | CI `list_backdoor_adjustment` |
@@ -36,8 +36,7 @@ A different 21-node DAG/pair with 512,128 valid sets:
 
 CausalStructures is ~52x faster and allocates ~190x less.
 
-**Enumerate all valid frontdoor sets (uncapped)** -- `all_frontdoor_sets` vs
-`list_frontdoor_adjustment`. Unlike adjustment/backdoor, frontdoor cost
+**Enumerate all valid frontdoor sets**. Unlike adjustment/backdoor, frontdoor cost
 tracks the size of the candidate pool rather than `n` directly, and
 satisfying the frontdoor criterion is a much rarer structural condition, so instead the setup is a single mediator `X --> M --> Y` plus 19 isolated
 nodes with no edges to `X`, `Y`, or `M`, each freely includable in or
