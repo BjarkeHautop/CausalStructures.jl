@@ -4,7 +4,10 @@ CurrentModule = CausalStructures
 
 # CausalStructures.jl
 
-CausalStructures.jl is a causality-first graph package for Julia, built for performance and flexibility. Each graph class is its own type, validated on construction. It aims to serve both experts and novices in causal inference.
+CausalStructures.jl is a Julia package for causal graphs and causal
+inference. It provides graph representations for the structures used in
+causal inference, along with algorithms for graphical queries, causal
+identification, and transformations between graph classes.
 
 ## Supported Graph Classes
 
@@ -50,8 +53,7 @@ using CausalStructures
 dag = DAG("U --> X + Y, X --> Y")
 ```
 
-Edges can equivalently be built up from constructor calls, which is useful
-when composing edges programmatically:
+Edges can equivalently be built up from constructor calls, which is useful when composing edges programmatically:
 
 ```@example example
 dag = DAG(
@@ -61,8 +63,8 @@ dag = DAG(
 )
 ```
 
-You can then run a variety of causal graph queries, transformations,
-adjustment-set computations, and separation criteria. For example, if `U` is unobserved, we can project it out to obtain an [`ADMG`](@ref):
+You can then run a variety of causal graph queries, transformations, and causal identification methods such as
+adjustment-set computations. For example, if `U` is unobserved, we can project it out to obtain an [`ADMG`](@ref):
 
 ```@example example
 admg = latent_project(dag, :U)

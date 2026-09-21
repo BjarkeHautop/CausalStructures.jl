@@ -18,7 +18,7 @@ apply_background_knowledge
 meek_closure
 ```
 
-## Latent variables
+## Conditioning & marginalization
 
 ```@docs
 latent_project

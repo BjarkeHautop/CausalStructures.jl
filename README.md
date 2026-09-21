@@ -84,23 +84,15 @@ construction:
 
 The package provides methods to work with these graphs:
 
-- graphical queries and separation criteria, such as ancestors, Markov
-  blankets, and d-/m-separation
-  ([reference](https://bjarkehautop.github.io/CausalStructures.jl/stable/95-reference/20-queries/));
-- graph-to-graph transformations, including latent projection, moralization,
-  and DAG-to-CPDAG/MPDAG conversion
-  ([reference](https://bjarkehautop.github.io/CausalStructures.jl/stable/95-reference/30-operations/));
-- Markov equivalence class algorithms, such as enumerating the DAGs
-  consistent with a CPDAG or the MAGs consistent with a PAG
-  ([guide](https://bjarkehautop.github.io/CausalStructures.jl/stable/15-equivalence-classes/));
-- random graph generation and data simulation
-  ([reference](https://bjarkehautop.github.io/CausalStructures.jl/stable/95-reference/50-simulation/));
-- and visualization of any graph class via Makie
-  ([guide](https://bjarkehautop.github.io/CausalStructures.jl/stable/40-plotting/)).
+- Queries such as parents, ancestors, and m-separation;
+- Operations such as moralize, meek closure, and conversion to/from equivalence classes;
+- Causal identification such as the Generalized Adjustment Criterion, backdoor, frontdoor, and instrumental variables;
+- Random graph generation and data simulation;
+- Visualization of any graph class via Makie.
 
 ## Performance
 
-Graphs are stored in a packed CSR (compressed sparse row) representation, supporting efficient graph queries and higher-level algorithms. See the [Benchmarks page](https://bjarkehautop.github.io/CausalStructures.jl/stable/70-benchmarks/) for measurements of query and algorithm performance, including comparisons with [CausalInference.jl](https://github.com/mschauer/CausalInference.jl).
+See [benchmark](https://github.com/BjarkeHautop/CausalStructures.jl/tree/main/benchmark) for comparisons with [CausalInference.jl](https://github.com/mschauer/CausalInference.jl).
 
 ## Contributing
 

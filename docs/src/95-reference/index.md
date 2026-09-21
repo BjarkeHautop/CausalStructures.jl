@@ -3,9 +3,9 @@
 The API reference is split by topic:
 
 - [Graph & Edge Types](@ref graph-types-reference) -- graph classes, edge constructors, background knowledge
-- [Queries](@ref queries-reference) -- traversal, membership, and predicate functions
+- [Queries](@ref queries-reference) -- traversal, separation, and predicate functions
 - [Operations](@ref operations-reference) -- graph-to-graph transformations
-- [Separation & Adjustment](@ref adjustment-reference) -- d-/m-separation and causal identification
+- [Causal Identification](@ref identification-reference) -- adjustment, backdoor, frontdoor, IV, and `id`
 - [Simulation](@ref simulation-reference) -- random graph and data generation
 - [Editing](@ref editing-reference) -- adding, removing, and reclassing graph elements
 - [Plotting](@ref plotting-reference) -- graph visualization

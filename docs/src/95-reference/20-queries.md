@@ -14,8 +14,6 @@ topological_sort
 ```@docs
 ancestors
 descendants
-possible_ancestors
-possible_descendants
 anteriors
 posteriors
 exogenous_nodes
@@ -32,13 +30,23 @@ markov_blanket
 districts
 ```
 
-## Possible parent sets
+## Separation
 
 ```@docs
+d_separated
+m_separated
+minimal_separator
+possible_d_sep
+```
+
+## Equivalence-class queries
+
+```@docs
+possible_ancestors
+possible_descendants
 possible_parent_sets
 possible_joint_parent_sets
 possible_local_structures
-possible_d_sep
 ```
 
 ## Graph class predicates

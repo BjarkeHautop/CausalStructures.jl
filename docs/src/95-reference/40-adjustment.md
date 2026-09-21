@@ -1,15 +1,7 @@
-# [Separation & Adjustment](@id adjustment-reference)
+# [Causal Identification](@id identification-reference)
 
 See the [Causal Identification guide](@ref causal-identification-guide) for
 worked examples.
-
-## Separation
-
-```@docs
-d_separated
-m_separated
-minimal_separator
-```
 
 ## Adjustment
 
