@@ -687,6 +687,41 @@ function posteriors(
     return _directed_undirected_reach(cg, node, _children_slice; open)
 end
 
+# Marks every node reachable from `node_idx` via a collider path (Pellet &
+# Elisseeff 2008): a path of length >= 2 whose interior nodes all have an
+# arrowhead pointing into them from both adjacent path edges.
+function _collider_reachable!(reached::BitVector, B, node_idx::Int)
+    n = length(reached)
+    queued = falses(n)
+    queue = Int[]
+
+    seed!(v) =
+        if !queued[v]
+            queued[v] = true
+            push!(queue, v)
+        end
+    for v in _children_slice(B, node_idx)
+        seed!(v)
+    end
+    for v in _spouses_slice(B, node_idx)
+        seed!(v)
+    end
+
+    while !isempty(queue)
+        v = pop!(queue)
+        for w in _parents_slice(B, v)
+            w == node_idx || (reached[w] = true)
+        end
+        for w in _spouses_slice(B, v)
+            if w != node_idx
+                reached[w] = true
+                seed!(w)
+            end
+        end
+    end
+    return reached
+end
+
 # Marks `node_idx`'s parents, children, and co-parents (other parents of its
 # children) in `seen`.
 function _mark_parents_children_coparents!(seen::BitVector, B, node_idx::Int)
@@ -714,7 +749,9 @@ co-parents (other parents of `node`'s children). For a [`AbstractPDAG`](@ref),
 undirected neighbors are also included. For an [`ADMG`](@ref),
 the blanket is the union of the parents of every node in `node`'s district
 (excluding `node` itself). For an [`AbstractAG`](@ref), it is parents, children,
-co-parents, spouses, and undirected neighbors.
+co-parents, spouses, and undirected neighbors, plus every node reachable by a
+collider path [pelletelisseeff2008finding](@cite): a path of length >= 2 whose
+interior nodes are all colliders.
 
 # Examples
 
@@ -731,7 +768,18 @@ julia> markov_blanket(dag, :C)
 2-element Vector{Symbol}:
  :B
  :D
+
+julia> mag = MAG("A <-> B <-> C");
+
+julia> markov_blanket(mag, :A)
+2-element Vector{Symbol}:
+ :B
+ :C
 ```
+
+# References
+
+- [pelletelisseeff2008finding](@citet)
 """
 function markov_blanket(cg::DAG, node::Symbol)
     B = cg.backend
@@ -784,6 +832,7 @@ function markov_blanket(cg::AbstractAG, node::Symbol)
     for nbr_idx in _undirected_slice(B, node_idx)
         seen[nbr_idx] = true
     end
+    _collider_reachable!(seen, B, node_idx)
 
     seen[node_idx] = false
     return [B.nodes[i] for i in eachindex(seen) if seen[i]]

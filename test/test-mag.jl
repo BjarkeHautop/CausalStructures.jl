@@ -83,6 +83,31 @@ end
     @test Set(markov_blanket(mag, :A)) == Set([:B, :C, :D])
 end
 
+@testitem "MAG: markov_blanket reaches non-adjacent nodes via a collider path" tags =
+    [:unit, :mag] begin
+    # A <-> B <-> C: B is a collider, so conditioning on {B} opens rather than
+    # blocks the path -- C must be in A's blanket despite being non-adjacent.
+    mag = MAG(bidirected(:A, :B), bidirected(:B, :C))
+    @test m_separated(mag, :A, :C, Symbol[])
+    @test !m_separated(mag, :A, :C, [:B])
+    @test Set(markov_blanket(mag, :A)) == Set([:B, :C])
+
+    # Same effect mixing directed and bidirected edges.
+    mixed = MAG(directed(:A, :B), bidirected(:B, :C))
+    @test !m_separated(mixed, :A, :C, [:B])
+    @test Set(markov_blanket(mixed, :A)) == Set([:B, :C])
+
+    # Chains through more than one collider.
+    chained = MAG(directed(:A, :B), bidirected(:B, :C), directed(:D, :C))
+    @test Set(markov_blanket(chained, :A)) == Set([:B, :C, :D])
+
+    # A directed edge carries an arrowhead at one end only, so the walk cannot
+    # continue past a node reached via a parent edge.
+    dead_end = MAG(bidirected(:A, :B), directed(:B, :C))
+    @test m_separated(dead_end, :A, :C, [:B])
+    @test Set(markov_blanket(dead_end, :A)) == Set([:B])
+end
+
 @testitem "MAG: minimal_separator works" tags = [:unit, :mag] begin
     mag = MAG(directed(:A, :B), directed(:B, :C))
     sep = minimal_separator(mag, :A, :C)

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased version
+
+### Bug fixes
+
+- `markov_blanket` on an `AbstractAG` (`AG`/`MAG`) only looked at direct neighbors, missing nodes reachable through a chain of colliders (e.g. `A <-> B <-> C`), so it could return a set too small to actually separate `node` from the rest of the graph.
+
 ## [0.7.0] - 2026-09-19
 
 ### Breaking changes
