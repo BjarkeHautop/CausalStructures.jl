@@ -35,7 +35,6 @@ Tests are `@testitem`s tagged `:unit`; each test file is self-contained and impo
 
 ## Conventions
 
-- Breaking changes are allowed — never consider backwards compatibility.
 - All arrows in comments must use ASCII (e.g. `-->`, `<--`), not Unicode.
 - File names use kebab-case.
 - Don't use `@inline` — relying on the Julia compiler is better.
@@ -43,7 +42,7 @@ Tests are `@testitem`s tagged `:unit`; each test file is self-contained and impo
 - Add or update tests in `test/` for any behavior change.
 - Keep public API changes documented — exports live in `src/CausalStructures.jl`.
 - Code is formatted with [JuliaFormatter](https://github.com/domluna/JuliaFormatter.jl) per
-  `.JuliaFormatter.toml` (4-space indent, 92-col margin). `pre-commit run --all-files` also
+  `.JuliaFormatter.toml` (4-space indent, 92-col margin). `prek run --all-files` also
   runs markdownlint, yamllint, trailing-whitespace, and CFF validation.
 - Never commit changes — the user handles all commits.
 
@@ -68,68 +67,50 @@ CausalGraph
 ```
 
 `src/core/` defines this hierarchy and is the load-order-sensitive foundation everything
-else builds on: `defs.jl` (types, backend structs), `edges.jl` (`directed`, `undirected`,
-`bidirected`, `partially_directed`, `partially_undirected`, `partial`), `constructors.jl`
-(`cgraph(...)` front door, dispatching through `build_graph` -> type constructor ->
-`_build_graph` -> `build_backend` + `validate`), `graph-string.jl` (the `cgraph(::String)`
-DSL parser, e.g. `"A --> B + C"`), `edit.jl` (`add_edges`/`remove_edges`/`add_nodes`/
-`remove_nodes`/`reclass`), and `validate.jl` (`is_dag`, `is_mpdag`, `is_mag`, `is_pag`, …,
-plus the `validate` dispatch every constructor calls). Each graph class has its own backend
-struct (`DAGBackend`, `ADMGBackend`, `AGBackend`, …) built in `backend.jl` using a packed
-CSR layout: one `rowval` vector holds all neighbors contiguously, `colptr` gives each
-node's slice, and `deg[bucket, node]` records the width of each relationship bucket
-(parents/children/spouses/undirected).
+else builds on: type/backend definitions, edge-kind predicates, per-class constructors
+(each graph type is its own constructor, e.g. `DAG(...)` and the string-DSL form
+`DAG("A --> B + C")`), node/edge editing, and the structural validation every constructor
+runs on construction. Each graph class has its own backend struct using a packed CSR
+layout for its adjacency data.
 
 ### `src/query/` — traversal and separation
 
-`traversal.jl` covers the basics (`ancestors`, `descendants`, `parents`, `children`,
-`spouses`, `neighbors`, `topological_sort`, `markov_blanket`, `districts`, …);
-`separation.jl` adds `d_separated`/`m_separated`; `minimal-separator.jl` and
-`possible-d-sep.jl` (Definite/Possible-D-SEP, for MAGs/PAGs) build on those to support the
-identification layer above.
+Basic traversal (ancestors, descendants, parents, children, spouses, neighbors,
+topological sort, Markov blanket, districts, …), d-separation/m-separation, and the
+Definite/Possible-D-SEP routines (for MAGs/PAGs) that the identification layer above
+builds on.
 
 ### `src/identification/` — adjustment, backdoor, frontdoor, IV, and `id`
 
-Each classical criterion is implemented once per applicable graph class, sharing a common
-shape across files: `adjustment-{admg,mag,pag,pdag}.jl` are the generalized adjustment
-criterion (GAC) per class (`is_valid_adjustment`, `all_adjustment_sets`), and
-`backdoor.jl`/`backdoor-{pdag,mag,pag}.jl` are the generalized backdoor criterion (GBC) per
-class. `enumerate-subsets.jl` is the shared brute-force subset search all the `all_*_sets`
-functions bottom out in. `frontdoor.jl` and `iv.jl` (Brito & Pearl 2002) are independent
-criteria. `id.jl` implements the Shpitser & Pearl (2008) `id`/`idc` algorithm for ADMGs,
-producing `Estimand` expression trees (`Prob`/`Marginal`/`Product`/`Quotient`, defined in
-`estimand.jl`). `possible-adjustment-sets.jl` and `possible-joint-parent-sets.jl` compute
-adjustment sets over MPDAGs under partial background knowledge; `pagcauses.jl` (Wang, Tao,
-Qin & Zhou 2025) generalizes this to PAGs by combining across every locally-consistent MAG,
-using `transform/local-structure.jl`.
+Each classical criterion is implemented once per applicable graph class: the generalized
+adjustment criterion (GAC) and the generalized backdoor criterion (GBC), both per graph
+class. `frontdoor.jl` and `iv.jl` (Brito & Pearl 2002) are independent criteria. `id.jl`
+implements the Shpitser & Pearl (2008) `id`/`idc` algorithm for ADMGs. Separately,
+`possible-adjustment-sets.jl`/`possible-joint-parent-sets.jl` compute adjustment sets over
+MPDAGs under partial background knowledge, and `pagcauses.jl` (Wang, Tao, Qin & Zhou 2025)
+generalizes this to PAGs by combining across every locally-consistent MAG.
 
 ### `src/transform/` — graph-to-graph transformations
 
-`skeleton-subgraph.jl` (`skeleton`, `subgraph`, `moralize`) and `latent.jl`
-(`latent_project`, `exogenize`, `normalize_latent_structure`) are self-contained. `pdag.jl`
-(`dag_from_pdag`, `dag_to_cpdag`, `dag_to_mpdag`, `meek_closure`) and
-`background-knowledge.jl` (`BackgroundKnowledge`/`RequiredEdge`/`ForbiddenEdge`,
-`apply_background_knowledge`, per Meek 1995) work together to orient PDAGs under
-constraints. `mag.jl` implements the MAG<->PAG equivalence-class transform (Zhang 2008):
-`mag_to_pag`, `mag_from_pag`, `ag_to_mag`. `local-structure.jl` (Wang, Qin & Zhou 2023) and
-`enumerate-mags.jl` both enumerate MAGs consistent with a PAG — the former per-vertex
-(`possible_local_structures`, `maximal_local_mag`, feeding `pagcauses.jl`), the latter
-globally (`enumerate_mags`). `enumerate-dags.jl` (`enumerate_dags`, `count_dags`) is the DAG
-analogue.
+Skeleton/subgraph/moralization and latent-projection utilities are self-contained.
+DAG<->CPDAG/MPDAG conversion and Meek-closure orientation work together with background-
+knowledge application (required/forbidden edges, per Meek 1995) to orient PDAGs under
+constraints. `mag.jl` implements the MAG<->PAG equivalence-class transform (Zhang 2008).
+`local-structure.jl` (Wang, Qin & Zhou 2023) and `enumerate-mags.jl` both enumerate MAGs
+consistent with a PAG — the former per-vertex, the latter globally — and
+`enumerate-dags.jl` is the DAG analogue.
 
 ### `src/io/` — generation, simulation, display, layout
 
-`utils.jl` (`generate_graph`, `simulate_data`, printing) and `uniform-dag.jl`
-(`uniform_dag`, exact uniform random DAG sampling per Kuipers & Moffa 2015) are
-self-contained generators. `layout.jl` is a stub that delegates to the optional `MakieExt`
-extension (`ext/`, plotting via Makie + NetworkLayout; `NetworkLayoutExt` is the layout-only
-counterpart for when Makie isn't loaded).
+Graph generation, data simulation, printing, and exact uniform random DAG sampling
+(Kuipers & Moffa 2015) are self-contained. `layout.jl` delegates to the optional `MakieExt`
+extension (`ext/`, plotting via Makie + NetworkLayout; `NetworkLayoutExt` is the
+layout-only counterpart for when Makie isn't loaded).
 
 ### Algorithm references
 
 Several files implement one specific published algorithm named in a comment at the top of
-the file — e.g. `id.jl` -> Shpitser & Pearl 2008, `iv.jl` -> Brito & Pearl 2002, `mag.jl` ->
-Zhang 2008, `pagcauses.jl` -> Wang, Tao, Qin & Zhou 2025, `local-structure.jl` -> Wang, Qin
-& Zhou 2023, `uniform-dag.jl` -> Kuipers & Moffa 2015, `adjustment-pag.jl` (GAC) ->
-Perković, Textor, Kalisch & Maathuis 2018. PDF copies of several of these papers are kept at
-the repo root for reference.
+the file (Shpitser & Pearl 2008, Brito & Pearl 2002, Zhang 2008, Wang/Tao/Qin/Zhou 2025,
+Wang/Qin/Zhou 2023, Kuipers & Moffa 2015, Perković/Textor/Kalisch/Maathuis 2018, …) — check
+that comment for the reference rather than relying on this list. PDF copies of several of
+these papers are kept at the repo root for reference.
