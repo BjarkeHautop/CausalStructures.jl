@@ -15,5 +15,4 @@ node_modules
 .JETLSConfig.toml
 *.pdf
 *.txt
-*.md
-*.typ
+scratch/
