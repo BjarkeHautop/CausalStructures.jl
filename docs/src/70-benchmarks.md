@@ -1,14 +1,12 @@
 # [Benchmarks](@id benchmarks)
 
-Every graph in CausalStructures is stored as a packed CSR (compressed sparse row)
-layout. Each node's parents, children, spouses, and neighbors occupy a contiguous
-slice of a single flat array. Querying a node's parents requires only index
-arithmetic into that array, so [`parents`](@ref), [`children`](@ref),
-[`spouses`](@ref), and [`neighbors`](@ref) are effectively ``O(1)``: compute the
-slice boundaries and return the corresponding entries. Many higher-level
-algorithms, including [`d_separated`](@ref), [`ancestors`](@ref), and
-adjustment-set search, are built on these primitive operations, so their
-performance depends directly on the efficiency of these basic queries.
+Every graph in CausalStructures precomputes and stores each node's parents, children,
+spouses, and neighbors directly, so [`parents`](@ref), [`children`](@ref),
+[`spouses`](@ref), and [`neighbors`](@ref) are effectively ``O(1)`` lookups rather than
+scans over the whole edge set. Many higher-level algorithms, including
+[`d_separated`](@ref)/[`m_separated`](@ref), [`minimal_separator`](@ref), and
+adjustment-set search, are built on these primitive operations, so their performance
+depends directly on the efficiency of these basic queries.
 
 ```@example bench
 using CausalStructures
@@ -30,19 +28,17 @@ for n in (100, 1_000, 10_000)
 end
 ```
 
-The same design carries through the rest of the query layer. Functions such as
-[`ancestors`](@ref), [`d_separated`](@ref), [`m_separated`](@ref),
-[`topological_sort`](@ref), [`minimal_separator`](@ref), and
-[`markov_blanket`](@ref) are all built on the same primitive operations and
-remain fast on graphs with hundreds of nodes:
+These primitives keep more involved queries fast too, on graphs with hundreds
+of nodes and across graph classes:
 
 ```@example bench
 dag = generate_graph(Random.Xoshiro(1), 500; p = 0.1, class = DAG)
+mag = generate_graph(Random.Xoshiro(1), 500; p = 0.01, class = MAG, latents = 20)
 x, y = :V10, :V290
 
 rows = [
-    ("d_separated", () -> d_separated(dag, x, y)),
-    ("ancestors", () -> ancestors(dag, x)),
+    ("d_separated (DAG)", () -> d_separated(dag, x, y)),
+    ("m_separated (MAG)", () -> m_separated(mag, x, y)),
     ("topological_sort", () -> topological_sort(dag)),
     ("minimal_separator", () -> minimal_separator(dag, x, y)),
     ("markov_blanket", () -> markov_blanket(dag, x)),
@@ -103,19 +99,24 @@ the number of undirected edges. For example, a clique on ``k`` nodes has
 quickly:
 
 ```@example bench
+prettyresult(t) =
+    string(BenchmarkTools.prettytime(t.time), " / ", BenchmarkTools.prettymemory(t.memory))
+
 for k in (5, 7, 9)
     names = [Symbol("V$i") for i = 1:k]
     clique_edges = [undirected(names[i], names[j]) for i = 1:k for j = (i+1):k]
     pdag = PDAG(clique_edges...)
     c = count_dags(pdag)
-    t = @benchmark count_dags($pdag) samples = 5 evals = 1
-    println("k=$k  DAGs=$c  ", median(t))
+    tc = @benchmark count_dags($pdag) samples = 5 evals = 1
+    te = @benchmark enumerate_dags($pdag) samples = 5 evals = 1
+    println(rpad("k=$k", 6), "DAGs=$c")
+    println(rpad("  count_dags:", 20), prettyresult(median(tc)))
+    println(rpad("  enumerate_dags:", 20), prettyresult(median(te)))
 end
 ```
 
-[`enumerate_dags`](@ref) is slightly slower than [`count_dags`](@ref) (and uses
-much more memory), since it must materialize every DAG rather than simply count
-them.
+[`enumerate_dags`](@ref) must materialize every DAG rather than simply count them, so
+it is slower and uses more memory than [`count_dags`](@ref), as the numbers above show.
 
 ### MAG equivalence class enumeration
 

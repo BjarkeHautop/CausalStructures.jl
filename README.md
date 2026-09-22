@@ -92,7 +92,11 @@ The package provides methods to work with these graphs:
 
 ## Performance
 
-See [benchmark](https://github.com/BjarkeHautop/CausalStructures.jl/tree/main/benchmark) for comparisons with [CausalInference.jl](https://github.com/mschauer/CausalInference.jl).
+Built with performance in mind: queries and identification algorithms stay fast even on graphs
+with thousands of nodes. See the
+[Benchmarks guide](https://bjarkehautop.github.io/CausalStructures.jl/stable/70-benchmarks/)
+for details, and [benchmark/](https://github.com/BjarkeHautop/CausalStructures.jl/tree/main/benchmark)
+for comparisons with [CausalInference.jl](https://github.com/mschauer/CausalInference.jl).
 
 ## Contributing
 
