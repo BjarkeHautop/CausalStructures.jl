@@ -738,7 +738,7 @@ function _mark_parents_children_coparents!(seen::BitVector, B, node_idx::Int)
 end
 
 """
-    markov_blanket(cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG}, node::Symbol) -> Vector{Symbol}
+    markov_blanket(cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG,PAG}, node::Symbol) -> Vector{Symbol}
 
 Return the Markov blanket of `node` in `cg`. The Markov blanket is the minimal
 set of nodes that renders `node` conditionally independent of all other nodes in
@@ -751,7 +751,8 @@ the blanket is the union of the parents of every node in `node`'s district
 (excluding `node` itself). For an [`AbstractAG`](@ref), it is parents, children,
 co-parents, spouses, and undirected neighbors, plus every node reachable by a
 collider path [pelletelisseeff2008finding](@cite): a path of length >= 2 whose
-interior nodes are all colliders.
+interior nodes are all colliders. For a [`PAG`](@ref), the blanket is computed
+on a underlying [`MAG`](@ref).
 
 # Examples
 
@@ -837,6 +838,8 @@ function markov_blanket(cg::AbstractAG, node::Symbol)
     seen[node_idx] = false
     return [B.nodes[i] for i in eachindex(seen) if seen[i]]
 end
+
+markov_blanket(cg::PAG, node::Symbol) = markov_blanket(mag_from_pag(cg), node)
 
 """
     spouses(cg::Union{ADMG,AbstractAG,PAG}, node::Symbol) -> Vector{Symbol}

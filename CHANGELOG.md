@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased version
 
+### New features
+
+- Implemented `markov_blanket` for a `PAG`.
+
 ### Bug fixes
 
 - `markov_blanket` on an `AbstractAG` (`AG`/`MAG`) only looked at direct neighbors, missing nodes reachable through a chain of colliders (e.g. `A <-> B <-> C`), so it could return a set too small to actually separate `node` from the rest of the graph.

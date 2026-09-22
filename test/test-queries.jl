@@ -226,6 +226,31 @@ end
     @test_throws MethodError markov_blanket(ug, :B)
 end
 
+@testitem "markov_blanket works on PAG (delegates to a member MAG)" tags = [:unit, :queries] begin
+    # A --> B <-- C produces PAG: A o-> B <-o C
+    pag = mag_to_pag(MAG(directed(:A, :B), directed(:C, :B)))
+    @test Set(markov_blanket(pag, :B)) == Set([:A, :C])
+    @test Set(markov_blanket(pag, :A)) == Set([:B, :C])
+    @test Set(markov_blanket(pag, :C)) == Set([:A, :B])
+end
+
+@testitem "markov_blanket on PAG reaches non-adjacent nodes via a collider path" tags =
+    [:unit, :queries] begin
+    # A <-> B <-> C: B is a collider, so C must be in A's blanket despite
+    # being non-adjacent.
+    pag = mag_to_pag(MAG(bidirected(:A, :B), bidirected(:B, :C)))
+    @test Set(markov_blanket(pag, :A)) == Set([:B, :C])
+end
+
+@testitem "markov_blanket agrees across every MAG a PAG represents" tags = [:unit, :queries] begin
+    pag = mag_to_pag(MAG(directed(:A, :C), directed(:B, :C), directed(:C, :D)))
+    for mag in enumerate_mags(pag)
+        @test Set(markov_blanket(pag, :A)) == Set(markov_blanket(mag, :A))
+        @test Set(markov_blanket(pag, :C)) == Set(markov_blanket(mag, :C))
+        @test Set(markov_blanket(pag, :D)) == Set(markov_blanket(mag, :D))
+    end
+end
+
 # ── exogenous_nodes ───────────────────────────────────────────────────────────
 
 @testitem "exogenous_nodes works on DAG" tags = [:unit, :queries] begin
