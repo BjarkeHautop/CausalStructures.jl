@@ -16,34 +16,33 @@ julia --project=benchmark benchmark/benchmark.jl
 
 Only the expensive, combinatorial `all_*_sets` enumeration operations are benchmarked here. Below we use the shorthands CS for CausalStructures (this package), and CI for CausalInference.
 
+`n` is the number of nodes in the DAG, for adjustment and backdoor. Frontdoor cost tracks the candidate-pool size rather than `n` directly, so its setup is instead a mediator chain `X --> M --> Y` plus `k` isolated nodes each freely includable in or excludable from `Z`, giving exactly `2^k` valid sets.
+
 Numbers below were measured with Julia 1.13.0 on an AMD Ryzen 7 8845HS (single thread, Linux x86_64).
 
 **Enumerate all valid adjustment sets**
-Done on a 21-node DAG `(x,y)` pair with 524,288 valid sets:
+DAGs of increasing size, same `(x,y)` pair:
 
-| | CS `all_adjustment_sets` | CI `list_covariate_adjustment` |
-|---|---|---|
-| n=21 | 0.27 s / 1,573,118 allocs | 14.99 s / 226,638,109 allocs |
-
-CausalStructures is ~55x faster and allocates ~144x less.
+| n | valid sets | CS `all_adjustment_sets` | CI `list_covariate_adjustment` | speedup |
+|---|---|---|---|---|
+| 15 | 8 | 5.5 us | 443.2 us | ~81x |
+| 18 | 25,500 | 25.22 ms | 423.51 ms | ~17x |
+| 21 | 524,288 | 255.17 ms | 14.18 s | ~56x |
 
 **Enumerate all valid backdoor sets**
-A different 21-node DAG/pair with 512,128 valid sets:
+A different family of DAG/pairs, same size sweep:
 
-| | CS `all_backdoor_sets` | CI `list_backdoor_adjustment` |
-|---|---|---|
-| n=21 | 0.29 s / 1,536,462 allocs | 15.23 s / 292,156,997 allocs |
+| n | valid sets | CS `all_backdoor_sets` | CI `list_backdoor_adjustment` | speedup |
+|---|---|---|---|---|
+| 15 | 5,376 | 2.69 ms | 84.16 ms | ~31x |
+| 18 | 32,768 | 7.15 ms | 750.67 ms | ~105x |
+| 21 | 512,128 | 182.97 ms | 14.12 s | ~77x |
 
-CausalStructures is ~52x faster and allocates ~190x less.
+**Enumerate all valid frontdoor sets**
+Single mediator chain plus increasing isolated-node count:
 
-**Enumerate all valid frontdoor sets**. Unlike adjustment/backdoor, frontdoor cost
-tracks the size of the candidate pool rather than `n` directly, and
-satisfying the frontdoor criterion is a much rarer structural condition, so instead the setup is a single mediator `X --> M --> Y` plus 19 isolated
-nodes with no edges to `X`, `Y`, or `M`, each freely includable in or
-excludable from `Z`, giving exactly 2^19 = 524,288 valid sets:
-
-| | CS `all_frontdoor_sets` | CI `list_frontdoor_adjustment` |
-|---|---|---|
-| k=19 | 0.51 s / 2,451,703 allocs | 7.34 s / 164,627,496 allocs |
-
-CausalStructures is ~14x faster here and allocates ~67x less.
+| k | valid sets | CS `all_frontdoor_sets` | CI `list_frontdoor_adjustment` | speedup |
+|---|---|---|---|---|
+| 13 | 8,192 | 4.69 ms | 136.88 ms | ~29x |
+| 16 | 65,536 | 41.17 ms | 557.83 ms | ~14x |
+| 19 | 524,288 | 397.19 ms | 6.72 s | ~17x |
