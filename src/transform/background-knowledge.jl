@@ -124,7 +124,10 @@ Per constraint, against the current state of the edge in `cg`:
 | forbidden `A --> B`| orient `B --> A`  | error     | no-op     | no-op        |
 
 Errors are raised because background knowledge cannot add or remove adjacencies, only
-orient existing edges.
+orient existing edges. The orientations are applied one at a time, each followed by
+Meek's rules; an error is also raised if a later one contradicts an orientation this
+implies, i.e. if `bk` is inconsistent with `cg` (e.g. `A --> B, C --> B` on
+`A --- B --- C`).
 
 # Examples
 
@@ -147,6 +150,7 @@ MPDAG with 3 nodes and 2 edges:
 # References
 
 - [meek1995causal](@citet)
+- [perkovic2017mpdag](@citet)
 """
 function apply_background_knowledge(cg::AbstractPDAG, bk::BackgroundKnowledge)
     node_set = Set(cg.backend.nodes)
@@ -168,6 +172,8 @@ function apply_background_knowledge(cg::AbstractPDAG, bk::BackgroundKnowledge)
         end
     end
 
+    # Orientations of undirected edges of cg required by bk, in order.
+    orient = Tuple{Symbol,Symbol}[]
     for e in bk.required
         a, b = e.src, e.dst
         check_nodes(a, b)
@@ -176,8 +182,7 @@ function apply_background_knowledge(cg::AbstractPDAG, bk::BackgroundKnowledge)
         elseif (b, a) in dir
             error("Background knowledge requires $a --> $b, but the graph has $b --> $a")
         elseif _ordered_pair(a, b) in und
-            delete!(und, _ordered_pair(a, b))
-            push!(dir, (a, b))
+            push!(orient, (a, b))
         else
             error("Background knowledge requires $a --> $b, but $a and $b are not adjacent")
         end
@@ -189,20 +194,27 @@ function apply_background_knowledge(cg::AbstractPDAG, bk::BackgroundKnowledge)
         if (a, b) in dir
             error("Background knowledge forbids $a --> $b, but the graph has $a --> $b")
         elseif _ordered_pair(a, b) in und
-            delete!(und, _ordered_pair(a, b))
-            push!(dir, (b, a))
+            push!(orient, (b, a))
         end
     end
 
-    new_edges = CausalEdge[]
-    for (a, b) in sort!(collect(dir))
+    # Algorithm 1 of Perkovic, Kalisch & Maathuis (2017), after Meek (1995):
+    # orient one edge at a time and close under R1-R4; bk is inconsistent iff
+    # a closure has already oriented a later edge the other way.
+    result = meek_closure(cg)
+    for (a, b) in orient
+        current = Set((e.src, e.dst) for e in result.edges if is_directed(e))
+        (a, b) in current && continue
+        (b, a) in current && error(
+            "Background knowledge is inconsistent with the graph: " *
+            "requires $a --> $b, but $b --> $a is implied",
+        )
+        new_edges =
+            [e for e in result.edges if _ordered_pair(e.src, e.dst) != _ordered_pair(a, b)]
         push!(new_edges, directed(a, b))
+        result = meek_closure(PDAG(node_set, new_edges))
     end
-    for (a, b) in sort!(collect(und))
-        push!(new_edges, undirected(a, b))
-    end
-
-    return meek_closure(PDAG(node_set, new_edges))
+    return result
 end
 
 apply_background_knowledge(cg::AbstractPDAG, s::AbstractString) =

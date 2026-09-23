@@ -150,6 +150,18 @@ end
     @test_throws ArgumentError apply_background_knowledge(cpdag, "A --> Z")
 end
 
+@testitem "apply_background_knowledge: errors when no represented DAG satisfies it" tags =
+    [:unit, :background_knowledge] begin
+    # Every DAG of A --- B --- C has a non-collider at B, so requiring
+    # A --> B <-- C creates a new v-structure.
+    cpdag = CPDAG("A --- B --- C")
+    @test_throws ErrorException apply_background_knowledge(cpdag, "A --> B, C --> B")
+    @test_throws ErrorException apply_background_knowledge(cpdag, "B !--> A, B !--> C")
+    # Each orientation alone is fine.
+    @test Set(edges(apply_background_knowledge(cpdag, "A --> B"))) ==
+          Set([directed(:A, :B), directed(:B, :C)])
+end
+
 @testitem "apply_background_knowledge: incremental refinement of an MPDAG" tags =
     [:unit, :background_knowledge] begin
     dag = DAG("A --> B, A --> C")

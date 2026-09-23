@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `backdoor_set` on a `CPDAG` could return an invalid set (e.g. `[]` for `X`, `Y` in `X --- A --> Y, X --> Y`).
 - `is_valid_iv`/`all_iv_sets` accepted a confounded descendant of `x` as an instrument (e.g. `Z` in `X --> Z, X --> Y, U --> X + Y`).
 - `possible_joint_parent_sets` could return joint parent sets that no DAG in the class realizes.
+- `apply_background_knowledge` accepted background knowledge inconsistent with the graph (e.g. `A --> B, C --> B` on `A --- B --- C`) and returned a graph with a new v-structure. It now errors in those cases.
 
 ### Performance improvements
 
