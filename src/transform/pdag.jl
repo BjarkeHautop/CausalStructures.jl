@@ -84,7 +84,10 @@ function dag_from_pdag(cg::AbstractPDAG)
 
         # x's former neighbors are the only nodes whose potential-sink status
         # can change by removing x.
-        candidates = union(nbrs, pa[x])
+        candidates = copy(pa[x])
+        for u in nbrs
+            push!(candidates, u)
+        end
 
         for p in pa[x]
             delete!(ch[p], x)
