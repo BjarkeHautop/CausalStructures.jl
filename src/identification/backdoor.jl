@@ -316,6 +316,17 @@ function all_backdoor_sets(
     return valid_sets
 end
 
+# Warns that the O-set is not defined because the nodes `y_out` of `y` are not
+# (possible) descendants of `x`.
+function _warn_optimal_undefined(B, xs::Vector{Int}, y_out::Vector{Int}, relation::String)
+    x_names = [B.nodes[v] for v in xs]
+    y_names = [B.nodes[v] for v in y_out]
+    @warn "The O-set is undefined: y = $y_names is not entirely a $relation of " *
+          "x = $x_names. `nothing` does not imply that no valid adjustment set " *
+          "exists; try `type=:parents` or `all_adjustment_sets`."
+    return nothing
+end
+
 """
     adjustment_set(cg::DAG, x, y; type::Symbol = :optimal) -> Union{Nothing,Vector{Symbol}}
 
@@ -328,8 +339,19 @@ Three types are supported:
 
 - `:parents`: ``\\bigcup \\mathrm{Pa}(x) \\setminus \\{x, y\\}``.
 - `:backdoor`: Pearl backdoor formula.
-- `:optimal`: O-set ``\\mathrm{Pa}(\\mathrm{cn}(x,y)) \\setminus (\\{x\\} \\cup \\mathrm{cn}(x,y))``,
-  where ``\\mathrm{cn}(x,y) = \\mathrm{De}(x) \\cap \\mathrm{An}(y)``.
+- `:optimal`: O-set ``\\mathrm{Pa}(\\mathrm{cn}(x,y)) \\setminus \\mathrm{Forb}(x,y)``,
+  where ``\\mathrm{cn}(x,y)`` is the set of nodes other than `x` on proper causal
+  paths from `x` to `y` (paths that meet `x` only at their first node) and
+  ``\\mathrm{Forb}(x,y) = \\mathrm{De}(\\mathrm{cn}(x,y)) \\cup x``.
+
+The O-set [henckel2022graphical](@cite) is defined when every node in `y` is a
+descendant of `x`. It is then a valid adjustment set whenever any valid
+adjustment set exists, and it is asymptotically optimal among them. If some
+node in `y` is not a descendant of `x` (so `x` has no causal effect on it),
+`:optimal` emits a warning: its result is then not guaranteed to be optimal,
+and it may return `nothing` even though a valid adjustment set exists (e.g.
+`x = :X`, `y = :Y` in `A --> X, A --> Y`); use `:backdoor` or
+[`all_adjustment_sets`](@ref) instead.
 
 The `type` keyword is specific to the [`DAG`](@ref)/[`AbstractPDAG`](@ref)
 methods; the [`ADMG`](@ref)/[`AbstractAG`](@ref)/[`PAG`](@ref) methods of
@@ -422,33 +444,29 @@ function adjustment_set(
         return is_valid_backdoor(cg, x, y, z) ? z : nothing
 
     elseif type === :optimal
+        # O = pa(cn) \ forb (Henckel, Perković & Maathuis 2022), with cn the
+        # nodes on proper causal paths from x to y, excluding x.
         de_x2 = _descendants_bitmask(B, xs)
         for xi in xs
             de_x2[xi] = false  # exclude X itself
         end
+        y_out = [yi for yi in ys if !de_x2[yi]]
+        isempty(y_out) || _warn_optimal_undefined(B, xs, y_out, "descendant")
 
-        an_y = _ancestors_bitmask(B, ys)  # includes ys
+        an_y = _proper_ancestors_bitmask(B, xs, ys)  # includes ys
 
         cn_mask = falses(n)
         for v = 1:n
             de_x2[v] && an_y[v] && (cn_mask[v] = true)
         end
-        for yi in ys
-            de_x2[yi] && (cn_mask[yi] = true)  # add y if y ∈ De(X)
-        end
+        forbidden = _forbidden_set(B, xs, ys)
 
         pacn_mask = falses(n)
         for v = 1:n
             cn_mask[v] || continue
             for p in _parents_slice(B, v)
-                pacn_mask[p] = true
+                forbidden[p] || (pacn_mask[p] = true)
             end
-        end
-        for xi in xs
-            pacn_mask[xi] = false
-        end
-        for v = 1:n
-            cn_mask[v] && (pacn_mask[v] = false)
         end
         z = _mask_nodes(B, pacn_mask)
         return is_valid_adjustment(cg, x, y, z) ? z : nothing
@@ -474,9 +492,19 @@ Compute an adjustment set for the causal effect of `x` on `y` in `cg`, or
 Two types are supported:
 
 - `:parents`: directed parents of `x`.
-- `:optimal`: O-set ``\\mathrm{Pa}(\\mathrm{Cn}(x,y)) \\setminus (\\{x\\} \\cup \\mathrm{Cn}(x,y))``,
+- `:optimal`: O-set ``\\mathrm{Pa}(\\mathrm{Cn}(x,y)) \\setminus \\mathrm{Forb}(x,y)``,
   where ``\\mathrm{Cn}(x,y)`` is the set of nodes on proper possibly directed paths
-  from `x` to `y`.
+  from `x` to `y` and ``\\mathrm{Forb}(x,y)`` is the forbidden set (see
+  [`is_valid_adjustment`](@ref)).
+
+The O-set [henckel2022graphical](@cite) is defined when every node in `y` lies on
+a proper possibly causal path from `x`. If additionally the effect is amenable
+(see [`is_valid_adjustment`](@ref)), it is a valid adjustment set whenever any
+valid adjustment set exists, and it is asymptotically optimal among them in every
+DAG that `cg` represents. If some node in `y` lies on no such path (so `x` has
+no causal effect on it in any represented DAG), `:optimal` emits a warning: its
+result is then not guaranteed to be optimal, and it may return `nothing` even
+though a valid adjustment set exists; use [`all_adjustment_sets`](@ref) instead.
 
 The `type` keyword is specific to the [`DAG`](@ref)/[`AbstractPDAG`](@ref)
 methods; the [`ADMG`](@ref)/[`AbstractAG`](@ref)/[`PAG`](@ref) methods of
@@ -538,21 +566,21 @@ function adjustment_set(
         return is_valid_adjustment(cg, x, y, z) ? z : nothing
 
     elseif type === :optimal
-        # Nodes on proper possibly causal paths from x to y, excluding x.
+        # O = pa(posscn) \ forb, where posscn are the nodes on proper possibly
+        # causal paths from x to y (excluding x). Henckel et al. (2022) define
+        # O = pa(cn) \ forb with cn the nodes on proper *causal* paths; the proof
+        # of their Lemma E.7 shows the two agree once forb is removed.
         cn_mask, _, _ = _proper_possibly_causal_paths(B, xs, ys)
+        y_out = [yi for yi in ys if !cn_mask[yi]]
+        isempty(y_out) || _warn_optimal_undefined(B, xs, y_out, "possible descendant")
+        forbidden = _forbidden_set_pdag(B, xs, cn_mask)
 
         pacn_mask = falses(n)
         for v = 1:n
             cn_mask[v] || continue
             for p in _parents_slice(B, v)
-                pacn_mask[p] = true
+                forbidden[p] || (pacn_mask[p] = true)
             end
-        end
-        for xi in xs
-            pacn_mask[xi] = false
-        end
-        for v = 1:n
-            cn_mask[v] && (pacn_mask[v] = false)
         end
         z = [B.nodes[v] for v = 1:n if pacn_mask[v]]
         return is_valid_adjustment(cg, x, y, z) ? z : nothing

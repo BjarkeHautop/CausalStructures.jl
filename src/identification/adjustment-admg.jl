@@ -28,7 +28,41 @@ function _descendants_bitmask(
     return mask
 end
 
-# forb(X,Y) = De(cn(X,Y) \ X) ∪ X,  where cn(X,Y) = De(X) ∩ An(Y)
+# Ancestors of Y along directed paths that never enter X (Y included). With
+# no directed cycles, W ∉ X lies on a proper causal path from X to Y iff
+# W ∈ De(X) and W is in this set: take the last X node on a directed path to
+# W and continue along a directed path to Y avoiding X; the joined directed
+# walk has no repeated node.
+function _proper_ancestors_bitmask(
+    B::Union{DAGBackend,ADMGBackend,AGBackend},
+    xs::Vector{Int},
+    ys::Vector{Int},
+)
+    n = length(B.nodes)
+    x_mask = falses(n)
+    for x in xs
+        x_mask[x] = true
+    end
+    mask = falses(n)
+    stack = Int[]
+    for y in ys
+        mask[y] && continue
+        mask[y] = true
+        push!(stack, y)
+    end
+    while !isempty(stack)
+        u = pop!(stack)
+        for p in _parents_slice(B, u)
+            (mask[p] || x_mask[p]) && continue
+            mask[p] = true
+            push!(stack, p)
+        end
+    end
+    return mask
+end
+
+# forb(X,Y) = De(cn(X,Y)) ∪ X, where cn(X,Y) = De(X) ∩ An_{avoiding X}(Y) \ X
+# are the nodes on proper causal paths from X to Y.
 function _forbidden_set(
     B::Union{DAGBackend,ADMGBackend,AGBackend},
     xs::Vector{Int},
@@ -36,7 +70,7 @@ function _forbidden_set(
 )
     n = length(B.nodes)
     de_x = _descendants_bitmask(B, xs)
-    an_y = _ancestors_bitmask(B, ys)
+    an_y = _proper_ancestors_bitmask(B, xs, ys)
     x_mask = falses(n)
     for x in xs
         x_mask[x] = true
@@ -92,7 +126,8 @@ function _moral_adj_filtered!(
     return adj
 end
 
-# Compute PBG removed edges: x --> v with x ∈ X, v ∉ X, v ∈ An(Y).
+# Compute PBG removed edges: x --> v with x ∈ X, v ∉ X, and v reaching Y along
+# a directed path avoiding X (i.e. the first edges of proper causal paths).
 #
 # DAG/ADMG only: a DAG's directed edges are always confounding-free by
 # definition, and ADMG's bidirected edges represent confounding directly, so
@@ -100,7 +135,7 @@ end
 # `_pbg_removed_ag` instead, which additionally requires the edge to be visible.
 function _pbg_removed(B::Union{DAGBackend,ADMGBackend}, xs::Vector{Int}, ys::Vector{Int})
     n = length(B.nodes)
-    an_y = _ancestors_bitmask(B, ys)
+    an_y = _proper_ancestors_bitmask(B, xs, ys)
     x_mask = falses(n)
     for x in xs
         x_mask[x] = true

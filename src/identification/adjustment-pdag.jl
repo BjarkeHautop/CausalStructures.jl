@@ -53,8 +53,8 @@ _proper_possible_ancestors_bitmask(B::PDAGBackend, xs::Vector{Int}, ys::Vector{I
 # Vj --> Vi for i < j. Returns (cn, first_edges, amenable): cn marks every node
 # other than V0 on such a path ending in Y (i.e. Cn(X, Y) \ X), first_edges
 # holds each such path's first edge when it is directed (V0 --> V1), and
-# amenable is false iff some such path starts with an undirected edge (Def.
-# 3.2), in which case no adjustment set exists.
+# amenable is false iff some such path starts with an undirected edge
+# (b-amenability, Def. 4.3), in which case no adjustment set exists.
 #
 # Intersecting PossibleDe(X) with PossibleAn(Y) is not enough:
 #   - in B --- X --> Y, B is a possible descendant of X and a possible
@@ -162,8 +162,9 @@ end
 _in_pbg(removed::Set{Tuple{Int,Int}}, a::Int, b::Int) =
     !((a, b) in removed || (b, a) in removed)
 
-# GAC condition (c) (Perković et al. 2017, Def. 4.1): Z blocks every proper
-# definite-status non-causal path from X to Y. Checked by reachability over
+# b-blocking condition of the b-adjustment criterion (Perković et al. 2017,
+# Def. 4.3): Z blocks every proper b-non-causal definite-status path from X to
+# Y. Checked by reachability over
 # walks in the proper backdoor graph (the first edges of proper possibly causal
 # paths removed), with states (previous node, current node) so each step can
 # classify the triple (u, v, w):

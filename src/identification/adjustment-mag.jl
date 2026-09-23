@@ -51,12 +51,13 @@ function _is_visible_edge(B::Union{AGBackend,PAGBackend}, x::Int, y::Int)
     return false
 end
 
-# Compute PBG removed edges: x --> v with x ∈ X, v ∉ X, v ∈ An(Y), and the edge
+# Compute PBG removed edges: x --> v with x ∈ X, v ∉ X, v reaching Y along a
+# directed path avoiding X (see `_proper_ancestors_bitmask`), and the edge
 # x --> v visible. A MAG directed edge is not guaranteed confounding-free, so
 # only visible edges can be safely dropped from the proper back-door graph.
 function _pbg_removed_ag(B::AGBackend, xs::Vector{Int}, ys::Vector{Int})
     n = length(B.nodes)
-    an_y = _ancestors_bitmask(B, ys)
+    an_y = _proper_ancestors_bitmask(B, xs, ys)
     x_mask = falses(n)
     for x in xs
         x_mask[x] = true

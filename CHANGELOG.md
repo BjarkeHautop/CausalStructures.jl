@@ -10,13 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### New features
 
 - Implemented `markov_blanket` for a `PAG`.
+- `adjustment_set(::DAG)` and `adjustment_set(::AbstractPDAG)` with `type = :optimal` now warn when some node of `y` is not a (possible) descendant of `x`, since the O-set is not defined there.
 
 ### Bug fixes
 
 - `markov_blanket` on an `AbstractAG` (`AG`/`MAG`) only looked at direct neighbors, missing nodes reachable through a chain of colliders (e.g. `A <-> B <-> C`), so it could return a set too small to actually separate `node` from the rest of the graph.
 - `meek_closure`'s R4 was missing the precondition that `a` must be adjacent to `d`, so it could orient `a --> b` in cases not actually implied by the pattern.
-- `is_valid_adjustment`, `all_adjustment_sets` and `adjustment_set` on an `AbstractPDAG` or `PAG` could reject valid adjustment sets (or add extra nodes to the optimal set) by treating nodes as lying on a causal path from `x` to `y` when they do not (e.g. `B` in `B --- X --> Y`).
-- `is_valid_adjustment` and `all_adjustment_sets` on an `MPDAG` could also reject valid adjustment sets because the separation step moralized the proper backdoor graph, which is only correct for CPDAGs. They now check amenability explicitly and block definite-status paths directly.
+- The adjustment functions (`is_valid_adjustment`, `all_adjustment_sets`, `adjustment_set`) could reject valid adjustment sets and return a non-optimal set in several cases:
+  - On an `AbstractPDAG` or `PAG`, nodes were treated as lying on a causal path from `x` to `y` when they do not (e.g. `B` in `B --- X --> Y`).
+  - On an `MPDAG`, the separation step moralized the proper backdoor graph, which is only correct for CPDAGs. `is_valid_adjustment` and `all_adjustment_sets` now check amenability explicitly and block definite-status paths directly.
+  - With several treatments on a `DAG`, `ADMG`, `AG` or `MAG`, a node was treated as causal when it reaches `y` only through another treatment (e.g. `W` in `X1 --> W --> X2 --> Y` with `x = [:X1, :X2]`). This affected `is_valid_adjustment`, `all_adjustment_sets`, and `adjustment_set(::DAG; type = :optimal)`.
 
 ### Performance improvements
 

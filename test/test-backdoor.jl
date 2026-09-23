@@ -153,7 +153,43 @@ end
     dag = DAG(directed(:Y, :X), directed(:A, :X))
     @test adjustment_set(dag, :X, :Y; type = :parents) === nothing
     @test adjustment_set(dag, :X, :Y; type = :backdoor) === nothing
-    @test adjustment_set(dag, :X, :Y; type = :optimal) === nothing
+    @test (@test_logs (:warn, r"O-set is undefined") adjustment_set(
+        dag,
+        :X,
+        :Y;
+        type = :optimal,
+    )) === nothing
+end
+
+@testitem "adjustment_set: optimal warns when y is not a descendant of x" tags =
+    [:unit, :backdoor] begin
+    # X does not cause Y: the O-set is undefined and comes out invalid ({}), so
+    # :optimal returns nothing although {A} is valid.
+    dag = DAG("A --> X, A --> Y")
+    z =
+        @test_logs (:warn, r"y = \[:Y\] is not entirely a descendant of x = \[:X\]") adjustment_set(
+            dag,
+            :X,
+            :Y;
+            type = :optimal,
+        )
+    @test z === nothing
+    @test adjustment_set(dag, :X, :Y; type = :backdoor) == [:A]
+
+    # Only the nodes of y outside De(x) are named.
+    dag2 = DAG("A --> X --> Y1, A --> Y2")
+    @test_logs (:warn, r"y = \[:Y2\] is not") adjustment_set(dag2, :X, [:Y1, :Y2])
+
+    # No warning when every y is a descendant of x.
+    @test_logs adjustment_set(DAG("A --> X --> Y, A --> Y"), :X, :Y)
+
+    pdag = PDAG("A --> X, A --> Y")
+    @test_logs (:warn, r"y = \[:Y\] is not entirely a possible descendant") adjustment_set(
+        pdag,
+        :X,
+        :Y,
+    )
+    @test_logs adjustment_set(PDAG("A --> X --> Y, A --> Y"), :X, :Y)
 end
 
 @testitem "adjustment_set: backdoor type valid when parent is not ancestor of Y" tags =
@@ -223,6 +259,21 @@ end
     @test is_valid_adjustment(dag, :X, :Y, Symbol[])
     @test is_valid_adjustment(dag, :X, :Y, [:W])
     @test is_valid_adjustment(dag, :X, :Y, [:A, :W])
+end
+
+@testitem "adjustment with several treatments: only proper causal paths count" tags =
+    [:unit, :backdoor] begin
+    # W reaches Y only through X2, so it lies on no proper causal path from
+    # {X1, X2} to Y: it is not forbidden, and the edge X1 --> W stays in the
+    # proper backdoor graph. The O-set is pa(Y) \ forb = {}.
+    s = "X1 --> W --> X2 --> Y, U --> W"
+    for cg in (DAG(s), ADMG(s), MAG(s))
+        @test is_valid_adjustment(cg, [:X1, :X2], :Y, [:W])
+        @test is_valid_adjustment(cg, [:X1, :X2], :Y, [:U])
+        @test is_valid_adjustment(cg, [:X1, :X2], :Y)
+    end
+    @test adjustment_set(DAG(s), [:X1, :X2], :Y; type = :optimal) == Symbol[]
+    @test [:W] in all_adjustment_sets(DAG(s), [:X1, :X2], :Y; minimal = false)
 end
 
 @testitem "is_valid_adjustment DAG: agrees with is_valid_backdoor on ECI graph" setup =
