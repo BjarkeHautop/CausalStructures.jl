@@ -1,24 +1,22 @@
 # Instrumental Variables (Brito & Pearl 2002)
 
-# G_{overline{X}}: G with all edges having an arrowhead into X removed (do(X)).
-function _build_g_do_x(cg::DAG, x::Symbol)
-    return build_graph(
-        DAG,
-        Set(cg.backend.nodes),
-        filter(e -> !(is_directed(e) && e.dst == x), cg.edges),
-    )
+# G with the first edge x --> c of every causal path from x to y removed (c an
+# ancestor of y, or y itself): the graph of the exclusion restriction. For a
+# single edge x --> y this is G_c of van der Zander, Textor & Liskiewicz (2015,
+# Def. 3.1); removing every such first edge extends it to the total effect.
+function _build_g_iv(cg::Union{DAG,ADMG}, x::Symbol, y)
+    B = cg.backend
+    an_y = _ancestors_bitmask(B, _node_indices(cg, y))
+    cut = Set(B.nodes[c] for c in _children_slice(B, node_index(cg, x)) if an_y[c])
+    keep = filter(e -> !(is_directed(e) && e.src == x && e.dst in cut), cg.edges)
+    return build_graph(typeof(cg), Set(B.nodes), keep)
 end
 
-# ADMGs also carry bidirected (spousal) edges into X; do(X) must cut those too,
-# or X can remain a collider on Z <-> X <-> Y paths after mutilation. Reuses
-# the same "cut every arrowhead into X" operation id.jl relies on for G_{overline{X}}.
-_build_g_do_x(cg::ADMG, x::Symbol) = _remove_incoming(cg, (x,))
-
 # Checks (ii) before (i) to skip the more expensive graph-build when relevance fails.
-function _check_iv(cg, x, y, z, g_do_x)
+function _check_iv(cg, x, y, z, g_iv)
     all(zi -> m_separated(cg, zi, x), z) && return false   # (ii) relevance: z must reach x
     for zi in z
-        m_separated(g_do_x, zi, y, [x]) || return false    # (i)  exclusion: z ⊥ y | x in G_{do_x}
+        m_separated(g_iv, zi, y) || return false           # (i)  exclusion: z ⊥ y in g_iv
     end
     return true
 end
@@ -41,11 +39,15 @@ in `cg`.
 for one structural coefficient `x -> y`.
 
 `z` is a valid instrumental set if:
-1. Every `zi ∈ z` is d-/m-separated from `y` given `{x}` in the interventional graph
-   `G_{overline{x}}` (obtained by deleting all incoming directed edges to `x`). This
+1. Every `zi ∈ z` is d-/m-separated from `y` in the graph obtained from `G` by
+   deleting the first edge `x --> c` of every causal path from `x` to `y`. This
    is the **exclusion restriction**: `z` can only affect `y` through `x`.
 2. At least one `zi ∈ z` is d-/m-connected to `x` in `G`. This is the **relevance
    condition**: `z` must be associated with the treatment.
+
+When the only causal path is the edge `x --> y`, this is Definition 3.1 of
+[vanderzander2015efficiently](@citet); deleting the first edge of every causal
+path extends it to the total effect.
 
 # Examples
 
@@ -83,6 +85,7 @@ true
 
 - [brito2002generalized](@citet)
 - [pearl2009causality](@citet)
+- [vanderzander2015efficiently](@citet)
 """
 function is_valid_iv(
     cg::Union{DAG,ADMG},
@@ -94,7 +97,7 @@ function is_valid_iv(
     isempty(z_vec) && return false
     ys_syms = _as_symbol_set(y)
     any(zi -> zi === x || zi in ys_syms, z_vec) && return false
-    return _check_iv(cg, x, y, z_vec, _build_g_do_x(cg, x))
+    return _check_iv(cg, x, y, z_vec, _build_g_iv(cg, x, y))
 end
 
 """
@@ -151,12 +154,10 @@ function all_iv_sets(
     end
 
     universe = [v for v = 1:n if v != x_idx && !ys_mask[v]]
-    g_do_x = _build_g_do_x(cg, x)  # built once; x/y already excluded from universe
-    Bd = g_do_x.backend
+    g_iv = _build_g_iv(cg, x, y)  # built once; x/y already excluded from universe
+    Bd = g_iv.backend
 
     empty_zmask = falses(n)
-    excl_zmask = falses(n)
-    excl_zmask[x_idx] = true
 
     anc_mask = falses(n)
     anc_stack = Int[]
@@ -174,21 +175,21 @@ function all_iv_sets(
         return !reached[b]
     end
 
-    # a ⊥ Y | {x} in backend Bk, for the (possibly multi-node) target set `bs`
-    function separated_given_x(Bk, a, bs)
+    # a ⊥ Y | ∅ in backend Bk, for the (possibly multi-node) target set `bs`
+    function separated_from_all(Bk, a, bs)
         empty!(seeds_buf)
-        push!(seeds_buf, a, x_idx)
+        push!(seeds_buf, a)
         append!(seeds_buf, bs)
         _ancestors_bitmask!(anc_mask, anc_stack, Bk, seeds_buf)
-        _reachable_single!(visited, q, reached, Bk, a, anc_mask, excl_zmask)
+        _reachable_single!(visited, q, reached, Bk, a, anc_mask, empty_zmask)
         return !any(reached[bi] for bi in bs)
     end
 
     # Unlike backdoor/GAC-style criteria, the IV criterion tests each candidate
-    # node individually against the *fixed* conditioning set {x}. So whether a
+    # node individually against a fixed conditioning set. So whether a
     # node can belong to a valid set at all (exclusion) and whether it can witness
     # relevance are both Z-independent, and can be decided once per node.
-    valid_pool = [v for v in universe if separated_given_x(Bd, v, ys_idx)]
+    valid_pool = [v for v in universe if separated_from_all(Bd, v, ys_idx)]
     relevant_pool = [v for v in valid_pool if !separated_empty(B, v, x_idx)]
 
     to_symbols(cur) = sort([B.nodes[v] for v in cur])

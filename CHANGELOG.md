@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - On an `MPDAG`, the separation step moralized the proper backdoor graph, which is only correct for CPDAGs. `is_valid_adjustment` and `all_adjustment_sets` now check amenability explicitly and block definite-status paths directly.
   - With several treatments on a `DAG`, `ADMG`, `AG` or `MAG`, a node was treated as causal when it reaches `y` only through another treatment (e.g. `W` in `X1 --> W --> X2 --> Y` with `x = [:X1, :X2]`). This affected `is_valid_adjustment`, `all_adjustment_sets`, and `adjustment_set(::DAG; type = :optimal)`.
 - `backdoor_set` on a `CPDAG` could return an invalid set (e.g. `[]` for `X`, `Y` in `X --- A --> Y, X --> Y`).
+- `is_valid_iv`/`all_iv_sets` accepted a confounded descendant of `x` as an instrument (e.g. `Z` in `X --> Z, X --> Y, U --> X + Y`).
 
 ### Performance improvements
 

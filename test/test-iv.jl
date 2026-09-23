@@ -30,6 +30,21 @@ end
     @test !is_valid_iv(cg, :X, :Y, [:Y])
 end
 
+@testitem "is_valid_iv: a descendant of X is an instrument only without confounding" tags =
+    [:unit, :iv] begin
+    # Z <-- X <-- U --> Y stays open once X --> Y is cut, so Z is not an instrument.
+    for cg in (DAG("X --> Z, X --> Y, U --> X + Y"), ADMG("X --> Z, X --> Y, X <-> Y"))
+        @test !is_valid_iv(cg, :X, :Y, :Z)
+        @test isempty(all_iv_sets(cg, :X, :Y; minimal = false))
+    end
+    cg = DAG("W --> X --> Z, X --> Y, U --> X + Y")
+    @test all_iv_sets(cg, :X, :Y; minimal = false) == [[:W]]
+    # Without confounding, cov(Z, Y) / cov(Z, X) is unbiased: Z is valid.
+    @test is_valid_iv(DAG("X --> Z, X --> Y"), :X, :Y, :Z)
+    # A descendant through the causal path is never valid.
+    @test !is_valid_iv(DAG("X --> M --> Y, M --> Z"), :X, :Y, :Z)
+end
+
 @testitem "is_valid_iv: isolated node fails relevance" tags = [:unit, :iv] begin
     cg = DAG(
         directed(:Z, :X),
