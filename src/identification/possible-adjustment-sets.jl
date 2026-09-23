@@ -37,8 +37,10 @@ recovers, for each orientation, both its parent set and its optimal adjustment
 set.
 
 An entry is `nothing` when `y` is among the resulting parents of `x` for that
-orientation: `x` cannot be an ancestor of `y` there, so no adjustment set
-applies.
+orientation, so no adjustment set applies, or when `y` is not a possible
+descendant of `x` in the resulting MPDAG. In the latter case the O-set is
+undefined and [`adjustment_set`](@ref) warns, but a valid adjustment set may
+still exist.
 
 # Examples
 

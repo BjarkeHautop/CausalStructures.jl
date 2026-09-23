@@ -463,9 +463,9 @@ end
 """
     pagcauses(cg::PAG, x::Symbol, y::Symbol) -> Vector{Vector{Symbol}}
 
-Return all covariate adjustment sets for the effect of `x` on `y` that are
-valid in at least one MAG consistent with `cg` (Wang et al. 2025, Algorithm 1,
-"PAGcauses").
+Return adjustment sets for the effect of `x` on `y` that together give every
+possible causal effect identifiable by adjustment in some DAG consistent with `cg`
+(Wang et al. 2025, Algorithm 1, "PAGcauses"; Theorem 4).
 
 Returns `Vector{Symbol}[]` if `x` is not a possible ancestor of `y`. If the
 effect is directly identifiable in `cg`, returns the corresponding
