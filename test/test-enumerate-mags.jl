@@ -67,6 +67,37 @@ end
     @test any(m -> mag_sig(m) == mag_sig(mag), mags)   # the originating MAG is present
 end
 
+# ── selection_bias = false ─────────────────────────────────────────────────────
+
+@testitem "enumerate_mags: selection_bias = false drops exactly the undirected members" setup=[
+    MagSig,
+] tags = [:unit, :enumerate_mags] begin
+    for pag in (
+        PAG(partial(:A, :B), partial(:B, :C)),
+        PAG(partial(:A, :B), partial(:B, :C), partial(:A, :C)),
+        PAG(partial(:A, :B), partial(:B, :C), partial(:C, :D)),
+        mag_to_pag(MAG(directed(:A, :C), directed(:B, :C), directed(:C, :D))),
+    )
+        expected = Set(
+            mag_sig(m) for
+            m in enumerate_mags(pag) if !any(CausalStructures.is_undirected, m.edges)
+        )
+        got = enumerate_mags(pag; selection_bias = false)
+        @test !any(m -> any(CausalStructures.is_undirected, m.edges), got)
+        @test Set(mag_sig(m) for m in got) == expected
+        @test length(got) == length(expected)
+    end
+end
+
+@testitem "enumerate_mags: selection_bias = false on a selection-bias PAG is empty" tags =
+    [:unit, :enumerate_mags] begin
+    cycle = [undirected(:A, :B), undirected(:B, :C), undirected(:C, :D), undirected(:A, :D)]
+    @test isempty(enumerate_mags(mag_to_pag(MAG(cycle...)); selection_bias = false))
+    # The pendant surfaces as E o-- B; the invariant --- edges still rule out every member.
+    pag = mag_to_pag(MAG(cycle..., directed(:B, :E)))
+    @test isempty(enumerate_mags(pag; selection_bias = false))
+end
+
 # ── Every member is in the class; the class is closed ───────────────────────────
 
 @testitem "enumerate_mags: every member maps back to the PAG" setup=[MagSig] tags =
@@ -133,6 +164,7 @@ end
         B.nodes,
         node_set,
         target,
+        true,
         total,
     )
     sequential = CausalStructures._enumerate_mags_range(
@@ -142,6 +174,7 @@ end
         B.nodes,
         node_set,
         target,
+        true,
         0,
         total - 1,
     )

@@ -50,14 +50,7 @@ end
 
 @testsnippet CidpHelpers begin
     function _admg_compatible_mags(pag)
-        return filter(enumerate_mags(pag)) do m
-            !any(
-                e ->
-                    e.src_end == CausalStructures.Tail &&
-                    e.dst_end == CausalStructures.Tail,
-                m.edges,
-            )
-        end
+        return enumerate_mags(pag; selection_bias = false)
     end
 
     function _idc_succeeds_in_every_mag(pag, x, y, z)

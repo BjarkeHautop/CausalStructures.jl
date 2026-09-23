@@ -5,10 +5,16 @@
 const _ENUMERATE_MAGS_PARALLEL_THRESHOLD = 8
 
 """
-    enumerate_mags(cg::PAG) -> Vector{MAG}
+    enumerate_mags(cg::PAG; selection_bias::Bool = true) -> Vector{MAG}
 
 Enumerate every [`MAG`](@ref) in the Markov equivalence class represented by the
 [`PAG`](@ref) `cg` (as produced by [`mag_to_pag`](@ref)).
+
+By default the result includes MAGs with selection bias, i.e. with undirected (`---`)
+edges. Pass `selection_bias = false` to keep only the MAGs without undirected edges, as
+assumed by e.g. [`pagcauses`](@ref) and [`backdoor_set`](@ref) on a `PAG`; this also
+prunes the search. If `cg` itself has an undirected edge, no such MAG exists and the
+result is empty.
 
 Every member of the class shares `cg`'s invariant (non-circle) endpoint marks, so
 each circle endpoint is independently resolved to a tail or an arrowhead. For a
@@ -32,13 +38,16 @@ julia> pag = PAG("A o-o B o-o C");
 
 julia> length(enumerate_mags(pag))
 8
+
+julia> length(enumerate_mags(pag; selection_bias = false))
+5
 ```
 
 # References
 
 - [zhang2008completeness](@citet)
 """
-function enumerate_mags(cg::PAG)
+function enumerate_mags(cg::PAG; selection_bias::Bool = true)
     B = cg.backend
     n = length(B.nodes)
 
@@ -49,6 +58,17 @@ function enumerate_mags(cg::PAG)
         adj[i, j] = adj[j, i] = true
         mark[j, i] = e.src_end   # mark at i (src)
         mark[i, j] = e.dst_end   # mark at j (dst)
+    end
+
+    if !selection_bias
+        # Without selection bias no edge may end up as i --- j: an invariant tail
+        # at i rules out cg entirely if the mark at j is also a tail, and forces an
+        # arrowhead if it is a circle.
+        for i = 1:n, j = 1:n
+            (adj[i, j] && mark[j, i] == Tail) || continue
+            mark[i, j] == Tail && return MAG[]
+            mark[i, j] == Circle && (mark[i, j] = Arrow)
+        end
     end
 
     # Each circle endpoint is an independent tail/arrow choice.
@@ -66,16 +86,28 @@ function enumerate_mags(cg::PAG)
             B.nodes,
             node_set,
             target,
+            selection_bias,
             0,
             total - 1,
         )
     end
-    return _enumerate_mags_threaded(circle_pos, mark, adj, B.nodes, node_set, target, total)
+    return _enumerate_mags_threaded(
+        circle_pos,
+        mark,
+        adj,
+        B.nodes,
+        node_set,
+        target,
+        selection_bias,
+        total,
+    )
 end
 
 # Checks every `bits` assignment in `lo:hi` against `target`, appending valid
-# MAGs to a freshly-allocated output vector. `mark` is copied once here so
-# concurrent calls across disjoint `lo:hi` ranges each get their own copy.
+# MAGs to a freshly-allocated output vector. With `selection_bias = false`, an
+# assignment that yields an undirected edge is skipped before building the MAG.
+# `mark` is copied once here so concurrent calls across disjoint `lo:hi` ranges
+# each get their own copy.
 function _enumerate_mags_range(
     circle_pos::Vector{Tuple{Int,Int}},
     mark::Matrix{Endpoint},
@@ -83,6 +115,7 @@ function _enumerate_mags_range(
     nodes_vec::Vector{Symbol},
     node_set::Set{Symbol},
     target,
+    selection_bias::Bool,
     lo::Int,
     hi::Int,
 )
@@ -95,6 +128,7 @@ function _enumerate_mags_range(
         end
 
         new_edges = CausalEdge[]
+        skip = false
         for i = 1:n, j = (i+1):n
             adj[i, j] || continue
             mi, mj = m[j, i], m[i, j]   # mark at i, mark at j
@@ -105,9 +139,11 @@ function _enumerate_mags_range(
             elseif mi == Arrow && mj == Arrow
                 push!(new_edges, bidirected(nodes_vec[i], nodes_vec[j]))
             else
+                selection_bias || (skip = true; break)
                 push!(new_edges, undirected(nodes_vec[i], nodes_vec[j]))
             end
         end
+        skip && continue
 
         candidate = try
             MAG(node_set, new_edges)
@@ -132,6 +168,7 @@ function _enumerate_mags_threaded(
     nodes_vec,
     node_set,
     target,
+    selection_bias::Bool,
     total::Int,
 )
     nt = min(Threads.nthreads(), total)
@@ -148,6 +185,7 @@ function _enumerate_mags_threaded(
                 nodes_vec,
                 node_set,
                 target,
+                selection_bias,
                 lo,
                 hi,
             )

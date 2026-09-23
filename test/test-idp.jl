@@ -7,14 +7,7 @@
 @testsnippet IdpHelpers begin
     # MAGs with selection bias (undirected edges) have no ADMG counterpart.
     function _admg_compatible_mags(pag)
-        return filter(enumerate_mags(pag)) do m
-            !any(
-                e ->
-                    e.src_end == CausalStructures.Tail &&
-                    e.dst_end == CausalStructures.Tail,
-                m.edges,
-            )
-        end
+        return enumerate_mags(pag; selection_bias = false)
     end
 
     function _id_succeeds_in_every_mag(pag, x, y)

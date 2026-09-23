@@ -3,9 +3,8 @@
 # maximal_local_mag (Wang, Qin & Zhou 2023).
 
 @testsnippet PagcausesBaseline begin
-    # enumerate_mags(::PAG) can include selection-variable (undirected-edge) MAGs; PAGcauses assumes none.
-    classical_mags(pag) =
-        [m for m in enumerate_mags(pag) if !any(CausalStructures.is_undirected, m.edges)]
+    # PAGcauses assumes no selection-variable (undirected-edge) MAGs.
+    classical_mags(pag) = enumerate_mags(pag; selection_bias = false)
 
     # Expand a MAG into a concrete DAG (each bidirected edge -> a fresh latent common cause).
     function expand_latents(mag)

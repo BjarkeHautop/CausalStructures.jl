@@ -50,8 +50,8 @@ function backdoor_set(cg::PAG, x::Symbol, y::Symbol)
     visible_children = _visible_children_symbols(B, xi)
     poss_de = Set(possible_descendants(cg, x))
 
-    for m in enumerate_mags(cg)
-        any(is_undirected, m.edges) && continue  # only classical (no-selection-variable) MAGs are in R*
+    # Only classical (no-selection-variable) MAGs are in R*.
+    for m in enumerate_mags(cg; selection_bias = false)
         mb = m.backend
         mxi = node_index(m, x)
         length(_parents_slice(mb, mxi)) + length(_spouses_slice(mb, mxi)) == k || continue
