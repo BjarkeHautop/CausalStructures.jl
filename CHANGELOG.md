@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `markov_blanket` on an `AbstractAG` (`AG`/`MAG`) only looked at direct neighbors, missing nodes reachable through a chain of colliders (e.g. `A <-> B <-> C`), so it could return a set too small to actually separate `node` from the rest of the graph.
 - `meek_closure`'s R4 was missing the precondition that `a` must be adjacent to `d`, so it could orient `a --> b` in cases not actually implied by the pattern.
 
+### Performance improvements
+
+- Improved performance of `dag_from_pdag` by using the potential-sink worklist algorithm from Wienöbst, Bannach & Liśkiewicz (UAI 2021), instead of rescanning every remaining node after each removal.
+
 ## [0.7.0] - 2026-09-19
 
 ### Breaking changes

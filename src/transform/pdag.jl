@@ -9,12 +9,12 @@
 Extend `cg` to a consistent [`DAG`](@ref) by orienting all undirected
 edges, using the Dor-Tarsi algorithm.
 
-The algorithm repeatedly finds a sink node `x` (no directed children, whose
-undirected neighbors form a clique, and whose undirected neighbors are each
-adjacent to every existing parent of `x`), orients all undirected edges
-toward `x`, and removes it. Raises an error if no valid DAG extension exists.
-The last condition on `x`'s existing parents ensures the extension has
-exactly the same v-structures as `cg`.
+The algorithm repeatedly finds a potential-sink node `x` (no directed
+children, whose undirected neighbors form a clique, and whose undirected
+neighbors are each adjacent to every existing parent of `x`), orients all
+undirected edges toward `x`, and removes it. Raises an error if no valid DAG
+extension exists. The last condition on `x`'s existing parents ensures the
+extension has exactly the same v-structures as `cg`.
 
 # Examples
 
@@ -44,62 +44,66 @@ function dag_from_pdag(cg::AbstractPDAG)
     # out_pa[i] accumulates the final parent set for node i (directed edges)
     out_pa = [Set{Int}(copy(pa[i])) for i = 1:n]
 
-    nodes_left = Set(1:n)
+    # Condition (a): x has no children. Condition (b): undirected neighbors of
+    # x form a clique. Condition (c): every undirected neighbor of x is also
+    # adjacent to every existing parent of x (Definition 4.2 in wienobst21a).
+    function is_potential_sink(x)
+        isempty(ch[x]) || return false
 
-    while !isempty(nodes_left)
-        found_sink = false
-
-        for x in nodes_left
-            # Condition (a): x has no children in working graph
-            isempty(ch[x]) || continue
-
-            # Condition (b): undirected neighbors of x form a clique
-            nbrs = collect(und[x])
-            clique = true
-            for i in eachindex(nbrs), j = (i+1):length(nbrs)
-                a, b = nbrs[i], nbrs[j]
-                if b ∉ pa[a] && b ∉ ch[a] && b ∉ und[a]
-                    clique = false
-                    break
-                end
+        nbrs = und[x]
+        for a in nbrs, b in nbrs
+            a == b && continue
+            if b ∉ pa[a] && b ∉ ch[a] && b ∉ und[a]
+                return false
             end
-            clique || continue
-
-            # Condition (c): every undirected neighbor of x must also be
-            # adjacent to every existing parent of x (Wienöbst, Bannach &
-            # Liśkiewicz, UAI 2021, Definition 4.2).
-            if !isempty(nbrs) && !isempty(pa[x])
-                for u in nbrs, p in pa[x]
-                    if p ∉ pa[u] && p ∉ ch[u] && p ∉ und[u]
-                        clique = false
-                        break
-                    end
-                end
-            end
-            clique || continue
-
-            # x is a valid sink. Orient all undirected edges toward x
-            for u in nbrs
-                push!(out_pa[x], u)
-            end
-
-            for p in pa[x]
-                delete!(ch[p], x)
-            end
-            for u in nbrs
-                delete!(und[u], x)
-            end
-            pa[x] = Set{Int}()
-            ch[x] = Set{Int}()
-            und[x] = Set{Int}()
-
-            delete!(nodes_left, x)
-            found_sink = true
-            break
         end
 
-        found_sink || error("PDAG cannot be extended to a DAG (Dor-Tarsi failed)")
+        if !isempty(nbrs) && !isempty(pa[x])
+            for u in nbrs, p in pa[x]
+                if p ∉ pa[u] && p ∉ ch[u] && p ∉ und[u]
+                    return false
+                end
+            end
+        end
+
+        return true
     end
+
+    removed = falses(n)
+    stack = Int[x for x = 1:n if is_potential_sink(x)]
+    n_removed = 0
+
+    while !isempty(stack)
+        x = pop!(stack)
+        (removed[x] || !is_potential_sink(x)) && continue
+
+        nbrs = collect(und[x])
+        for u in nbrs
+            push!(out_pa[x], u)
+        end
+
+        # x's former neighbors are the only nodes whose potential-sink status
+        # can change by removing x.
+        candidates = union(nbrs, pa[x])
+
+        for p in pa[x]
+            delete!(ch[p], x)
+        end
+        for u in nbrs
+            delete!(und[u], x)
+        end
+        pa[x] = Set{Int}()
+        ch[x] = Set{Int}()
+        und[x] = Set{Int}()
+        removed[x] = true
+        n_removed += 1
+
+        for c in candidates
+            is_potential_sink(c) && push!(stack, c)
+        end
+    end
+
+    n_removed == n || error("PDAG cannot be extended to a DAG (Dor-Tarsi failed)")
 
     new_edges = CausalEdge[]
     for i = 1:n, p in out_pa[i]
