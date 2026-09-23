@@ -95,6 +95,30 @@ end
     @test result isa MPDAG
 end
 
+@testitem "meek_closure: R4 requires a adjacent to d, not just c --> d --> b" tags =
+    [:unit, :mpdag] begin
+    # A --- B, A --- C, C --> D --> B, C not adjacent to B: this alone is not
+    # enough for R4, since A is not adjacent to D. A --> E1 --> E2 --> B blocks
+    # R1 from resolving A --- B via cycle avoidance, and is too long to trigger
+    # R2, so A --- B must stay undirected.
+    pdag = PDAG(
+        undirected(:A, :B),
+        undirected(:A, :C),
+        directed(:C, :D),
+        directed(:D, :B),
+        directed(:A, :E1),
+        directed(:E1, :E2),
+        directed(:E2, :B),
+    )
+    result = meek_closure(pdag)
+    @test undirected(:A, :B) in edges(result)
+
+    # Adding A --- D (so A is adjacent to D) makes R4 fire.
+    pdag_with_ad = PDAG(edges(pdag)..., undirected(:A, :D))
+    result_with_ad = meek_closure(pdag_with_ad)
+    @test directed(:A, :B) in edges(result_with_ad)
+end
+
 # TODO: Make test for unsafe meek_closure with check_cycles = false, which may return a cycle.
 # TODO: Make test for r4 = false for meek_closure on a PDAG with background knowledge.
 

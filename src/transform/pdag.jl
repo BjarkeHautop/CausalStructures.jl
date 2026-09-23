@@ -122,8 +122,8 @@ The four rules are:
 - **R2**: `a --- b`, directed path `a --> w --> b` exists --> orient `a --> b`
 - **R3**: `a --- b`, two parents `c, d` of `b` with `c` not adjacent to `d`,
   and `a --- c`, `a --- d` --> orient `a --> b`
-- **R4**: `a --- b`, `a --- c`, `c` not adjacent to `b`, and a directed path
-  `c --> d --> b` exists --> orient `a --> b`
+- **R4**: `a --- b`, `a --- c`, `c` not adjacent to `b`, `a` adjacent to `d`,
+  and a directed path `c --> d --> b` exists --> orient `a --> b`
 
 # Keyword arguments
 
@@ -237,7 +237,7 @@ function meek_closure(cg::AbstractPDAG; check_cycles::Bool = true, r4::Bool = tr
             end
         end
 
-        # R4: a --- b, ∃c: a --- c, c not adj b, ∃d: c --> d --> b --> orient a --> b
+        # R4: a --- b, ∃c: a --- c, c not adj b, ∃d: c --> d --> b, a adj d --> orient a --> b
         if r4
             for a = 1:n
                 for b in collect(und[a])
@@ -245,7 +245,7 @@ function meek_closure(cg::AbstractPDAG; check_cycles::Bool = true, r4::Bool = tr
                     for c in und[a]
                         c == b && continue
                         adjacent(c, b) && continue
-                        if any(d -> d in pa[b], ch[c])
+                        if any(d -> d in pa[b] && adjacent(a, d), ch[c])
                             fires = true
                             break
                         end
