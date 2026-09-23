@@ -16,9 +16,7 @@ end
     result = cidp(pag, :X, :Y; given = :A)
 
     @test result !== nothing
-    @test string(result) ==
-          "(Σ_{B} (P(A, B, X, Y) / P(X | A, B))) / " *
-          "(Σ_{B, Y'} (P(A, B, X, Y') / P(X | A, B)))"
+    @test string(result) == "(Σ_{B} (P(A, B, X, Y) / P(X | A, B))) / P(A)"
 end
 
 @testitem "cidp: rejects malformed queries" tags = [:unit, :cidp] begin

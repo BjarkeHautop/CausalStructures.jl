@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented `markov_blanket` for a `PAG`.
 - `enumerate_mags` has a `selection_bias` keyword; `selection_bias = false` returns only the MAGs without undirected edges, pruning those candidates from the search.
 - `adjustment_set(::DAG)` and `adjustment_set(::AbstractPDAG)` with `type = :optimal` now warn when some node of `y` is not a (possible) descendant of `x`, since the O-set is not defined there.
+- Estimands returned by `id`/`idc`/`idp`/`cidp` are simplified further.
 
 ### Bug fixes
 

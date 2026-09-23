@@ -165,8 +165,8 @@ it directly: `Σ_a P(a, b | c)` becomes `P(b | c)`.
 Sums over a product are narrowed as far as they go: factors that do not mention
 the summation index are constants of the sum and are pulled out in front of it,
 and a factor whose whole head is summed over, and whose head no other factor
-under the sum mentions, sums to `1` and drops out. A denominator free of the
-index is likewise pulled out of the sum.
+under the sum mentions, sums to `1` and drops out. Under a ratio, the part of
+the index the denominator does not mention is summed in the numerator alone.
 
 # Examples
 
@@ -209,9 +209,14 @@ function marginal(index, term::Estimand)
     # Σ_a Σ_b f  ==  Σ_{a, b} f
     term isa Marginal && return marginal(union(idx, term.index), term.term)
 
-    # Σ_a (f / g) == (Σ_a f) / g, when g is a constant of the sum.
-    if term isa Quotient && isdisjoint(idx, _free_vars(term.den))
-        return quotient(marginal(idx, term.num), term.den)
+    # Σ_{a, b} (f / g) == Σ_b ((Σ_a f) / g), when g does not mention a.
+    if term isa Quotient
+        den_vars = _free_vars(term.den)
+        inner = filter(v -> !(v in den_vars), idx)
+        if !isempty(inner)
+            outer = filter(in(den_vars), idx)
+            return marginal(outer, quotient(marginal(inner, term.num), term.den))
+        end
     end
 
     if term isa Product
@@ -335,12 +340,12 @@ Form the ratio `num / den`.
 A denominator of `1` returns `num` unchanged. When the denominator is itself
 `a / b` and the numerator is exactly `a`, the ratio collapses to `b`; this is
 what most often turns `_reduce_bucket`'s divisions back into something
-readable. Otherwise, a factor appearing on both sides cancels. When both
-sides are probability terms sharing the same conditioning set, and the
-denominator's variables are a subset of the numerator's, the ratio collapses
-to a conditional: `P(a, b | c) / P(b | c)` becomes `P(a | b, c)`. That is
-what turns the ratios of marginals produced by the ID recursion back into
-ordinary conditionals.
+readable. Otherwise, a factor appearing on both sides cancels, and a
+numerator factor and a denominator factor related by the chain rule
+`P(a, b | c) = P(a | b, c) P(b | c)` divide out: `P(a, b | c) / P(b | c)`
+becomes `P(a | b, c)`, and `P(a, b | c) / P(a | b, c)` becomes `P(b | c)`.
+That is what turns the ratios of marginals produced by the ID recursion back
+into ordinary conditionals.
 
 Cancellation assumes the cancelled factor is non-zero, which is the positivity
 assumption the identification results are stated under anyway.
@@ -350,6 +355,11 @@ assumption the identification results are stated under anyway.
 ```jldoctest
 julia> quotient(prob([:Y, :Z]; given = [:X]), prob(:Z; given = [:X]))
 P(Y | X, Z)
+```
+
+```jldoctest
+julia> quotient(prob([:W, :Y, :Z]), prob(:W; given = [:Y, :Z]))
+P(Y, Z)
 ```
 
 ```jldoctest
@@ -375,27 +385,40 @@ function quotient(num::Estimand, den::Estimand)
     # a / (a / b) == b.
     den isa Quotient && num == den.num && return den.den
 
-    # A factor shared by both sides cancels. Re-entering with one factor fewer
-    # on each side lets the remaining rules see through the cancellation.
+    # A factor shared by both sides cancels, and a pair of probability terms
+    # related by the chain rule divides out. Re-entering with one factor fewer
+    # in the denominator lets the remaining rules see through the result.
     nf = _factors(num)
     df = _factors(den)
-    for i in eachindex(nf)
-        j = findfirst(isequal(nf[i]), df)
-        j === nothing && continue
-        deleteat!(nf, i)
+    for i in eachindex(nf), j in eachindex(df)
+        r = _divide_factors(nf[i], df[j])
+        r === nothing && continue
+        nf[i] = r
         deleteat!(df, j)
         return quotient(product(nf), product(df))
     end
 
-    # P(a, b | c) / P(b | c) == P(a | b, c).
-    if num isa Prob &&
-       den isa Prob &&
-       num.given == den.given &&
-       issubset(den.vars, num.vars)
-        return prob(setdiff(num.vars, den.vars); given = vcat(den.vars, den.given))
-    end
-
     return Quotient(num, den)
+end
+
+# The ratio `n / d` of two factors when it simplifies to a single factor, or
+# `nothing`. Both simplifications are the chain rule
+# `P(a, b | c) = P(a | b, c) P(b | c)`, read with either factor as divisor.
+_divide_factors(n::Estimand, d::Estimand) = n == d ? _ONE : nothing
+
+function _divide_factors(n::Prob, d::Prob)
+    n == d && return _ONE
+    issubset(d.vars, n.vars) || return nothing
+
+    # P(a, b | c) / P(b | c) == P(a | b, c).
+    d.given == n.given &&
+        return prob(setdiff(n.vars, d.vars); given = vcat(d.vars, d.given))
+
+    # P(a, b | c) / P(a | b, c) == P(b | c).
+    rest = setdiff(n.vars, d.vars)
+    d.given == sort(vcat(rest, n.given)) && return prob(rest; given = n.given)
+
+    return nothing
 end
 
 # --- bound-variable renaming ------------------------------------------------

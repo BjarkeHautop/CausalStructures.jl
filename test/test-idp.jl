@@ -38,6 +38,15 @@ end
     @test string(result) == "Σ_{A, B} (P(A, B, X, Y) / P(X | A, B))"
 end
 
+@testitem "idp: estimand cancels variables the effect does not depend on" tags =
+    [:unit, :idp] begin
+    # Y is isolated, so P(Y | do(X)) == P(Y); the Q-factor reduction produces
+    # P(X, Y, Z) / P(X, Z | Y), which should simplify all the way.
+    pag = PAG("X o-o Z, Y")
+    @test idp(pag, :X, :Y) == prob(:Y)
+    @test cidp(pag, :X, :Y; given = :Z) == prob(:Y)
+end
+
 @testitem "idp: consistent with is_valid_adjustment across several PAGs" setup =
     [IdpHelpers] tags = [:unit, :idp] begin
     # Whenever a GAC-valid adjustment set exists, the effect must be

@@ -173,6 +173,19 @@ end
     @test kept isa Marginal
 end
 
+@testitem "marginal sums the numerator over indices the denominator lacks" tags =
+    [:unit, :estimand] begin
+    # Σ_{V, W} (P(V, W, Y, Z) / P(Y | V, Z)): the denominator does not mention
+    # W, so Σ_W P(V, W, Y, Z) == P(V, Y, Z), and the ratio then collapses to
+    # P(V, Z), leaving Σ_V P(V, Z) == P(Z).
+    e = marginal([:V, :W], quotient(prob([:V, :W, :Y, :Z]), prob(:Y; given = [:V, :Z])))
+    @test e == prob(:Z)
+
+    # When no rule fires, the sum over the denominator's variables stays.
+    kept = marginal([:V, :W], quotient(prob([:V, :W, :Y, :Z]), prob(:Y; given = [:V])))
+    @test string(kept) == "Σ_{V} (P(V, Y, Z) / P(Y | V))"
+end
+
 @testitem "quotient cancels a factor shared by both sides" tags = [:unit, :estimand] begin
     # P(Z | X) P(Y | X, Z) / P(Z | X) == P(Y | X, Z)
     num = product([prob(:Z; given = [:X]), prob(:Y; given = [:X, :Z])])
@@ -183,6 +196,24 @@ end
 
     # A factor appearing only on one side is left alone.
     @test quotient(num, prob(:Z; given = [:W])) isa Quotient
+end
+
+@testitem "quotient divides out factors related by the chain rule" tags = [:unit, :estimand] begin
+    # P(W, Y, Z) / P(W | Y, Z) == P(Y, Z)
+    @test quotient(prob([:W, :Y, :Z]), prob(:W; given = [:Y, :Z])) == prob([:Y, :Z])
+
+    # Likewise under a shared conditioning set.
+    @test quotient(prob([:W, :Y]; given = [:X]), prob(:W; given = [:X, :Y])) ==
+          prob(:Y; given = [:X])
+
+    # The pair divides out wherever it sits among the factors.
+    num = product([prob(:V), prob([:W, :Y, :Z])])
+    den = product([prob(:W; given = [:Y, :Z]), prob(:U)])
+    @test quotient(num, den) == quotient(product([prob(:V), prob([:Y, :Z])]), prob(:U))
+
+    # The denominator must condition on exactly the rest of the numerator.
+    @test quotient(prob([:W, :Y, :Z]), prob(:W; given = [:Y])) isa Quotient
+    @test quotient(prob([:W, :Y]), prob(:W; given = [:Y, :Z])) isa Quotient
 end
 
 @testitem "estimands hash consistently with equality" tags = [:unit, :estimand] begin
