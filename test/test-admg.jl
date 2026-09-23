@@ -103,12 +103,22 @@ end
 
 # ── markov_blanket for ADMG ─────────────────────────────
 
-@testitem "markov_blanket district-based for ADMG" tags = [:unit, :admg] begin
+@testitem "markov_blanket for ADMG includes parents, children and spouses" tags =
+    [:unit, :admg] begin
     admg = ADMG(directed(:L, :X), directed(:X, :Y), bidirected(:X, :Z))
+    @test Set(markov_blanket(admg, :X)) == Set([:L, :Y, :Z])
+end
+
+@testitem "markov_blanket for ADMG follows collider paths through children" tags =
+    [:unit, :admg] begin
+    # X --> C <-> D <-- E: C is a child of X, D is collider-connected to X
+    # through C, and E is a parent of D.
+    admg = ADMG("X --> C, C <-> D, E --> D")
     mb = markov_blanket(admg, :X)
-    @test :L in mb
-    @test :Z in mb
-    @test !(:Y in mb)
+    @test Set(mb) == Set([:C, :D, :E])
+    rest = setdiff(nodes(admg), [mb; :X])
+    @test isempty(rest) || m_separated(admg, :X, rest, mb)
+    @test markov_blanket(ADMG("X --> C"), :X) == [:C]
 end
 
 @testitem "markov_blanket includes parents of district members for ADMG" tags =

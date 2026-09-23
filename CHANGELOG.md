@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
-- `markov_blanket` on an `AbstractAG` (`AG`/`MAG`) only looked at direct neighbors, missing nodes reachable through a chain of colliders (e.g. `A <-> B <-> C`), so it could return a set too small to actually separate `node` from the rest of the graph.
+- `markov_blanket` on an `AbstractAG` or `ADMG` missed nodes reachable through collider paths (e.g. `C` in `A <-> B <-> C`), so it could return a set too small to separate `node` from the rest of the graph.
 - `meek_closure`'s R4 was missing the precondition that `a` must be adjacent to `d`, so it could orient `a --> b` in cases not actually implied by the pattern.
 - The adjustment functions (`is_valid_adjustment`, `all_adjustment_sets`, `adjustment_set`) could reject valid adjustment sets and return a non-optimal set in several cases:
   - On an `AbstractPDAG` or `PAG`, nodes were treated as lying on a causal path from `x` to `y` when they do not (e.g. `B` in `B --- X --> Y`).

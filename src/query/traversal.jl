@@ -749,12 +749,11 @@ the graph.
 
 For a [`DAG`](@ref), the Markov blanket is the set of parents, children, and
 co-parents (other parents of `node`'s children). For a [`AbstractPDAG`](@ref),
-undirected neighbors are also included. For an [`ADMG`](@ref),
-the blanket is the union of the parents of every node in `node`'s district
-(excluding `node` itself). For an [`AbstractAG`](@ref), it is parents, children,
-co-parents, spouses, and undirected neighbors, plus every node reachable by a
-collider path [pelletelisseeff2008finding](@cite): a path of length >= 2 whose
-interior nodes are all colliders. For a [`PAG`](@ref), the blanket is computed
+undirected neighbors are also included. For an [`ADMG`](@ref) or
+[`AbstractAG`](@ref), it is parents, children, co-parents, spouses, and (for an
+`AbstractAG`) undirected neighbors, plus every node reachable by a collider path
+[pelletelisseeff2008finding](@cite): a path of length >= 2 whose interior nodes
+are all colliders. For a [`PAG`](@ref), the blanket is computed
 on a underlying [`MAG`](@ref).
 
 # Examples
@@ -814,12 +813,13 @@ function markov_blanket(cg::ADMG, node::Symbol)
     B = cg.backend
     node_idx = node_index(cg, node)
     seen = falses(length(B.nodes))
-    for d_idx in _district_of_idx(B, node_idx)
-        d_idx != node_idx && (seen[d_idx] = true)
-        for p_idx in _parents_slice(B, d_idx)
-            seen[p_idx] = true
-        end
+
+    _mark_parents_children_coparents!(seen, B, node_idx)
+    for spouse_idx in _spouses_slice(B, node_idx)
+        seen[spouse_idx] = true
     end
+    _collider_reachable!(seen, B, node_idx)
+
     seen[node_idx] = false
     return [B.nodes[i] for i in eachindex(seen) if seen[i]]
 end
@@ -867,22 +867,6 @@ function spouses(cg::Union{ADMG,AbstractAG,PAG}, node::Symbol)
     B = cg.backend
     idx = node_index(cg, node)
     return B.nodes[_spouses_slice(B, idx)]
-end
-
-function _district_of_idx(B::ADMGBackend, node_idx::Int)
-    seen = falses(length(B.nodes))
-    seen[node_idx] = true
-    stack = [node_idx]
-    while !isempty(stack)
-        u = pop!(stack)
-        for w in _spouses_slice(B, u)
-            if !seen[w]
-                seen[w] = true
-                push!(stack, w)
-            end
-        end
-    end
-    return [i for i in eachindex(seen) if seen[i]]
 end
 
 """
