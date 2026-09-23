@@ -34,6 +34,13 @@ function _possible_ancestors_bitmask(
     return mask
 end
 
+# The b-adjustment criterion and the b-possibly causal searches here assume an
+# MPDAG. A PDAG not closed under Meek's rules leaves implied orientations
+# undirected (in A --> X --- Y, X --- Y looks like a possibly causal first step
+# although R1 forces X --> Y), so close it first; this keeps the represented DAGs.
+_adjustment_graph(cg::PDAG) = meek_closure(cg)
+_adjustment_graph(cg::AbstractPDAG) = cg
+
 function _index_mask(n::Int, idxs::Vector{Int})
     mask = falses(n)
     for i in idxs
@@ -232,7 +239,10 @@ effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
 The effect must be amenable (every proper possibly causal path from `x` to `y`
 starts with a directed edge), `z` must avoid the forbidden set (possible
 descendants of nodes on proper possibly causal paths), and `z` must block every
-proper non-causal path of definite status.
+proper non-causal path of definite status. A `z` overlapping `y` is never valid.
+
+A [`PDAG`](@ref) is first closed under Meek's rules (see [`meek_closure`](@ref)),
+since the criterion is stated for [`MPDAG`](@ref)s.
 
 # Examples
 
@@ -262,12 +272,14 @@ function is_valid_adjustment(
     y::Union{Symbol,AbstractVector{Symbol}},
     z::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
+    cg = _adjustment_graph(cg)
     B = cg.backend
     xs = _node_indices(cg, x)
     ys = _node_indices(cg, y)
     z_idxs = _node_indices(cg, z)
 
     (isempty(xs) || isempty(ys)) && return true
+    any(in(ys), z_idxs) && return false
 
     cn, removed, amenable = _proper_possibly_causal_paths(B, xs, ys)
     amenable || return false
@@ -337,6 +349,7 @@ function all_adjustment_sets(
     minimal::Bool = true,
     max_size::Int = 3,
 )
+    cg = _adjustment_graph(cg)
     B = cg.backend
     n = length(B.nodes)
     xs = _node_indices(cg, x)

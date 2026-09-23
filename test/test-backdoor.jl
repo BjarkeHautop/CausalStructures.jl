@@ -253,6 +253,21 @@ end
     @test is_valid_adjustment(dag, :X, :Y, [:A])
 end
 
+@testitem "is_valid_adjustment: z overlapping y is never valid" tags = [:unit, :backdoor] begin
+    # Y2 is not a descendant of X, so it is not forbidden, but an adjustment set
+    # must still be disjoint from Y.
+    dag = DAG("X --> Y1, W --> Y2")
+    @test is_valid_adjustment(dag, :X, [:Y1, :Y2])
+    @test !is_valid_adjustment(dag, :X, [:Y1, :Y2], [:Y2])
+    admg = ADMG("X --> Y1, W <-> Y2")
+    @test is_valid_adjustment(admg, :X, [:Y1, :Y2])
+    @test !is_valid_adjustment(admg, :X, [:Y1, :Y2], [:Y2])
+    for g in (DAG("X, Y"), ADMG("X, Y"), MAG("X, Y"), PAG("X, Y"))
+        @test is_valid_adjustment(g, :X, :Y)
+        @test !is_valid_adjustment(g, :X, :Y, :Y)
+    end
+end
+
 @testitem "is_valid_adjustment DAG: off-path descendant of X is not forbidden" tags =
     [:unit, :backdoor] begin
     dag = DAG(directed(:A, :X), directed(:X, :Y), directed(:X, :W))

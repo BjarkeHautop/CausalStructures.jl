@@ -541,6 +541,7 @@ function adjustment_set(
     y::Union{Symbol,AbstractVector{Symbol}};
     type::Symbol = :optimal,
 )
+    cg = _adjustment_graph(cg)
     B = cg.backend
     n = length(B.nodes)
     xs = _node_indices(cg, x)

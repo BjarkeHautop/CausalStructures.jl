@@ -194,6 +194,7 @@ function is_valid_adjustment(
     ys = _node_indices(cg, y)
     z_idxs = _node_indices(cg, z)
 
+    any(in(ys), z_idxs) && return false
     forbidden = _forbidden_set(B, xs, ys)
     any(v -> forbidden[v], z_idxs) && return false
 

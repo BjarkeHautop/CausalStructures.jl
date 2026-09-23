@@ -147,6 +147,28 @@ end
     @test isempty(sets)
 end
 
+@testitem "adjustment AbstractPDAG: a PDAG is Meek-closed first" tags =
+    [:unit, :pdag_adjustment] begin
+    # A --> X --- Y: R1 forces X --> Y, so the effect is amenable and {} is
+    # valid, although X --- Y alone looks like an undirected first edge.
+    pdag = PDAG("A --> X --- Y")
+    @test is_valid_adjustment(pdag, :X, :Y)
+    @test all_adjustment_sets(pdag, :X, :Y) == [Symbol[]]
+    @test adjustment_set(pdag, :X, :Y) == Symbol[]
+    @test adjustment_set(pdag, :X, :Y; type = :parents) == [:A]
+    @test all(d -> is_valid_adjustment(d, :X, :Y), enumerate_dags(pdag))
+end
+
+@testitem "is_valid_adjustment AbstractPDAG: z overlapping y is never valid" tags =
+    [:unit, :pdag_adjustment] begin
+    # Y2 is not a possible descendant of X, so it is not forbidden, but an
+    # adjustment set must still be disjoint from Y.
+    pdag = PDAG("X --> Y1, W --- Y2")
+    @test is_valid_adjustment(pdag, :X, [:Y1, :Y2])
+    @test !is_valid_adjustment(pdag, :X, [:Y1, :Y2], [:Y2])
+    @test !is_valid_adjustment(CPDAG("X, Y"), :X, :Y, :Y)
+end
+
 # ── d_separated ───────────────────────────────────────────────────────────────
 
 @testitem "d_separated AbstractPDAG: chain is open" tags = [:unit, :pdag_adjustment] begin
