@@ -47,6 +47,19 @@ end
     end
 end
 
+@testitem "possible_joint_parent_sets rejects orientations that force a v-structure elsewhere" tags =
+    [:unit, :possible_joint_parent_sets] begin
+    # pa(C) = {A}, pa(D) = {C} passes the local checks, but it forces
+    # C --> B, D --> B and then A --> B (else B --> A --> C --> B is a cycle):
+    # a new v-structure A --> B <-- D, so no DAG in the class realizes it.
+    cpdag = CPDAG("A --- B, A --- C, B --- C, B --- D, C --- D")
+    result = possible_joint_parent_sets(cpdag, [:C, :D])
+    @test !([[:A], [:C]] in result)
+    realized =
+        Set([[sort(parents(d, :C)), sort(parents(d, :D))] for d in enumerate_dags(cpdag)])
+    @test Set(result) == realized
+end
+
 @testitem "possible_joint_parent_sets: entries are ordered like xs and pairwise consistent" tags =
     [:unit, :possible_joint_parent_sets] begin
     cpdag = CPDAG("X1 --- X2, X1 --- A, X2 --- B, A --> Y, B --> Y")

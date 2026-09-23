@@ -78,11 +78,10 @@ a set of simultaneous interventions.
 
 Every undirected edge incident to at least one node in `xs` is jointly
 reoriented, including edges directly between two nodes of `xs`. A candidate
-orientation is locally valid if it introduces no new v-structure at *any*
-node that gains a parent from it (not only at nodes in `xs`: two
-non-adjacent members of `xs` directing an edge into the same outside neighbor
-is also a new v-structure), and if the result is acyclic when combined with
-`cg`'s existing directed edges.
+orientation is accepted if it introduces no new v-structure at *any* node that
+gains a parent from it (not only at nodes in `xs`: two non-adjacent members of
+`xs` directing an edge into the same outside neighbor is also a new
+v-structure), and if the result extends to a DAG represented by `cg`.
 
 Each returned entry is a vector of parent sets in the same order as `xs`
 (entry `i` is a valid `pa(xs[i])` for that joint orientation). Since a node
@@ -130,6 +129,11 @@ function possible_joint_parent_sets(
 
     acyclic! = _make_acyclic_checker(cg)
     gained_pairs = Tuple{Int,Int}[]
+    B = cg.backend
+    n = length(B.nodes)
+    pa_base = [Set{Int}(_parents_slice(B, i)) for i = 1:n]
+    ch_base = [Set{Int}(_children_slice(B, i)) for i = 1:n]
+    und_base = [Set{Int}(_undirected_slice(B, i)) for i = 1:n]
 
     results = Vector{Vector{Vector{Symbol}}}()
     for mask = 0:(2^m-1)
@@ -140,7 +144,20 @@ function possible_joint_parent_sets(
         for (v, newps) in gained, p in newps
             push!(gained_pairs, (node_index(cg, p), node_index(cg, v)))
         end
-        acyclic!(gained_pairs) || continue
+        acyclic!(gained_pairs) || continue  # cheap pre-filter, implied by the extension check
+
+        # The local checks miss orientations forced away from xs, so also
+        # require a consistent extension of the oriented graph.
+        pa = deepcopy(pa_base)
+        ch = deepcopy(ch_base)
+        und = deepcopy(und_base)
+        for (p, v) in gained_pairs
+            delete!(und[p], v)
+            delete!(und[v], p)
+            push!(pa[v], p)
+            push!(ch[p], v)
+        end
+        _dor_tarsi_parents!(pa, ch, und) === nothing && continue
 
         push!(results, [sort([pa0[x]; get(gained, x, Symbol[])]) for x in xs])
     end

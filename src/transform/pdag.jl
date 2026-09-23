@@ -35,11 +35,36 @@ DAG with 3 nodes and 2 edges:
 """
 function dag_from_pdag(cg::AbstractPDAG)
     B = cg.backend
-    n = length(B.nodes)
+    out_pa = _dor_tarsi_parents(B)
+    out_pa === nothing && error("PDAG cannot be extended to a DAG (Dor-Tarsi failed)")
 
+    new_edges = CausalEdge[]
+    for i in eachindex(out_pa), p in out_pa[i]
+        push!(new_edges, directed(B.nodes[p], B.nodes[i]))
+    end
+
+    # validate=false is safe here: Dor-Tarsi only orients toward a sink whose
+    # undirected neighbors form a clique, which never creates a cycle.
+    return DAG(Set(B.nodes), new_edges; validate = false)
+end
+
+# Parent sets of a consistent DAG extension of the PDAG in `B` (same
+# v-structures, acyclic), found with Dor-Tarsi, or `nothing` if none exists.
+function _dor_tarsi_parents(B::PDAGBackend)
+    n = length(B.nodes)
     pa = [Set{Int}(_parents_slice(B, i)) for i = 1:n]
     ch = [Set{Int}(_children_slice(B, i)) for i = 1:n]
     und = [Set{Int}(_undirected_slice(B, i)) for i = 1:n]
+    return _dor_tarsi_parents!(pa, ch, und)
+end
+
+# Same on explicit parent/child/undirected-neighbor sets, which it consumes.
+function _dor_tarsi_parents!(
+    pa::Vector{Set{Int}},
+    ch::Vector{Set{Int}},
+    und::Vector{Set{Int}},
+)
+    n = length(pa)
 
     # out_pa[i] accumulates the final parent set for node i (directed edges)
     out_pa = [Set{Int}(copy(pa[i])) for i = 1:n]
@@ -106,16 +131,7 @@ function dag_from_pdag(cg::AbstractPDAG)
         end
     end
 
-    n_removed == n || error("PDAG cannot be extended to a DAG (Dor-Tarsi failed)")
-
-    new_edges = CausalEdge[]
-    for i = 1:n, p in out_pa[i]
-        push!(new_edges, directed(B.nodes[p], B.nodes[i]))
-    end
-
-    # validate=false is safe here: Dor-Tarsi only orients toward a sink whose
-    # undirected neighbors form a clique, which never creates a cycle.
-    return DAG(Set(B.nodes), new_edges; validate = false)
+    return n_removed == n ? out_pa : nothing
 end
 
 """
