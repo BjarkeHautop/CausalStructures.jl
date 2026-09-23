@@ -40,6 +40,17 @@ end
     @test backdoor_set(cpdag, :X, :Y) === nothing
 end
 
+@testitem "backdoor_set CPDAG: possibly directed path shielded only by a removed edge" tags =
+    [:unit, :gbc] begin
+    # X --- A --> Y is shielded by X --> Y in the CPDAG, but that edge is gone
+    # in C_X, so Y is still a possible descendant of X there. In the DAG with
+    # A --> X, the backdoor path X <-- A --> Y is open given the (empty)
+    # parent set, and A cannot be used since X --> A in another DAG.
+    cpdag = CPDAG("X --- A, A --> Y, X --> Y, B --> Y")
+    @test backdoor_set(cpdag, :X, :Y) === nothing
+    @test !all(d -> is_valid_backdoor(d, :X, :Y, Symbol[]), enumerate_dags(cpdag))
+end
+
 @testitem "backdoor_set CPDAG: Y a parent of X has no generalized back-door set" tags =
     [:unit, :gbc] begin
     cpdag = CPDAG("A --> X <-- C, X --> Y")

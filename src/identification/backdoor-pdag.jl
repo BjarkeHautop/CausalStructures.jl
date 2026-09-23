@@ -1,8 +1,22 @@
-# possibleDe(x, C_X), C_X = cg with x's out-edges removed: excludes all of
-# x's children from the first step of _b_possibly_causal_reachable.
+# possibleDe(x, C_X), C_X = cg with x's out-edges removed: nodes reachable
+# from x along possibly directed paths that leave x through an undirected
+# edge. Not _b_possibly_causal_reachable, whose unshielded-path shortcut can
+# rely on the out-edges of x that C_X removes.
 function _possible_descendants_bitmask_no_out_x(B::PDAGBackend, x::Int)
-    n = length(B.nodes)
-    return _b_possibly_causal_reachable(B, x, _children_slice; excluded = trues(n))
+    reach = falses(length(B.nodes))
+    stack = Int[]
+    for w in _undirected_slice(B, x)
+        reach[w] || (reach[w] = true; push!(stack, w))
+    end
+    while !isempty(stack)
+        v = pop!(stack)
+        for w in Iterators.flatten((_children_slice(B, v), _undirected_slice(B, v)))
+            (w == x || reach[w]) && continue
+            reach[w] = true
+            push!(stack, w)
+        end
+    end
+    return reach
 end
 
 """
