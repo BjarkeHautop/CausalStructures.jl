@@ -58,6 +58,16 @@ end
     @test !_valid_in_every_mag(pag, :X, :Y, [:M])
 end
 
+@testitem "is_valid_adjustment PAG: possible child of X off the causal path is not forbidden" setup =
+    [PagAdjustmentHelpers] tags = [:unit, :pag_adjustment] begin
+    # B is a possible descendant of X (X o-o B) and a possible ancestor of Y
+    # only through X (B o-o X --> Y), so it is on no proper possibly causal
+    # path from X to Y and must not be forbidden.
+    pag = PAG("A o-> X + B, C o-> X + B, X o-o B, X --> Y")
+    @test is_valid_adjustment(pag, :X, :Y, [:B])
+    @test _valid_in_every_mag(pag, :X, :Y, [:B])
+end
+
 @testitem "is_valid_adjustment PAG: all-circle triangle has no valid set" setup =
     [PagAdjustmentHelpers] tags = [:unit, :pag_adjustment] begin
     # Fully unresolved 3-node PAG (every edge o-o): amenability can't be

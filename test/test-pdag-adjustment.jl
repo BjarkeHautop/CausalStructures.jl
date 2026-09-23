@@ -26,27 +26,60 @@ end
     @test is_valid_adjustment(mpdag, :X, :Y, [:A])
 end
 
-@testitem "is_valid_adjustment AbstractPDAG: undirected edge forbids possible descendant" tags =
+@testitem "is_valid_adjustment AbstractPDAG: possible child of X alone is not forbidden" tags =
     [:unit, :pdag_adjustment] begin
-    # A --- X --> Y: A is a possible descendant of X (undirected can go X --> A)
-    # Forbidden set includes A. Only empty set candidate exists; Z={} is valid.
+    # A --- X --> Y: A is a possible descendant of X (X --> A), but the forbidden
+    # set only holds possible descendants of nodes other than X on a proper
+    # possibly causal path from X to Y, and A is on none. {A} is valid in both
+    # member DAGs (A --> X --> Y and A <-- X --> Y).
     mpdag = MPDAG(undirected(:A, :X), directed(:X, :Y))
     @test is_valid_adjustment(mpdag, :X, :Y)         # empty set valid (no confounders)
-    @test !is_valid_adjustment(mpdag, :X, :Y, [:A])  # A is forbidden
+    @test is_valid_adjustment(mpdag, :X, :Y, [:A])
+    @test all(d -> is_valid_adjustment(d, :X, :Y, [:A]), enumerate_dags(mpdag))
+end
+
+@testitem "is_valid_adjustment AbstractPDAG: possible descendant of a causal node is forbidden" tags =
+    [:unit, :pdag_adjustment] begin
+    # X --> M --> Y, M --- A: A is a possible descendant of M, which is on the
+    # causal path, so A is forbidden.
+    pdag = PDAG("X --> M --> Y, M --- A")
+    @test !is_valid_adjustment(pdag, :X, :Y, [:A])
+    @test !any(d -> is_valid_adjustment(d, :X, :Y, [:A]), enumerate_dags(pdag))
+end
+
+@testitem "is_valid_adjustment AbstractPDAG: possible child of X off the causal path is not forbidden" tags =
+    [:unit, :pdag_adjustment] begin
+    # B is a possible descendant of C (C --> B) and a possible ancestor of D
+    # (B --> C --> D), but only under opposite orientations of B --- C, so B is
+    # on no proper possibly causal path from C to D and adjusting for it is fine.
+    cpdag = CPDAG("B --- C, C --> D, A --> D")
+    @test is_valid_adjustment(cpdag, :C, :D, [:B])
+    @test all(d -> is_valid_adjustment(d, :C, :D, [:B]), enumerate_dags(cpdag))
+end
+
+@testitem "is_valid_adjustment MPDAG: joined possibly causal pieces need not form a possibly causal path" tags =
+    [:unit, :pdag_adjustment] begin
+    # W is a possible descendant of X (X --- W) and a possible ancestor of Y
+    # avoiding X (W --- U --> Y), but X, W, U, Y is not b-possibly causal since
+    # U --> X points back. So W is not on a causal path, the forbidden set is
+    # {X, Y, C}, and the confounder U is a valid adjustment set.
+    mpdag = MPDAG(
+        "U --> X, X --- W, X --> Y, U --> Y, A --- U, U --- W, " *
+        "A --> C, Y --> C, X --> C, U --> C, W --> C",
+    )
+    @test is_valid_adjustment(mpdag, :X, :Y, [:U])
+    @test all(d -> is_valid_adjustment(d, :X, :Y, [:U]), enumerate_dags(mpdag))
+    @test adjustment_set(mpdag, :X, :Y) !== nothing
 end
 
 @testitem "is_valid_adjustment AbstractPDAG: undirected confounder" tags =
     [:unit, :pdag_adjustment] begin
-    # A --- X, A --> Y, X --> Y: A is a possible confounder via undirected edge.
-    # A is NOT a possible descendant of X (no outgoing path from X to A exists via
-    # directed children or undirected from X... wait A---X undirected, so A IS possible descendant).
-    # Actually both A and X are possible descendants of each other via A---X.
-    # So A is forbidden. The only valid candidate is empty set if it blocks the path.
-    # Path X <-- A --> Y is open without conditioning (A is ancestor of Y and of X).
-    # So empty set is invalid. No valid adjustment set exists.
+    # A --- X, A --> Y, X --> Y: X --- A --> Y is a possibly causal path starting
+    # with an undirected edge, so (X, Y) is not amenable: the effect differs
+    # between A --> X (A confounds) and X --> A (A mediates), and no set is valid.
     mpdag = MPDAG(undirected(:A, :X), directed(:A, :Y), directed(:X, :Y))
-    @test !is_valid_adjustment(mpdag, :X, :Y)        # path via A is open
-    @test !is_valid_adjustment(mpdag, :X, :Y, [:A])  # A is forbidden
+    @test !is_valid_adjustment(mpdag, :X, :Y)
+    @test !is_valid_adjustment(mpdag, :X, :Y, [:A])
 end
 
 @testitem "is_valid_adjustment AbstractPDAG: MPDAG: basic confounder" tags =
@@ -73,9 +106,10 @@ end
     @test sets[1] == Symbol[]
 end
 
-@testitem "all_adjustment_sets AbstractPDAG: undirected forbids all candidates" tags =
+@testitem "all_adjustment_sets AbstractPDAG: minimal set next to an undirected neighbor" tags =
     [:unit, :pdag_adjustment] begin
-    # A --- X --> Y: A is forbidden; only empty set is in universe; it is valid.
+    # A --- X --> Y: both {} and {A} are valid ({A} is off the causal path), so
+    # the only inclusion-minimal set is {}.
     mpdag = MPDAG(undirected(:A, :X), directed(:X, :Y))
     sets = all_adjustment_sets(mpdag, :X, :Y)
     @test length(sets) == 1
@@ -91,10 +125,10 @@ end
     end
 end
 
-@testitem "all_adjustment_sets AbstractPDAG: no valid set when all candidates forbidden" tags =
+@testitem "all_adjustment_sets AbstractPDAG: no valid set when not amenable" tags =
     [:unit, :pdag_adjustment] begin
-    # A --- X --> Y, A --> Y: A is a possible descendant of X (forbidden) and
-    # the path via A is open. No valid adjustment set.
+    # A --- X --> Y, A --> Y: X --- A --> Y makes (X, Y) non-amenable, so no
+    # adjustment set is valid.
     mpdag = MPDAG(undirected(:A, :X), directed(:A, :Y), directed(:X, :Y))
     sets = all_adjustment_sets(mpdag, :X, :Y)
     @test isempty(sets)
@@ -169,6 +203,15 @@ end
     cpdag = CPDAG(directed(:A, :X), directed(:B, :X), directed(:X, :Y), directed(:A, :Y))
     z = adjustment_set(cpdag, :X, :Y)
     @test is_valid_adjustment(cpdag, :X, :Y, z)
+end
+
+@testitem "adjustment_set AbstractPDAG: optimal ignores parents of a possible child of x off the causal path" tags =
+    [:unit, :pdag_adjustment] begin
+    # U is a possible child of X and a possible ancestor of Y only through X
+    # (U --> X --> Y), so it is on no possibly causal path from X to Y and
+    # Pa(U) = {A, B} must not enter the O-set: Cn(X, Y) = {Y}, O = Pa(Y) \ {X}.
+    cpdag = CPDAG("A --> X + U, B --> X + U, X --- U, X --> Y")
+    @test adjustment_set(cpdag, :X, :Y) == Symbol[]
 end
 
 # ── minimal_separator ─────────────────────────────────────────────────────────

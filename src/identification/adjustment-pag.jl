@@ -50,8 +50,13 @@ end
 
 # PossAn bitmask: reachable from seeds via collapsed parents (far mark not an
 # arrowhead: parents, circle_parents, undirected, circle_undirected_out,
-# circle_circle). Mirrors `possible_ancestors` in query/traversal.jl.
-function _pag_possible_ancestors_bitmask(B::PAGBackend, seeds::Vector{Int})
+# circle_circle), never entering `avoid`. Mirrors `possible_ancestors` in
+# query/traversal.jl.
+function _pag_possible_ancestors_bitmask(
+    B::PAGBackend,
+    seeds::Vector{Int};
+    avoid::BitVector = falses(length(B.nodes)),
+)
     n = length(B.nodes)
     mask = falses(n)
     stack = Int[]
@@ -63,27 +68,27 @@ function _pag_possible_ancestors_bitmask(B::PAGBackend, seeds::Vector{Int})
     while !isempty(stack)
         u = pop!(stack)
         for p in _parents_slice(B, u)
-            mask[p] && continue
+            (mask[p] || avoid[p]) && continue
             mask[p] = true
             push!(stack, p)
         end
         for p in _circle_parents_slice(B, u)
-            mask[p] && continue
+            (mask[p] || avoid[p]) && continue
             mask[p] = true
             push!(stack, p)
         end
         for w in _undirected_slice(B, u)
-            mask[w] && continue
+            (mask[w] || avoid[w]) && continue
             mask[w] = true
             push!(stack, w)
         end
         for w in _circle_undirected_out_slice(B, u)
-            mask[w] && continue
+            (mask[w] || avoid[w]) && continue
             mask[w] = true
             push!(stack, w)
         end
         for w in _circle_circle_slice(B, u)
-            mask[w] && continue
+            (mask[w] || avoid[w]) && continue
             mask[w] = true
             push!(stack, w)
         end
@@ -91,11 +96,28 @@ function _pag_possible_ancestors_bitmask(B::PAGBackend, seeds::Vector{Int})
     return mask
 end
 
-# forb(X,Y) = PossDe(Cn(X,Y) \ X) ∪ X, where Cn(X,Y) = PossDe(X) ∩ PossAn(Y).
+# PossAn(Y) over paths avoiding X, so that PossDe(X) ∩ it is the set of nodes on
+# *proper* possibly causal paths from X to Y. Plain PossAn(Y) is too big: in
+# B o-o X --> Y, B is a possible descendant of X and a possible ancestor of Y
+# (through X), yet on no possibly causal path from X to Y.
+function _pag_proper_possible_ancestors_bitmask(
+    B::PAGBackend,
+    xs::Vector{Int},
+    ys::Vector{Int},
+)
+    avoid = falses(length(B.nodes))
+    for x in xs
+        avoid[x] = true
+    end
+    return _pag_possible_ancestors_bitmask(B, ys; avoid)
+end
+
+# forb(X,Y) = PossDe(Cn(X,Y) \ X) ∪ X, where Cn(X,Y) (nodes on proper possibly
+# causal paths from X to Y) = PossDe(X) ∩ PossAn(Y) over paths avoiding X.
 function _forbidden_set_pag(B::PAGBackend, xs::Vector{Int}, ys::Vector{Int})
     n = length(B.nodes)
     poss_de_x = _pag_possible_descendants_bitmask(B, xs)
-    poss_an_y = _pag_possible_ancestors_bitmask(B, ys)
+    poss_an_y = _pag_proper_possible_ancestors_bitmask(B, xs, ys)
     x_mask = falses(n)
     for x in xs
         x_mask[x] = true
@@ -108,12 +130,13 @@ function _forbidden_set_pag(B::PAGBackend, xs::Vector{Int}, ys::Vector{Int})
     return forbidden
 end
 
-# PBG removed edges: x --> v or x o-> v with x ∈ X, v ∉ X, v ∈ PossAn(Y), and
+# PBG removed edges: x --> v or x o-> v with x ∈ X, v ∉ X on a proper possibly
+# causal path to Y (v ∈ PossAn(Y) over paths avoiding X), and
 # the edge visible (see `_is_visible_edge` in adjustment-mag.jl). Invisible
 # edges might still hide confounding and must stay in the PBG.
 function _pbg_removed_pag(B::PAGBackend, xs::Vector{Int}, ys::Vector{Int})
     n = length(B.nodes)
-    poss_an_y = _pag_possible_ancestors_bitmask(B, ys)
+    poss_an_y = _pag_proper_possible_ancestors_bitmask(B, xs, ys)
     x_mask = falses(n)
     for x in xs
         x_mask[x] = true

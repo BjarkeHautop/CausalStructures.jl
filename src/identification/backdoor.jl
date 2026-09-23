@@ -475,8 +475,8 @@ Two types are supported:
 
 - `:parents`: directed parents of `x`.
 - `:optimal`: O-set ``\\mathrm{Pa}(\\mathrm{Cn}(x,y)) \\setminus (\\{x\\} \\cup \\mathrm{Cn}(x,y))``,
-  where ``\\mathrm{Cn}(x,y) = \\mathrm{PossibleDe}(x) \\cap \\mathrm{PossibleAn}(y)`` (nodes
-  on possibly directed paths from `x` to `y`).
+  where ``\\mathrm{Cn}(x,y)`` is the set of nodes on proper possibly directed paths
+  from `x` to `y`.
 
 The `type` keyword is specific to the [`DAG`](@ref)/[`AbstractPDAG`](@ref)
 methods; the [`ADMG`](@ref)/[`AbstractAG`](@ref)/[`PAG`](@ref) methods of
@@ -538,20 +538,8 @@ function adjustment_set(
         return is_valid_adjustment(cg, x, y, z) ? z : nothing
 
     elseif type === :optimal
-        poss_de_x = _possible_descendants_bitmask(B, xs)
-        for xi in xs
-            poss_de_x[xi] = false
-        end
-
-        ant_y = _anterior_bitmask(B, ys)
-
-        cn_mask = falses(n)
-        for v = 1:n
-            poss_de_x[v] && ant_y[v] && (cn_mask[v] = true)
-        end
-        for yi in ys
-            poss_de_x[yi] && (cn_mask[yi] = true)
-        end
+        # Nodes on proper possibly causal paths from x to y, excluding x.
+        cn_mask, _ = _proper_possibly_causal_paths(B, xs, ys)
 
         pacn_mask = falses(n)
         for v = 1:n

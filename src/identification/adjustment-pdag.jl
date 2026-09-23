@@ -1,6 +1,7 @@
 # Perković, Textor, Kalisch, Maathuis (2018). Forbidden set uses PossibleDe
-# (children + undirected) rather than De; PBG removes X --> V where V ∈
-# PossibleAn(Y); moralization joins Pa(v) ∪ Ne(v) into a clique.
+# (children + undirected) rather than De; PBG removes the first edge X --> V of
+# every proper possibly causal path; moralization joins Pa(v) ∪ Ne(v) into a
+# clique.
 
 # PossibleDe bitmask, i.e. b-PossDe (Definition 3.3): union of seeds and
 # _b_possibly_causal_reachable (traversal.jl) over each seed. Not naive
@@ -16,51 +17,126 @@ function _possible_descendants_bitmask(B::PDAGBackend, seeds::Vector{Int})
 end
 
 # PossibleAn bitmask, i.e. b-PossAn: same as _possible_descendants_bitmask
-# via parents instead of children. Not _anterior_bitmask (naive reachability,
-# fine for AG moralization but unsound here for the same MPDAG reason).
-function _possible_ancestors_bitmask(B::PDAGBackend, seeds::Vector{Int})
+# via parents instead of children, over paths that never enter `avoid`. Not
+# _anterior_bitmask (naive reachability, fine for AG moralization but unsound
+# here for the same MPDAG reason).
+function _possible_ancestors_bitmask(
+    B::PDAGBackend,
+    seeds::Vector{Int};
+    avoid::BitVector = falses(length(B.nodes)),
+)
     n = length(B.nodes)
     mask = falses(n)
     for s in seeds
         mask[s] = true
-        mask .|= _b_possibly_causal_reachable(B, s, _parents_slice)
+        mask .|= _b_possibly_causal_reachable(B, s, _parents_slice; avoid)
     end
     return mask
 end
 
-# forb(X,Y) for PDAG: PossibleDe(Cn(X,Y) \ X) ∪ X,
-# where Cn(X,Y) = PossibleDe(X) ∩ PossibleAn(Y) (nodes on possibly directed paths X --> Y).
+function _index_mask(n::Int, idxs::Vector{Int})
+    mask = falses(n)
+    for i in idxs
+        mask[i] = true
+    end
+    return mask
+end
+
+# PossibleAn(Y) over paths avoiding X: every node W ∉ X that reaches Y along a
+# b-possibly causal path which never passes through X. Used below only as a
+# superset of Cn(X, Y) to prune the path search.
+_proper_possible_ancestors_bitmask(B::PDAGBackend, xs::Vector{Int}, ys::Vector{Int}) =
+    _possible_ancestors_bitmask(B, ys; avoid = _index_mask(length(B.nodes), xs))
+
+# Proper b-possibly causal paths from X to Y (Perković, Kalisch & Maathuis
+# 2017, Def. 3.1): V0, ..., Vk with V0 ∈ X, no other Vi ∈ X, and no edge
+# Vj --> Vi for i < j. Returns (cn, first_edges): cn marks every node other
+# than V0 on such a path ending in Y (i.e. Cn(X, Y) \ X), and first_edges holds
+# each such path's first edge when it is directed (V0 --> V1).
+#
+# Intersecting PossibleDe(X) with PossibleAn(Y) is not enough:
+#   - in B --- X --> Y, B is a possible descendant of X and a possible
+#     ancestor of Y, but only under opposite orientations of B --- X;
+#   - on an MPDAG, even avoiding X, in X --- W --- U --> Y with U --> X the
+#     joined path X, W, U, Y is not b-possibly causal (U --> X points back).
+# So this enumerates paths, pruned to that intersection (a superset of Cn). The
+# search from each first edge V0 --> V1 stops once it has reached Y and every
+# candidate is marked.
+function _proper_possibly_causal_paths(B::PDAGBackend, xs::Vector{Int}, ys::Vector{Int})
+    n = length(B.nodes)
+    x_mask = _index_mask(n, xs)
+    y_mask = _index_mask(n, ys)
+    cand =
+        _possible_descendants_bitmask(B, xs) .&
+        _proper_possible_ancestors_bitmask(B, xs, ys)
+    cand .&= .!x_mask
+    cn = falses(n)
+    first_edges = Set{Tuple{Int,Int}}()
+    remaining = Ref(count(cand))
+    found = Ref(false)
+    path = Int[]
+    for x in xs, directed in (true, false)
+        for w in (directed ? _children_slice(B, x) : _undirected_slice(B, x))
+            cand[w] || continue
+            found[] = false
+            push!(path, x, w)
+            _possibly_causal_step!(cn, remaining, found, path, B, cand, y_mask)
+            empty!(path)
+            (found[] && directed) && push!(first_edges, (x, w))
+        end
+    end
+    return cn, first_edges
+end
+
+# `path` ends in a node just added to it; marks it (and the path) if it is in
+# Y, then extends the path by every b-possibly causal step.
+function _possibly_causal_step!(
+    cn::BitVector,
+    remaining::Base.RefValue{Int},
+    found::Base.RefValue{Bool},
+    path::Vector{Int},
+    B::PDAGBackend,
+    cand::BitVector,
+    y_mask::BitVector,
+)
+    v = path[end]
+    if y_mask[v]
+        found[] = true
+        for u in @view path[2:end]
+            cn[u] || (cn[u] = true; remaining[] -= 1)
+        end
+    end
+    for directed in (true, false)
+        for w in (directed ? _children_slice(B, v) : _undirected_slice(B, v))
+            (found[] && remaining[] == 0) && return nothing
+            (cand[w] && !(w in path)) || continue
+            # b-possibly causal: no edge from w back into an earlier path node.
+            any(u -> u in _children_slice(B, w), path) && continue
+            push!(path, w)
+            _possibly_causal_step!(cn, remaining, found, path, B, cand, y_mask)
+            pop!(path)
+        end
+    end
+    return nothing
+end
+
+# forb(X,Y) for PDAG: PossibleDe(Cn(X,Y) \ X) ∪ X, where Cn(X,Y) is the set of
+# nodes on proper possibly causal paths from X to Y.
 function _forbidden_set_pdag(B::PDAGBackend, xs::Vector{Int}, ys::Vector{Int})
     n = length(B.nodes)
-    poss_de_x = _possible_descendants_bitmask(B, xs)
-    ant_y = _possible_ancestors_bitmask(B, ys)
-    x_mask = falses(n)
-    for x in xs
-        x_mask[x] = true
-    end
-    causal_minus_x = [v for v = 1:n if poss_de_x[v] && ant_y[v] && !x_mask[v]]
-    forbidden = _possible_descendants_bitmask(B, causal_minus_x)
+    cn, _ = _proper_possibly_causal_paths(B, xs, ys)
+    forbidden = _possible_descendants_bitmask(B, [v for v = 1:n if cn[v]])
     for x in xs
         forbidden[x] = true
     end
     return forbidden
 end
 
-# PBG removed edges for PDAG: X --> V where V ∉ X and V ∈ PossibleAn(Y).
+# PBG removed edges for PDAG: the first edge X --> V of every proper possibly
+# causal path from X to Y.
 function _pbg_removed_pdag(B::PDAGBackend, xs::Vector{Int}, ys::Vector{Int})
-    n = length(B.nodes)
-    ant_y = _possible_ancestors_bitmask(B, ys)
-    x_mask = falses(n)
-    for x in xs
-        x_mask[x] = true
-    end
-    removed = Set{Tuple{Int,Int}}()
-    for x in xs
-        for c in _children_slice(B, x)
-            (!x_mask[c] && ant_y[c]) && push!(removed, (x, c))
-        end
-    end
-    return removed
+    _, first_edges = _proper_possibly_causal_paths(B, xs, ys)
+    return first_edges
 end
 
 # Moralized adjacency for PDAG PBG: clique Pa(v); undirected Ne(v) add direct edges only.

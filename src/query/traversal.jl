@@ -257,11 +257,12 @@ function _b_possibly_causal_reachable(
     x::Int,
     forward::F;
     excluded::BitVector = falses(length(B.nodes)),
+    avoid::BitVector = falses(length(B.nodes)),
 ) where {F<:Function}
     n = length(B.nodes)
     reach = falses(n)
     path = [x]
-    _b_possibly_causal_dfs!(reach, path, B, x, forward, excluded)
+    _b_possibly_causal_dfs!(reach, path, B, x, forward, excluded, avoid)
     return reach
 end
 
@@ -272,20 +273,22 @@ function _b_possibly_causal_dfs!(
     v::Int,
     forward::F,
     excluded::BitVector,
+    avoid::BitVector,
 ) where {F<:Function}
     for w in forward(B, v)
-        (v == path[1] && excluded[w]) && continue
+        (avoid[w] || (v == path[1] && excluded[w])) && continue
         _b_possibly_causal_unshielded_extend(B, path, v, w) || continue
         reach[w] = true
         push!(path, w)
-        _b_possibly_causal_dfs!(reach, path, B, w, forward, excluded)
+        _b_possibly_causal_dfs!(reach, path, B, w, forward, excluded, avoid)
         pop!(path)
     end
     for w in _undirected_slice(B, v)
+        avoid[w] && continue
         _b_possibly_causal_unshielded_extend(B, path, v, w) || continue
         reach[w] = true
         push!(path, w)
-        _b_possibly_causal_dfs!(reach, path, B, w, forward, excluded)
+        _b_possibly_causal_dfs!(reach, path, B, w, forward, excluded, avoid)
         pop!(path)
     end
     return nothing
