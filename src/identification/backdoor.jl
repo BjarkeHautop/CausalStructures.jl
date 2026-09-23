@@ -539,7 +539,7 @@ function adjustment_set(
 
     elseif type === :optimal
         # Nodes on proper possibly causal paths from x to y, excluding x.
-        cn_mask, _ = _proper_possibly_causal_paths(B, xs, ys)
+        cn_mask, _, _ = _proper_possibly_causal_paths(B, xs, ys)
 
         pacn_mask = falses(n)
         for v = 1:n

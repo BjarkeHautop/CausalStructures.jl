@@ -72,6 +72,19 @@ end
     @test adjustment_set(mpdag, :X, :Y) !== nothing
 end
 
+@testitem "is_valid_adjustment MPDAG: indefinite triples do not open paths" tags =
+    [:unit, :pdag_adjustment] begin
+    # X --> W --- U --- Y looks like an open backdoor path once X --> U is
+    # removed from the proper backdoor graph, but in G the triples X, W, U and
+    # W, U, Y are not of definite status (X ~ U and W ~ Y are adjacent), and
+    # Y --> W rules out every orientation making W an ancestor of Y. The empty
+    # set is valid in all three member DAGs.
+    mpdag = MPDAG("A --> Y + W + U, X --> Y + W + U, Y --- U, Y --> W, W --- U")
+    @test is_valid_adjustment(mpdag, :X, :Y)
+    @test all(d -> is_valid_adjustment(d, :X, :Y), enumerate_dags(mpdag))
+    @test all_adjustment_sets(mpdag, :X, :Y) == [Symbol[]]
+end
+
 @testitem "is_valid_adjustment AbstractPDAG: undirected confounder" tags =
     [:unit, :pdag_adjustment] begin
     # A --- X, A --> Y, X --> Y: X --- A --> Y is a possibly causal path starting

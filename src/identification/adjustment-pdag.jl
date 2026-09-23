@@ -1,7 +1,7 @@
-# Perković, Textor, Kalisch, Maathuis (2018). Forbidden set uses PossibleDe
-# (children + undirected) rather than De; PBG removes the first edge X --> V of
-# every proper possibly causal path; moralization joins Pa(v) ∪ Ne(v) into a
-# clique.
+# Generalized adjustment criterion for PDAGs (Perković, Textor, Kalisch &
+# Maathuis 2018; Perković, Kalisch & Maathuis 2017 for MPDAGs): amenability,
+# a forbidden set built from possible descendants, and blocking of every proper
+# definite-status non-causal path, checked in the proper backdoor graph.
 
 # PossibleDe bitmask, i.e. b-PossDe (Definition 3.3): union of seeds and
 # _b_possibly_causal_reachable (traversal.jl) over each seed. Not naive
@@ -50,9 +50,11 @@ _proper_possible_ancestors_bitmask(B::PDAGBackend, xs::Vector{Int}, ys::Vector{I
 
 # Proper b-possibly causal paths from X to Y (Perković, Kalisch & Maathuis
 # 2017, Def. 3.1): V0, ..., Vk with V0 ∈ X, no other Vi ∈ X, and no edge
-# Vj --> Vi for i < j. Returns (cn, first_edges): cn marks every node other
-# than V0 on such a path ending in Y (i.e. Cn(X, Y) \ X), and first_edges holds
-# each such path's first edge when it is directed (V0 --> V1).
+# Vj --> Vi for i < j. Returns (cn, first_edges, amenable): cn marks every node
+# other than V0 on such a path ending in Y (i.e. Cn(X, Y) \ X), first_edges
+# holds each such path's first edge when it is directed (V0 --> V1), and
+# amenable is false iff some such path starts with an undirected edge (Def.
+# 3.2), in which case no adjustment set exists.
 #
 # Intersecting PossibleDe(X) with PossibleAn(Y) is not enough:
 #   - in B --- X --> Y, B is a possible descendant of X and a possible
@@ -72,6 +74,7 @@ function _proper_possibly_causal_paths(B::PDAGBackend, xs::Vector{Int}, ys::Vect
     cand .&= .!x_mask
     cn = falses(n)
     first_edges = Set{Tuple{Int,Int}}()
+    amenable = true
     remaining = Ref(count(cand))
     found = Ref(false)
     path = Int[]
@@ -82,18 +85,19 @@ function _proper_possibly_causal_paths(B::PDAGBackend, xs::Vector{Int}, ys::Vect
             push!(path, x, w)
             _possibly_causal_step!(cn, remaining, found, path, B, cand, y_mask)
             empty!(path)
-            (found[] && directed) && push!(first_edges, (x, w))
+            found[] || continue
+            directed ? push!(first_edges, (x, w)) : (amenable = false)
         end
     end
-    return cn, first_edges
+    return cn, first_edges, amenable
 end
 
 # `path` ends in a node just added to it; marks it (and the path) if it is in
 # Y, then extends the path by every b-possibly causal step.
 function _possibly_causal_step!(
     cn::BitVector,
-    remaining::Base.RefValue{Int},
-    found::Base.RefValue{Bool},
+    remaining::Ref{Int},
+    found::Ref{Bool},
     path::Vector{Int},
     B::PDAGBackend,
     cand::BitVector,
@@ -120,78 +124,100 @@ function _possibly_causal_step!(
     return nothing
 end
 
-# forb(X,Y) for PDAG: PossibleDe(Cn(X,Y) \ X) ∪ X, where Cn(X,Y) is the set of
-# nodes on proper possibly causal paths from X to Y.
-function _forbidden_set_pdag(B::PDAGBackend, xs::Vector{Int}, ys::Vector{Int})
-    n = length(B.nodes)
-    cn, _ = _proper_possibly_causal_paths(B, xs, ys)
-    forbidden = _possible_descendants_bitmask(B, [v for v = 1:n if cn[v]])
+# forb(X,Y) for PDAG: PossibleDe(Cn(X,Y) \ X) ∪ X, with `cn` from
+# _proper_possibly_causal_paths.
+function _forbidden_set_pdag(B::PDAGBackend, xs::Vector{Int}, cn::BitVector)
+    forbidden = _possible_descendants_bitmask(B, findall(cn))
     for x in xs
         forbidden[x] = true
     end
     return forbidden
 end
 
-# PBG removed edges for PDAG: the first edge X --> V of every proper possibly
-# causal path from X to Y.
-function _pbg_removed_pdag(B::PDAGBackend, xs::Vector{Int}, ys::Vector{Int})
-    _, first_edges = _proper_possibly_causal_paths(B, xs, ys)
-    return first_edges
-end
-
-# Moralized adjacency for PDAG PBG: clique Pa(v); undirected Ne(v) add direct edges only.
-function _pdag_moral_adj_filtered(
-    B::PDAGBackend,
+# Nodes with a descendant in Z (Z included) along directed edges of the proper
+# backdoor graph, i.e. skipping the edges in `removed`.
+function _pbg_ancestors_bitmask!(
     mask::BitVector,
-    removed::Set{Tuple{Int,Int}},
-)
-    n = length(B.nodes)
-    adj = [Int[] for _ = 1:n]
-    return _pdag_moral_adj_filtered!(adj, B, mask, removed, Int[], Int[])
-end
-
-function _pdag_moral_adj_filtered!(
-    adj::Vector{Vector{Int}},
+    stack::Vector{Int},
     B::PDAGBackend,
-    mask::BitVector,
-    removed::Set{Tuple{Int,Int}},
-    clique_buf::Vector{Int},
-    direct_buf::Vector{Int},
-)
-    function collect_clique!(buf, v)
-        for p in _parents_slice(B, v)
-            (mask[p] && !((p, v) in removed)) && push!(buf, p)
-        end
-    end
-    function collect_direct!(buf, v)
-        for w in _undirected_slice(B, v)
-            mask[w] && push!(buf, w)
-        end
-    end
-
-    return _moral_adj_filtered!(
-        adj,
-        mask,
-        clique_buf,
-        direct_buf,
-        collect_clique!,
-        collect_direct!,
-    )
-end
-
-# BFS d-sep check in PDAG PBG (moralization-based).
-function _d_separated_pbg_pdag(
-    B::PDAGBackend,
-    xs::Vector{Int},
-    ys::Vector{Int},
     z::Vector{Int},
     removed::Set{Tuple{Int,Int}},
 )
-    (isempty(xs) || isempty(ys)) && return true
-    seeds = unique([xs; ys; z])
-    mask = _anterior_bitmask(B, seeds, removed)
-    adj = _pdag_moral_adj_filtered(B, mask, removed)
-    return _bfs_blocked_reaches(adj, mask, xs, ys, z)
+    fill!(mask, false)
+    empty!(stack)
+    for v in z
+        mask[v] || (mask[v] = true; push!(stack, v))
+    end
+    while !isempty(stack)
+        v = pop!(stack)
+        for p in _parents_slice(B, v)
+            (mask[p] || (p, v) in removed) && continue
+            mask[p] = true
+            push!(stack, p)
+        end
+    end
+    return mask
+end
+
+_in_pbg(removed::Set{Tuple{Int,Int}}, a::Int, b::Int) =
+    !((a, b) in removed || (b, a) in removed)
+
+# GAC condition (c) (Perković et al. 2017, Def. 4.1): Z blocks every proper
+# definite-status non-causal path from X to Y. Checked by reachability over
+# walks in the proper backdoor graph (the first edges of proper possibly causal
+# paths removed), with states (previous node, current node) so each step can
+# classify the triple (u, v, w):
+#   - definite collider u --> v <-- w: open iff v has a descendant in Z;
+#   - definite non-collider (u <-- v, v --> w, or u --- v --- w with u and w
+#     non-adjacent): open iff v ∉ Z;
+#   - anything else is not of definite status and is never traversed.
+# Definite status is judged in G, not in the proper backdoor graph: removing
+# X --> V can make u and w look non-adjacent (e.g. u = X in X --> V4 --- V5
+# once X --> V5 is removed), turning a triple of indefinite status into a
+# spurious open non-collider. Moralizing the proper backdoor graph instead is
+# only correct on CPDAGs; on an MPDAG its anterior set can include nodes that
+# are ancestors of X ∪ Y ∪ Z in no member DAG.
+function _gac_blocked_pdag!(
+    visited::BitMatrix,
+    queue::Vector{Tuple{Int,Int}},
+    B::PDAGBackend,
+    xs::Vector{Int},
+    x_mask::BitVector,
+    y_mask::BitVector,
+    z_mask::BitVector,
+    anc_z::BitVector,
+    removed::Set{Tuple{Int,Int}},
+)
+    fill!(visited, false)
+    empty!(queue)
+    for x in xs, w in _all_nbrs_slice(B, x)
+        (x_mask[w] || !_in_pbg(removed, x, w)) && continue
+        y_mask[w] && return false
+        visited[x, w] || (visited[x, w] = true; push!(queue, (x, w)))
+    end
+    head = 1
+    while head <= length(queue)
+        u, v = queue[head]
+        head += 1
+        for w in _all_nbrs_slice(B, v)
+            (w == u || x_mask[w] || !_in_pbg(removed, v, w)) && continue
+            open = if u in _parents_slice(B, v) && w in _parents_slice(B, v)
+                anc_z[v]
+            elseif u in _children_slice(B, v) || w in _children_slice(B, v)
+                !z_mask[v]
+            elseif u in _undirected_slice(B, v) &&
+                   w in _undirected_slice(B, v) &&
+                   !(w in _all_nbrs_slice(B, u))
+                !z_mask[v]
+            else
+                false
+            end
+            open || continue
+            y_mask[w] && return false
+            visited[v, w] || (visited[v, w] = true; push!(queue, (v, w)))
+        end
+    end
+    return true
 end
 
 """
@@ -202,9 +228,10 @@ effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
 
 `x`, `y`, and `z` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
-The forbidden set is computed using possible descendants (nodes reachable via
-directed or undirected edges) and the separation check uses the moralized
-proper backdoor graph.
+The effect must be amenable (every proper possibly causal path from `x` to `y`
+starts with a directed edge), `z` must avoid the forbidden set (possible
+descendants of nodes on proper possibly causal paths), and `z` must block every
+proper non-causal path of definite status.
 
 # Examples
 
@@ -239,11 +266,26 @@ function is_valid_adjustment(
     ys = _node_indices(cg, y)
     z_idxs = _node_indices(cg, z)
 
-    forbidden = _forbidden_set_pdag(B, xs, ys)
+    (isempty(xs) || isempty(ys)) && return true
+
+    cn, removed, amenable = _proper_possibly_causal_paths(B, xs, ys)
+    amenable || return false
+    forbidden = _forbidden_set_pdag(B, xs, cn)
     any(v -> forbidden[v], z_idxs) && return false
 
-    removed = _pbg_removed_pdag(B, xs, ys)
-    return _d_separated_pbg_pdag(B, xs, ys, z_idxs, removed)
+    n = length(B.nodes)
+    anc_z = _pbg_ancestors_bitmask!(falses(n), Int[], B, z_idxs, removed)
+    return _gac_blocked_pdag!(
+        falses(n, n),
+        Tuple{Int,Int}[],
+        B,
+        xs,
+        _index_mask(n, xs),
+        _index_mask(n, ys),
+        _index_mask(n, z_idxs),
+        anc_z,
+        removed,
+    )
 end
 
 """
@@ -299,30 +341,39 @@ function all_adjustment_sets(
     xs = _node_indices(cg, x)
     ys = _node_indices(cg, y)
 
-    forbidden = _forbidden_set_pdag(B, xs, ys)
-    y_mask = falses(n)
-    for yi in ys
-        y_mask[yi] = true
-    end
-
+    cn, removed, amenable = _proper_possibly_causal_paths(B, xs, ys)
+    amenable || return Vector{Vector{Symbol}}()
+    forbidden = _forbidden_set_pdag(B, xs, cn)
+    x_mask = _index_mask(n, xs)
+    y_mask = _index_mask(n, ys)
     universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
-    removed = _pbg_removed_pdag(B, xs, ys)
 
     # Scratch buffers allocated once per `make_checker` call
     function make_checker()
-        anc_mask = falses(n)
-        anc_stack = Int[]
-        adj = [Int[] for _ = 1:n]
-        clique_buf = Int[]
-        direct_buf = Int[]
+        z_mask = falses(n)
+        anc_z = falses(n)
+        stack = Int[]
+        visited = falses(n, n)
+        queue = Tuple{Int,Int}[]
 
-        function recompute!(seeds_buf)
-            _anterior_bitmask!(anc_mask, anc_stack, B, seeds_buf, removed)
-            _pdag_moral_adj_filtered!(adj, B, anc_mask, removed, clique_buf, direct_buf)
-            return anc_mask, adj
+        return function valid_candidate(z_idxs::Vector{Int})
+            fill!(z_mask, false)
+            for v in z_idxs
+                z_mask[v] = true
+            end
+            _pbg_ancestors_bitmask!(anc_z, stack, B, z_idxs, removed)
+            return _gac_blocked_pdag!(
+                visited,
+                queue,
+                B,
+                xs,
+                x_mask,
+                y_mask,
+                z_mask,
+                anc_z,
+                removed,
+            )
         end
-
-        return _make_pbg_checker(n, xs, ys, y_mask, recompute!)
     end
 
     to_symbols(cur) = sort([B.nodes[v] for v in cur])
