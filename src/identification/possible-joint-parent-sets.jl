@@ -148,9 +148,9 @@ function possible_joint_parent_sets(
 
         # The local checks miss orientations forced away from xs, so also
         # require a consistent extension of the oriented graph.
-        pa = deepcopy(pa_base)
-        ch = deepcopy(ch_base)
-        und = deepcopy(und_base)
+        pa = map(copy, pa_base)
+        ch = map(copy, ch_base)
+        und = map(copy, und_base)
         for (p, v) in gained_pairs
             delete!(und[p], v)
             delete!(und[v], p)
