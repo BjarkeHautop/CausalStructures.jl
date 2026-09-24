@@ -107,6 +107,16 @@ Graph generation, data simulation, printing, and exact uniform random DAG sampli
 extension (`ext/`, plotting via Makie + NetworkLayout; `NetworkLayoutExt` is the
 layout-only counterpart for when Makie isn't loaded).
 
+### `src/metrics/` — graph comparison
+
+`hamming.jl` (`hd`, `shd`) compares edges only, across any graph classes.
+`separation-distance.jl` (`separation_distance`, Wahl & Runge 2025) compares
+implied separations via a class-specific strategy; not symmetric by default.
+`sc-metric.jl` (`sc_metric`, `markov_metric`, `faithfulness_metric`) checks
+every separation/connection statement up to a conditioning-set order: the
+most complete and most expensive comparison. Both require the two graphs to
+share one separation notion.
+
 ### Algorithm references
 
 Several files implement one specific published algorithm named in a comment at the top of

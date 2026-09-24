@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### New features
+
+Implements several metrics for comparing two graphs:
+
+- Add `hd` (hamming distance) and `shd` (structural hamming distance) for comparing two graphs.
+- Add `separation_distance` for comparing two graphs by their implied separations, with a `symmetric` keyword for the mean of both directions.
+- Add `sc_metric` (alongside the one-sided variants `markov_metric` and `faithfulness_metric`) for comparing two graphs by every separation/connection statement, graded by conditioning-set order.
+- Add `aid` (Adjustment Identification Distance) that compares implied causal effect estimands.
+
 ## [0.7.1] - 2026-09-24
 
 ### New features

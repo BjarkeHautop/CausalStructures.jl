@@ -68,3 +68,10 @@ include("identification/cidp.jl")
 include("io/utils.jl")
 include("io/uniform-dag.jl")
 include("io/layout.jl")
+
+# Graph comparison metrics
+include("metrics/utils.jl")
+include("metrics/hamming.jl")
+include("metrics/separation-distance.jl")
+include("metrics/sc-metric.jl")
+include("metrics/aid.jl")
