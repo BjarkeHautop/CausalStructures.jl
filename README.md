@@ -39,7 +39,7 @@ like `directed(:A, :B)`, which is useful when composing them programmatically.
 ```julia
 using CausalStructures
 
-dag = DAG("C --> X, A --> X + K, X --> F + D, K --> Y, D --> Y + G, Y --> H")
+dag = DAG("U --> X + M, M --> N, N --> Y, X --> Y")
 ```
 
 `adjustment_set` finds a set of variables that identifies the causal effect
@@ -49,14 +49,19 @@ of the effect estimator:
 ```julia
 adjustment_set(dag, :X, :Y; type = :optimal)
 #> 1-element Vector{Symbol}:
-#>  :K
+#>  :N
 ```
 
-If `K` is unobserved, we can project it out to obtain an ADMG over the observed variables. We can then enumerate all valid adjustment sets under the generalized adjustment criterion:
+If `U` is unobserved, we can project it out to obtain an ADMG over the
+observed variables, replacing `U` with a bidirected edge `M <-> X` that
+captures its confounding effect. We can then enumerate all valid adjustment sets under the generalized adjustment criterion:
 
 ```julia
-admg = latent_project(dag, :K)
+admg = latent_project(dag, :U)
 all_adjustment_sets(admg, :X, :Y)
+#> 2-element Vector{Vector{Symbol}}:
+#>  [:M]
+#>  [:N]
 ```
 
 See the [Getting Started guide](https://bjarkehautop.github.io/CausalStructures.jl/stable/05-quick-guide/)
