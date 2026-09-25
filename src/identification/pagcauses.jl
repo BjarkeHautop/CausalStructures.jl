@@ -463,9 +463,9 @@ end
 """
     pagcauses(cg::PAG, x::Symbol, y::Symbol) -> Vector{Vector{Symbol}}
 
-Return adjustment sets for the effect of `x` on `y` that together give every
-possible causal effect identifiable by adjustment in some DAG consistent with `cg`
-(Wang et al. 2025, Algorithm 1, "PAGcauses"; Theorem 4).
+Return adjustment sets for the effect of `x` on `y` (Wang et al. 2025, Algorithm 1,
+"PAGcauses"; Theorem 4). Together, these give every possible causal effect
+identifiable by adjustment in some DAG consistent with `cg`.
 
 Returns `Vector{Symbol}[]` if `x` is not a possible ancestor of `y`. If the
 effect is directly identifiable in `cg`, returns the corresponding
