@@ -663,7 +663,7 @@ runs a Bayes-ball traversal from `x` treating parents and spouses alike as
 arrowhead endpoints, and checks whether `y` is reached.
 
 [`AbstractAG`](@ref): same traversal extended with undirected edges, restricted
-to the anterior set of `x`, `y`, and `z` (Richardson & Spirtes, 2002).
+to the anterior set of `x`, `y`, and `z` [richardsonspirtes2002ancestral](@cite).
 
 [`PAG`](@ref): same traversal as `AbstractAG`, with circle marks collapsing to
 tails (as for [`possible_ancestors`](@ref)/[`possible_descendants`](@ref)).

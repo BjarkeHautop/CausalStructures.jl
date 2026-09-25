@@ -9,6 +9,7 @@ The API reference is split by topic:
 - [Simulation](@ref simulation-reference) -- random graph and data generation
 - [Editing](@ref editing-reference) -- adding, removing, and reclassing graph elements
 - [Plotting](@ref plotting-reference) -- graph visualization
+- [Metrics](@ref metrics-reference) -- comparing two graphs
 
 ## Contents
 
@@ -21,6 +22,7 @@ Pages = [
     "50-simulation.md",
     "60-editing.md",
     "70-plotting.md",
+    "80-metrics.md",
 ]
 ```
 
@@ -39,6 +41,7 @@ Pages = [
     "50-simulation.md",
     "60-editing.md",
     "70-plotting.md",
+    "80-metrics.md",
 ]
 ```
 
