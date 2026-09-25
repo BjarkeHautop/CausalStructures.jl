@@ -12,8 +12,8 @@ end
 """
     hd(cg1::CausalGraph, cg2::CausalGraph; normalized::Bool = false) -> Real
 
-Skeleton Hamming distance between `cg1` and `cg2`: the number of node pairs on
-which the two graphs disagree about whether an edge is present, ignoring edge
+Skeleton Hamming distance between `cg1` and `cg2`. Counts the number of node pairs
+on which the two graphs disagree about whether an edge is present, ignoring edge
 type and orientation entirely. `cg1` and `cg2` must have the same node set;
 they may be of different graph classes.
 
@@ -50,16 +50,17 @@ end
 """
     shd(cg1::CausalGraph, cg2::CausalGraph; normalized::Bool = false) -> Real
 
-Structural Hamming Distance (SHD) between `cg1` and `cg2`. Counts the node
-pairs on which the two graphs disagree, both skeleton mismatches (an edge
-present in one graph but not the other) and orientation mismatches (the pair
-is adjacent in both graphs, but with different endpoint marks, e.g.
-`A --> B` vs `A <-- B`, or `A --- B` vs `A <-> B`), weighted equally. `cg1` and
-`cg2` must have the same node set; they may be of different graph classes.
+Structural Hamming Distance (SHD) [tsamardinos2006max](@cite) between `cg1`
+and `cg2`. Counts the node pairs on which the two graphs disagree, weighting
+skeleton and orientation mismatches equally. `cg1` and `cg2` must
+have the same node set; they may be of different graph classes.
 
 With `normalized = true`, divides by the number of node pairs
 `n * (n - 1) / 2`, giving a value in `[0, 1]` (`0.0` when `cg1`/`cg2` have
 fewer than two nodes).
+
+The original paper only defined SHD for PDAGs, but we do the natural extension
+of the metric to any pair of causal graphs.
 
 # Examples
 
@@ -76,6 +77,10 @@ julia> shd(DAG("A --> B"), ADMG("A <-> B"))
 julia> shd(DAG("A --> B --> C"), DAG("A --> B --> C"))
 0
 ```
+
+# References
+
+- [tsamardinos2006max](@citet)
 """
 function shd(cg1::CausalGraph, cg2::CausalGraph; normalized::Bool = false)
     node_set = _check_same_nodes(cg1, cg2)
