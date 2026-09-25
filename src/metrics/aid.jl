@@ -44,11 +44,7 @@ function _aid_claimed_set(type::Symbol, cg::CausalGraph, t::Symbol, y::Symbol)
         y in _poss_descendants(cg, t) || return nothing
         return something(adjustment_set(cg, t, y; type = :optimal), Symbol[])
     end
-    throw(
-        ArgumentError(
-            "Unknown aid type $(repr(type)) (expected :parent, :ancestor, or :oset)",
-        ),
-    )
+    throw(ArgumentError("Unknown aid type :$type (expected :parent, :ancestor, or :oset)"))
 end
 
 # Whether the guess's identification claim for (t, y) is wrong in cg_true.
@@ -144,9 +140,7 @@ function aid(
     normalized::Bool = false,
 )
     type in (:parent, :ancestor, :oset) || throw(
-        ArgumentError(
-            "Unknown aid type $(repr(type)) (expected :parent, :ancestor, or :oset)",
-        ),
+        ArgumentError("Unknown aid type :$type (expected :parent, :ancestor, or :oset)"),
     )
     node_set = _check_same_nodes(cg_true, cg_guess)
     mistakes = 0

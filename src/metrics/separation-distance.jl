@@ -33,7 +33,7 @@ function _dag_strategy_separator(cg::DAG, strategy::Symbol, x::Symbol, y::Symbol
     strategy === :zl && return _zl_separator(cg, x, y)
     throw(
         ArgumentError(
-            "Unknown separation_distance strategy $(repr(strategy)) for DAG (expected :parents, :ancestors, or :zl)",
+            "Unknown separation_distance strategy :$strategy for DAG (expected :parents, :ancestors, or :zl)",
         ),
     )
 end
@@ -59,19 +59,12 @@ function _mb_enhanced(base_separator, cg::CausalGraph, x::Symbol, y::Symbol)
     return y in mb ? base_separator(cg, x, y) : mb
 end
 
-function _separation_distance(
+function _separation_distance_one_way(
     cg1::CausalGraph,
     cg2::CausalGraph,
     separator;
     normalized::Bool,
-    symmetric::Bool,
 )
-    if symmetric
-        a = _separation_distance(cg1, cg2, separator; normalized, symmetric = false)
-        b = _separation_distance(cg2, cg1, separator; normalized, symmetric = false)
-        return (a + b) / 2
-    end
-
     node_set = _check_same_nodes(cg1, cg2)
     d = 0
     for (x, y) in _nonadjacent_pairs(cg2)
@@ -81,6 +74,19 @@ function _separation_distance(
     normalized || return d
     mp = _max_pairs(length(node_set))
     return mp == 0 ? 0.0 : d / mp
+end
+
+function _separation_distance(
+    cg1::CausalGraph,
+    cg2::CausalGraph,
+    separator;
+    normalized::Bool,
+    symmetric::Bool,
+)
+    symmetric || return _separation_distance_one_way(cg1, cg2, separator; normalized)
+    a = _separation_distance_one_way(cg1, cg2, separator; normalized)
+    b = _separation_distance_one_way(cg2, cg1, separator; normalized)
+    return (a + b) / 2
 end
 
 """

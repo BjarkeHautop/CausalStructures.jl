@@ -426,6 +426,55 @@ function _check_enumerate()
     return nothing
 end
 
+# --- src/metrics/{aid,hamming,separation-distance,sc-metric}.jl -------------
+
+function _check_metrics()
+    dag_true = DAG("A --> B --> C, A --> C")
+    dag_guess = DAG("A --> B --> C")
+    aid(dag_true, dag_guess)
+    aid(dag_true, dag_guess; type = :parent)
+    aid(dag_true, dag_guess; type = :ancestor)
+    aid(dag_true, dag_guess; normalized = true)
+
+    cpdag_true = CPDAG("A --> B --> C, A --> C")
+    cpdag_guess = CPDAG("A --> B --> C")
+    aid(cpdag_true, cpdag_guess)
+
+    hd(dag_true, dag_guess)
+    hd(dag_true, dag_guess; normalized = true)
+    shd(dag_true, dag_guess)
+    shd(dag_true, dag_guess; normalized = true)
+
+    separation_distance(dag_true, dag_guess)
+    separation_distance(dag_true, dag_guess; strategy = :zl)
+    separation_distance(dag_true, dag_guess; mb_enhanced = true, symmetric = true)
+    separation_distance(dag_true, dag_guess; normalized = true)
+
+    pdag_true = PDAG("A --> B --- C")
+    pdag_guess = PDAG("A --> B --- C")
+    separation_distance(pdag_true, pdag_guess)
+
+    ag_true = AG("A --> B --> C")
+    ag_guess = AG("A --> B --> C")
+    separation_distance(ag_true, ag_guess)
+
+    pag_true = PAG("A o-o B, B o-o C")
+    pag_guess = PAG("A o-o B, B o-o C")
+    separation_distance(pag_true, pag_guess)
+
+    sc_metric(dag_true, dag_guess)
+    sc_metric(dag_true, dag_guess; max_order = 1)
+    markov_metric(dag_true, dag_guess)
+    faithfulness_metric(dag_true, dag_guess)
+
+    admg_true = ADMG("A --> B, B --> C, A <-> C")
+    admg_guess = ADMG("A --> B, B --> C, A <-> C")
+    sc_metric(admg_true, admg_guess)
+    markov_metric(admg_true, admg_guess)
+    faithfulness_metric(admg_true, admg_guess)
+    return nothing
+end
+
 # --- src/io/utils.jl, uniform-dag.jl ---
 
 function _check_io()
@@ -460,6 +509,7 @@ Base.@ccallable function trim_check_run()::Cint
     _check_latent()
     _check_skeleton_subgraph()
     _check_enumerate()
+    _check_metrics()
     _check_io()
     return Cint(0)
 end
