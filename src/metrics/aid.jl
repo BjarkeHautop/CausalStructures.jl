@@ -98,16 +98,6 @@ With `normalized = true`, divides by the number of ordered pairs
 `n * (n - 1)`, giving a value in `[0, 1]` (`0.0` when `cg_true`/`cg_guess` have
 fewer than two nodes).
 
-!!! tip "Comparing CPDAG-producing algorithms"
-    When comparing several CPDAG-producing causal discovery algorithms
-    against each other using a known true DAG, one should preferably first
-    convert `cg_true` to its CPDAG with [`dag_to_cpdag`](@ref) and compare
-    CPDAG to CPDAG, so that non-identifiability in `cg_guess` is judged
-    against what is identifiable in the true equivalence class rather than
-    in the true DAG itself. If `cg_guess` is an [`MPDAG`](@ref) built from
-    background knowledge, apply the same
-    [`apply_background_knowledge`](@ref) to the converted true CPDAG before
-    comparing, so both sides reflect the same knowledge.
 
 # Examples
 
