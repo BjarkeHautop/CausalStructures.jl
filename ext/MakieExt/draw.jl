@@ -363,14 +363,79 @@ end
 # `Makie.@recipe` auto-generates a docstring for `causalgraphplot` from the
 # attribute docstrings above, and generic one-liners for `CausalGraphPlot`
 # and `causalgraphplot!`; overriding all three here keeps their wording and
-# Documenter source links under our own control rather than Makie's.
+# Documenter source links under our own control rather than Makie's. The
+# generated bindings are deleted first so Base.Docs doesn't warn about
+# replacing them.
+for name in (:causalgraphplot, :causalgraphplot!, :CausalGraphPlot)
+    delete!(Docs.meta(@__MODULE__), Docs.Binding(@__MODULE__, name))
+end
 
 """
     causalgraphplot(cg::CausalGraph; kwargs...) -> CausalGraphPlot
     causalgraphplot!(ax, cg::CausalGraph; kwargs...) -> CausalGraphPlot
 
 Recipe-native aliases for [`Makie.plot`](@ref)/`Makie.plot!` on a
-[`CausalGraph`](@ref); see that docstring for the full keyword reference.
+[`CausalGraph`](@ref). See that docstring for composing into an existing
+figure and the figure-level keywords (`title`, `fig_size`, ...) that only
+`Makie.plot` accepts.
+
+## Attributes
+
+**Layout**
+
+| Keyword         | Default            | Controls                                    |
+|:--------------- |:------------------- |:--------------------------------------------- |
+| `layout`        | `Makie.automatic`  | node position layout; see [`layout`](@ref)  |
+| `layout_kwargs` | `(;)`               | extra keywords forwarded to the layout algorithm |
+
+**Node styling**
+
+| Keyword            | Default   | Controls                                             |
+|:------------------ |:--------- |:------------------------------------------------------ |
+| `node_color`       | `:white` | fill color                                           |
+| `node_strokecolor` | `:black` | border color                                         |
+| `node_strokewidth` | `2.0`     | border line width                                    |
+| `node_linestyle`   | `nothing` | border line style (`nothing` = solid)                |
+| `node_shape`       | `:circle`| `:circle`, `:square`, `:ellipse`, or `:rect`         |
+| `node_radius`      | `nothing` | fixed node radius; `nothing` sizes each node to its label |
+| `node_padding`     | `10.0`    | label clearance used when sizing a node automatically |
+| `arrow_size`       | `nothing` | arrowhead size; `nothing` scales with node size      |
+| `circle_size`      | `nothing` | bidirected/undirected-edge circle marker size; `nothing` scales with node size |
+
+**Edge styling**
+
+| Keyword          | Default   | Controls                                       |
+|:---------------- |:--------- |:------------------------------------------------ |
+| `edge_color`     | inherits theme's `linecolor` | line/marker color              |
+| `arrow_fill`     | `nothing` | arrowhead fill color; `nothing` matches `edge_color` |
+| `linewidth`      | `1.5`     | line width                                     |
+| `edge_linestyle` | `nothing` | line style (`nothing` = solid)                 |
+| `curvature`      | `nothing` | how far an edge bows; also disables automatic routing around other nodes |
+| `edge_paths`     | `nothing` | explicit waypoints overriding an edge's drawn route |
+
+Edge styling keywords accept either a scalar or a `Dict` for per-edge
+overrides, keyed by a [`CausalEdge`](@ref), a `(src, dst)` tuple, an
+edge-type symbol, or `:default`; node styling keywords accept a scalar or a
+`Dict` keyed by node name, with `:default` as a fallback.
+
+**Labels**
+
+| Keyword                | Default    | Controls                                     |
+|:----------------------- |:---------- |:----------------------------------------------- |
+| `node_labels`          | `nothing`  | per-node label text; defaults to the node's name |
+| `node_label_color`    | `:black`   | node label text color                        |
+| `node_label_fontsize`  | `14.0`     | node label font size                         |
+| `node_label_font`      | `:regular` | node label font                              |
+| `edge_labels`          | `nothing`  | per-edge label text                          |
+| `edge_label_color`     | inherits theme's `textcolor` | edge label text color        |
+| `edge_label_fontsize`  | `12.0`     | edge label font size                         |
+| `edge_label_font`      | `:regular` | edge label font                              |
+| `edge_label_shift`     | `0.5`      | position along the edge, 0 (source) to 1 (destination) |
+| `edge_label_distance`  | `nothing`  | perpendicular gap from the edge; `nothing` scales with `edge_label_fontsize` |
+| `edge_label_rotation`  | `nothing`  | label angle; `nothing` follows the edge's own angle |
+
+See the [Plotting](@ref plotting-guide) page for styling precedence rules
+and examples.
 """
 causalgraphplot
 
