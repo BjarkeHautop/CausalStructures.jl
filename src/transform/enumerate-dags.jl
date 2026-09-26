@@ -396,6 +396,12 @@ Can call [`count_dags`](@ref) for sizing the problem before
 calling this function, as the number of DAGs in a MEC
 can be very large.
 
+# Arguments
+- `cg::AbstractPDAG`: the graph whose Markov equivalence class to enumerate.
+
+# Returns
+A `Vector{DAG}` containing every DAG in the MEC of `cg`.
+
 # Examples
 
 ```jldoctest
@@ -454,6 +460,12 @@ calling [`enumerate_dags`](@ref).
 Unlike calling `length(enumerate_dags(cg))`, this shares the same Chickering
 recursion but skips building a `DAG` (edge list, backend, validation) at every
 leaf of the search, only incrementing a counter instead.
+
+# Arguments
+- `cg::AbstractPDAG`: the graph whose Markov equivalence class to count.
+
+# Returns
+The number of DAGs in the MEC of `cg`.
 
 # Examples
 

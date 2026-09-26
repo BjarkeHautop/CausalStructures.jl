@@ -19,8 +19,7 @@ end
 """
     layout(cg::CausalGraph, method::Symbol = :stress; kwargs...)
 
-Compute 2-D node positions for `cg` and return them as a
-`Dict{Symbol,NTuple{2,Float64}}` keyed by node name.
+Compute 2-D node positions for `cg`, for use in plotting.
 
 | `method`      | Algorithm                           | Requires                     |
 |---------------|--------------------------------------|-------------------------------|
@@ -36,7 +35,30 @@ The default is `:stress`, except for a `DAG` with Sugiyama loaded, where it
 is `:sugiyama`. Extra `kwargs` are forwarded to the underlying
 algorithm.
 
-## Examples
+# Arguments
+- `cg::CausalGraph`: the graph to lay out.
+- `method::Symbol = _default_layout_method(cg)`: the layout algorithm to use, one of
+  `:spring`, `:stress`, `:sfdp`, `:spectral`, `:shell`, `:squaregrid`, or `:sugiyama`.
+
+# Keywords
+- `kwargs...`: forwarded to the underlying algorithm (e.g. `seed`, `iterations`).
+
+# Returns
+A `Dict{Symbol,NTuple{2,Float64}}` mapping each node name to its `(x, y)` position.
+
+# Examples
+
+```jldoctest
+julia> using NetworkLayout
+
+julia> dag = DAG("A --> X, A --> Y, X --> Y");
+
+julia> layout(dag, :spring; seed = 1)
+Dict{Symbol, Tuple{Float64, Float64}} with 3 entries:
+  :A => (-1.21358, -0.442569)
+  :X => (0.283814, 1.32745)
+  :Y => (1.06799, -0.854346)
+```
 
 ```julia
 using NetworkLayout

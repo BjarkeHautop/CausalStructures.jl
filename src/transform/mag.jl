@@ -30,8 +30,8 @@ _pag_unchecked(nodes, edges::Vector{CausalEdge}) =
 """
     mag_to_pag(cg::MAG) -> PAG
 
-Return the Partial Ancestral Graph (PAG) representing the Markov equivalence
-class of the [`MAG`](@ref) `cg`.
+Compute the Partial Ancestral Graph (PAG) representing `cg`'s Markov
+equivalence class.
 
 The PAG has the same skeleton (adjacencies) as `cg`. Each endpoint carries an
 *invariant* mark: an arrowhead (`>`) or tail (`-`) when that mark is shared by
@@ -43,6 +43,12 @@ are represented with the [`partial`](@ref) (`o-o`),
 The algorithm starts from the skeleton with all marks set to circles, orients
 unshielded colliders as they appear in `cg`, and then applies Zhang's complete
 orientation rules R1-R10 until no further mark is implied.
+
+# Arguments
+- `cg::MAG`: the graph whose Markov equivalence class to represent.
+
+# Returns
+The [`PAG`](@ref) representing the Markov equivalence class of `cg`.
 
 # Examples
 
@@ -675,9 +681,9 @@ end
 """
     mag_from_pag(cg::PAG) -> MAG
 
-Return one [`MAG`](@ref) belonging to the Markov equivalence class represented by
-the [`PAG`](@ref) `cg`. This is a left inverse of [`mag_to_pag`](@ref):
-`mag_to_pag(mag_from_pag(pag))` recovers `pag`.
+Pick one [`MAG`](@ref) representative of `cg`'s Markov equivalence class. This
+is a left inverse of [`mag_to_pag`](@ref): `mag_to_pag(mag_from_pag(pag))`
+recovers `pag`.
 
 A PAG leaves some endpoints as circle marks (`o`) that are not invariant across the
 class. This resolves every circle into a tail or arrowhead, following Zhang's
@@ -690,6 +696,12 @@ construction (2008, Theorem 2):
   - An undirected (`---`) edge carries selection bias and is kept unchanged.
   - The remaining `o-o` edges form a chordal component, oriented into a DAG with
     no new unshielded colliders by Dor-Tarsi simplicial elimination.
+
+# Arguments
+- `cg::PAG`: the graph whose Markov equivalence class to pick a representative from.
+
+# Returns
+A [`MAG`](@ref) belonging to the Markov equivalence class represented by `cg`.
 
 # Examples
 
@@ -818,6 +830,13 @@ end
 
 Return `true` if `cg1` and `cg2` belong to the same Markov equivalence class, i.e.
 they impose the same m-separation constraints.
+
+# Arguments
+- `cg1::MAG`: the first graph to compare.
+- `cg2::MAG`: the second graph to compare.
+
+# Returns
+`true` if `cg1` and `cg2` are Markov equivalent, `false` otherwise.
 
 # Examples
 

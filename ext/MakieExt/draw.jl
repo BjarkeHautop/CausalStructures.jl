@@ -379,16 +379,25 @@ Recipe-native aliases for [`Makie.plot`](@ref)/`Makie.plot!` on a
 figure and the figure-level keywords (`title`, `fig_size`, ...) that only
 `Makie.plot` accepts.
 
-## Attributes
+# Arguments
+- `cg::CausalGraph`: the graph to plot.
 
-**Layout**
+# Keywords
+- `kwargs...`: any of the attributes listed below.
+
+# Returns
+A `CausalGraphPlot`.
+
+# Attributes
+
+## Layout
 
 | Keyword         | Default            | Controls                                    |
 |:--------------- |:------------------- |:--------------------------------------------- |
 | `layout`        | `Makie.automatic`  | node position layout; see [`layout`](@ref)  |
 | `layout_kwargs` | `(;)`               | extra keywords forwarded to the layout algorithm |
 
-**Node styling**
+## Node styling
 
 | Keyword            | Default   | Controls                                             |
 |:------------------ |:--------- |:------------------------------------------------------ |
@@ -402,7 +411,7 @@ figure and the figure-level keywords (`title`, `fig_size`, ...) that only
 | `arrow_size`       | `nothing` | arrowhead size; `nothing` scales with node size      |
 | `circle_size`      | `nothing` | bidirected/undirected-edge circle marker size; `nothing` scales with node size |
 
-**Edge styling**
+## Edge styling
 
 | Keyword          | Default   | Controls                                       |
 |:---------------- |:--------- |:------------------------------------------------ |
@@ -418,7 +427,7 @@ overrides, keyed by a [`CausalEdge`](@ref), a `(src, dst)` tuple, an
 edge-type symbol, or `:default`; node styling keywords accept a scalar or a
 `Dict` keyed by node name, with `:default` as a fallback.
 
-**Labels**
+## Labels
 
 | Keyword                | Default    | Controls                                     |
 |:----------------------- |:---------- |:----------------------------------------------- |
@@ -434,8 +443,8 @@ edge-type symbol, or `:default`; node styling keywords accept a scalar or a
 | `edge_label_distance`  | `nothing`  | perpendicular gap from the edge; `nothing` scales with `edge_label_fontsize` |
 | `edge_label_rotation`  | `nothing`  | label angle; `nothing` follows the edge's own angle |
 
-See the [Plotting](@ref plotting-guide) page for styling precedence rules
-and examples.
+See the [Plotting](@ref plotting-guide) page for styling precedence rules,
+examples, and runnable code (under [`Makie.plot`](@ref)).
 """
 causalgraphplot
 
@@ -443,6 +452,18 @@ causalgraphplot
     causalgraphplot!(ax, cg::CausalGraph; kwargs...) -> CausalGraphPlot
 
 Mutating variant of [`causalgraphplot`](@ref); draws into an existing `ax`.
+
+# Arguments
+- `ax`: the axis to draw into.
+- `cg::CausalGraph`: the graph to plot.
+
+# Keywords
+- `kwargs...`: any of the attributes documented in [`causalgraphplot`](@ref).
+
+# Returns
+A `CausalGraphPlot`.
+
+See [`Makie.plot`](@ref) for runnable examples.
 """
 causalgraphplot!
 
@@ -789,7 +810,40 @@ node's position, in the same coordinates as `layout`.
 See the [Plotting](@ref plotting-guide) page for the full keyword reference,
 styling precedence rules, and examples.
 
-## Examples
+# Arguments
+- `ax`: the axis to draw into; `Makie.plot!` only.
+- `cg::CausalGraph`: the graph to plot.
+
+# Keywords
+- `layout::Union{Symbol,AbstractVector,AbstractDict,Makie.Automatic} = Makie.automatic`:
+  node position layout; see [`layout`](@ref).
+- `layout_kwargs::NamedTuple = (;)`: extra keywords forwarded to the layout algorithm.
+- `edge_paths::Union{AbstractDict,Nothing} = nothing`: explicit waypoints overriding
+  an edge's drawn route.
+- `title::Union{AbstractString,Nothing} = nothing`: figure title; `Makie.plot` only.
+- `title_fontsize::Union{Real,Nothing} = nothing`: figure title font size; `Makie.plot` only.
+- `title_color = nothing`: figure title color; `Makie.plot` only.
+- `title_gap::Real = 4.0`: gap between the title and the plot; `Makie.plot` only.
+- `outer_margin::Real = 16`: outer margin around the figure, in pixels; `Makie.plot` only.
+- `fig_size::NTuple{2,Real} = (600.0, 450.0)`: figure size in pixels; `Makie.plot` only.
+- `stretch_to_fig_size::Bool = false`: stretch the plot to fill `fig_size`; `Makie.plot` only.
+- `kwargs...`: any other reactive attribute; see [`causalgraphplot`](@ref) for the full list.
+
+# Returns
+A `FigureAxisPlot` (for `Makie.plot`) or a `CausalGraphPlot` (for `Makie.plot!`).
+
+# Examples
+
+```jldoctest
+julia> using CairoMakie
+
+julia> dag = DAG("A --> B");
+
+julia> fig = Makie.plot(dag);
+
+julia> typeof(fig)
+Makie.FigureAxisPlot
+```
 
 ```julia
 using CairoMakie

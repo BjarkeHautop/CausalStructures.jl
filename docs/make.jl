@@ -3,6 +3,7 @@ using CairoMakie
 using Documenter
 using DocumenterCitations
 using DocumenterCodeBlocks
+using DocumenterDocstringStyle
 
 bib = CitationBibliography(joinpath(@__DIR__, "src", "references.bib"); style = :authoryear)
 
@@ -39,6 +40,13 @@ DocMeta.setdocmeta!(
     CausalStructures,
     :DocTestSetup,
     :(using CausalStructures);
+    recursive = true,
+)
+
+DocMeta.setdocmeta!(
+    _makie_ext,
+    :DocTestSetup,
+    :(using CausalStructures, CairoMakie);
     recursive = true,
 )
 
@@ -131,11 +139,31 @@ makedocs(;
             "25-pag-causal-effects.md",
             "40-plotting.md",
             "70-benchmarks.md",
+            "95-reference/20-queries.md",
             "95-reference/40-adjustment.md",
         ],
     ),
     pages = list_pages(),
-    plugins = [bib, CodeBlocks(line_numbers = false)],
+    plugins = [
+        bib,
+        CodeBlocks(line_numbers = false),
+        SchemaConfig(
+            order = [
+                "Arguments",
+                "Keywords",
+                "Returns",
+                "Attributes",
+                "Throws",
+                "Notes",
+                "Examples",
+                "See also",
+                "References",
+                "Extended help",
+            ],
+            theme = :rustdoc,
+            strict = false,
+        ),
+    ],
 )
 
 deploydocs(; repo = "github.com/BjarkeHautop/CausalStructures.jl")

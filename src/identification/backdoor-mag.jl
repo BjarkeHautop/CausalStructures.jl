@@ -36,6 +36,14 @@ adjacent to `x` in `M_X` and `D-SEP(x, y, M_X)` does not intersect the
 descendants of `x` in `cg`; when it exists, `D-SEP(x, y, M_X)` is such a set
 (not necessarily minimal).
 
+# Arguments
+- `cg::MAG`: the graph to search.
+- `x::Symbol`: the treatment node.
+- `y::Symbol`: the outcome node.
+
+# Returns
+A `Vector{Symbol}` back-door set, or `nothing` if none exists.
+
 # Examples
 
 ```jldoctest

@@ -109,15 +109,21 @@ end
 """
     idp(cg::PAG, x, y) -> Union{Estimand,Nothing}
 
-Return the interventional distribution `P(y | do(x))` as an [`Estimand`](@ref),
-or `nothing` if the effect is not identifiable from the PAG `cg`.
-
+Identify the interventional distribution `P(y | do(x))` from the PAG `cg`.
 This is the IDP algorithm of [jaber2022causal](@citet), complete for
 identifying marginal effects from a partial ancestral graph (a Markov
 equivalence class of causal diagrams), generalizing [`id`](@ref) from a single
 [`ADMG`](@ref) to the equivalence-class setting.
 
 `x` and `y` may each be a `Symbol` or a vector of them, and must be disjoint.
+
+# Arguments
+- `cg::PAG`: the graph to identify the effect in.
+- `x`: the treatment node(s).
+- `y`: the outcome node(s).
+
+# Returns
+An [`Estimand`](@ref), or `nothing` if the effect is not identifiable.
 
 # Examples
 

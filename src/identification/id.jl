@@ -163,10 +163,8 @@ end
 """
     id(cg::Union{DAG,ADMG}, x, y) -> Union{Estimand,Nothing}
 
-Return the interventional distribution `P(y | do(x))` as an [`Estimand`](@ref),
-or `nothing` if the effect is not identifiable.
-
-This is the ID algorithm of [shpitser2008complete](@citet).
+Identify the interventional distribution `P(y | do(x))`, following the ID
+algorithm of [shpitser2008complete](@citet).
 
 `x` and `y` may each be a `Symbol` or a vector of them, and must be disjoint.
 
@@ -179,6 +177,14 @@ Bidirected edges represent latent confounders. To identify an effect in a
     the algorithm enlarges the intervention set by a set `W` whenever
     intervening on `W` provably changes nothing, and the resulting expression
     is then a function of those values too.
+
+# Arguments
+- `cg::Union{DAG,ADMG}`: the graph to identify the effect in.
+- `x`: the treatment node(s).
+- `y`: the outcome node(s).
+
+# Returns
+An [`Estimand`](@ref), or `nothing` if the effect is not identifiable.
 
 # Examples
 
@@ -233,10 +239,8 @@ id(cg::DAG, x, y) = id(reclass(cg, ADMG), x, y)
 """
     idc(cg::Union{DAG,ADMG}, x, y; given) -> Union{Estimand,Nothing}
 
-Return the conditional interventional distribution `P(y | do(x), given)` as an
-[`Estimand`](@ref), or `nothing` if it is not identifiable.
-
-This is the IDC algorithm of [shpitser2008complete](@citet). Each variable in
+Identify the conditional interventional distribution `P(y | do(x), given)`,
+following the IDC algorithm of [shpitser2008complete](@citet). Each variable in
 `given` that satisfies rule 2 of do-calculus is moved from the conditioning set
 into the intervention set; whatever remains is handled by [`id`](@ref) and
 normalized:
@@ -247,6 +251,17 @@ P(y | do(x), z) = ID(y ∪ z, x) / Σ_y ID(y ∪ z, x)
 
 `x`, `y`, and `given` must be pairwise disjoint. With an empty
 `given` this reduces to [`id`](@ref).
+
+# Arguments
+- `cg::Union{DAG,ADMG}`: the graph to identify the effect in.
+- `x`: the treatment node(s).
+- `y`: the outcome node(s).
+
+# Keywords
+- `given`: the conditioning node(s).
+
+# Returns
+An [`Estimand`](@ref), or `nothing` if the effect is not identifiable.
 
 # Examples
 

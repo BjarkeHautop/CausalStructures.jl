@@ -252,6 +252,25 @@ an entry with [`maximal_local_mag`](@ref) to get the corresponding graph.
 Throws `ArgumentError` if `cg` has selection bias (undirected edges), since
 both source papers assume none throughout.
 
+# Arguments
+- `cg::PAG`: the graph to search for local structures in.
+- `x::Symbol`: the node whose local structures are enumerated.
+
+# Returns
+A `Vector{Vector{Symbol}}`, one entry per valid local structure `C` at `x`.
+
+# Examples
+
+```jldoctest
+julia> pag = mag_to_pag(MAG("A <-> X, X --> Y"));
+
+julia> possible_local_structures(pag, :X)
+3-element Vector{Vector{Symbol}}:
+ []
+ [:A]
+ [:Y]
+```
+
 # References
 
 - [wang2023localbk](@citet)
@@ -286,12 +305,20 @@ circle-marked neighbors (Algorithm 1 of [wang2023localbk](@citet)), treated as
 local background knowledge about `x` and closed under the corresponding rule
 set.
 
+# Arguments
+- `cg::PAG`: the graph to derive the local MAG from.
+- `x::Symbol`: the node whose circle marks are resolved.
+- `c::Union{Symbol,AbstractVector{Symbol}}`: the local structure at `x`, i.e. the
+  subset of `x`'s circle-marked neighbors resolved to `x <-> v`.
+
+# Returns
+The [`UNKNOWN`](@ref) graph obtained by closing `cg` under the local background
+knowledge implied by `c` at `x`.
+
 `c` should be a valid local structure, i.e. an entry of
 [`possible_local_structures`](@ref)`(cg, x)`; passing an invalid one gives an
-unsound result. The returned graph may still contain circles (unlike a MAG,
-which is why it is returned as [`UNKNOWN`](@ref) rather than validated as a
-`MAG` or `PAG`): only what the local background knowledge about `x` implies
-is resolved, not necessarily everything.
+unsound result. The returned graph may still contain circles: only what the local
+background knowledge about `x` implies is resolved, not necessarily everything.
 
 Throws `ArgumentError` if `cg` has selection bias (undirected edges), since
 both source papers assume none throughout.

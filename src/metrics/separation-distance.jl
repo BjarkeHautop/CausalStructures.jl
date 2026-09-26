@@ -128,7 +128,23 @@ The separator is class-specific:
 every `y` not already in it (falling back to the base strategy otherwise);
 often cheaper on sparse graphs.
 
-`normalized = true` divides by `n * (n - 1) / 2`, giving a value in `[0, 1]`.
+# Arguments
+- `cg1::CausalGraph`: the graph the separator is verified in.
+- `cg2::CausalGraph`: the graph the separator is read off, of the same class as `cg1`.
+
+# Keywords
+- `strategy::Symbol = :parents`: the separator strategy for `DAG`s, one of
+  `:parents`, `:ancestors`, or `:zl`; not available for other graph classes.
+- `mb_enhanced::Bool = false`: use `x`'s Markov blanket as the separator
+  where possible.
+- `symmetric::Bool = false`: average the distance over both directions.
+- `normalized::Bool = false`: divide by the number of node pairs.
+
+# Returns
+The number of pairs non-adjacent in `cg2` whose `cg2`-separator fails to
+separate them in `cg1`, or, if `normalized = true`, that count divided by
+`n * (n - 1) / 2` (a value in `[0, 1]`), or the mean of both directions if
+`symmetric = true`.
 
 # Examples
 

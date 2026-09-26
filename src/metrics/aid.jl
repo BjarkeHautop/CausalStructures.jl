@@ -94,10 +94,20 @@ descendant of `T` in `cg_true`. For an `AbstractPDAG` guess where `(cg_guess, T,
 Y)` is not amenable, the strategy claims the effect is not identifiable,
 correct iff `(cg_true, T, Y)` is not amenable either.
 
-With `normalized = true`, divides by the number of ordered pairs
-`n * (n - 1)`, giving a value in `[0, 1]` (`0.0` when `cg_true`/`cg_guess` have
-fewer than two nodes).
+# Arguments
+- `cg_true::Union{DAG,AbstractPDAG}`: the ground-truth graph.
+- `cg_guess::Union{DAG,AbstractPDAG}`: the guessed graph.
 
+# Keywords
+- `type::Symbol = :oset`: the identification strategy, one of `:parent`,
+  `:ancestor`, or `:oset`.
+- `normalized::Bool = false`: divide by the number of ordered pairs.
+
+# Returns
+The number of ordered pairs `(T, Y)` on which `cg_guess`'s identification
+claim is wrong, or, if `normalized = true`, that count divided by
+`n * (n - 1)` (a value in `[0, 1]`, `0.0` when `cg_true`/`cg_guess` have
+fewer than two nodes).
 
 # Examples
 

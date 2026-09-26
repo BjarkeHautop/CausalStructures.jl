@@ -84,6 +84,18 @@ equivalent) but exponential in the number of nodes. Pass `max_order` to bound
 the conditioning-set size, e.g. `max_order = 0` for pairwise marginal
 (in)dependence alone.
 
+# Arguments
+- `cg1::CausalGraph`: the first graph.
+- `cg2::CausalGraph`: the second graph.
+
+# Keywords
+- `max_order::Union{Nothing,Int} = nothing`: the maximum conditioning-set
+  size to consider; `nothing` for the full `n - 2`.
+
+# Returns
+The mean, over orders `k = 0, ..., K`, of the fraction of order-`k`
+separation/connection statements on which `cg1` and `cg2` disagree.
+
 # Examples
 
 ```jldoctest
@@ -155,6 +167,18 @@ considered (in particular whenever the graphs are Markov equivalent). An order
 being skipped, so every one of the `K + 1` orders counts toward the mean. See
 [`faithfulness_metric`](@ref) for the complementary false-positive rate.
 
+# Arguments
+- `cg_truth::CausalGraph`: the ground-truth graph.
+- `cg_test::CausalGraph`: the graph being evaluated.
+
+# Keywords
+- `max_order::Union{Nothing,Int} = nothing`: the maximum conditioning-set
+  size to consider; `nothing` for the full `n - 2`.
+
+# Returns
+The mean, over orders `k = 0, ..., K`, of the false-negative rate for
+connection statements of `cg_test` relative to `cg_truth`.
+
 # Examples
 
 ```jldoctest
@@ -205,6 +229,18 @@ considered (in particular whenever the graphs are Markov equivalent). An order
 `k` with no separation statements in `cg_truth` contributes `0.0` rather than
 being skipped, so every one of the `K + 1` orders counts toward the mean. See
 [`markov_metric`](@ref) for the complementary false-negative rate.
+
+# Arguments
+- `cg_truth::CausalGraph`: the ground-truth graph.
+- `cg_test::CausalGraph`: the graph being evaluated.
+
+# Keywords
+- `max_order::Union{Nothing,Int} = nothing`: the maximum conditioning-set
+  size to consider; `nothing` for the full `n - 2`.
+
+# Returns
+The mean, over orders `k = 0, ..., K`, of the false-positive rate for
+separation statements of `cg_test` relative to `cg_truth`.
 
 # Examples
 

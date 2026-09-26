@@ -10,6 +10,12 @@ Pass the result as `uniform_dag(rng, n; counts = table)` to avoid
 recomputing it on every draw when sampling many DAGs at the same (or a
 smaller) `n`.
 
+# Arguments
+- `n::Integer`: the number of nodes to precompute the table for.
+
+# Returns
+The `Vector{Vector{BigInt}}` DP table.
+
 # Examples
 
 ```jldoctest
@@ -146,7 +152,28 @@ entries also grow in digit-width), unlike [`generate_graph`](@ref)'s roughly
 edge-linear cost; pass a table from [`uniform_dag_counts`](@ref) via `counts`
 to avoid recomputing it when drawing many DAGs at the same `n` (or below).
 
+# Arguments
+- `rng::Random.AbstractRNG`: the random number generator to use.
+- `n::Integer`: the number of nodes.
+
+# Keywords
+- `counts::Union{Nothing,Vector{Vector{BigInt}}} = nothing`: a precomputed table from
+  [`uniform_dag_counts`](@ref), to avoid recomputing it on every draw.
+
+# Returns
+The generated `DAG`.
+
 # Examples
+
+```jldoctest
+julia> using Random
+
+julia> uniform_dag(Xoshiro(1), 4)
+DAG with 4 nodes and 4 edges:
+  nodes: V1, V2, V3, V4
+  edges:
+    V2 --> V3, V4 --> V2, V1 --> V2, V1 --> V4
+```
 
 ```@repl
 dag = uniform_dag(6)

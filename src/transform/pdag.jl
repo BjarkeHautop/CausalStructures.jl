@@ -16,6 +16,12 @@ undirected edges toward `x`, and removes it. Raises an error if no valid DAG
 extension exists. The last condition on `x`'s existing parents ensures the
 extension has exactly the same v-structures as `cg`.
 
+# Arguments
+- `cg::AbstractPDAG`: the graph to extend.
+
+# Returns
+The [`DAG`](@ref) extension of `cg`.
+
 # Examples
 
 ```jldoctest
@@ -148,17 +154,22 @@ The four rules are:
 - **R4**: `a --- b`, `a --- c`, `c` not adjacent to `b`, `a` adjacent to `d`,
   and a directed path `c --> d --> b` exists --> orient `a --> b`
 
-# Keyword arguments
+# Arguments
+- `cg::AbstractPDAG`: the graph to close.
 
-- `check_cycles`: when `true` (default), every candidate orientation is
+# Keywords
+- `check_cycles::Bool = true`: when `true`, every candidate orientation is
   verified not to create a directed cycle before being applied. This check is
   redundant *if* `cg` is a genuine Meek pattern -- every directed
   edge already justified by an unshielded collider -- since
   Meek's Theorem 3 then guarantees no cycle can arise. Potentially unsafe
   downstream, since it always returns an MPDAG without verifying acyclicity.
-- `r4`: whether to apply R4 (default `true`). R4 is only needed when `cg`
+- `r4::Bool = true`: whether to apply R4. R4 is only needed when `cg`
   carries directed edges beyond what its own v-structures imply (background
   knowledge).
+
+# Returns
+The [`MPDAG`](@ref) resulting from closing `cg` under Meek's rules.
 
 # Examples
 
@@ -307,6 +318,12 @@ The algorithm detects v-structures (unshielded colliders) to determine
 compelled edge orientations, builds an initial PDAG from the skeleton, then
 applies [`meek_closure`](@ref) to propagate all implied orientations.
 
+# Arguments
+- `cg::DAG`: the DAG whose Markov equivalence class to represent.
+
+# Returns
+The [`CPDAG`](@ref) representing the MEC of `cg`.
+
 # Examples
 
 ```jldoctest
@@ -395,6 +412,13 @@ Two DAGs are Markov equivalent if and only if they share the same skeleton
 colliders a --> b <-- c with a,c non-adjacent). This is the Verma-Pearl
 characterization (Verma & Pearl, 1990).
 
+# Arguments
+- `cg1::DAG`: the first graph to compare.
+- `cg2::DAG`: the second graph to compare.
+
+# Returns
+`true` if `cg1` and `cg2` are Markov equivalent, `false` otherwise.
+
 # Examples
 
 ```jldoctest
@@ -479,6 +503,12 @@ ancestor relationship in the current graph:
 
 Edges are added one at a time and the graph is re-evaluated after each addition,
 since each new edge can change m-separation and ancestor relationships.
+
+# Arguments
+- `cg::AG`: the graph to convert.
+
+# Returns
+A Markov equivalent [`MAG`](@ref).
 
 # Examples
 

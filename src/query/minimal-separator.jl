@@ -209,22 +209,26 @@ A set ``Z`` separates ``x`` from ``y`` if conditioning on ``Z`` renders them
 d/m-independent. The returned set is *minimal*: no proper subset (excluding forced
 `include` nodes) still separates ``x`` from ``y``.
 
-Returns a `Vector{Symbol}` of node names, or `nothing` when no valid separator
-exists within the allowed candidate set.
-
 # Arguments
-
 - `cg`: A [`DAG`](@ref), [`ADMG`](@ref), [`AbstractAG`](@ref), [`PAG`](@ref), or
   [`AbstractPDAG`](@ref).
-- `x`, `y`: The nodes to separate. Each may be a single `Symbol` or an
+- `x`: The first node(s) to separate. May be a single `Symbol` or an
+  `AbstractVector{Symbol}`.
+- `y`: The second node(s) to separate. May be a single `Symbol` or an
   `AbstractVector{Symbol}`, in which case the returned set separates every
   node in `x` from every node in `y`.
-- `include`: Nodes forced into the separator. Must be a subset of `restrict` (or
-  the default candidate set). May be a single `Symbol` or an `AbstractVector{Symbol}`.
-- `restrict`: Candidate pool from which the separator is drawn. Defaults to all
-  nodes except `x` and `y`. May be a single `Symbol` or an `AbstractVector{Symbol}`.
 
-# Algorithm
+# Keywords
+- `include::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: Nodes forced into
+  the separator. Must be a subset of `restrict` (or the default candidate set).
+- `restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing`: Candidate
+  pool from which the separator is drawn. Defaults to all nodes except `x` and `y`.
+
+# Returns
+A `Vector{Symbol}` of node names, or `nothing` when no valid separator exists
+within the allowed candidate set.
+
+# Notes
 
 Implements FINDMINSEP from [vanderzander2020finding](@citet), running in
 ``O(n + m)`` time. FINDNEARESTSEP is called twice; once from `x`, once from `y`
@@ -245,60 +249,33 @@ restricted to the first result, and the outputs are intersected.
 ```jldoctest
 julia> dag = DAG("A --> B --> C");
 
-julia> minimal_separator(dag, :A, :C)  # chain A --> B --> C: separator is {B}
+julia> minimal_separator(dag, :A, :C)
 1-element Vector{Symbol}:
  :B
 
+julia> minimal_separator(dag, :A, :B) === nothing
+true
+
 julia> dag_coll = DAG("A --> C <-- B");
 
-julia> minimal_separator(dag_coll, :A, :B)  # collider A --> C <-- B: already d-separated
+julia> minimal_separator(dag_coll, :A, :B)
 Symbol[]
+```
 
-julia> dag_edge = DAG("A --> B");
-
-julia> minimal_separator(dag_edge, :A, :B) === nothing  # direct edge: no separator exists
-true
-
-julia> dag4 = DAG("A --> X --> M --> Y, A --> Y");
-
-julia> minimal_separator(dag4, :X, :Y)  # two paths require both A and M
-2-element Vector{Symbol}:
- :A
- :M
-
-julia> minimal_separator(dag4, :X, :Y, include = :M)  # force M in; A still needed
-2-element Vector{Symbol}:
- :A
- :M
-
-julia> minimal_separator(dag4, :X, :Y, restrict = :M) === nothing  # M alone cannot block X <-- A --> Y
-true
-
-julia> dag5 = DAG("A --> M1 --> Y, B --> M2 --> Y");
-
-julia> minimal_separator(dag5, [:A, :B], :Y)  # both mediators are needed to block both sources
-2-element Vector{Symbol}:
- :M1
- :M2
-
+```jldoctest
 julia> admg = ADMG("A --> B --> C");
 
 julia> minimal_separator(admg, :A, :C)
 1-element Vector{Symbol}:
  :B
+```
 
-julia> pag = mag_to_pag(MAG("A --> X --> M --> Y, A --> Y"));
+```jldoctest
+julia> pag = PAG("A o-o X, A --> Y, M o-o X, M --> Y");
 
 julia> minimal_separator(pag, :A, :M)
 1-element Vector{Symbol}:
  :X
-
-julia> mag2 = MAG("A <-> X1, B <-> X2, A --> M1 --> Y, B --> M2 --> Y");
-
-julia> sort(minimal_separator(mag2, [:X1, :X2], :Y))
-2-element Vector{Symbol}:
- :A
- :B
 ```
 
 # References

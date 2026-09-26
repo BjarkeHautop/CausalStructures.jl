@@ -14,6 +14,15 @@ Return `true` if `z` satisfies the backdoor criterion for the causal effect of
 - [`ADMG`](@ref): equivalently, `z` m-separates `x` from `y` in the graph
   obtained by removing every directed edge out of `x`.
 
+# Arguments
+- `cg::Union{DAG,ADMG}`: the graph to check.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+- `z::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: the candidate backdoor set.
+
+# Returns
+`true` if `z` is a valid backdoor set, `false` otherwise.
+
 # Examples
 
 ```jldoctest
@@ -120,6 +129,18 @@ descendants of `x` and not `y`), checking each for validity using
 inclusion-minimal sets are returned. For [`ADMG`](@ref), the universe is drawn
 from the graph's observed nodes; latent confounders are already summarized by
 bidirected edges and are never candidates.
+
+# Arguments
+- `cg::Union{DAG,ADMG}`: the graph to search.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+
+# Keywords
+- `minimal::Bool = true`: return only inclusion-minimal sets.
+- `max_size::Int = 3`: the maximum candidate set size to consider.
+
+# Returns
+A `Vector{Vector{Symbol}}` of valid backdoor sets.
 
 # Examples
 
@@ -358,6 +379,17 @@ methods; the [`ADMG`](@ref)/[`AbstractAG`](@ref)/[`PAG`](@ref) methods of
 `adjustment_set` take no `type` keyword and always return a fixed
 inclusion-minimal valid adjustment set.
 
+# Arguments
+- `cg::DAG`: the graph to search.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+
+# Keywords
+- `type::Symbol = :optimal`: one of `:parents`, `:backdoor`, or `:optimal`.
+
+# Returns
+A `Vector{Symbol}` adjustment set, or `nothing` if none exists.
+
 # Examples
 
 ```jldoctest
@@ -511,6 +543,17 @@ methods; the [`ADMG`](@ref)/[`AbstractAG`](@ref)/[`PAG`](@ref) methods of
 `adjustment_set` take no `type` keyword and always return a fixed
 inclusion-minimal valid adjustment set.
 
+# Arguments
+- `cg::AbstractPDAG`: the graph to search.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+
+# Keywords
+- `type::Symbol = :optimal`: one of `:parents` or `:optimal`.
+
+# Returns
+A `Vector{Symbol}` adjustment set, or `nothing` if none exists.
+
 # Examples
 
 ```jldoctest
@@ -602,6 +645,14 @@ For a DAG this reduces to Pearl's original result ([pearl2009causality](@citet))
 a generalized back-door set exists if and only if `y` is not a parent of `x`,
 and when it exists, `parents(cg, x)` is such a set (not necessarily minimal).
 
+# Arguments
+- `cg::DAG`: the graph to search.
+- `x::Symbol`: the treatment node.
+- `y::Symbol`: the outcome node.
+
+# Returns
+A `Vector{Symbol}` back-door set, or `nothing` if none exists.
+
 # Examples
 
 ```jldoctest
@@ -633,6 +684,14 @@ end
 
 Return a generalized back-door set relative to `(x, y)` and `cg`,
 or `nothing` if none exists.
+
+# Arguments
+- `cg::ADMG`: the graph to search.
+- `x::Symbol`: the treatment node.
+- `y::Symbol`: the outcome node.
+
+# Returns
+A `Vector{Symbol}` back-door set, or `nothing` if none exists.
 
 # Examples
 

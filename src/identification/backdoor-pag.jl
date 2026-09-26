@@ -19,6 +19,14 @@ possible descendants of `x` in `cg`; when it exists, `D-SEP(x, y, R_X)` is
 such a set (not necessarily minimal; Theorem 4.1 shows the result does not
 depend on which admissible `R` is used).
 
+# Arguments
+- `cg::PAG`: the graph to search.
+- `x::Symbol`: the treatment node.
+- `y::Symbol`: the outcome node.
+
+# Returns
+A `Vector{Symbol}` back-door set, or `nothing` if none exists.
+
 # Examples
 
 ```jldoctest

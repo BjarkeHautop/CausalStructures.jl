@@ -404,6 +404,17 @@ For a [`PAG`](@ref) the `:in`, `:out`, `:undirected`, and `:bidirected` modes re
 only neighbors joined by the corresponding *definite* (circle-free) edge. Neighbors
 joined by circle-mark edges (`o->`, `o--`, `o-o`) are reported by `:all` only.
 
+# Arguments
+- `cg::CausalGraph`: the graph to query.
+- `node::Symbol`: the node whose neighbors to return.
+
+# Keywords
+- `mode::Symbol = :all`: which edge types to include; one of `:all`, `:in`,
+  `:out`, `:undirected`, `:bidirected`.
+
+# Returns
+The `Vector{Symbol}` of matching neighbors.
+
 # Examples
 
 ```jldoctest
@@ -471,6 +482,13 @@ Equivalent to `neighbors(cg, node; mode = :in)`. Applicable to [`DAG`](@ref),
 [`UNKNOWN`](@ref). For a [`PAG`](@ref) only *definite* parents (`p --> node`) are
 returned; a circle endpoint at `node` is not a parent.
 
+# Arguments
+- `cg`: the graph to query.
+- `node::Symbol`: the node whose parents to return.
+
+# Returns
+The `Vector{Symbol}` of parents.
+
 # Examples
 
 ```jldoctest
@@ -498,6 +516,13 @@ Equivalent to `neighbors(cg, node; mode = :out)`. Applicable to [`DAG`](@ref),
 [`UNKNOWN`](@ref). For a [`PAG`](@ref) only *definite* children (`node --> c`) are
 returned; a circle endpoint at the child is not a definite child.
 
+# Arguments
+- `cg`: the graph to query.
+- `node::Symbol`: the node whose children to return.
+
+# Returns
+The `Vector{Symbol}` of children.
+
 # Examples
 
 ```jldoctest
@@ -519,6 +544,14 @@ children(cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG,PAG,UNKNOWN}, node::Symbol) 
     has_edge(cg::CausalGraph, src::Symbol, dst::Symbol) -> Bool
 
 Return `true` if there is any edge between `src` and `dst` in `cg`.
+
+# Arguments
+- `cg::CausalGraph`: the graph to query.
+- `src::Symbol`: one endpoint.
+- `dst::Symbol`: the other endpoint.
+
+# Returns
+`true` if `src` and `dst` are joined by an edge in `cg`, `false` otherwise.
 
 # Examples
 

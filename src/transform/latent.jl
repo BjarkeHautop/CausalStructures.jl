@@ -21,6 +21,13 @@ Each latent node `v` is eliminated by node substitution: directed edges
 edges `s <-> c` are added for every sibling `s` (bidirected neighbor) and child
 `c` of `v`. All pairs of children of `v` also become bidirected-connected.
 
+# Arguments
+- `cg::DAG`: the graph to project.
+- `latents::Union{Symbol,AbstractVector{Symbol}}`: the latent node(s) to project out.
+
+# Returns
+The [`ADMG`](@ref) over the observed (non-latent) variables.
+
 # Examples
 
 ```jldoctest
@@ -130,6 +137,13 @@ children to preserve reachability.
 
 `nodes` may be a single `Symbol` or an `AbstractVector{Symbol}`.
 
+# Arguments
+- `cg::DAG`: the graph to modify.
+- `nodes::Union{Symbol,AbstractVector{Symbol}}`: the node(s) to make exogenous.
+
+# Returns
+A new [`DAG`](@ref) with each node in `nodes` made exogenous.
+
 # Examples
 
 ```jldoctest
@@ -204,6 +218,13 @@ Lemmas 1-3):
    node's child set.
 
 `latents` may be a single `Symbol` or an `AbstractVector{Symbol}`.
+
+# Arguments
+- `cg::DAG`: the graph to normalize.
+- `latents::Union{Symbol,AbstractVector{Symbol}}`: the latent node(s) to normalize.
+
+# Returns
+A new [`DAG`](@ref) with the latent structure normalized.
 
 # Examples
 

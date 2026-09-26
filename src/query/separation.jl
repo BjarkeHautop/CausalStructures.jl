@@ -553,6 +553,16 @@ For [`AbstractPDAG`](@ref): restricts to the anterior set (nodes reachable via
 directed parents or undirected edges), then runs the same Bayes-ball
 traversal treating undirected edges as never forming a collider endpoint.
 
+# Arguments
+- `cg::Union{DAG,AbstractPDAG}`: the graph to query.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the first node set.
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the second node set.
+- `z::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: the conditioning set.
+
+# Returns
+`true` if every node in `x` is d-separated from every node in `y` given `z`,
+`false` otherwise.
+
 # Examples
 
 ```jldoctest
@@ -667,6 +677,16 @@ to the anterior set of `x`, `y`, and `z` [richardsonspirtes2002ancestral](@cite)
 
 [`PAG`](@ref): same traversal as `AbstractAG`, with circle marks collapsing to
 tails (as for [`possible_ancestors`](@ref)/[`possible_descendants`](@ref)).
+
+# Arguments
+- `cg::Union{DAG,ADMG,AbstractAG,PAG}`: the graph to query.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the first node set.
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the second node set.
+- `z::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: the conditioning set.
+
+# Returns
+`true` if every node in `x` is m-separated from every node in `y` given `z`,
+`false` otherwise.
 
 # Examples
 

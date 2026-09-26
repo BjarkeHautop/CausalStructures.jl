@@ -80,15 +80,25 @@ end
 """
     cidp(cg::PAG, x, y; given) -> Union{Estimand,Nothing}
 
-Return the conditional interventional distribution `P(y | do(x), given)` as an
-[`Estimand`](@ref), or `nothing` if it is not identifiable from the PAG `cg`.
-
-This is the CIDP algorithm of [jaber2022causal](@citet), complete for
-identifying conditional effects from a partial ancestral graph, generalizing
-[`idc`](@ref) from a single [`ADMG`](@ref) to the equivalence-class setting.
+Identify the conditional interventional distribution `P(y | do(x), given)` from
+the PAG `cg`. This is the CIDP algorithm of [jaber2022causal](@citet), complete
+for identifying conditional effects from a partial ancestral graph,
+generalizing [`idc`](@ref) from a single [`ADMG`](@ref) to the
+equivalence-class setting.
 
 `x`, `y`, and `given` must be pairwise disjoint. With an empty `given` this
 reduces to [`idp`](@ref).
+
+# Arguments
+- `cg::PAG`: the graph to identify the effect in.
+- `x`: the treatment node(s).
+- `y`: the outcome node(s).
+
+# Keywords
+- `given`: the conditioning node(s).
+
+# Returns
+An [`Estimand`](@ref), or `nothing` if the effect is not identifiable.
 
 # Examples
 

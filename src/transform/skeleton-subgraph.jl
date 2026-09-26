@@ -25,6 +25,12 @@ end
 Return the skeleton of `cg`: the undirected graph obtained by replacing every
 directed or partially-directed edge with an undirected edge.
 
+# Arguments
+- `cg::Union{DAG,AbstractPDAG}`: the graph to take the skeleton of.
+
+# Returns
+The [`UG`](@ref) skeleton of `cg`.
+
 # Examples
 
 ```jldoctest
@@ -51,6 +57,12 @@ an undirected edge.
 
 For [`AbstractPDAG`](@ref), only directed parents participate in marriage edges;
 undirected neighbors are included in the skeleton but do not form a clique.
+
+# Arguments
+- `cg::Union{DAG,AbstractPDAG}`: the graph to moralize.
+
+# Returns
+The moral graph of `cg`, as a [`UG`](@ref).
 
 # Examples
 
@@ -132,6 +144,14 @@ induced subgraph need not satisfy the stronger class invariant:
 - [`PAG`](@ref) subgraphs are returned as [`UNKNOWN`](@ref): the invariant marks
   of a Markov equivalence class are not preserved by node restriction, so the
   result need not be a valid PAG.
+
+# Arguments
+- `cg::CausalGraph`: the graph to restrict.
+- `nodes::Union{Symbol,AbstractVector{Symbol}}`: the node(s) to keep.
+
+# Returns
+The induced subgraph of `cg` on `nodes`, as a `CausalGraph` (see above for which
+class).
 
 # Examples
 

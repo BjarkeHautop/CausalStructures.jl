@@ -49,6 +49,15 @@ When the only causal path is the edge `x --> y`, this is Definition 3.1 of
 [vanderzander2015efficiently](@citet); deleting the first edge of every causal
 path extends it to the total effect.
 
+# Arguments
+- `cg::Union{DAG,ADMG}`: the graph to check.
+- `x::Symbol`: the treatment node.
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+- `z::Union{Symbol,AbstractVector{Symbol}}`: the candidate instrumental set.
+
+# Returns
+`true` if `z` is a valid instrumental set, `false` otherwise.
+
 # Examples
 
 Classic IV graph: `Z --> X --> Y` with hidden confounder `U --> X`, `U --> Y`:
@@ -114,6 +123,18 @@ single `Symbol` (see [`is_valid_iv`](@ref)).
 Bruteforces over subsets of the allowed universe of nodes (nodes that are not `x` or `y`),
 checking each for validity using [`is_valid_iv`](@ref). When `minimal = true` (default),
 only inclusion-minimal sets are returned.
+
+# Arguments
+- `cg::Union{DAG,ADMG}`: the graph to search.
+- `x::Symbol`: the treatment node.
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+
+# Keywords
+- `minimal::Bool = true`: return only inclusion-minimal sets.
+- `max_size::Int = 3`: the maximum candidate set size to consider.
+
+# Returns
+A `Vector{Vector{Symbol}}` of valid instrumental sets.
 
 # Examples
 

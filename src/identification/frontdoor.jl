@@ -17,6 +17,15 @@ Return `true` if `z` satisfies the front-door criterion for the causal effect of
 When these conditions hold, the causal effect is identified by the front-door
 formula, even in the presence of unmeasured confounders between `x` and `y`.
 
+# Arguments
+- `cg::DAG`: the graph to check.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+- `z::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: the candidate front-door set.
+
+# Returns
+`true` if `z` is a valid front-door set, `false` otherwise.
+
 # Examples
 
 ```jldoctest
@@ -451,6 +460,19 @@ The returned set is the full R'' from Steps 1-2 (not necessarily minimal). For
 bidirected edges treated as latent-confounder edges (a spouse contributes an
 arrowhead into a node just like a directed parent does).
 
+# Arguments
+- `cg::Union{DAG,ADMG}`: the graph to search.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+
+# Keywords
+- `include::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: nodes forced into the set.
+- `restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing`: candidate pool
+  from which the set is drawn. Defaults to all nodes except `x` and `y`.
+
+# Returns
+A `Vector{Symbol}` front-door set, or `nothing` if none exists.
+
 # Examples
 
 ```jldoctest
@@ -854,6 +876,20 @@ Implements Algorithm 2 (LISTFDSETS) of [jeong2022finding](@cite). The
 algorithm has polynomial-delay guarantees: it outputs the first result in
 polynomial time and takes polynomial time between consecutive results. For
 [`ADMG`](@ref), see the note on m-separation in [`frontdoor_set`](@ref).
+
+# Arguments
+- `cg::Union{DAG,ADMG}`: the graph to search.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+
+# Keywords
+- `include::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: nodes forced into every
+  returned set.
+- `restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing`: candidate pool
+  from which sets are drawn. Defaults to all nodes except `x` and `y`.
+
+# Returns
+A `Vector{Vector{Symbol}}` of front-door sets.
 
 # Examples
 

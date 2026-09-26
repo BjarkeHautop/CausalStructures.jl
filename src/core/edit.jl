@@ -8,6 +8,13 @@ end
 Return a new graph of the same class with edges `es` added. Nodes referenced by
 any edge are added automatically if not already present.
 
+# Arguments
+- `cg::CausalGraph`: the graph to add edges to.
+- `es::CausalEdge...`: the edges to add.
+
+# Returns
+A new `CausalGraph` of the same class as `cg`.
+
 # Examples
 
 ```jldoctest
@@ -44,6 +51,16 @@ end
 Return a new graph of the same class with edges `es` removed. Nodes that become
 isolated are retained. Throws `ArgumentError` if any edge in `es` is not present.
 
+# Arguments
+- `cg::CausalGraph`: the graph to remove edges from.
+- `es::CausalEdge...`: the edges to remove.
+
+# Returns
+A new `CausalGraph` of the same class as `cg`.
+
+# Throws
+- `ArgumentError`: if any edge in `es` is not present in `cg`.
+
 # Examples
 
 ```jldoctest
@@ -73,6 +90,14 @@ end
 
 Return a new graph of the same class with isolated nodes `ns` added.
 Nodes already present are ignored.
+
+# Arguments
+- `cg::CausalGraph`: the graph to add nodes to.
+- `ns::Symbol...`: the nodes to add.
+
+# Returns
+A new `CausalGraph` of the same class as `cg`, or `cg` itself if every node in `ns`
+is already present.
 
 # Examples
 
@@ -108,6 +133,16 @@ end
 Return a new graph of the same class with nodes `ns` and all their incident edges removed.
 Throws `ArgumentError` if any node in `ns` is not present.
 
+# Arguments
+- `cg::CausalGraph`: the graph to remove nodes from.
+- `ns::Symbol...`: the nodes to remove.
+
+# Returns
+A new `CausalGraph` of the same class as `cg`.
+
+# Throws
+- `ArgumentError`: if any node in `ns` is not present in `cg`.
+
 # Examples
 
 ```jldoctest
@@ -139,8 +174,14 @@ end
 """
     reclass(cg::CausalGraph, T::Type{<:CausalGraph}) -> T
 
-Return a new graph of class `T` with the same nodes and edges as `cg`.
+Reinterpret `cg`'s nodes and edges as a graph of class `T`.
 Throws an error if the edges violate the structural constraints of `T`.
+
+# Arguments
+- `cg::CausalGraph`: the graph to reclass.
+
+# Returns
+A new graph of class `T` with the same nodes and edges as `cg`.
 
 # Examples
 

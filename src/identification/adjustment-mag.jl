@@ -265,8 +265,13 @@ Return a inclusion-minimal valid adjustment set for the causal effect of `x` on 
 
 `x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
-Unlike the [`DAG`](@ref)/[`AbstractPDAG`](@ref) methods of `adjustment_set`,
-this method takes no `type` keyword.
+# Arguments
+- `cg::AbstractAG`: the graph to search.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+
+# Returns
+A `Vector{Symbol}` adjustment set, or `nothing` if none exists.
 
 # Examples
 

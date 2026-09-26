@@ -244,6 +244,15 @@ proper non-causal path of definite status. A `z` overlapping `y` is never valid.
 A [`PDAG`](@ref) is first closed under Meek's rules (see [`meek_closure`](@ref)),
 since the criterion is stated for [`MPDAG`](@ref)s.
 
+# Arguments
+- `cg::AbstractPDAG`: the graph to check.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+- `z::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: the candidate adjustment set.
+
+# Returns
+`true` if `z` is a valid adjustment set, `false` otherwise.
+
 # Examples
 
 ```jldoctest
@@ -313,6 +322,18 @@ Return all valid adjustment sets for the total causal effect of `x` on `y` in
 
 Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 (default), only inclusion-minimal sets are returned.
+
+# Arguments
+- `cg::AbstractPDAG`: the graph to search.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+
+# Keywords
+- `minimal::Bool = true`: return only inclusion-minimal sets.
+- `max_size::Int = 3`: the maximum candidate set size to consider.
+
+# Returns
+A `Vector{Vector{Symbol}}` of valid adjustment sets.
 
 # Examples
 

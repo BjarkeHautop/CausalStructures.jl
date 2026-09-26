@@ -474,7 +474,15 @@ effect is directly identifiable in `cg`, returns the corresponding
 Throws `ArgumentError` if `cg` contains selection bias (undirected edges),
 which is not covered by the algorithm.
 
-# Algorithm
+# Arguments
+- `cg::PAG`: the graph to search.
+- `x::Symbol`: the treatment node.
+- `y::Symbol`: the outcome node.
+
+# Returns
+A `Vector{Vector{Symbol}}` of adjustment sets.
+
+# Notes
 
 Rather than enumerating the ``O(3^{(d^2-d)/2})`` MAGs consistent with a PAG and
 checking D-SEP in each, the algorithm performs a graphical check for each of

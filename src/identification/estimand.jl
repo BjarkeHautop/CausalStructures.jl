@@ -130,6 +130,15 @@ de-duplicated, and any variable appearing in `given` is dropped from `vars`
 (since `P(X, Y | X) = P(Y | X)`). A term left with an empty head is the
 constant `1`.
 
+# Arguments
+- `vars`: a single `Symbol` or a vector of them, the head of the probability term.
+
+# Keywords
+- `given = Symbol[]`: the conditioning variable(s).
+
+# Returns
+An [`Estimand`](@ref).
+
 # Examples
 
 ```jldoctest
@@ -167,6 +176,13 @@ the summation index are constants of the sum and are pulled out in front of it,
 and a factor whose whole head is summed over, and whose head no other factor
 under the sum mentions, sums to `1` and drops out. Under a ratio, the part of
 the index the denominator does not mention is summed in the numerator alone.
+
+# Arguments
+- `index`: the variable(s) to sum over.
+- `term::Estimand`: the expression being summed.
+
+# Returns
+An [`Estimand`](@ref).
 
 # Examples
 
@@ -306,6 +322,12 @@ Nested products are flattened and factors equal to `1` are dropped. A
 single-factor product collapses to that factor, and an empty product is `1`.
 The order of the remaining factors is preserved.
 
+# Arguments
+- `terms`: the factors to multiply.
+
+# Returns
+An [`Estimand`](@ref).
+
 # Examples
 
 ```jldoctest
@@ -349,6 +371,13 @@ into ordinary conditionals.
 
 Cancellation assumes the cancelled factor is non-zero, which is the positivity
 assumption the identification results are stated under anyway.
+
+# Arguments
+- `num::Estimand`: the numerator.
+- `den::Estimand`: the denominator.
+
+# Returns
+An [`Estimand`](@ref).
 
 # Examples
 

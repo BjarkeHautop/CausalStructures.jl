@@ -42,6 +42,15 @@ descendant of `x` in the resulting MPDAG. In the latter case the O-set is
 undefined and [`adjustment_set`](@ref) warns, but a valid adjustment set may
 still exist.
 
+# Arguments
+- `cg::AbstractPDAG`: the graph to search.
+- `x::Symbol`: the treatment node.
+- `y::Symbol`: the outcome node.
+
+# Returns
+A `Vector{Union{Vector{Symbol},Nothing}}`, one entry per locally valid
+orientation of `x`'s undirected neighbors.
+
 # Examples
 
 ```jldoctest

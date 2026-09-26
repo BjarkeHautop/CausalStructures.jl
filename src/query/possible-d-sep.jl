@@ -66,6 +66,14 @@ D-SEP is the set that [`backdoor_set`](@ref) (for [`MAG`](@ref) and [`PAG`](@ref
 uses as the generalized back-door set (Maathuis & Colombo 2015), computed there
 on `M_X` (`cg` with `x`'s visible edges removed) rather than on `cg` directly.
 
+# Arguments
+- `cg::AbstractAG`: the graph to query.
+- `x::Symbol`: the node to compute D-SEP for.
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the target node(s).
+
+# Returns
+The `Vector{Symbol}` of nodes in D-SEP(x, y, cg).
+
 # Examples
 
 ```jldoctest

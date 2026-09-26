@@ -91,6 +91,14 @@ downstream recursive-regression methods like RRC or MCD need); nodes of `xs`
 with no directed relation between them in a given entry are left unordered by
 that orientation, as either relative order is valid.
 
+# Arguments
+- `cg::AbstractPDAG`: the graph to search.
+- `xs::Union{Symbol,AbstractVector{Symbol}}`: the intervention node(s).
+
+# Returns
+A `Vector{Vector{Vector{Symbol}}}`, one entry per locally valid joint
+orientation.
+
 # Examples
 
 ```jldoctest
@@ -177,6 +185,13 @@ suffices. This is the `xs = [x]` special case of
 
 Unlike [`all_adjustment_sets`](@ref), returns one entry per accepted subset,
 not per DAG in the Markov equivalence class.
+
+# Arguments
+- `cg::AbstractPDAG`: the graph to search.
+- `x::Symbol`: the intervention node.
+
+# Returns
+A `Vector{Vector{Symbol}}` of possible parent sets of `x`.
 
 # Examples
 

@@ -6,6 +6,12 @@
 Check whether `cg` satisfies the structural constraints of a [`DAG`](@ref)
 (directed acyclic graph), independent of its declared graph class.
 
+# Arguments
+- `cg::CausalGraph`: the graph to check.
+
+# Returns
+`true` if `cg` satisfies the DAG constraints, `false` otherwise.
+
 # Examples
 
 ```jldoctest
@@ -22,6 +28,12 @@ is_dag(cg::CausalGraph) = _class_matches_or_satisfies(cg, DAGConstraints())
 
 Check whether `cg` satisfies the structural constraints of a [`PDAG`](@ref)
 (partially directed acyclic graph), independent of its declared graph class.
+
+# Arguments
+- `cg::CausalGraph`: the graph to check.
+
+# Returns
+`true` if `cg` satisfies the PDAG constraints, `false` otherwise.
 
 # Examples
 
@@ -40,6 +52,12 @@ is_pdag(cg::CausalGraph) = _class_matches_or_satisfies(cg, PDAGConstraints())
 Check whether `cg` satisfies the structural constraints of a [`CPDAG`](@ref)
 (completed partially directed acyclic graph), independent of its declared graph class.
 
+# Arguments
+- `cg::CausalGraph`: the graph to check.
+
+# Returns
+`true` if `cg` satisfies the CPDAG constraints, `false` otherwise.
+
 # Examples
 
 ```jldoctest
@@ -57,6 +75,12 @@ is_cpdag(cg::CausalGraph) = _class_matches_or_satisfies(cg, CPDAGConstraints())
 Check whether `cg` satisfies the structural constraints of a [`MPDAG`](@ref)
 (maximally oriented partially directed acyclic graph), independent of its
 declared graph class.
+
+# Arguments
+- `cg::CausalGraph`: the graph to check.
+
+# Returns
+`true` if `cg` satisfies the MPDAG constraints, `false` otherwise.
 
 # Examples
 
@@ -80,6 +104,12 @@ is_mpdag(cg::CausalGraph) = _class_matches_or_satisfies(cg, MPDAGConstraints())
 Check whether `cg` satisfies the structural constraints of a [`UG`](@ref)
 (undirected graph), independent of its declared graph class.
 
+# Arguments
+- `cg::CausalGraph`: the graph to check.
+
+# Returns
+`true` if `cg` satisfies the UG constraints, `false` otherwise.
+
 # Examples
 
 ```jldoctest
@@ -96,6 +126,12 @@ is_ug(cg::CausalGraph) = _class_matches_or_satisfies(cg, UGConstraints())
 
 Check whether `cg` satisfies the structural constraints of a [`ADMG`](@ref)
 (acyclic directed mixed graph), independent of its declared graph class.
+
+# Arguments
+- `cg::CausalGraph`: the graph to check.
+
+# Returns
+`true` if `cg` satisfies the ADMG constraints, `false` otherwise.
 
 # Examples
 
@@ -114,6 +150,12 @@ is_admg(cg::CausalGraph) = _class_matches_or_satisfies(cg, ADMGConstraints())
 Check whether `cg` satisfies the structural constraints of a [`AG`](@ref)
 (ancestral graph), independent of its declared graph class.
 
+# Arguments
+- `cg::CausalGraph`: the graph to check.
+
+# Returns
+`true` if `cg` satisfies the AG constraints, `false` otherwise.
+
 # Examples
 
 ```jldoctest
@@ -130,6 +172,12 @@ is_ag(cg::CausalGraph) = _class_matches_or_satisfies(cg, AGConstraints())
 
 Check whether `cg` satisfies the structural constraints of a [`MAG`](@ref)
 (maximal ancestral graph), independent of its declared graph class.
+
+# Arguments
+- `cg::CausalGraph`: the graph to check.
+
+# Returns
+`true` if `cg` satisfies the MAG constraints, `false` otherwise.
 
 # Examples
 
@@ -155,6 +203,12 @@ are the invariant marks of the Markov equivalence class of some [`MAG`](@ref),
 independent of `cg`'s declared graph class. Verified by resolving `cg` to a MAG with
 [`mag_from_pag`](@ref) and checking that [`mag_to_pag`](@ref) recovers `cg`.
 
+# Arguments
+- `cg::CausalGraph`: the graph to check.
+
+# Returns
+`true` if `cg` is a valid PAG, `false` otherwise.
+
 # Examples
 
 ```jldoctest
@@ -173,6 +227,12 @@ is_pag(cg::CausalGraph) = _class_matches_or_satisfies(cg, PAGConstraints())
     nodes(cg::CausalGraph) -> Vector{Symbol}
 
 Return the nodes of `cg` in alphabetical order.
+
+# Arguments
+- `cg::CausalGraph`: the graph to query.
+
+# Returns
+The `Vector{Symbol}` of nodes.
 
 # Examples
 
@@ -198,6 +258,12 @@ pair of nodes.
 
 For all graph classes except [`UNKNOWN`](@ref), simplicity is guaranteed by
 construction.
+
+# Arguments
+- `cg::CausalGraph`: the graph to check.
+
+# Returns
+`true` if `cg` is simple, `false` otherwise.
 
 # Examples
 
@@ -243,6 +309,12 @@ Return `true` if `cg` contains no directed cycle.
 
 For all graph classes except [`UNKNOWN`](@ref), acyclicity is guaranteed by
 construction.
+
+# Arguments
+- `cg::CausalGraph`: the graph to check.
+
+# Returns
+`true` if `cg` is acyclic, `false` otherwise.
 
 # Examples
 
@@ -315,7 +387,33 @@ the resulting MAG is then converted to its equivalence class via
 `rng` defaults to `Random.default_rng()` when omitted; pass an explicit
 `AbstractRNG` (e.g. `Random.Xoshiro(seed)`) for reproducibility.
 
+# Arguments
+- `rng::Random.AbstractRNG`: the random number generator to use.
+- `n::Integer`: the number of observed nodes.
+
+# Keywords
+- `m::Union{Nothing,Integer} = nothing`: the exact edge count. Exactly one of `m`/`p`
+  must be given.
+- `p::Union{Nothing,Real} = nothing`: the edge probability. Exactly one of `m`/`p` must
+  be given.
+- `class::Union{Type{DAG},Type{CPDAG},Type{ADMG},Type{MAG},Type{PAG}} = DAG`: the graph
+  class to generate.
+- `latents::Integer = 0`: the number of latent nodes to marginalize out.
+
+# Returns
+The generated `CausalGraph` of type `class`.
+
 # Examples
+
+```jldoctest
+julia> using Random
+
+julia> generate_graph(Xoshiro(1), 5; m = 3)
+DAG with 5 nodes and 3 edges:
+  nodes: V1, V2, V3, V4, V5
+  edges:
+    V4 --> V2, V4 --> V1, V2 --> V1
+```
 
 ```@repl
 dag = generate_graph(7; m = 5)
@@ -454,7 +552,20 @@ standardized to zero mean and unit variance.
 `rng` defaults to `Random.default_rng()` when omitted; pass an explicit
 `AbstractRNG` (e.g. `Random.Xoshiro(seed)`) for reproducibility.
 
-Returns a `Dict` mapping each node name to a length-`samples` vector.
+# Arguments
+- `rng::Random.AbstractRNG`: the random number generator to use.
+- `cg::DAG`: the structural causal model's graph.
+
+# Keywords
+- `samples::Integer`: the number of samples to draw.
+- `standardize::Bool = true`: whether to standardize each variable to zero mean and
+  unit variance.
+- `coef_range::Tuple{Float64,Float64} = (-1.0, 1.0)`: the range edge coefficients are
+  drawn uniformly from.
+- `error_sd::Float64 = 1.0`: the standard deviation of each node's noise term.
+
+# Returns
+A `Dict{Symbol,Vector{Float64}}` mapping each node name to a length-`samples` vector.
 
 # Examples
 
@@ -535,6 +646,12 @@ simulate_data(cg::DAG; kwargs...) = simulate_data(Random.default_rng(), cg; kwar
     edges(cg::CausalGraph) -> Vector{CausalEdge}
 
 Return the edges of `cg`.
+
+# Arguments
+- `cg::CausalGraph`: the graph to query.
+
+# Returns
+The `Vector{CausalEdge}` of edges.
 
 # Examples
 

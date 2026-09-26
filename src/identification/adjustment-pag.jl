@@ -237,6 +237,15 @@ adjacent to that target, ruling out a latent confounder riding along the edge
 proper possibly-directed path from `x` to `y` starts with an invisible edge --
 no set satisfies the criterion, including the empty set.
 
+# Arguments
+- `cg::PAG`: the graph to check.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+- `z::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: the candidate adjustment set.
+
+# Returns
+`true` if `z` is a valid adjustment set, `false` otherwise.
+
 # Examples
 
 ```jldoctest
@@ -295,6 +304,18 @@ Return all valid adjustment sets for the total causal effect of `x` on `y` in
 
 Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 (default), only inclusion-minimal sets are returned.
+
+# Arguments
+- `cg::PAG`: the graph to search.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+
+# Keywords
+- `minimal::Bool = true`: return only inclusion-minimal sets.
+- `max_size::Int = 3`: the maximum candidate set size to consider.
+
+# Returns
+A `Vector{Vector{Symbol}}` of valid adjustment sets.
 
 # Examples
 
@@ -361,8 +382,13 @@ Return a inclusion-minimalvalid adjustment set for the causal effect of `x` on `
 
 `x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
-Unlike the [`DAG`](@ref)/[`AbstractPDAG`](@ref) methods of `adjustment_set`,
-this method takes no `type` keyword.
+# Arguments
+- `cg::PAG`: the graph to search.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+
+# Returns
+A `Vector{Symbol}` adjustment set, or `nothing` if none exists.
 
 # Examples
 

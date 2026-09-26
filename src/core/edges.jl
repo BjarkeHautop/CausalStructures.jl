@@ -5,6 +5,15 @@ end
 """
     directed(src, dst) -> CausalEdge   # src --> dst
 
+Construct the directed edge `src --> dst`.
+
+# Arguments
+- `src::Symbol`: the source node.
+- `dst::Symbol`: the destination node.
+
+# Returns
+The `CausalEdge` `src --> dst`.
+
 # Examples
 
 ```jldoctest
@@ -18,6 +27,15 @@ DAG with 3 nodes and 2 edges:
 directed(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Tail, Arrow)
 """
     undirected(src, dst) -> CausalEdge   # src --- dst
+
+Construct the undirected edge `src --- dst`.
+
+# Arguments
+- `src::Symbol`: one endpoint.
+- `dst::Symbol`: the other endpoint.
+
+# Returns
+The `CausalEdge` `src --- dst`.
 
 # Examples
 
@@ -33,6 +51,15 @@ undirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Tail, Tail)
 """
     bidirected(src, dst) -> CausalEdge   # src <-> dst
 
+Construct the bidirected edge `src <-> dst`.
+
+# Arguments
+- `src::Symbol`: one endpoint.
+- `dst::Symbol`: the other endpoint.
+
+# Returns
+The `CausalEdge` `src <-> dst`.
+
 # Examples
 
 ```jldoctest
@@ -46,6 +73,15 @@ ADMG with 3 nodes and 2 edges:
 bidirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Arrow, Arrow)
 """
     partially_directed(src, dst) -> CausalEdge   # src o-> dst
+
+Construct the partially directed edge `src o-> dst`.
+
+# Arguments
+- `src::Symbol`: the circle-marked endpoint.
+- `dst::Symbol`: the arrowhead-marked endpoint.
+
+# Returns
+The `CausalEdge` `src o-> dst`.
 
 # Examples
 
@@ -61,6 +97,15 @@ partially_directed(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Circle, Arro
 """
     partially_undirected(src, dst) -> CausalEdge   # src o-- dst
 
+Construct the partially undirected edge `src o-- dst`.
+
+# Arguments
+- `src::Symbol`: the circle-marked endpoint.
+- `dst::Symbol`: the tail-marked endpoint.
+
+# Returns
+The `CausalEdge` `src o-- dst`.
+
 # Examples
 
 ```jldoctest
@@ -74,6 +119,15 @@ UNKNOWN with 3 nodes and 2 edges:
 partially_undirected(src::Symbol, dst::Symbol) = CausalEdge(src, dst, Circle, Tail)
 """
     partial(src, dst) -> CausalEdge   # src o-o dst
+
+Construct the partial edge `src o-o dst`, with a circle mark at both endpoints.
+
+# Arguments
+- `src::Symbol`: one endpoint.
+- `dst::Symbol`: the other endpoint.
+
+# Returns
+The `CausalEdge` `src o-o dst`.
 
 # Examples
 
@@ -120,6 +174,13 @@ end
 Declare the directed edge `src --> dst` as required background knowledge, for use in
 [`BackgroundKnowledge`](@ref).
 
+# Arguments
+- `src::Symbol`: the source node.
+- `dst::Symbol`: the destination node.
+
+# Returns
+The `RequiredEdge` `src --> dst`.
+
 # Examples
 
 ```jldoctest
@@ -134,6 +195,13 @@ required_directed(src::Symbol, dst::Symbol) = RequiredEdge(src, dst)
 
 Declare the directed edge `src --> dst` as forbidden background knowledge, for use in
 [`BackgroundKnowledge`](@ref).
+
+# Arguments
+- `src::Symbol`: the source node.
+- `dst::Symbol`: the destination node.
+
+# Returns
+The `ForbiddenEdge` `src !--> dst`.
 
 # Examples
 

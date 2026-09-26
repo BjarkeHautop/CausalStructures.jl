@@ -110,11 +110,25 @@ end
 """
     apply_background_knowledge(cg::AbstractPDAG, bk) -> MPDAG
 
-Orient the edges of `cg` according to the background knowledge `bk`, then close under
-Meek's rules R1-R4 (see [`meek_closure`](@ref)), returning the [`MPDAG`](@ref) that
-represents the DAGs consistent with both `cg` and `bk`.
+Orient the edges of `cg` according to the background knowledge `bk`, then close
+under Meek's rules R1-R4 (see [`meek_closure`](@ref)).
 
 `bk` may be a [`BackgroundKnowledge`](@ref) or a string accepted by its constructor.
+
+# Arguments
+- `cg::AbstractPDAG`: the graph to orient.
+- `bk::BackgroundKnowledge`: the required and forbidden directed edges to apply.
+
+# Returns
+The [`MPDAG`](@ref) representing the DAGs consistent with both `cg` and `bk`.
+
+# Throws
+- `ErrorException`: if `bk` is inconsistent with `cg`, e.g. a required/forbidden
+  edge is not adjacent in `cg`, contradicts the existing orientation of an edge,
+  or contradicts an orientation implied by an earlier item in `bk` (e.g.
+  `A --> B, C --> B` on `A --- B --- C`).
+
+# Notes
 
 Per constraint, against the current state of the edge in `cg`:
 
@@ -125,9 +139,7 @@ Per constraint, against the current state of the edge in `cg`:
 
 Errors are raised because background knowledge cannot add or remove adjacencies, only
 orient existing edges. The orientations are applied one at a time, each followed by
-Meek's rules; an error is also raised if a later one contradicts an orientation this
-implies, i.e. if `bk` is inconsistent with `cg` (e.g. `A --> B, C --> B` on
-`A --- B --- C`).
+Meek's rules.
 
 # Examples
 
@@ -223,13 +235,28 @@ apply_background_knowledge(cg::AbstractPDAG, s::AbstractString) =
 """
     dag_to_mpdag(cg::DAG, bk = BackgroundKnowledge()) -> MPDAG
 
-Return the [`MPDAG`](@ref) representing the DAGs that are Markov equivalent to `cg`
-and consistent with the background knowledge `bk`. This is the CPDAG of `cg` with
-the `bk` orientations applied and closed under Meek's rules R1-R4.
+Compute the CPDAG of `cg`, apply the `bk` orientations, and close under Meek's
+rules R1-R4.
 
 `bk` may be a [`BackgroundKnowledge`](@ref) or a string accepted by its constructor.
-Raises an error if `cg` itself violates `bk`; this guarantees the restricted
-equivalence class is non-empty, since it contains `cg`.
+
+# Arguments
+- `cg::DAG`: the DAG whose MEC to restrict.
+- `bk::BackgroundKnowledge = BackgroundKnowledge()`: the required and forbidden
+  directed edges to apply.
+
+# Returns
+The [`MPDAG`](@ref) representing the DAGs Markov equivalent to `cg` and consistent
+with `bk`.
+
+# Throws
+- `ErrorException`: if `cg` itself violates `bk`, i.e. `cg` has a forbidden edge or
+  is missing a required one.
+
+# Notes
+
+Raising an error when `cg` violates `bk` guarantees the restricted equivalence
+class is non-empty, since it contains `cg`.
 
 # Examples
 

@@ -460,12 +460,23 @@ end
     T(node_set, edges::Vector{CausalEdge}; validate::Bool = true) -> T
 
 Every concrete graph type `T` (`DAG`, `UG`, `PDAG`, `CPDAG`, `MPDAG`, `ADMG`, `AG`,
-`MAG`, `UNKNOWN`, `PAG`) has this constructor, which builds a graph directly from a
-node set and an edge vector, bypassing the `items...` collection and the
-[string DSL](@ref constructing-graphs) that the other constructor forms
-(`T(items...)`, `T(s::AbstractString)`) go through to get there.
+`MAG`, `UNKNOWN`, `PAG`) has this constructor.
 
-Pass `validate = false` to skip the structural check for performance reasons.
+It builds a graph directly from a node set and an edge vector, bypassing the
+`items...` collection and the [string DSL](@ref constructing-graphs) that the
+other constructor forms (`T(items...)`, `T(s::AbstractString)`) go through to
+get there.
+
+# Arguments
+- `nodes`: the nodes of the graph, as a collection of `Symbol`s.
+- `edges::Vector{CausalEdge}`: the edges of the graph.
+
+# Keywords
+- `validate::Bool = true`: whether to run the structural validation for `T`.
+  Pass `false` to skip it for performance reasons.
+
+# Returns
+A new graph of class `T`.
 
 # Examples
 
@@ -545,6 +556,12 @@ end
 Wrap a symbol as an isolated node for inclusion in a graph constructor such as
 [`DAG`](@ref).
 
+# Arguments
+- `name::Symbol`: the node's name.
+
+# Returns
+A `GraphNode` wrapping `name`.
+
 # Examples
 ```jldoctest
 julia> DAG(node(:A), node(:B), node(:C))
@@ -554,4 +571,4 @@ DAG with 3 nodes and 0 edges:
     (none)
 ```
 """
-node(x::Symbol) = GraphNode(x)
+node(name::Symbol) = GraphNode(name)

@@ -36,6 +36,14 @@ Deliberately not defined for [`MPDAG`](@ref) or plain [`PDAG`](@ref): Corollary
 through a *compelled* parent) that fails once background knowledge introduces
 a partially directed cycle.
 
+# Arguments
+- `cg::CPDAG`: the graph to search.
+- `x::Symbol`: the treatment node.
+- `y::Symbol`: the outcome node.
+
+# Returns
+A `Vector{Symbol}` back-door set, or `nothing` if none exists.
+
 # Examples
 
 ```jldoctest

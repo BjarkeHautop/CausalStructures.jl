@@ -17,9 +17,17 @@ on which the two graphs disagree about whether an edge is present, ignoring edge
 type and orientation entirely. `cg1` and `cg2` must have the same node set;
 they may be of different graph classes.
 
-With `normalized = true`, divides by the number of node pairs
-`n * (n - 1) / 2`, giving a value in `[0, 1]` (`0.0` when `cg1`/`cg2` have
-fewer than two nodes).
+# Arguments
+- `cg1::CausalGraph`: the first graph.
+- `cg2::CausalGraph`: the second graph.
+
+# Keywords
+- `normalized::Bool = false`: divide by the number of node pairs.
+
+# Returns
+The number of node pairs on which the two skeletons disagree, or, if
+`normalized = true`, that count divided by `n * (n - 1) / 2` (a value in
+`[0, 1]`, `0.0` when `cg1`/`cg2` have fewer than two nodes).
 
 # Examples
 
@@ -55,12 +63,20 @@ and `cg2`. Counts the node pairs on which the two graphs disagree, weighting
 skeleton and orientation mismatches equally. `cg1` and `cg2` must
 have the same node set; they may be of different graph classes.
 
-With `normalized = true`, divides by the number of node pairs
-`n * (n - 1) / 2`, giving a value in `[0, 1]` (`0.0` when `cg1`/`cg2` have
-fewer than two nodes).
-
 The original paper only defined SHD for PDAGs, but we do the natural extension
 of the metric to any pair of causal graphs.
+
+# Arguments
+- `cg1::CausalGraph`: the first graph.
+- `cg2::CausalGraph`: the second graph.
+
+# Keywords
+- `normalized::Bool = false`: divide by the number of node pairs.
+
+# Returns
+The number of node pairs on which the two graphs disagree, or, if
+`normalized = true`, that count divided by `n * (n - 1) / 2` (a value in
+`[0, 1]`, `0.0` when `cg1`/`cg2` have fewer than two nodes).
 
 # Examples
 

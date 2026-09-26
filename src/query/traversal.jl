@@ -12,6 +12,12 @@ Return the nodes of `cg` in topological order.
 For every directed edge `u --> v` in `cg`, `u` appears before `v` in the
 returned vector.
 
+# Arguments
+- `cg::DAG`: the graph to sort.
+
+# Returns
+The `Vector{Symbol}` of nodes in topological order.
+
 # Examples
 
 ```jldoctest
@@ -102,6 +108,16 @@ the result. When `open = false` (closed definition), `node` is included. The
 default can be changed project-wide via Preferences.jl:
 `set_preferences!(CausalStructures, "open" => false)` (restart Julia after).
 
+# Arguments
+- `cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG}`: the graph to query.
+- `node::Symbol`: the node whose ancestors to return.
+
+# Keywords
+- `open::Bool = true`: whether to exclude `node` from the result.
+
+# Returns
+The `Vector{Symbol}` of ancestors.
+
 # Examples
 
 ```jldoctest
@@ -138,6 +154,16 @@ When `open = true` (open definition, default), `node` itself is excluded from
 the result. When `open = false` (closed definition), `node` is included. The
 default can be changed project-wide via Preferences.jl:
 `set_preferences!(CausalStructures, "open" => false)` (restart Julia after).
+
+# Arguments
+- `cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG}`: the graph to query.
+- `node::Symbol`: the node whose descendants to return.
+
+# Keywords
+- `open::Bool = true`: whether to exclude `node` from the result.
+
+# Returns
+The `Vector{Symbol}` of descendants.
 
 # Examples
 
@@ -180,6 +206,12 @@ if and only if it is isolated (no neighbors at all).
 For [`AbstractPDAG`](@ref), the `undirected_as_parents` keyword
 controls how undirected edges are treated. When `true`, a node incident to any
 undirected edge is not considered exogenous.
+
+# Arguments
+- `cg`: the graph to query.
+
+# Returns
+The `Vector{Symbol}` of exogenous nodes.
 
 # Examples
 
@@ -313,6 +345,16 @@ When `open = true` (default), `node` itself is excluded. When `open = false`
 (closed definition), `node` is included. The default can be changed via
 Preferences.jl: `set_preferences!(CausalStructures, "open" => false)`.
 
+# Arguments
+- `cg::AbstractPDAG`: the graph to query.
+- `node::Symbol`: the node whose possible ancestors to return.
+
+# Keywords
+- `open::Bool = true`: whether to exclude `node` from the result.
+
+# Returns
+The `Vector{Symbol}` of possible ancestors.
+
 # Examples
 
 ```jldoctest
@@ -363,6 +405,16 @@ unsound, since background knowledge can create partially directed cycles.
 When `open = true` (default), `node` itself is excluded. When `open = false`
 (closed definition), `node` is included. The default can be changed via
 Preferences.jl: `set_preferences!(CausalStructures, "open" => false)`.
+
+# Arguments
+- `cg::AbstractPDAG`: the graph to query.
+- `node::Symbol`: the node whose possible descendants to return.
+
+# Keywords
+- `open::Bool = true`: whether to exclude `node` from the result.
+
+# Returns
+The `Vector{Symbol}` of possible descendants.
 
 # Examples
 
@@ -417,6 +469,16 @@ edge in any MAG.
 When `open = true` (default), `node` itself is excluded. When `open = false`
 (closed definition), `node` is included. The default can be changed via
 Preferences.jl: `set_preferences!(CausalStructures, "open" => false)`.
+
+# Arguments
+- `cg::PAG`: the graph to query.
+- `node::Symbol`: the node whose possible ancestors to return.
+
+# Keywords
+- `open::Bool = true`: whether to exclude `node` from the result.
+
+# Returns
+The `Vector{Symbol}` of possible ancestors.
 
 # Examples
 
@@ -492,6 +554,16 @@ When `open = true` (default), `node` itself is excluded. When `open = false`
 (closed definition), `node` is included. The default can be changed via
 Preferences.jl: `set_preferences!(CausalStructures, "open" => false)`.
 
+# Arguments
+- `cg::PAG`: the graph to query.
+- `node::Symbol`: the node whose possible descendants to return.
+
+# Keywords
+- `open::Bool = true`: whether to exclude `node` from the result.
+
+# Returns
+The `Vector{Symbol}` of possible descendants.
+
 # Examples
 
 ```jldoctest
@@ -558,6 +630,16 @@ When `open = true` (open definition, default), `node` itself is excluded from
 the result. When `open = false` (closed definition), `node` is included. The
 default can be changed project-wide via Preferences.jl:
 `set_preferences!(CausalStructures, "open" => false)` (restart Julia after).
+
+# Arguments
+- `cg::Union{DAG,ADMG,AbstractPDAG,AbstractAG}`: the graph to query.
+- `node::Symbol`: the node whose anteriors to return.
+
+# Keywords
+- `open::Bool = true`: whether to exclude `node` from the result.
+
+# Returns
+The `Vector{Symbol}` of anteriors.
 
 # Examples
 
@@ -655,6 +737,16 @@ When `open = true` (open definition, default), `node` itself is excluded from
 the result. When `open = false` (closed definition), `node` is included. The
 default can be changed project-wide via Preferences.jl:
 `set_preferences!(CausalStructures, "open" => false)` (restart Julia after).
+
+# Arguments
+- `cg::Union{DAG,ADMG,AbstractPDAG,AbstractAG}`: the graph to query.
+- `node::Symbol`: the node whose posteriors to return.
+
+# Keywords
+- `open::Bool = true`: whether to exclude `node` from the result.
+
+# Returns
+The `Vector{Symbol}` of posteriors.
 
 # Examples
 
@@ -756,6 +848,13 @@ undirected neighbors are also included. For an [`ADMG`](@ref) or
 are all colliders. For a [`PAG`](@ref), the blanket is computed
 on a underlying [`MAG`](@ref).
 
+# Arguments
+- `cg::Union{DAG,AbstractPDAG,ADMG,AbstractAG,PAG}`: the graph to query.
+- `node::Symbol`: the node whose Markov blanket to return.
+
+# Returns
+The `Vector{Symbol}` of nodes in the Markov blanket.
+
 # Examples
 
 ```jldoctest
@@ -850,6 +949,13 @@ markov_blanket(cg::PAG, node::Symbol) = markov_blanket(mag_from_pag(cg), node)
 Return the spouses of `node` in `cg`: nodes connected to `node` via a
 bidirected edge (`node <-> spouse`).
 
+# Arguments
+- `cg::Union{ADMG,AbstractAG,PAG}`: the graph to query.
+- `node::Symbol`: the node whose spouses to return.
+
+# Returns
+The `Vector{Symbol}` of spouses.
+
 # Examples
 
 ```jldoctest
@@ -876,6 +982,12 @@ Return all districts (c-components) of `cg`.
 
 A district is a maximal set of nodes connected via bidirected edges. Singleton
 nodes with no bidirected edges each form their own district.
+
+# Arguments
+- `cg::Union{ADMG,AbstractAG}`: the graph to query.
+
+# Returns
+The `Vector{Vector{Symbol}}` of districts.
 
 # Examples
 

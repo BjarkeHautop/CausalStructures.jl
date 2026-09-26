@@ -414,10 +414,18 @@ effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
 `x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 For a DAG this reduces to the adjustment criterion of Shpitser (2012), which is
-sound *and complete* for adjustment -- unlike [`is_valid_backdoor`](@ref)
-(Pearl's backdoor criterion, sound but not complete), `z` may include
+sound *and complete* for adjustment. `z` may include
 descendants of `x` as long as they are not on a causal path from `x` to `y`, so
 this criterion accepts some valid sets the backdoor criterion rejects.
+
+# Arguments
+- `cg::DAG`: the graph to check.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+- `z::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: the candidate adjustment set.
+
+# Returns
+`true` if `z` is a valid adjustment set, `false` otherwise.
 
 # Examples
 
@@ -471,6 +479,18 @@ Return all valid adjustment sets for the total causal effect of `x` on `y` in
 
 Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 (default), only inclusion-minimal sets are returned.
+
+# Arguments
+- `cg::DAG`: the graph to search.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+
+# Keywords
+- `minimal::Bool = true`: return only inclusion-minimal sets.
+- `max_size::Int = 3`: the maximum candidate set size to consider.
+
+# Returns
+A `Vector{Vector{Symbol}}` of valid adjustment sets.
 
 # Examples
 
@@ -574,6 +594,15 @@ A set `z` is valid if it contains no forbidden node (no node in
 `x` to `y`) and `x` and `y` are m-separated by `z` in the proper backdoor graph
 of `cg`.
 
+# Arguments
+- `cg::Union{ADMG,AbstractAG}`: the graph to check.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+- `z::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: the candidate adjustment set.
+
+# Returns
+`true` if `z` is a valid adjustment set, `false` otherwise.
+
 # Examples
 
 ```jldoctest
@@ -640,6 +669,18 @@ Bruteforces over subsets of the allowed universe of nodes (nodes that are not
 forbidden and not `y`), checking each for validity using
 [`is_valid_adjustment`](@ref). When `minimal = true` (default), only
 inclusion-minimal sets are returned.
+
+# Arguments
+- `cg::Union{ADMG,AbstractAG,AbstractPDAG}`: the graph to search.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+
+# Keywords
+- `minimal::Bool = true`: return only inclusion-minimal sets.
+- `max_size::Int = 3`: the maximum candidate set size to consider.
+
+# Returns
+A `Vector{Vector{Symbol}}` of valid adjustment sets.
 
 # Examples
 
@@ -722,8 +763,13 @@ Return a valid inclusion-minimal adjustment set for the causal effect of `x` on 
 
 `x` and `y` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
-Unlike the [`DAG`](@ref)/[`AbstractPDAG`](@ref) methods of `adjustment_set`,
-this method takes no `type` keyword.
+# Arguments
+- `cg::ADMG`: the graph to search.
+- `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+
+# Returns
+A `Vector{Symbol}` adjustment set, or `nothing` if none exists.
 
 # Examples
 

@@ -41,6 +41,16 @@ if each is anterior to the other.
 At least one of `given` or `index` must be non-empty, and they must
 be disjoint.
 
+# Arguments
+- `cg::Union{DAG,ADMG,AbstractAG}`: the graph to condition and marginalize.
+
+# Keywords
+- `given::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: nodes to condition on.
+- `index::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: nodes to marginalize out.
+
+# Returns
+An [`AG`](@ref) over the remaining nodes.
+
 # Examples
 
 ```jldoctest

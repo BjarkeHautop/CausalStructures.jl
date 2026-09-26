@@ -20,7 +20,17 @@ Every member of the class shares `cg`'s invariant (non-circle) endpoint marks, s
 each circle endpoint is independently resolved to a tail or an arrowhead. For a
 single representative instead of the whole class, use [`mag_from_pag`](@ref).
 
-# Algorithm
+# Arguments
+- `cg::PAG`: the graph whose Markov equivalence class to enumerate.
+
+# Keywords
+- `selection_bias::Bool = true`: whether to include MAGs with undirected (`---`)
+  edges in the result.
+
+# Returns
+A `Vector{MAG}` of the enumerated MAGs.
+
+# Notes
 
 This is a brute-force search. With `k` circle endpoints in the PAG, it iterates
 all `2^k` tail/arrow assignments; for each it builds the candidate graph,
