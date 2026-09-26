@@ -162,6 +162,7 @@ makedocs(;
             ],
             theme = :rustdoc,
             strict = false,
+            ignore = [:DS020],
         ),
     ],
 )
