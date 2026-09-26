@@ -1,0 +1,13 @@
+/*
+ * Labeled theme: section labels in a left column, one row per parameter with
+ * the name, the type and the default as a pill. Modeled on the design's HTML
+ * preview (2026-09).
+ */
+
+.ds-theme-labeled .ds-header-label_column > .ds-label {
+  font-size: 0.95rem;
+}
+
+.ds-theme-labeled .ds-section-throws .ds-name code {
+  color: var(--ds-error);
+}
