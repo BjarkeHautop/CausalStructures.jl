@@ -161,8 +161,14 @@ makedocs(;
                 "Extended help",
             ],
             theme = :rustdoc,
-            strict = false,
-            ignore = [:DS020],
+            strict = true,
+            skip_unexported = true,
+            no_check = Any[
+                _makie_ext.causalgraphplot,
+                _makie_ext.causalgraphplot!,
+                plot,
+                plot!,
+            ],
         ),
     ],
 )

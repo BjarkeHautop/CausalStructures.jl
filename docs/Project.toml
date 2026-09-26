@@ -13,7 +13,7 @@ Sugiyama = "a85cd6b6-3810-52a0-aaf7-38a6bd88fd85"
 
 [sources]
 CausalStructures = {path = ".."}
-DocumenterDocstringStyle = {rev = "main", url = "https://github.com/langestefan/DocumenterDocstringStyle.jl"}
+DocumenterDocstringStyle = {rev = "opt-out-checks", url = "https://github.com/BjarkeHautop/DocumenterDocstringStyle.jl"}
 
 [compat]
 BenchmarkTools = "1"
