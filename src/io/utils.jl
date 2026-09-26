@@ -715,7 +715,7 @@ end
 
 function Base.show(io::IO, cg::CausalGraph)
     B = cg.backend
-    typename = typeof(cg)
+    typename = nameof(typeof(cg))
     n_nodes = length(B.nodes)
     n_edges = length(cg.edges)
     s_n = n_nodes == 1 ? "" : "s"
