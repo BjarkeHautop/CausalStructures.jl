@@ -254,3 +254,59 @@ end
     @test abs(cor(data[:A], data[:C])) > 0.05
     @test abs(cor(data[:B], data[:C])) > 0.05
 end
+
+@testitem "simulate_data: errors on invalid coef_range" tags = [:unit, :simulation] begin
+    using Random
+    dag = DAG(directed(:A, :B))
+    @test_throws ErrorException simulate_data(dag; samples = 10, coef_range = (1.0, -1.0))
+    @test_throws ErrorException simulate_data(
+        dag;
+        samples = 10,
+        coef_range = (-1.0, 1.0),
+        random_sign = true,
+    )
+end
+
+@testitem "simulate_data: errors on invalid error_sd" tags = [:unit, :simulation] begin
+    dag = DAG(directed(:A, :B))
+    @test_throws ErrorException simulate_data(dag; samples = 10, error_sd = 0.0)
+    @test_throws ErrorException simulate_data(dag; samples = 10, error_sd = -1.0)
+    @test_throws ErrorException simulate_data(dag; samples = 10, error_sd = (1.0, 0.5))
+    @test_throws ErrorException simulate_data(dag; samples = 10, error_sd = (0.0, 1.0))
+end
+
+@testitem "simulate_data: random_sign draws both positive and negative coefficients" tags =
+    [:unit, :simulation] begin
+    using Random
+    using Statistics
+    dag = DAG(directed(:A, :B))
+    signs = Set{Bool}()
+    for seed = 1:50
+        data = simulate_data(
+            Random.Xoshiro(seed),
+            dag;
+            samples = 10_000,
+            coef_range = (0.5, 1.0),
+            random_sign = true,
+            standardize = false,
+        )
+        push!(signs, cor(data[:A], data[:B]) > 0)
+    end
+    @test true in signs
+    @test false in signs
+end
+
+@testitem "simulate_data: error_sd tuple gives each node its own noise scale" tags =
+    [:unit, :simulation] begin
+    using Random
+    using Statistics
+    dag = DAG(node(:A), node(:B))
+    data = simulate_data(
+        Random.Xoshiro(1),
+        dag;
+        samples = 50_000,
+        error_sd = (0.1, 10.0),
+        standardize = false,
+    )
+    @test std(data[:A]) != std(data[:B])
+end

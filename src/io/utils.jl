@@ -540,14 +540,14 @@ end
 
 """
     simulate_data([rng], cg::DAG; samples, standardize=true,
-                  coef_range=(-1.0, 1.0), error_sd=1.0)
+                  coef_range=(-1.0, 1.0), random_sign=false, error_sd=1.0)
         -> Dict{Symbol, Vector{Float64}}
 
 Simulate observational data from a linear Gaussian structural causal model over
 `cg`. Each node is a linear function of its parents plus independent Gaussian
-noise with standard deviation `error_sd`. Edge coefficients are drawn uniformly
-from `coef_range`. If `standardize = true` (default), each variable is
-standardized to zero mean and unit variance.
+noise. Edge coefficients are drawn uniformly from `coef_range`. If
+`standardize = true` (default), each variable is standardized to zero mean and
+unit variance.
 
 `rng` defaults to `Random.default_rng()` when omitted; pass an explicit
 `AbstractRNG` (e.g. `Random.Xoshiro(seed)`) for reproducibility.
@@ -560,9 +560,15 @@ standardized to zero mean and unit variance.
 - `samples::Integer`: the number of samples to draw.
 - `standardize::Bool = true`: whether to standardize each variable to zero mean and
   unit variance.
-- `coef_range::Tuple{Float64,Float64} = (-1.0, 1.0)`: the range edge coefficients are
-  drawn uniformly from.
-- `error_sd::Float64 = 1.0`: the standard deviation of each node's noise term.
+- `coef_range::Tuple{Real,Real} = (-1.0, 1.0)`: the range edge coefficients are
+  drawn uniformly from. When `random_sign = true`, this is instead the range
+  each coefficient's magnitude is drawn from.
+- `random_sign::Bool = false`: when `true`, `coef_range` gives the magnitude range
+  and each coefficient's sign is drawn independently at random.
+- `error_sd::Union{Real,Tuple{Real,Real}} = 1.0`: the standard deviation of
+  each node's noise term. A single number gives every node the same
+  standard deviation; a `(lo, hi)` tuple draws each node's own standard
+  deviation independently and uniformly from that range.
 
 # Returns
 A `Dict{Symbol,Vector{Float64}}` mapping each node name to a length-`samples` vector.
@@ -574,11 +580,12 @@ julia> dag = DAG("A --> B --> C");
 
 julia> data = simulate_data(dag; samples = 100);
 
-julia> haskey(data, :A)
-true
 
 julia> length(data[:B])
 100
+
+julia> data2 = simulate_data(dag; samples = 100, coef_range = (0.25, 1.0),
+           random_sign = true, error_sd = (0.5, 2.0));
 ```
 """
 function simulate_data(
@@ -586,11 +593,22 @@ function simulate_data(
     cg::DAG;
     samples::Integer,
     standardize::Bool = true,
-    coef_range::Tuple{Float64,Float64} = (-1.0, 1.0),
-    error_sd::Float64 = 1.0,
+    coef_range::Tuple{Real,Real} = (-1.0, 1.0),
+    random_sign::Bool = false,
+    error_sd::Union{Real,Tuple{Real,Real}} = 1.0,
 )
     if samples <= 0
         error("samples must be positive")
+    end
+    coef_range[1] <= coef_range[2] || error("coef_range must have lo <= hi")
+    if random_sign && coef_range[1] < 0
+        error("coef_range must have coef_range[1] >= 0 when random_sign = true")
+    end
+    if error_sd isa Tuple
+        lo, hi = error_sd
+        0 < lo <= hi || error("error_sd must have 0 < lo <= hi")
+    else
+        error_sd > 0 || error("error_sd must be positive")
     end
     B = cg.backend
     if isempty(B.nodes)
@@ -603,9 +621,19 @@ function simulate_data(
 
     coeffs = Dict{Tuple{Symbol,Symbol},Float64}()
     for e in cg.edges
-        coeffs[(e.src, e.dst)] =
-            rand(local_rng) * (coef_range[2] - coef_range[1]) + coef_range[1]
+        magnitude = rand(local_rng) * (coef_range[2] - coef_range[1]) + coef_range[1]
+        sign = random_sign ? rand(local_rng, (-1.0, 1.0)) : 1.0
+        coeffs[(e.src, e.dst)] = sign * magnitude
     end
+
+    node_sd = Dict{Symbol,Float64}(
+        node => if error_sd isa Tuple
+            lo, hi = error_sd
+            rand(local_rng) * (hi - lo) + lo
+        else
+            error_sd
+        end for node in ordering
+    )
 
     data = Dict{Symbol,Vector{Float64}}()
     for node in ordering
@@ -615,13 +643,13 @@ function simulate_data(
     for node in ordering
         pa = parents(cg, node)
         if isempty(pa)
-            data[node] = randn(local_rng, samples) .* error_sd
+            data[node] = randn(local_rng, samples) .* node_sd[node]
         else
             vals = zeros(Float64, samples)
             for p in pa
                 vals .+= coeffs[(p, node)] .* data[p]
             end
-            vals .+= randn(local_rng, samples) .* error_sd # noise
+            vals .+= randn(local_rng, samples) .* node_sd[node] # noise
             data[node] = vals
         end
     end

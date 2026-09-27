@@ -16,6 +16,11 @@ Implements several metrics for comparing two graphs:
 - Add `sc_metric` (alongside the one-sided variants `markov_metric` and `faithfulness_metric`) for comparing two graphs by every separation/connection statement, graded by conditioning-set order.
 - Add `aid` (Adjustment Identification Distance) that compares implied causal effect estimands.
 
+`simulate_data` gained two keywords:
+
+- `random_sign`: draws each edge coefficient's magnitude from `coef_range` and its sign independently at random, instead of drawing the signed coefficient directly from `coef_range`.
+- `error_sd` now also accepts a `(lo, hi)` tuple, drawing each node's noise standard deviation independently and uniformly from that range.
+
 ## [0.7.1] - 2026-09-24
 
 ### New features
