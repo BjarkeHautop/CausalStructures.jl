@@ -1,4 +1,4 @@
-# Run with: julia --project=benchmarks benchmarks/benchmark.jl
+# Run with: julia --project=benchmark benchmark/benchmark.jl
 
 using Random
 using Graphs
