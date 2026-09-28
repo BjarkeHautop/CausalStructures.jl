@@ -48,3 +48,7 @@ jobs:
             --compile-ccallable \
             --verbose \
             trim-check/entry.jl
+      - name: Run the compiled trim_check_run()
+        run: |
+          gcc trim-check/run.c -o "$RUNNER_TEMP/run-trim-check" -ldl
+          "$RUNNER_TEMP/run-trim-check" "$RUNNER_TEMP/trimcheck.so"
