@@ -146,16 +146,16 @@ function _check_effect_args(
     all_ns = Set(nodes(cg))
     for (name, vs) in (("x", x), ("y", y), ("z", z))
         for v in vs
-            v in all_ns || error("Unknown node in $(name): $(v)")
+            v in all_ns || throw(ArgumentError("Unknown node in $(name): $(v)"))
         end
     end
 
-    isempty(y) && error("y must be non-empty")
-    isempty(x) && error("x must be non-empty")
+    isempty(y) && throw(ArgumentError("y must be non-empty"))
+    isempty(x) && throw(ArgumentError("x must be non-empty"))
 
-    !isempty(intersect(x, y)) && error("x and y must be disjoint")
-    !isempty(intersect(x, z)) && error("x and z must be disjoint")
-    !isempty(intersect(y, z)) && error("y and z must be disjoint")
+    !isempty(intersect(x, y)) && throw(ArgumentError("x and y must be disjoint"))
+    !isempty(intersect(x, z)) && throw(ArgumentError("x and z must be disjoint"))
+    !isempty(intersect(y, z)) && throw(ArgumentError("y and z must be disjoint"))
 
     return nothing
 end

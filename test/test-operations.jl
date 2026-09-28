@@ -225,7 +225,7 @@ end
 
 @testitem "latent_project rejects unknown node name" tags = [:unit, :operations] begin
     dag = DAG(directed(:X, :Y))
-    @test_throws ErrorException latent_project(dag, [:Z])
+    @test_throws ArgumentError latent_project(dag, [:Z])
 end
 
 @testitem "latent_project rejects non-DAG graph" tags = [:unit, :operations] begin
@@ -254,7 +254,7 @@ end
 
 @testitem "exogenize rejects unknown node" tags = [:unit, :operations] begin
     cg = DAG(directed(:A, :B))
-    @test_throws ErrorException exogenize(cg, [:Z])
+    @test_throws ArgumentError exogenize(cg, [:Z])
 end
 
 @testitem "exogenize multiple nodes" tags = [:unit, :operations] begin
@@ -446,7 +446,7 @@ end
 
 @testitem "normalize_latent_structure rejects unknown latent" tags = [:unit, :operations] begin
     dag = DAG(directed(:X, :Y))
-    @test_throws ErrorException normalize_latent_structure(dag, [:Z])
+    @test_throws ArgumentError normalize_latent_structure(dag, [:Z])
 end
 
 @testitem "normalize_latent_structure empty latent list returns same graph" tags =
@@ -547,13 +547,13 @@ end
 
 @testitem "condition_marginalize: errors on empty given/index" tags = [:unit, :operations] begin
     cg = DAG(directed(:A, :B))
-    @test_throws ErrorException condition_marginalize(cg)
+    @test_throws ArgumentError condition_marginalize(cg)
 end
 
 @testitem "condition_marginalize: errors on overlapping given/index" tags =
     [:unit, :operations] begin
     cg = DAG(directed(:A, :B), directed(:B, :C))
-    @test_throws ErrorException condition_marginalize(cg; given = [:B], index = [:B])
+    @test_throws ArgumentError condition_marginalize(cg; given = [:B], index = [:B])
 end
 
 @testitem "condition_marginalize: single remaining node returns empty AG" tags =
@@ -773,11 +773,11 @@ end
 end
 
 @testitem "DAG: parallel edges are rejected" tags = [:unit, :operations] begin
-    @test_throws ErrorException DAG("X --> Y, X --> Y")
-    @test_throws ErrorException UG("X --- Y, Y --- X")
-    @test_throws ErrorException ADMG("X <-> Z, Z <-> X")
-    @test_throws ErrorException PDAG("X --> Y, X --- Y")
-    @test_throws ErrorException PAG("X o-o Y, Y o-o X")
+    @test_throws ArgumentError DAG("X --> Y, X --> Y")
+    @test_throws ArgumentError UG("X --- Y, Y --- X")
+    @test_throws ArgumentError ADMG("X <-> Z, Z <-> X")
+    @test_throws ArgumentError PDAG("X --> Y, X --- Y")
+    @test_throws ArgumentError PAG("X o-o Y, Y o-o X")
 
     # An ADMG may carry a directed and a bidirected edge on the same pair.
     admg = ADMG("X --> Y, X <-> Y")
@@ -800,6 +800,6 @@ end
 
     # Re-adding an existing edge is rejected too, in either spelling.
     g = ADMG("X <-> Z")
-    @test_throws ErrorException add_edges(g, bidirected(:X, :Z))
-    @test_throws ErrorException add_edges(g, bidirected(:Z, :X))
+    @test_throws ArgumentError add_edges(g, bidirected(:X, :Z))
+    @test_throws ArgumentError add_edges(g, bidirected(:Z, :X))
 end

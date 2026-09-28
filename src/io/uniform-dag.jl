@@ -190,11 +190,13 @@ function uniform_dag(
 )
     n = Int(n)
     if n <= 0
-        error("n must be positive")
+        throw(ArgumentError("n must be positive"))
     end
     if counts !== nothing && length(counts) < n
-        error(
-            "counts table only covers n <= $(length(counts)) nodes, but n = $n was requested",
+        throw(
+            ArgumentError(
+                "counts table only covers n <= $(length(counts)) nodes, but n = $n was requested",
+            ),
         )
     end
 

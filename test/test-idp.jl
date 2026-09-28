@@ -65,11 +65,11 @@ end
 @testitem "idp: rejects malformed queries" tags = [:unit, :idp] begin
     pag = PAG("A o-> X, A --> Y, B o-> X, X --> Y")
 
-    @test_throws ErrorException idp(pag, :X, :X)
-    @test_throws ErrorException idp(pag, :Q, :Y)
-    @test_throws ErrorException idp(pag, :X, :Q)
-    @test_throws ErrorException idp(pag, Symbol[], :Y)
-    @test_throws ErrorException idp(pag, :X, Symbol[])
+    @test_throws ArgumentError idp(pag, :X, :X)
+    @test_throws ArgumentError idp(pag, :Q, :Y)
+    @test_throws ArgumentError idp(pag, :X, :Q)
+    @test_throws ArgumentError idp(pag, Symbol[], :Y)
+    @test_throws ArgumentError idp(pag, :X, Symbol[])
 end
 
 # ── buckets, pc-components, regions, visibility ─────────────────────────────

@@ -640,7 +640,7 @@ function validate(cg::CausalGraph, c::GraphConstraints)
 
     if !isempty(errors)
         name = graph_class_name(c)::String
-        error("Invalid " * name * ":\n  - " * join(errors, "\n  - "))
+        throw(ArgumentError("Invalid " * name * ":\n  - " * join(errors, "\n  - ")))
     end
 
     return cg

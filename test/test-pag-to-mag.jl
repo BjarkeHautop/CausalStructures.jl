@@ -108,7 +108,7 @@ end
     # A --> B, A --> C, B --> C is a valid MAG, but the triangle is
     # shielded, so no edge's mark is invariant across the equivalence class: the
     # true invariant PAG for this skeleton is all circles (A o-o B o-o C o-o A).
-    @test_throws ErrorException PAG(directed(:A, :B), directed(:A, :C), directed(:B, :C))
+    @test_throws ArgumentError PAG(directed(:A, :B), directed(:A, :C), directed(:B, :C))
 
     mag = MAG(directed(:A, :B), directed(:A, :C), directed(:B, :C))
     pag = mag_to_pag(mag)

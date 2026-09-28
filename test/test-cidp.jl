@@ -22,9 +22,9 @@ end
 @testitem "cidp: rejects malformed queries" tags = [:unit, :cidp] begin
     pag = PAG("A o-> X, A --> Y, B o-> X, X --> Y")
 
-    @test_throws ErrorException cidp(pag, :X, :Y; given = :X)
-    @test_throws ErrorException cidp(pag, :X, :Y; given = :Y)
-    @test_throws ErrorException cidp(pag, :X, :Y; given = :Q)
+    @test_throws ArgumentError cidp(pag, :X, :Y; given = :X)
+    @test_throws ArgumentError cidp(pag, :X, :Y; given = :Y)
+    @test_throws ArgumentError cidp(pag, :X, :Y; given = :Q)
 end
 
 # ── the paper's own worked example (Example 4 / Fig. 5, Obs. 2 and 3) ───────

@@ -437,19 +437,23 @@ function generate_graph(
 )
     n = Int(n)
     if n <= 0
-        error("n must be positive")
+        throw(ArgumentError("n must be positive"))
     end
 
     latents = Int(latents)
     if latents < 0
-        error("latents must be non-negative")
+        throw(ArgumentError("latents must be non-negative"))
     end
     if latents > 0 && !(class <: Union{ADMG,MAG,PAG})
-        error("latents is only supported for class = ADMG, class = MAG, or class = PAG")
+        throw(
+            ArgumentError(
+                "latents is only supported for class = ADMG, class = MAG, or class = PAG",
+            ),
+        )
     end
 
     if xor(m === nothing, p === nothing) == false
-        error("Supply exactly one of m or p")
+        throw(ArgumentError("Supply exactly one of m or p"))
     end
 
     local_rng = rng
@@ -463,12 +467,12 @@ function generate_graph(
     if p !== nothing
         p = Float64(p)
         if !isfinite(p) || p < 0 || p > 1
-            error("p must be in [0,1]")
+            throw(ArgumentError("p must be in [0,1]"))
         end
     else
         m = Int(m)
         if m < 0 || m > total_edges
-            error("m must be in 0..$(total_edges)")
+            throw(ArgumentError("m must be in 0..$(total_edges)"))
         end
     end
 
@@ -598,21 +602,25 @@ function simulate_data(
     error_sd::Union{Real,Tuple{Real,Real}} = 1.0,
 )
     if samples <= 0
-        error("samples must be positive")
+        throw(ArgumentError("samples must be positive"))
     end
-    coef_range[1] <= coef_range[2] || error("coef_range must have lo <= hi")
+    coef_range[1] <= coef_range[2] || throw(ArgumentError("coef_range must have lo <= hi"))
     if random_sign && coef_range[1] < 0
-        error("coef_range must have coef_range[1] >= 0 when random_sign = true")
+        throw(
+            ArgumentError(
+                "coef_range must have coef_range[1] >= 0 when random_sign = true",
+            ),
+        )
     end
     if error_sd isa Tuple
         lo, hi = error_sd
-        0 < lo <= hi || error("error_sd must have 0 < lo <= hi")
+        0 < lo <= hi || throw(ArgumentError("error_sd must have 0 < lo <= hi"))
     else
-        error_sd > 0 || error("error_sd must be positive")
+        error_sd > 0 || throw(ArgumentError("error_sd must be positive"))
     end
     B = cg.backend
     if isempty(B.nodes)
-        error("Cannot simulate data from an empty graph")
+        throw(ArgumentError("Cannot simulate data from an empty graph"))
     end
 
     local_rng = rng

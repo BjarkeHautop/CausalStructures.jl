@@ -94,10 +94,10 @@ end
     [:unit, :background_knowledge] begin
     dag = DAG("A --> B --> C")
     # DAG has B --> C, so requiring C --> B / forbidding B --> C contradicts it
-    @test_throws ErrorException dag_to_mpdag(dag, "C --> B")
-    @test_throws ErrorException dag_to_mpdag(dag, "B !--> C")
+    @test_throws ArgumentError dag_to_mpdag(dag, "C --> B")
+    @test_throws ArgumentError dag_to_mpdag(dag, "B !--> C")
     # required edge between non-adjacent nodes
-    @test_throws ErrorException dag_to_mpdag(dag, "A --> C")
+    @test_throws ArgumentError dag_to_mpdag(dag, "A --> C")
 end
 
 @testitem "dag_to_mpdag: enumerate_dags respects background knowledge" tags =
@@ -142,10 +142,10 @@ end
     @test Set(edges(mpdag2)) == Set(edges(cpdag))
 
     # conflicts with compelled orientations
-    @test_throws ErrorException apply_background_knowledge(cpdag, "C --> A")
-    @test_throws ErrorException apply_background_knowledge(cpdag, "A !--> C")
+    @test_throws ArgumentError apply_background_knowledge(cpdag, "C --> A")
+    @test_throws ArgumentError apply_background_knowledge(cpdag, "A !--> C")
     # required edge cannot add an adjacency
-    @test_throws ErrorException apply_background_knowledge(cpdag, "A --> B")
+    @test_throws ArgumentError apply_background_knowledge(cpdag, "A --> B")
     # unknown node
     @test_throws ArgumentError apply_background_knowledge(cpdag, "A --> Z")
 end
@@ -155,8 +155,8 @@ end
     # Every DAG of A --- B --- C has a non-collider at B, so requiring
     # A --> B <-- C creates a new v-structure.
     cpdag = CPDAG("A --- B --- C")
-    @test_throws ErrorException apply_background_knowledge(cpdag, "A --> B, C --> B")
-    @test_throws ErrorException apply_background_knowledge(cpdag, "B !--> A, B !--> C")
+    @test_throws ArgumentError apply_background_knowledge(cpdag, "A --> B, C --> B")
+    @test_throws ArgumentError apply_background_knowledge(cpdag, "B !--> A, B !--> C")
     # Each orientation alone is fine.
     @test Set(edges(apply_background_knowledge(cpdag, "A --> B"))) ==
           Set([directed(:A, :B), directed(:B, :C)])

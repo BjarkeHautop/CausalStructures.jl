@@ -3,27 +3,27 @@
 # ── generate_graph ────────────────────────────────────────────────────────────
 
 @testitem "generate_graph: errors on invalid n" tags = [:unit, :simulation] begin
-    @test_throws ErrorException generate_graph(0; m = 0)
+    @test_throws ArgumentError generate_graph(0; m = 0)
 end
 
 @testitem "generate_graph: errors on invalid p" tags = [:unit, :simulation] begin
-    @test_throws ErrorException generate_graph(4; p = -0.1)
-    @test_throws ErrorException generate_graph(4; p = 1.1)
+    @test_throws ArgumentError generate_graph(4; p = -0.1)
+    @test_throws ArgumentError generate_graph(4; p = 1.1)
 end
 
 @testitem "generate_graph: errors on invalid m" tags = [:unit, :simulation] begin
     n = 4
     tot = n * (n - 1) ÷ 2
-    @test_throws ErrorException generate_graph(n; m = -1)
-    @test_throws ErrorException generate_graph(n; m = tot + 1)
+    @test_throws ArgumentError generate_graph(n; m = -1)
+    @test_throws ArgumentError generate_graph(n; m = tot + 1)
 end
 
 @testitem "generate_graph: errors when neither m nor p supplied" tags = [:unit, :simulation] begin
-    @test_throws ErrorException generate_graph(5)
+    @test_throws ArgumentError generate_graph(5)
 end
 
 @testitem "generate_graph: errors when both m and p supplied" tags = [:unit, :simulation] begin
-    @test_throws ErrorException generate_graph(5; m = 2, p = 0.1)
+    @test_throws ArgumentError generate_graph(5; m = 2, p = 0.1)
 end
 
 @testitem "generate_graph: DAG with m=0 yields 0 edges and correct nodes" tags =
@@ -120,12 +120,12 @@ end
 
 @testitem "generate_graph: latents keyword rejected for DAG/CPDAG classes" tags =
     [:unit, :simulation] begin
-    @test_throws ErrorException generate_graph(4; m = 2, class = DAG, latents = 1)
-    @test_throws ErrorException generate_graph(4; m = 2, class = CPDAG, latents = 1)
+    @test_throws ArgumentError generate_graph(4; m = 2, class = DAG, latents = 1)
+    @test_throws ArgumentError generate_graph(4; m = 2, class = CPDAG, latents = 1)
 end
 
 @testitem "generate_graph: latents must be non-negative" tags = [:unit, :simulation] begin
-    @test_throws ErrorException generate_graph(4; m = 2, class = ADMG, latents = -1)
+    @test_throws ArgumentError generate_graph(4; m = 2, class = ADMG, latents = -1)
 end
 
 # ── simulate_data ─────────────────────────────────────────────────────────────
@@ -140,13 +140,13 @@ end
 
 @testitem "simulate_data: errors on empty graph" tags = [:unit, :simulation] begin
     empty_dag = DAG()
-    @test_throws ErrorException simulate_data(empty_dag; samples = 10)
+    @test_throws ArgumentError simulate_data(empty_dag; samples = 10)
 end
 
 @testitem "simulate_data: errors on invalid samples" tags = [:unit, :simulation] begin
     dag = DAG(directed(:A, :B))
-    @test_throws ErrorException simulate_data(dag; samples = 0)
-    @test_throws ErrorException simulate_data(dag; samples = -5)
+    @test_throws ArgumentError simulate_data(dag; samples = 0)
+    @test_throws ArgumentError simulate_data(dag; samples = -5)
 end
 
 @testitem "simulate_data: returns dict with correct keys" tags = [:unit, :simulation] begin
@@ -258,8 +258,8 @@ end
 @testitem "simulate_data: errors on invalid coef_range" tags = [:unit, :simulation] begin
     using Random
     dag = DAG(directed(:A, :B))
-    @test_throws ErrorException simulate_data(dag; samples = 10, coef_range = (1.0, -1.0))
-    @test_throws ErrorException simulate_data(
+    @test_throws ArgumentError simulate_data(dag; samples = 10, coef_range = (1.0, -1.0))
+    @test_throws ArgumentError simulate_data(
         dag;
         samples = 10,
         coef_range = (-1.0, 1.0),
@@ -269,10 +269,10 @@ end
 
 @testitem "simulate_data: errors on invalid error_sd" tags = [:unit, :simulation] begin
     dag = DAG(directed(:A, :B))
-    @test_throws ErrorException simulate_data(dag; samples = 10, error_sd = 0.0)
-    @test_throws ErrorException simulate_data(dag; samples = 10, error_sd = -1.0)
-    @test_throws ErrorException simulate_data(dag; samples = 10, error_sd = (1.0, 0.5))
-    @test_throws ErrorException simulate_data(dag; samples = 10, error_sd = (0.0, 1.0))
+    @test_throws ArgumentError simulate_data(dag; samples = 10, error_sd = 0.0)
+    @test_throws ArgumentError simulate_data(dag; samples = 10, error_sd = -1.0)
+    @test_throws ArgumentError simulate_data(dag; samples = 10, error_sd = (1.0, 0.5))
+    @test_throws ArgumentError simulate_data(dag; samples = 10, error_sd = (0.0, 1.0))
 end
 
 @testitem "simulate_data: random_sign draws both positive and negative coefficients" tags =

@@ -1,8 +1,8 @@
 # ── uniform_dag ─────────────────────────────────────────────────────────────
 
 @testitem "uniform_dag: errors on invalid n" tags = [:unit, :uniform_dag] begin
-    @test_throws ErrorException uniform_dag(0)
-    @test_throws ErrorException uniform_dag(-3)
+    @test_throws ArgumentError uniform_dag(0)
+    @test_throws ArgumentError uniform_dag(-3)
 end
 
 @testitem "uniform_dag: n=1 yields a single node and no edges" tags = [:unit, :uniform_dag] begin

@@ -103,15 +103,18 @@ function condition_marginalize(
     all_ns = Set(nodes(cg))
 
     for v in given
-        v in all_ns || error("Unknown node in given: $(v)")
+        v in all_ns || throw(ArgumentError("Unknown node in given: $(v)"))
     end
     for v in index
-        v in all_ns || error("Unknown node in index: $(v)")
+        v in all_ns || throw(ArgumentError("Unknown node in index: $(v)"))
     end
 
-    isempty(given) && isempty(index) && error("Either given or index must be non-empty")
+    isempty(given) &&
+        isempty(index) &&
+        throw(ArgumentError("Either given or index must be non-empty"))
 
-    !isempty(intersect(given, index)) && error("given and index must be disjoint")
+    !isempty(intersect(given, index)) &&
+        throw(ArgumentError("given and index must be disjoint"))
 
     removed = Set([given; index])
     remaining = [v for v in nodes(cg) if !(v in removed)]

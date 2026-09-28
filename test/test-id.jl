@@ -102,11 +102,11 @@ end
 @testitem "id: rejects malformed queries" tags = [:unit, :id] begin
     cg = DAG("Z --> X + Y, X --> Y")
 
-    @test_throws ErrorException id(cg, :X, :X)
-    @test_throws ErrorException id(cg, :Q, :Y)
-    @test_throws ErrorException id(cg, :X, :Q)
-    @test_throws ErrorException id(cg, Symbol[], :Y)
-    @test_throws ErrorException id(cg, :X, Symbol[])
+    @test_throws ArgumentError id(cg, :X, :X)
+    @test_throws ArgumentError id(cg, :Q, :Y)
+    @test_throws ArgumentError id(cg, :X, :Q)
+    @test_throws ArgumentError id(cg, Symbol[], :Y)
+    @test_throws ArgumentError id(cg, :X, Symbol[])
 end
 
 @testitem "idc: rule 2 moves the conditioning variable into the intervention" tags =
@@ -136,7 +136,7 @@ end
 @testitem "idc: rejects overlapping argument sets" tags = [:unit, :id] begin
     cg = DAG("Z --> X + Y, X --> Y")
 
-    @test_throws ErrorException idc(cg, :X, :Y; given = :X)
-    @test_throws ErrorException idc(cg, :X, :Y; given = :Y)
-    @test_throws ErrorException idc(cg, :X, :Y; given = :Q)
+    @test_throws ArgumentError idc(cg, :X, :Y; given = :X)
+    @test_throws ArgumentError idc(cg, :X, :Y; given = :Y)
+    @test_throws ArgumentError idc(cg, :X, :Y; given = :Q)
 end

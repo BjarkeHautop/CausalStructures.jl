@@ -123,7 +123,7 @@ under Meek's rules R1-R4 (see [`meek_closure`](@ref)).
 The [`MPDAG`](@ref) representing the DAGs consistent with both `cg` and `bk`.
 
 # Throws
-- `ErrorException`: if `bk` is inconsistent with `cg`, e.g. a required/forbidden
+- `ArgumentError`: if `bk` is inconsistent with `cg`, e.g. a required/forbidden
   edge is not adjacent in `cg`, contradicts the existing orientation of an edge,
   or contradicts an orientation implied by an earlier item in `bk` (e.g.
   `A --> B, C --> B` on `A --- B --- C`).
@@ -192,11 +192,19 @@ function apply_background_knowledge(cg::AbstractPDAG, bk::BackgroundKnowledge)
         if (a, b) in dir
             continue
         elseif (b, a) in dir
-            error("Background knowledge requires $a --> $b, but the graph has $b --> $a")
+            throw(
+                ArgumentError(
+                    "Background knowledge requires $a --> $b, but the graph has $b --> $a",
+                ),
+            )
         elseif _ordered_pair(a, b) in und
             push!(orient, (a, b))
         else
-            error("Background knowledge requires $a --> $b, but $a and $b are not adjacent")
+            throw(
+                ArgumentError(
+                    "Background knowledge requires $a --> $b, but $a and $b are not adjacent",
+                ),
+            )
         end
     end
 
@@ -204,7 +212,11 @@ function apply_background_knowledge(cg::AbstractPDAG, bk::BackgroundKnowledge)
         a, b = f.src, f.dst
         check_nodes(a, b)
         if (a, b) in dir
-            error("Background knowledge forbids $a --> $b, but the graph has $a --> $b")
+            throw(
+                ArgumentError(
+                    "Background knowledge forbids $a --> $b, but the graph has $a --> $b",
+                ),
+            )
         elseif _ordered_pair(a, b) in und
             push!(orient, (b, a))
         end
@@ -217,9 +229,11 @@ function apply_background_knowledge(cg::AbstractPDAG, bk::BackgroundKnowledge)
     for (a, b) in orient
         current = Set((e.src, e.dst) for e in result.edges if is_directed(e))
         (a, b) in current && continue
-        (b, a) in current && error(
-            "Background knowledge is inconsistent with the graph: " *
-            "requires $a --> $b, but $b --> $a is implied",
+        (b, a) in current && throw(
+            ArgumentError(
+                "Background knowledge is inconsistent with the graph: " *
+                "requires $a --> $b, but $b --> $a is implied",
+            ),
         )
         new_edges =
             [e for e in result.edges if _ordered_pair(e.src, e.dst) != _ordered_pair(a, b)]
@@ -250,7 +264,7 @@ The [`MPDAG`](@ref) representing the DAGs Markov equivalent to `cg` and consiste
 with `bk`.
 
 # Throws
-- `ErrorException`: if `cg` itself violates `bk`, i.e. `cg` has a forbidden edge or
+- `ArgumentError`: if `cg` itself violates `bk`, i.e. `cg` has a forbidden edge or
   is missing a required one.
 
 # Notes
@@ -283,15 +297,19 @@ MPDAG with 3 nodes and 2 edges:
 function dag_to_mpdag(cg::DAG, bk::BackgroundKnowledge = BackgroundKnowledge())
     dir = Set{Tuple{Symbol,Symbol}}((e.src, e.dst) for e in cg.edges)
     for e in bk.required
-        (e.src, e.dst) in dir || error(
-            "Background knowledge is inconsistent with the DAG: " *
-            "required $(e.src) --> $(e.dst) is not an edge of the DAG",
+        (e.src, e.dst) in dir || throw(
+            ArgumentError(
+                "Background knowledge is inconsistent with the DAG: " *
+                "required $(e.src) --> $(e.dst) is not an edge of the DAG",
+            ),
         )
     end
     for f in bk.forbidden
-        (f.src, f.dst) in dir && error(
-            "Background knowledge is inconsistent with the DAG: " *
-            "forbidden $(f.src) --> $(f.dst) is an edge of the DAG",
+        (f.src, f.dst) in dir && throw(
+            ArgumentError(
+                "Background knowledge is inconsistent with the DAG: " *
+                "forbidden $(f.src) --> $(f.dst) is an edge of the DAG",
+            ),
         )
     end
     return apply_background_knowledge(dag_to_cpdag(cg), bk)

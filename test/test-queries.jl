@@ -784,7 +784,7 @@ end
 end
 
 @testitem "is_cpdag: CPDAG constructor rejects invalid graph" tags = [:unit, :queries] begin
-    @test_throws ErrorException CPDAG(directed(:A, :B))
+    @test_throws ArgumentError CPDAG(directed(:A, :B))
 end
 
 @testitem "is_cpdag: generate_graph(CPDAG) produces valid CPDAGs" tags = [:unit, :queries] begin

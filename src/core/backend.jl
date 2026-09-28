@@ -372,7 +372,7 @@ _circle_circle_slice(B::PAGBackend, i::Int) = bucket_slice(B, i, 9)
 
 function node_index(cg::CausalGraph, node::Symbol)
     idx = get(cg.backend.index, node, 0)
-    idx == 0 && error("Unknown node: $(node)")
+    idx == 0 && throw(ArgumentError("Unknown node: $(node)"))
     return idx
 end
 
@@ -444,30 +444,34 @@ julia> neighbors(pdag, :B, mode = :undirected)
 function neighbors(cg::CausalGraph, node::Symbol; mode::Symbol = :all)
     B = cg.backend
     idx = get(B.index, node, 0)
-    idx == 0 && error("Unknown node: $(node)")
+    idx == 0 && throw(ArgumentError("Unknown node: $(node)"))
     if mode === :all
         return B.nodes[_all_nbrs_slice(B, idx)]
     elseif mode === :in
         B isa
         Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend,UNKNOWNBackend,PAGBackend} ||
-            error("mode :in is not supported for $(nameof(typeof(cg)))")
+            throw(ArgumentError("mode :in is not supported for $(nameof(typeof(cg)))"))
         return B.nodes[_parents_slice(B, idx)]
     elseif mode === :out
         B isa
         Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend,UNKNOWNBackend,PAGBackend} ||
-            error("mode :out is not supported for $(nameof(typeof(cg)))")
+            throw(ArgumentError("mode :out is not supported for $(nameof(typeof(cg)))"))
         return B.nodes[_children_slice(B, idx)]
     elseif mode === :undirected
-        B isa Union{UGBackend,PDAGBackend,AGBackend,UNKNOWNBackend,PAGBackend} ||
-            error("mode :undirected is not supported for $(nameof(typeof(cg)))")
+        B isa Union{UGBackend,PDAGBackend,AGBackend,UNKNOWNBackend,PAGBackend} || throw(
+            ArgumentError("mode :undirected is not supported for $(nameof(typeof(cg)))"),
+        )
         return B.nodes[_undirected_slice(B, idx)]
     elseif mode === :bidirected
-        B isa Union{ADMGBackend,AGBackend,UNKNOWNBackend,PAGBackend} ||
-            error("mode :bidirected is not supported for $(nameof(typeof(cg)))")
+        B isa Union{ADMGBackend,AGBackend,UNKNOWNBackend,PAGBackend} || throw(
+            ArgumentError("mode :bidirected is not supported for $(nameof(typeof(cg)))"),
+        )
         return B.nodes[_spouses_slice(B, idx)]
     else
-        error(
-            "Unknown mode :$(mode). Valid modes: :all, :in, :out, :undirected, :bidirected",
+        throw(
+            ArgumentError(
+                "Unknown mode :$(mode). Valid modes: :all, :in, :out, :undirected, :bidirected",
+            ),
         )
     end
 end
@@ -566,7 +570,7 @@ function has_edge(cg::CausalGraph, src::Symbol, dst::Symbol)
     B = cg.backend
     src_idx = get(B.index, src, 0)
     dst_idx = get(B.index, dst, 0)
-    src_idx == 0 && error("Unknown node: $(src)")
-    dst_idx == 0 && error("Unknown node: $(dst)")
+    src_idx == 0 && throw(ArgumentError("Unknown node: $(src)"))
+    dst_idx == 0 && throw(ArgumentError("Unknown node: $(dst)"))
     dst_idx ∈ _all_nbrs_slice(B, src_idx)
 end

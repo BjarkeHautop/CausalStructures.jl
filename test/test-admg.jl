@@ -13,11 +13,11 @@
 end
 
 @testitem "ADMG rejects undirected edges" tags = [:unit, :admg] begin
-    @test_throws ErrorException ADMG(directed(:A, :B), undirected(:B, :C))
+    @test_throws ArgumentError ADMG(directed(:A, :B), undirected(:B, :C))
 end
 
 @testitem "ADMG rejects directed cycles" tags = [:unit, :admg] begin
-    @test_throws ErrorException ADMG(directed(:A, :B), directed(:B, :C), directed(:C, :A))
+    @test_throws ArgumentError ADMG(directed(:A, :B), directed(:B, :C), directed(:C, :A))
 end
 
 # ── parents / children for ADMG ───────────────────────────────────────────────

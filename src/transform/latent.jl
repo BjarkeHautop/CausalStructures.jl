@@ -162,7 +162,7 @@ function exogenize(cg::DAG, nodes::Union{Symbol,AbstractVector{Symbol}})
     nodes_to_exo = _as_symbol_vec(nodes)
 
     for v in nodes_to_exo
-        haskey(B.index, v) || error("Node $(v) not in graph")
+        haskey(B.index, v) || throw(ArgumentError("Node $(v) not in graph"))
     end
 
     pa = [Set{Int}() for _ = 1:n]
@@ -248,7 +248,7 @@ function normalize_latent_structure(cg::DAG, latents::Union{Symbol,AbstractVecto
     latents_vec = _as_symbol_vec(latents)
 
     for l in latents_vec
-        haskey(B.index, l) || error("Unknown latent node: $(l)")
+        haskey(B.index, l) || throw(ArgumentError("Unknown latent node: $(l)"))
     end
 
     isempty(latents_vec) && return cg
