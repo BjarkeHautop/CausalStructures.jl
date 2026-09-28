@@ -85,14 +85,14 @@ end
     # Line 7 hands a factorized Q[S'] down to a recursive call that reaches
     # line 6 again, so the conditionals there cannot be read off the original
     # joint and are emitted as ratios instead. This is the only branch of
-    # `_conditional` that produces a Quotient.
+    # `_conditional` that produces a quotient node.
     cg = ADMG(
         "A --> B, A --> D, B --> C, B --> D, C --> E, " *
         "A <-> C, A <-> E, B <-> D, D <-> E",
     )
     result = id(cg, :C, :E)
 
-    @test result isa CausalStructures.Quotient
+    @test result.kind === :quotient
     # The denominator sums over E as well, and no other factor there mentions
     # it, so P(E | A, B, C) sums away and only the numerator keeps it.
     @test string(result) ==

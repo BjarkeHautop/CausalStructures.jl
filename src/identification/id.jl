@@ -48,7 +48,7 @@ end
 function _conditional(P::Estimand, vs, order, i::Int)
     predecessors = order[1:(i-1)]
 
-    if P isa Prob && isempty(P.given) && Set(P.vars) == Set(vs)
+    if P.kind === :prob && isempty(P.given) && Set(P.vars) == Set(vs)
         return prob(order[i]; given = predecessors)
     end
 

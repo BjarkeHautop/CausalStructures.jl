@@ -49,10 +49,6 @@ cidp
 
 ```@docs
 Estimand
-Prob
-Marginal
-Product
-Quotient
 prob
 marginal
 product

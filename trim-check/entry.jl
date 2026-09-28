@@ -289,11 +289,9 @@ function _check_iv()
     return nothing
 end
 
-# --- src/identification/id.jl, estimand.jl ----------------------------------
-#
-# Currently broken; the recursive struct fields not allowed in
-# --trim=safe mode.
-function _check_id_not_trim_safe()
+# --- src/identification/id.jl, idp.jl, cidp.jl, estimand.jl -----------------
+
+function _check_id()
     dag = DAG("Z --> X + Y, X --> Y")
     id(dag, :X, :Y)
     idc(dag, :X, :Y; given = :Z)
@@ -304,6 +302,10 @@ function _check_id_not_trim_safe()
 
     bow = ADMG("X --> Y, X <-> Y")
     id(bow, :X, :Y)
+
+    pag = mag_to_pag(MAG("B --> X, A <-> X, A --> Y, X --> Y"))
+    idp(pag, :X, :Y)
+    cidp(pag, :X, :Y; given = :A)
 
     e = marginal([:Z], product([prob(:Y; given = [:X, :Z]), prob(:Z)]))
     quotient(prob([:Y, :Z]; given = [:X]), prob(:Z; given = [:X]))
@@ -436,8 +438,8 @@ function _check_metrics()
     aid(dag_true, dag_guess; type = :ancestor)
     aid(dag_true, dag_guess; normalized = true)
 
-    cpdag_true = CPDAG("A --> B --> C, A --> C")
-    cpdag_guess = CPDAG("A --> B --> C")
+    cpdag_true = CPDAG("A --> X <-- C, X --> Y")
+    cpdag_guess = CPDAG("A --> X <-- C, X --> Y")
     aid(cpdag_true, cpdag_guess)
 
     hd(dag_true, dag_guess)
@@ -488,6 +490,7 @@ function _check_io()
     simulate_data(dag; samples = 20)
 
     uniform_dag(5)
+    uniform_dag_counts(5)
     return nothing
 end
 
@@ -504,6 +507,7 @@ Base.@ccallable function trim_check_run()::Cint
     _check_condition_marginalize()
     _check_possible_sets()
     _check_pagcauses()
+    _check_id()
     _check_pdag_transform()
     _check_mag_transform()
     _check_latent()

@@ -1,17 +1,26 @@
 """
     Estimand
 
-Abstract supertype for symbolic causal estimands: formulas expressed purely in
-terms of the observational distribution.
+A symbolic causal estimand: a formula expressed purely in terms of the
+observational distribution, as an immutable expression tree. Build one with
+the smart constructors [`prob`](@ref), [`marginal`](@ref), [`product`](@ref),
+and [`quotient`](@ref).
 
-The concrete subtypes are [`Prob`](@ref), [`Marginal`](@ref),
-[`Product`](@ref), and [`Quotient`](@ref). Build them with the smart
-constructors [`prob`](@ref), [`marginal`](@ref), [`product`](@ref), and
-[`quotient`](@ref).
+A single concrete type covers every node of the tree, tagged by `kind`; the
+fields double up across kinds rather than one field per possible meaning:
+
+# Fields
+- `kind::Symbol`: one of `:prob`, `:marginal`, `:product`, `:quotient`.
+- `vars::Vector{Symbol}`: a `:prob` node's head, or a `:marginal` node's
+  summation index. Empty for `:product`/`:quotient`.
+- `given::Vector{Symbol}`: a `:prob` node's conditioning set. Empty otherwise.
+- `terms::Vector{Estimand}`: a `:marginal` node's single summand (as a
+  one-element vector), a `:product` node's factors, or a `:quotient` node's
+  `[numerator, denominator]`. Empty for `:prob`.
 
 # Output formats
 
-It can be rendered as text, rendered as LaTeX, or taken apart field by field:
+It can be rendered as text or as LaTeX:
 
 ```jldoctest
 julia> e = marginal([:Z], product([prob(:Y; given = [:X, :Z]), prob(:Z)]));
@@ -19,13 +28,11 @@ julia> e = marginal([:Z], product([prob(:Y; given = [:X, :Z]), prob(:Z)]));
 julia> string(e)
 "Σ_{Z} P(Y | X, Z) P(Z)"
 
-julia> e.index
-1-element Vector{Symbol}:
- :Z
+julia> e.kind
+:marginal
 
-julia> e.term.terms[1].given
-2-element Vector{Symbol}:
- :X
+julia> e.vars
+1-element Vector{Symbol}:
  :Z
 ```
 
@@ -33,90 +40,61 @@ The LaTeX form comes from the `MIME"text/latex"` method, so
 `repr(MIME("text/latex"), e)` gives `\$\\sum_{Z} P(Y \\mid X, Z) P(Z)\$`,
 used for frontend documentation.
 """
-abstract type Estimand end
-
-"""
-    Prob(vars, given)
-
-A probability term `P(vars | given)`, the leaf of an [`Estimand`](@ref) tree.
-
-Both variable lists are stored sorted, so that terms differing only in the
-order the variables were listed compare equal. Use [`prob`](@ref) to construct.
-"""
-struct Prob <: Estimand
+struct Estimand
+    kind::Symbol
     vars::Vector{Symbol}
     given::Vector{Symbol}
-end
-
-"""
-    Marginal(index, term)
-
-The sum of `term` over all values of the variables in `index`. Use
-[`marginal`](@ref) to construct.
-"""
-struct Marginal <: Estimand
-    index::Vector{Symbol}
-    term::Estimand
-end
-
-"""
-    Product(terms)
-
-The product of `terms`. An empty product is the multiplicative identity `1`.
-Use [`product`](@ref) to construct.
-"""
-struct Product <: Estimand
     terms::Vector{Estimand}
 end
 
-"""
-    Quotient(num, den)
+# Low-level node builders, bypassing the smart constructors' simplification.
+_prob_node(vars, given) = Estimand(:prob, vars, given, Estimand[])
+_marginal_node(index, term) = Estimand(:marginal, index, Symbol[], Estimand[term])
+_product_node(terms) = Estimand(:product, Symbol[], Symbol[], terms)
+_quotient_node(num, den) = Estimand(:quotient, Symbol[], Symbol[], Estimand[num, den])
 
-The ratio `num / den`. Use [`quotient`](@ref) to construct.
-"""
-struct Quotient <: Estimand
-    num::Estimand
-    den::Estimand
-end
+# A `:marginal` node's summand, or a `:quotient` node's numerator/denominator.
+_term(e::Estimand) = e.terms[1]
+_num(e::Estimand) = e.terms[1]
+_den(e::Estimand) = e.terms[2]
 
 # The multiplicative identity, produced by `product(Estimand[])` and by
 # `marginal` when everything has been summed out.
-const _ONE = Product(Estimand[])
+const _ONE = _product_node(Estimand[])
 
 Base.one(::Type{Estimand}) = _ONE
-Base.isone(e::Estimand) = e isa Product && isempty(e.terms)
+Base.isone(e::Estimand) = e.kind === :product && isempty(e.terms)
 
 # --- equality and hashing ---------------------------------------------------
 
-Base.:(==)(a::Prob, b::Prob) = a.vars == b.vars && a.given == b.given
-Base.:(==)(a::Marginal, b::Marginal) = a.index == b.index && a.term == b.term
-Base.:(==)(a::Product, b::Product) = a.terms == b.terms
-Base.:(==)(a::Quotient, b::Quotient) = a.num == b.num && a.den == b.den
-Base.:(==)(::Estimand, ::Estimand) = false
+Base.:(==)(a::Estimand, b::Estimand) =
+    a.kind == b.kind && a.vars == b.vars && a.given == b.given && a.terms == b.terms
 
-Base.hash(e::Prob, h::UInt) = hash(e.given, hash(e.vars, hash(:Prob, h)))
-Base.hash(e::Marginal, h::UInt) = hash(e.term, hash(e.index, hash(:Marginal, h)))
-Base.hash(e::Product, h::UInt) = hash(e.terms, hash(:Product, h))
-Base.hash(e::Quotient, h::UInt) = hash(e.den, hash(e.num, hash(:Quotient, h)))
+Base.hash(e::Estimand, h::UInt) =
+    hash(e.terms, hash(e.given, hash(e.vars, hash(e.kind, h))))
 
 # --- free variables ---------------------------------------------------------
 
 # The variables an expression is a function of. A summation index is bound by
 # the sum that introduces it, so it is not free in that sum.
-_free_vars(e::Prob) = Set{Symbol}(vcat(e.vars, e.given))
-_free_vars(e::Marginal) = setdiff(_free_vars(e.term), Set(e.index))
-_free_vars(e::Quotient) = union(_free_vars(e.num), _free_vars(e.den))
-function _free_vars(e::Product)
-    acc = Set{Symbol}()
-    for t in e.terms
-        union!(acc, _free_vars(t))
+function _free_vars(e::Estimand)
+    if e.kind === :prob
+        return Set{Symbol}(vcat(e.vars, e.given))
+    elseif e.kind === :marginal
+        return setdiff(_free_vars(_term(e)), Set(e.vars))
+    elseif e.kind === :quotient
+        return union(_free_vars(_num(e)), _free_vars(_den(e)))
+    else
+        acc = Set{Symbol}()
+        for t in e.terms
+            union!(acc, _free_vars(t))
+        end
+        return acc
     end
-    return acc
 end
 
 # The factors of an expression, as a fresh vector the caller may mutate.
-_factors(e::Product) = copy(e.terms)
-_factors(e::Estimand) = Estimand[e]
+_factors(e::Estimand) = e.kind === :product ? copy(e.terms) : Estimand[e]
 
 # --- smart constructors -----------------------------------------------------
 
@@ -155,7 +133,7 @@ function prob(vars; given = Symbol[])
     g = sort(unique(_as_symbols(given)))
     v = sort(setdiff(unique(_as_symbols(vars)), g))
     isempty(v) && return _ONE
-    return Prob(v, g)
+    return _prob_node(v, g)
 end
 
 _as_symbols(s::Symbol) = [s]
@@ -218,24 +196,24 @@ function marginal(index, term::Estimand)
     isempty(idx) && return term
 
     # Σ_a P(a, b | c) == P(b | c).
-    if term isa Prob && issubset(idx, term.vars)
+    if term.kind === :prob && issubset(idx, term.vars)
         return prob(setdiff(term.vars, idx); given = term.given)
     end
 
     # Σ_a Σ_b f  ==  Σ_{a, b} f
-    term isa Marginal && return marginal(union(idx, term.index), term.term)
+    term.kind === :marginal && return marginal(union(idx, term.vars), _term(term))
 
     # Σ_{a, b} (f / g) == Σ_b ((Σ_a f) / g), when g does not mention a.
-    if term isa Quotient
-        den_vars = _free_vars(term.den)
+    if term.kind === :quotient
+        den_vars = _free_vars(_den(term))
         inner = filter(v -> !(v in den_vars), idx)
         if !isempty(inner)
             outer = filter(in(den_vars), idx)
-            return marginal(outer, quotient(marginal(inner, term.num), term.den))
+            return marginal(outer, quotient(marginal(inner, _num(term)), _den(term)))
         end
     end
 
-    if term isa Product
+    if term.kind === :product
         outside, inside, rest = _narrow_sum(term.terms, idx)
         # Anything pulled out or dropped shrinks the summand, so re-entering
         # `marginal` here terminates.
@@ -243,7 +221,7 @@ function marginal(index, term::Estimand)
             return _rebuild_sum(term.terms, outside, inside, rest)
     end
 
-    return Marginal(idx, term)
+    return _marginal_node(idx, term)
 end
 
 # Sort the positions of a summed product's factors into those that can leave the
@@ -274,7 +252,7 @@ function _narrow_sum(terms::Vector{Estimand}, index::Vector{Symbol})
         # Σ_a P(a | c) == 1, provided nothing else under the sum mentions `a`.
         for (k, p) in pairs(inside)
             t = terms[p]
-            t isa Prob && issubset(t.vars, rest) || continue
+            t.kind === :prob && issubset(t.vars, rest) || continue
             all(q -> q == p || isdisjoint(t.vars, _free_vars(terms[q])), inside) || continue
             rest = setdiff(rest, t.vars)
             deleteat!(inside, k)
@@ -343,7 +321,7 @@ P(Y)
 function product(terms)
     flat = Estimand[]
     for t in terms
-        if t isa Product
+        if t.kind === :product
             append!(flat, t.terms)
         else
             push!(flat, t)
@@ -351,7 +329,7 @@ function product(terms)
     end
     filter!(!isone, flat)
     length(flat) == 1 && return flat[1]
-    return Product(flat)
+    return _product_node(flat)
 end
 
 """
@@ -361,10 +339,10 @@ Form the ratio `num / den`.
 
 A denominator of `1` returns `num` unchanged. When the denominator is itself
 `a / b` and the numerator is exactly `a`, the ratio collapses to `b`; this is
-what most often turns `_reduce_bucket`'s divisions back into something
-readable. Otherwise, a factor appearing on both sides cancels, and a
-numerator factor and a denominator factor related by the chain rule
-`P(a, b | c) = P(a | b, c) P(b | c)` divide out: `P(a, b | c) / P(b | c)`
+what most often turns the divisions performed while identifying a PAG effect
+back into something readable. Otherwise, a factor appearing on both sides
+cancels, and a numerator factor and a denominator factor related by the chain
+rule `P(a, b | c) = P(a | b, c) P(b | c)` divide out: `P(a, b | c) / P(b | c)`
 becomes `P(a | b, c)`, and `P(a, b | c) / P(a | b, c)` becomes `P(b | c)`.
 That is what turns the ratios of marginals produced by the ID recursion back
 into ordinary conditionals.
@@ -412,7 +390,7 @@ function quotient(num::Estimand, den::Estimand)
     isone(den) && return num
 
     # a / (a / b) == b.
-    den isa Quotient && num == den.num && return den.den
+    den.kind === :quotient && num == _num(den) && return _den(den)
 
     # A factor shared by both sides cancels, and a pair of probability terms
     # related by the chain rule divides out. Re-entering with one factor fewer
@@ -427,16 +405,16 @@ function quotient(num::Estimand, den::Estimand)
         return quotient(product(nf), product(df))
     end
 
-    return Quotient(num, den)
+    return _quotient_node(num, den)
 end
 
 # The ratio `n / d` of two factors when it simplifies to a single factor, or
 # `nothing`. Both simplifications are the chain rule
 # `P(a, b | c) = P(a | b, c) P(b | c)`, read with either factor as divisor.
-_divide_factors(n::Estimand, d::Estimand) = n == d ? _ONE : nothing
-
-function _divide_factors(n::Prob, d::Prob)
+function _divide_factors(n::Estimand, d::Estimand)
     n == d && return _ONE
+    (n.kind === :prob && d.kind === :prob) || return nothing
+
     issubset(d.vars, n.vars) || return nothing
 
     # P(a, b | c) / P(b | c) == P(a | b, c).
@@ -457,29 +435,35 @@ end
 
 # Every symbol occurring anywhere, bound or free. Used to pick replacement
 # names that cannot collide with anything already in the tree.
-_vars_used(e::Prob) = Set{Symbol}(vcat(e.vars, e.given))
-_vars_used(e::Marginal) = union(Set{Symbol}(e.index), _vars_used(e.term))
-_vars_used(e::Quotient) = union(_vars_used(e.num), _vars_used(e.den))
-function _vars_used(e::Product)
-    acc = Set{Symbol}()
-    for t in e.terms
-        union!(acc, _vars_used(t))
+function _vars_used(e::Estimand)
+    if e.kind === :prob
+        return Set{Symbol}(vcat(e.vars, e.given))
+    elseif e.kind === :marginal
+        return union(Set{Symbol}(e.vars), _vars_used(_term(e)))
+    elseif e.kind === :quotient
+        return union(_vars_used(_num(e)), _vars_used(_den(e)))
+    else
+        acc = Set{Symbol}()
+        for t in e.terms
+            union!(acc, _vars_used(t))
+        end
+        return acc
     end
-    return acc
 end
 
-_rename(e::Prob, m::Dict{Symbol,Symbol}) =
-    prob([get(m, v, v) for v in e.vars]; given = [get(m, v, v) for v in e.given])
-_rename(e::Product, m::Dict{Symbol,Symbol}) =
-    Product(Estimand[_rename(t, m) for t in e.terms])
-_rename(e::Quotient, m::Dict{Symbol,Symbol}) =
-    Quotient(_rename(e.num, m), _rename(e.den, m))
-
-function _rename(e::Marginal, m::Dict{Symbol,Symbol})
-    # A nested sum over the same symbol rebinds it, so substitution stops there.
-    active = Dict{Symbol,Symbol}(k => v for (k, v) in m if !(k in e.index))
-    isempty(active) && return e
-    return Marginal(e.index, _rename(e.term, active))
+function _rename(e::Estimand, m::Dict{Symbol,Symbol})
+    if e.kind === :prob
+        return prob([get(m, v, v) for v in e.vars]; given = [get(m, v, v) for v in e.given])
+    elseif e.kind === :product
+        return _product_node(Estimand[_rename(t, m) for t in e.terms])
+    elseif e.kind === :quotient
+        return _quotient_node(_rename(_num(e), m), _rename(_den(e), m))
+    else
+        # A nested sum over the same symbol rebinds it, so substitution stops there.
+        active = Dict{Symbol,Symbol}(k => v for (k, v) in m if !(k in e.vars))
+        isempty(active) && return e
+        return _marginal_node(e.vars, _rename(_term(e), active))
+    end
 end
 
 # Rename summation indices so that no sum binds a variable also used in its
@@ -493,67 +477,70 @@ function _freshen(e::Estimand, reserved = Set{Symbol}())
 end
 
 # The walk carries `outer`, the names visible from the enclosing context.
-_freshen_walk(e::Prob, ::Set{Symbol}) = e
-_freshen_walk(e::Product, outer::Set{Symbol}) =
-    Product(Estimand[_freshen_walk(t, outer) for t in e.terms])
-_freshen_walk(e::Quotient, outer::Set{Symbol}) =
-    Quotient(_freshen_walk(e.num, outer), _freshen_walk(e.den, outer))
+function _freshen_walk(e::Estimand, outer::Set{Symbol})
+    if e.kind === :prob
+        return e
+    elseif e.kind === :product
+        return _product_node(Estimand[_freshen_walk(t, outer) for t in e.terms])
+    elseif e.kind === :quotient
+        return _quotient_node(_freshen_walk(_num(e), outer), _freshen_walk(_den(e), outer))
+    else
+        # A replacement name must avoid capturing something inside this sum's
+        # own subtree and stay distinct from the context.
+        taken = union(outer, _vars_used(_term(e)))
 
-function _freshen_walk(e::Marginal, outer::Set{Symbol})
-    # A replacement name must avoid capturing something inside this sum's own
-    # subtree and stay distinct from the context.
-    taken = union(outer, _vars_used(e.term))
+        mapping = Dict{Symbol,Symbol}()
+        new_index = Symbol[]
 
-    mapping = Dict{Symbol,Symbol}()
-    new_index = Symbol[]
-
-    for v in e.index
-        if v in outer
-            w = Symbol(string(v, "'"))
-            while w in taken
-                w = Symbol(string(w, "'"))
+        for v in e.vars
+            if v in outer
+                w = Symbol(string(v, "'"))
+                while w in taken
+                    w = Symbol(string(w, "'"))
+                end
+                mapping[v] = w
+                push!(new_index, w)
+                push!(taken, w)
+            else
+                push!(new_index, v)
             end
-            mapping[v] = w
-            push!(new_index, w)
-            push!(taken, w)
-        else
-            push!(new_index, v)
         end
-    end
 
-    term = isempty(mapping) ? e.term : _rename(e.term, mapping)
-    return Marginal(sort(new_index), _freshen_walk(term, union(outer, Set(new_index))))
+        term = isempty(mapping) ? _term(e) : _rename(_term(e), mapping)
+        return _marginal_node(
+            sort(new_index),
+            _freshen_walk(term, union(outer, Set(new_index))),
+        )
+    end
 end
 
 # --- printing ---------------------------------------------------------------
 
 # A term is atomic if it never needs parentheses when embedded in a larger
 # expression. Only probability terms and the literal 1 qualify.
-_is_atomic(::Prob) = true
-_is_atomic(e::Product) = isempty(e.terms)
-_is_atomic(::Estimand) = false
+_is_atomic(e::Estimand) = e.kind === :prob || (e.kind === :product && isempty(e.terms))
 
 _wrap(s::AbstractString, e::Estimand) = _is_atomic(e) ? s : "(" * s * ")"
 
-_estimand_str(e::Prob) =
-    isempty(e.given) ? "P(" * join(e.vars, ", ") * ")" :
-    "P(" * join(e.vars, ", ") * " | " * join(e.given, ", ") * ")"
-
-function _estimand_str(e::Product)
-    isempty(e.terms) && return "1"
-    return join((_wrap(_estimand_str(t), t) for t in e.terms), " ")
+function _estimand_str(e::Estimand)
+    if e.kind === :prob
+        return isempty(e.given) ? "P(" * join(e.vars, ", ") * ")" :
+               "P(" * join(e.vars, ", ") * " | " * join(e.given, ", ") * ")"
+    elseif e.kind === :product
+        isempty(e.terms) && return "1"
+        return join(String[_wrap(_estimand_str(t), t) for t in e.terms], " ")
+    elseif e.kind === :marginal
+        inner = _estimand_str(_term(e))
+        # A product under a sum needs no parentheses
+        # but a quotient does, to keep the summed factor out of the denominator.
+        body = _term(e).kind === :quotient ? "(" * inner * ")" : inner
+        return "Σ_{" * join(e.vars, ", ") * "} " * body
+    else
+        return _wrap(_estimand_str(_num(e)), _num(e)) *
+               " / " *
+               _wrap(_estimand_str(_den(e)), _den(e))
+    end
 end
-
-function _estimand_str(e::Marginal)
-    inner = _estimand_str(e.term)
-    # A product under a sum needs no parentheses
-    # but a quotient does, to keep the summed factor out of the denominator.
-    body = e.term isa Quotient ? "(" * inner * ")" : inner
-    return "Σ_{" * join(e.index, ", ") * "} " * body
-end
-
-_estimand_str(e::Quotient) =
-    _wrap(_estimand_str(e.num), e.num) * " / " * _wrap(_estimand_str(e.den), e.den)
 
 Base.show(io::IO, e::Estimand) = print(io, _estimand_str(e))
 Base.show(io::IO, ::MIME"text/plain", e::Estimand) = print(io, _estimand_str(e))
@@ -562,24 +549,22 @@ Base.show(io::IO, ::MIME"text/plain", e::Estimand) = print(io, _estimand_str(e))
 
 _latex_wrap(s::AbstractString, e::Estimand) = _is_atomic(e) ? s : "\\left(" * s * "\\right)"
 
-_estimand_latex(e::Prob) =
-    isempty(e.given) ? "P(" * join(e.vars, ", ") * ")" :
-    "P(" * join(e.vars, ", ") * " \\mid " * join(e.given, ", ") * ")"
-
-function _estimand_latex(e::Product)
-    isempty(e.terms) && return "1"
-    return join((_latex_wrap(_estimand_latex(t), t) for t in e.terms), " ")
+function _estimand_latex(e::Estimand)
+    if e.kind === :prob
+        return isempty(e.given) ? "P(" * join(e.vars, ", ") * ")" :
+               "P(" * join(e.vars, ", ") * " \\mid " * join(e.given, ", ") * ")"
+    elseif e.kind === :product
+        isempty(e.terms) && return "1"
+        return join(String[_latex_wrap(_estimand_latex(t), t) for t in e.terms], " ")
+    elseif e.kind === :marginal
+        inner = _estimand_latex(_term(e))
+        body = _term(e).kind === :quotient ? "\\left(" * inner * "\\right)" : inner
+        return "\\sum_{" * join(e.vars, ", ") * "} " * body
+    else
+        # \frac already groups both arguments, so neither side needs extra parentheses.
+        return "\\frac{" * _estimand_latex(_num(e)) * "}{" * _estimand_latex(_den(e)) * "}"
+    end
 end
-
-function _estimand_latex(e::Marginal)
-    inner = _estimand_latex(e.term)
-    body = e.term isa Quotient ? "\\left(" * inner * "\\right)" : inner
-    return "\\sum_{" * join(e.index, ", ") * "} " * body
-end
-
-# \frac already groups both arguments, so neither side needs extra parentheses.
-_estimand_latex(e::Quotient) =
-    "\\frac{" * _estimand_latex(e.num) * "}{" * _estimand_latex(e.den) * "}"
 
 Base.show(io::IO, ::MIME"text/latex", e::Estimand) =
     print(io, "\$", _estimand_latex(e), "\$")

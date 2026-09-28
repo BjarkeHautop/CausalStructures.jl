@@ -149,8 +149,16 @@ dag4 = DAG("Z --> X + Y, X --> Y")
 id(dag4, :X, :Y)
 ```
 
-Projecting `U` out of the front-door graph gives an ADMG where no adjustment set
-exists, yet the effect is identified through the mediator:
+Unlike the criteria above, `id` also works when no adjustment set exists at all.
+Recall the front-door graph from before, where `U` is an unobserved confounder
+of `X` and `Y`, and `M` mediates the effect of `X` on `Y`:
+
+```@example id
+plot(dag2)
+```
+
+Projecting `U` out gives an ADMG with no valid adjustment set, yet `id` still
+identifies the effect through the mediator:
 
 ```@example id
 admg2 = latent_project(dag2, :U)
@@ -160,11 +168,14 @@ id(admg2, :X, :Y)
 which is the standard front-door adjustment formula. The primed `X'` is a summation
 index distinct from the intervened value of `X`, following the usual convention.
 
-In the following graph the causal effect cannot be identified:
+`id` can also detect non-identifiability. Recall the ADMG obtained earlier by
+projecting the unobserved instrument-confounder graph's `U` out of `dag3`:
 
 ```@example id
-admg
+plot(admg)
 ```
+
+Here the causal effect cannot be identified:
 
 ```@example id
 id(admg, :X, :Y) === nothing
@@ -178,11 +189,11 @@ idc(admg2, :X, :Y; given = :M)
 
 ### Working with the result
 
-The result is an immutable tree of
-[`Prob`](@ref), [`Marginal`](@ref), [`Product`](@ref), and [`Quotient`](@ref)
-nodes, so it can be inspected or transformed programmatically:
+The result is an immutable [`Estimand`](@ref) expression tree, tagged by
+`kind` (`:prob`, `:marginal`, `:product`, or `:quotient`), so it can be
+inspected or transformed programmatically:
 
 ```@example id
 e = id(dag4, :X, :Y)
-(typeof(e), e.index, typeof.(e.term.terms))
+(e.kind, e.vars, [t.kind for t in e.terms[1].terms])
 ```

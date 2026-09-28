@@ -34,9 +34,9 @@ end
     inner = marginal([:W], prob(:Y; given = [:W, :X]))
     outer = marginal([:Z], inner)
 
-    @test outer isa Marginal
-    @test outer.index == [:W, :Z]
-    @test outer.term isa Prob
+    @test outer.kind === :marginal
+    @test outer.vars == [:W, :Z]
+    @test outer.terms[1].kind === :prob
 end
 
 @testitem "marginal prints its index set" tags = [:unit, :estimand] begin
@@ -54,7 +54,7 @@ end
 
     # Nested products are spliced into the parent rather than kept as a subtree.
     nested = product([product([a, b]), prob(:Z)])
-    @test nested isa Product
+    @test nested.kind === :product
     @test length(nested.terms) == 3
 end
 
@@ -81,7 +81,7 @@ end
     # kept as one.
     e = quotient(prob([:Y, :Z]; given = [:X]), prob(:Z))
 
-    @test e isa Quotient
+    @test e.kind === :quotient
     @test string(e) == "P(Y, Z | X) / P(Z)"
 end
 
@@ -95,10 +95,10 @@ end
     @test quotient(prob([:Y, :Z]), prob(:Z)) == prob(:Y; given = [:Z])
 
     # No collapse when the two terms condition on different things.
-    @test quotient(prob([:Y, :Z]; given = [:X]), prob(:Z)) isa Quotient
+    @test quotient(prob([:Y, :Z]; given = [:X]), prob(:Z)).kind === :quotient
 
     # No collapse when the denominator's head is not part of the numerator's.
-    @test quotient(prob(:Y; given = [:X]), prob(:Z; given = [:X])) isa Quotient
+    @test quotient(prob(:Y; given = [:X]), prob(:Z; given = [:X])).kind === :quotient
 end
 
 @testitem "marginal over part of the head marginalizes the term" tags = [:unit, :estimand] begin
@@ -106,10 +106,10 @@ end
     @test marginal([:W], prob([:W, :Y]; given = [:X])) == prob(:Y; given = [:X])
 
     # A variable in the conditioning set is not marginalized, so the sum stands.
-    @test marginal([:W], prob(:Y; given = [:W, :X])) isa Marginal
+    @test marginal([:W], prob(:Y; given = [:W, :X])).kind === :marginal
 
     # Nor is one the term does not mention at all.
-    @test marginal([:Q], prob(:Y; given = [:X])) isa Marginal
+    @test marginal([:Q], prob(:Y; given = [:X])).kind === :marginal
 end
 
 @testitem "printing parenthesizes non-atomic subterms" tags = [:unit, :estimand] begin
@@ -158,7 +158,7 @@ end
     # depends on W, so neither factor may leave and neither sums away.
     e = marginal([:W], product([prob(:W; given = [:X]), prob(:Y; given = [:W, :X])]))
 
-    @test e isa Marginal
+    @test e.kind === :marginal
     @test string(e) == "Σ_{W} P(W | X) P(Y | W, X)"
 end
 
@@ -170,7 +170,7 @@ end
 
     # The denominator mentions W here, so the sum has to stay outside the ratio.
     kept = marginal([:W], quotient(prob([:Y, :Z]; given = [:X]), prob(:Z; given = [:W])))
-    @test kept isa Marginal
+    @test kept.kind === :marginal
 end
 
 @testitem "marginal sums the numerator over indices the denominator lacks" tags =
@@ -195,7 +195,7 @@ end
     @test isone(quotient(num, num))
 
     # A factor appearing only on one side is left alone.
-    @test quotient(num, prob(:Z; given = [:W])) isa Quotient
+    @test quotient(num, prob(:Z; given = [:W])).kind === :quotient
 end
 
 @testitem "quotient divides out factors related by the chain rule" tags = [:unit, :estimand] begin
@@ -212,8 +212,8 @@ end
     @test quotient(num, den) == quotient(product([prob(:V), prob([:Y, :Z])]), prob(:U))
 
     # The denominator must condition on exactly the rest of the numerator.
-    @test quotient(prob([:W, :Y, :Z]), prob(:W; given = [:Y])) isa Quotient
-    @test quotient(prob([:W, :Y]), prob(:W; given = [:Y, :Z])) isa Quotient
+    @test quotient(prob([:W, :Y, :Z]), prob(:W; given = [:Y])).kind === :quotient
+    @test quotient(prob([:W, :Y]), prob(:W; given = [:Y, :Z])).kind === :quotient
 end
 
 @testitem "estimands hash consistently with equality" tags = [:unit, :estimand] begin

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking changes
+
+- Invalid-argument errors now throw `ArgumentError` instead of `ErrorException`. This affects graph constructors and various functions that validate node sets, graph parameters, background knowledge, or modes. Code catching `ErrorException` from these calls should catch `ArgumentError` instead.
+- `Estimand` is now a single concrete type tagged by a `kind` field (`:prob`, `:marginal`, `:product`, or `:quotient`), rather than an abstract type with the separate `Prob`, `Marginal`, `Product`, and `Quotient` subtypes, which are no longer exported. This closes the type so `id`, `idc`, `idp`, and `cidp` compile under `--trim=safe`.
+
 ### New features
 
 Implements several metrics for comparing two graphs:
