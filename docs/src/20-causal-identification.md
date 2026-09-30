@@ -110,9 +110,8 @@ Without a mediator, the frontdoor criterion cannot apply here:
 is_valid_frontdoor(dag3, :X, :Y, :Z)
 ```
 
-However, `Z` is a valid instrument since it is d-connected to `X` and d-separated from
-`Y` given `X` in the interventional graph ``G_{\overline{X}}`` (the graph with all
-incoming edges to `X` removed):
+However, `Z` is a valid instrument since it is d-connected to `X`, and d-separated from
+`Y` once the causal edge `X --> Y` is removed, so it can only affect `Y` through `X`:
 
 ```@example id
 is_valid_iv(dag3, :X, :Y, :Z)
@@ -168,8 +167,8 @@ id(admg2, :X, :Y)
 which is the standard front-door adjustment formula. The primed `X'` is a summation
 index distinct from the intervened value of `X`, following the usual convention.
 
-`id` can also detect non-identifiability. Recall the ADMG obtained earlier by
-projecting the unobserved instrument-confounder graph's `U` out of `dag3`:
+`id` can also detect non-identifiability. Recall the instrument graph from before,
+with `U` projected out:
 
 ```@example id
 plot(admg)

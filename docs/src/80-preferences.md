@@ -21,7 +21,7 @@ delete_preferences!(CausalStructures, "key")
 
 ## Traversal
 
-### `"open"`: open vs closed neighbourhood definition
+### `"open"`: open vs closed neighborhood definition
 
 | Default | Type | Affects |
 | ------- | ---- | ------- |

@@ -1,11 +1,11 @@
 # Developer Docs
 
-Some notes on performance. Before doing any of these, please benchmark/profile the code, to see if it affects the performance.
+Some notes on performance. Before applying any of these, benchmark or profile the code to check that it actually makes a difference.
 
 ## Skipping validation
 
 Every graph constructor takes `validate::Bool`. You can use `validate=false` if the algorithm is proven to give a valid
-graph type, e.g. [`dag_to_cpdag`](@ref)'s last step.
+graph, e.g. [`dag_to_cpdag`](@ref)'s last step.
 
 ```@docs
 CausalStructures._build_graph

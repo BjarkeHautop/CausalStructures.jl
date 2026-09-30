@@ -79,7 +79,7 @@ algorithms.
 [`generate_graph`](@ref) uses an Erdős–Rényi model: it samples each edge
 independently, which is cheap regardless of `n` but is not uniform over the
 space of DAGs. [`uniform_dag`](@ref) instead draws exactly uniformly from all
-labelled DAGs on `n` nodes using the recursive enumeration algorithm of
+labeled DAGs on `n` nodes using the recursive enumeration algorithm of
 [kuipers2015uniform](@citet).
 
 ```@example bench
@@ -122,9 +122,9 @@ it is slower and uses more memory than [`count_dags`](@ref), as the numbers abov
 
 [`enumerate_mags`](@ref) is the PAG/MAG counterpart to [`enumerate_dags`](@ref).
 While `enumerate_dags` is fairly efficient via Chickering's recursive pruning,
-the algorithm for `enumerate_mags` is simply just brute-forcing every
-tail/arrowhead assignment for each circle endpoint in the PAG (`2^k`
-candidates for `k` circle endpoints), and checks if it's a valid PAG. Thus, it's
+`enumerate_mags` simply brute-forces every tail/arrowhead assignment for each
+circle endpoint in the PAG (`2^k` candidates for `k` circle endpoints), and keeps
+the candidates that are valid MAGs with the given PAG as their equivalence class. Thus, it's
 considerably more expensive than [`count_dags`](@ref)/[`enumerate_dags`](@ref):
 
 ```@example bench

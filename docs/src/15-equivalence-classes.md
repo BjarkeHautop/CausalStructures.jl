@@ -26,6 +26,7 @@ plot(cpdag)
 ```
 
 The v-structure `C --> X <-- A` appears in every DAG in the equivalence class and therefore remains directed. The edges `A --- Y` and `Y --- Z` are undirected because no v-structure or Meek rule forces their orientation.
+
 [`count_dags`](@ref) tells us how many DAGs are in the class, and
 [`enumerate_dags`](@ref) lists them all:
 
@@ -43,7 +44,7 @@ When you need one concrete DAG to work with, [`dag_from_pdag`](@ref) picks one:
 dag_from_pdag(cpdag)
 ```
 
-Adjustment sets can be computed on CPDAGs and the result is then valid for every DAG in the equivalence class:
+You can compute adjustment sets on a CPDAG, and the result is valid for every DAG in the equivalence class:
 
 ```@example ec
 all_adjustment_sets(cpdag, :X, :Z)
@@ -55,7 +56,7 @@ An [`MPDAG`](@ref) (maximally oriented partially directed acyclic graph) can, fo
 
 ```@example ec
 pdag = PDAG("C --- X, A --> X, A --- Y, Y --> Z")
-cpdag = meek_closure(pdag)
+mpdag = meek_closure(pdag)
 ```
 
 Here, `X --- C` was oriented to `X --> C` using Meek's rules.
@@ -64,7 +65,7 @@ All the methods shown above work on any subtype of [`AbstractPDAG`](@ref):
 
 ```@example ec
 count_dags(pdag)
-all_adjustment_sets(cpdag, :X, :Z)
+all_adjustment_sets(mpdag, :X, :Z)
 ```
 
 !!! note "Only CPDAGs are guaranteed to be extendable"
@@ -90,7 +91,7 @@ unobserved: every latent common cause between two observed nodes becomes a bidir
 in the MAG. Two MAGs are Markov equivalent if they
 encode the same conditional independence structure over the observed variables.
 
-Each Markov equivalence class of MAGs has a unique [`PAG`](@ref) (Partial Ancestral Graph). Like a PDAG for DAGs, the PAG marks each endpoint with the symbol shared by every MAG in the class. A circle (`o`) at an endpoint means that mark is not invariant; some MAGs in the class have a tail there and others have an arrowhead.
+Each Markov equivalence class of MAGs has a unique [`PAG`](@ref) (Partial Ancestral Graph). Like a CPDAG for DAGs, the PAG marks each endpoint with the symbol shared by every MAG in the class. A circle (`o`) at an endpoint means that mark is not invariant; some MAGs in the class have a tail there and others have an arrowhead.
 
 Consider a MAG where `A` and `B` share a hidden common cause, `C` directly causes `B`, and `B` directly causes `D`:
 

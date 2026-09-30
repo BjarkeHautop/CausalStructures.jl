@@ -62,8 +62,8 @@ example:
 pagcauses(pag, :C, :D)
 ```
 
-If there is no MAG compatible with the PAG in which `A` can have a causal effect on
-`D`, `pagcauses` returns no possible causal effect:
+If there is no MAG compatible with the PAG in which `D` can have a causal effect on
+`A`, `pagcauses` returns no possible causal effect:
 
 ```@example pc
 pagcauses(pag, :D, :A)
@@ -74,10 +74,10 @@ This is consistent with [`possible_ancestors`](@ref).
 !!! note "No selection bias"
 
     [`pagcauses`](@ref), [`possible_local_structures`](@ref), and
-    [`maximal_local_mag`](@ref) assume that `cg` has no selection bias, matching
+    [`maximal_local_mag`](@ref) assume that the PAG has no selection bias, matching
     the assumptions in the source papers. Selection bias shows up as an
     undirected edge in a PAG, and all three functions throw an `ArgumentError`
-    if `cg` has one:
+    if the PAG has one:
 
     ```@repl pc
     selection_pag = PAG(
