@@ -814,6 +814,34 @@ end
     @test fig isa Makie.FigureAxisPlot
 end
 
+@testitem "Makie.plot: edge_gap pulls edge ends back from the node border" tags =
+    [:unit, :plot] begin
+    using Makie
+
+    dag = DAG(directed(:A, :B))
+    edge_plots(; kwargs...) =
+        Makie.plot(dag; layout = [(0.0, 0.0), (2.0, 0.0)], kwargs...).plot.plots
+    shaft_start(; kwargs...) = edge_plots(; kwargs...)[1][1][][1][1]
+    tip(; kwargs...) = edge_plots(; kwargs...)[2][1][][1][1]
+
+    @test shaft_start(; edge_gap = 10.0) > shaft_start()
+    @test tip(; edge_gap = 10.0) < tip()
+
+    # Resolves per edge like the other edge styling keywords.
+    @test shaft_start(; edge_gap = Dict((:A, :B) => 10.0, :default => 0.0)) ≈
+          shaft_start(; edge_gap = 10.0)
+
+    # Negative gaps are rejected, including through a per-edge Dict.
+    @test_throws ArgumentError edge_plots(; edge_gap = -10.0)
+    @test_throws ArgumentError edge_plots(; edge_gap = Dict((:A, :B) => -1.0))
+
+    # A gap too large to fit between the nodes drops the edge instead of
+    # drawing it reversed; only the two nodes (Poly + Text each) remain.
+    plots = edge_plots(; edge_gap = 10_000.0)
+    @test length(plots) == 4
+    @test all(p -> !(p isa Makie.Lines), plots)
+end
+
 @testitem "Makie.plot: edge_label_rotation overrides the default follow-the-edge angle" tags =
     [:unit, :plot] begin
     using Makie

@@ -70,7 +70,8 @@ function _edge_path(
     curvature::Union{Float32,Nothing},
     px_per_data_unit::Float32,
     linewidth::Real,
-    explicit_path::Union{AbstractVector{Point2f},Nothing} = nothing,
+    explicit_path::Union{AbstractVector{Point2f},Nothing} = nothing;
+    edge_gap::Real = 0,
 )
     p_src, p_dst = g_src.center, g_dst.center
     diff = p_dst - p_src
@@ -85,9 +86,12 @@ function _edge_path(
     # Arrowheads and circle marks are stroked outlines, so the stroke paints
     # roughly linewidth/2 (screen pixels) past the path coordinate. Without
     # this gap a tip placed exactly on the node boundary overlaps the node.
+    # The user's `edge_gap` (also pixels) is added on top, at both ends. Only
+    # the clipping geometry is inflated; routing still sees the true nodes.
     half_lw_data = (Float32(linewidth) / 2.0f0) / px_per_data_unit
-    gap_from = (has_arrow_src || has_circle_src) ? half_lw_data : 0.0f0
-    gap_to = (has_arrow_dst || has_circle_dst) ? half_lw_data : 0.0f0
+    user_gap_data = Float32(edge_gap) / px_per_data_unit
+    gap_from = ((has_arrow_src || has_circle_src) ? half_lw_data : 0.0f0) + user_gap_data
+    gap_to = ((has_arrow_dst || has_circle_dst) ? half_lw_data : 0.0f0) + user_gap_data
     g_from = _inflate(g_src, gap_from)
     g_to = _inflate(g_dst, gap_to)
 
@@ -117,10 +121,12 @@ function _edge_path(
         fanned
     else
         dir = Point2f(diff[1] / len, diff[2] / len)
-        [
-            p_src + _boundary_distance(g_from, dir) * dir,
-            p_dst - _boundary_distance(g_to, dir) * dir,
-        ]
+        d_from = _boundary_distance(g_from, dir)
+        d_to = _boundary_distance(g_to, dir)
+        # The gaps leave no room between the nodes (e.g. a large `edge_gap`):
+        # skip the edge rather than draw it reversed.
+        d_from + d_to >= len && return nothing
+        [p_src + d_from * dir, p_dst - d_to * dir]
     end
 end
 
@@ -140,6 +146,7 @@ function _draw_edge!(
     fill = color,
     linewidth = 1.5f0,
     linestyle = nothing,
+    edge_gap = 0,
 )
     path = _edge_path(
         e,
@@ -150,7 +157,8 @@ function _draw_edge!(
         curvature,
         px_per_data_unit,
         linewidth,
-        explicit_path,
+        explicit_path;
+        edge_gap = edge_gap,
     )
     path === nothing && return nothing
 
@@ -334,6 +342,8 @@ Makie.@recipe CausalGraphPlot (graph,) begin
     linewidth = 1.5
     """Edge line style."""
     edge_linestyle = nothing
+    """Extra space (in pixels) left between each end of an edge and the node border."""
+    edge_gap = 0.0
     """Per-edge curvature amount for curved edge routing."""
     curvature = nothing
     """Explicit waypoints overriding an edge's drawn route."""
@@ -419,7 +429,8 @@ A `CausalGraphPlot`.
 | `arrow_fill`     | `nothing` | arrowhead fill color; `nothing` matches `edge_color` |
 | `linewidth`      | `1.5`     | line width                                     |
 | `edge_linestyle` | `nothing` | line style (`nothing` = solid)                 |
-| `curvature`      | `nothing` | how far an edge bows; also disables automatic routing around other nodes |
+| `edge_gap`       | `0.0`     | extra space (pixels) between each edge end and the node border |
+| `curvature`     | `nothing` | how far an edge bows; also disables automatic routing around other nodes |
 | `edge_paths`     | `nothing` | explicit waypoints overriding an edge's drawn route |
 
 Edge styling keywords accept either a scalar or a `Dict` for per-edge
@@ -502,6 +513,7 @@ function Makie.plot!(plot::CausalGraphPlot)
         arrow_fill,
         linewidth,
         edge_linestyle,
+        edge_gap,
         curvature,
         edge_paths,
         node_label_color,
@@ -641,6 +653,13 @@ function Makie.plot!(plot::CausalGraphPlot)
                 j in eachindex(positions) if j != src_idx && j != dst_idx
             ]
 
+            resolved_gap = _resolve_edge(edge_gap, e, 0.0f0)
+            resolved_gap >= 0 || throw(
+                ArgumentError(
+                    "edge_gap must be non-negative, got $(resolved_gap) for edge $(e).",
+                ),
+            )
+
             resolved_color = _resolve_edge(edge_color, e, :black)
             path = _draw_edge!(
                 plot,
@@ -658,6 +677,7 @@ function Makie.plot!(plot::CausalGraphPlot)
                 fill = something(_resolve_edge(arrow_fill, e, nothing), resolved_color),
                 linewidth = Float32(_resolve_edge(linewidth, e, 1.5f0)),
                 linestyle = _resolve_edge(edge_linestyle, e, nothing),
+                edge_gap = resolved_gap,
             )
 
             if edge_labels !== nothing && path !== nothing
@@ -755,6 +775,7 @@ function Makie.plot!(plot::CausalGraphPlot)
         plot.arrow_fill,
         plot.linewidth,
         plot.edge_linestyle,
+        plot.edge_gap,
         plot.curvature,
         plot.edge_paths,
         plot.node_label_color,
