@@ -154,6 +154,17 @@ plot(dag;
 )
 ```
 
+To draw only the node names, without any shape around them, you can make the fill transparent and drop the border. Edges still stop at the (now invisible) node boundary, so `:rect` with a smaller `node_padding` can be used to bring the arrowheads closer to the text:
+
+```@example plot
+plot(dag;
+    node_color = :transparent,
+    node_strokewidth = 0,
+    node_shape = :rect,
+    node_padding = 4,
+)
+```
+
 ### Text-fit node sizing
 
 By default (`node_radius = nothing`), each node is sized to fit its
