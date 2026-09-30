@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### New features
 
 - `plot` gained `edge_gap`, which leaves extra space (in pixels) between each end of an edge and the node border. It accepts a scalar or a per-edge `Dict`, like the other edge styling keywords.
+- `plot`'s `arrow_size` and `circle_size` now also accept a per-edge `Dict`, like the other edge styling keywords.
 
 ## [1.0.0] - 2026-09-28
 

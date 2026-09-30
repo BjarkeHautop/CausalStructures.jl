@@ -418,8 +418,6 @@ A `CausalGraphPlot`.
 | `node_shape`       | `:circle`| `:circle`, `:square`, `:ellipse`, or `:rect`         |
 | `node_radius`      | `nothing` | fixed node radius; `nothing` sizes each node to its label |
 | `node_padding`     | `10.0`    | label clearance used when sizing a node automatically |
-| `arrow_size`       | `nothing` | arrowhead size; `nothing` scales with node size      |
-| `circle_size`      | `nothing` | bidirected/undirected-edge circle marker size; `nothing` scales with node size |
 
 ## Edge styling
 
@@ -432,6 +430,8 @@ A `CausalGraphPlot`.
 | `edge_gap`       | `0.0`     | extra space (pixels) between each edge end and the node border |
 | `curvature`     | `nothing` | how far an edge bows; also disables automatic routing around other nodes |
 | `edge_paths`     | `nothing` | explicit waypoints overriding an edge's drawn route |
+| `arrow_size`     | `nothing` | arrowhead size; `nothing` scales with node size |
+| `circle_size`    | `nothing` | open-circle (`o`) endpoint size; `nothing` scales with node size |
 
 Edge styling keywords accept either a scalar or a `Dict` for per-edge
 overrides, keyed by a [`CausalEdge`](@ref), a `(src, dst)` tuple, an
@@ -631,8 +631,8 @@ function Makie.plot!(plot::CausalGraphPlot)
         # Arrowhead/circle-marker sizes are based on the typical (not
         # per-node) node size, so one long label doesn't skew them.
         r_typical = node_radius !== nothing ? Float32(node_radius) : Float32(sum(radii) / n)
-        r_arrow = Float32(something(arrow_size, r_typical * 0.4f0))
-        r_circle = Float32(something(circle_size, r_typical * 0.28f0))
+        default_r_arrow = r_typical * 0.4f0
+        default_r_circle = r_typical * 0.28f0
 
         node_idx = Dict{Symbol,Int}(node_names[i] => i for i in eachindex(node_names))
         fan_slots = _edge_fan_slots(cg.edges)
@@ -659,6 +659,11 @@ function Makie.plot!(plot::CausalGraphPlot)
                     "edge_gap must be non-negative, got $(resolved_gap) for edge $(e).",
                 ),
             )
+
+            r_arrow =
+                Float32(something(_resolve_edge(arrow_size, e, nothing), default_r_arrow))
+            r_circle =
+                Float32(something(_resolve_edge(circle_size, e, nothing), default_r_circle))
 
             resolved_color = _resolve_edge(edge_color, e, :black)
             path = _draw_edge!(

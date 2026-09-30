@@ -842,6 +842,30 @@ end
     @test all(p -> !(p isa Makie.Lines), plots)
 end
 
+@testitem "Makie.plot: arrow_size and circle_size resolve per edge" tags = [:unit, :plot] begin
+    using Makie
+
+    # A --> B: plots[1] is the shaft (Lines), trimmed back by the arrowhead
+    # length at B, so a bigger arrow_size ends the shaft further left.
+    dag = DAG(directed(:A, :B))
+    shaft_end(; kwargs...) =
+        Makie.plot(dag; layout = [(0.0, 0.0), (2.0, 0.0)], kwargs...).plot.plots[1][1][][end][1]
+
+    @test shaft_end(; arrow_size = 0.3) < shaft_end(; arrow_size = 0.1)
+    @test shaft_end(; arrow_size = Dict((:A, :B) => 0.3, :default => 0.1)) ≈
+          shaft_end(; arrow_size = 0.3)
+    @test shaft_end(; arrow_size = Dict(:bidirected => 0.3, :default => 0.1)) ≈
+          shaft_end(; arrow_size = 0.1)
+
+    g = UNKNOWN("A o-> B")
+    fig = Makie.plot(
+        g;
+        layout = [(0.0, 0.0), (2.0, 0.0)],
+        circle_size = Dict(partially_directed(:A, :B) => 0.05, :default => 0.1),
+    )
+    @test fig isa Makie.FigureAxisPlot
+end
+
 @testitem "Makie.plot: edge_label_rotation overrides the default follow-the-edge angle" tags =
     [:unit, :plot] begin
     using Makie
