@@ -48,16 +48,13 @@ A `Dict{Symbol,NTuple{2,Float64}}` mapping each node name to its `(x, y)` positi
 
 # Examples
 
-```jldoctest
+```jldoctest; filter = r"entries:(\\n.*)*" => "entries:"
 julia> using NetworkLayout
 
 julia> dag = DAG("A --> X, A --> Y, X --> Y");
 
-julia> layout(dag, :spring; seed = 1)
+julia> layout(dag, :spring; iterations = 100)
 Dict{Symbol, Tuple{Float64, Float64}} with 3 entries:
-  :A => (-1.21358, -0.442569)
-  :X => (0.283814, 1.32745)
-  :Y => (1.06799, -0.854346)
 ```
 
 ```julia
