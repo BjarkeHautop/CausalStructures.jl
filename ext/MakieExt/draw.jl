@@ -279,8 +279,8 @@ end
 
 # `curvature` resolves like any other per-edge style attribute (see
 # `_resolve_edge`), just converted to Float32 once resolved.
-function _resolve_curvature(val, e::CausalEdge)
-    resolved = _resolve_edge(val, e, nothing)
+function _resolve_curvature(val, e::CausalEdge, fallback)
+    resolved = _resolve_edge(val, e, fallback)
     return resolved === nothing ? nothing : Float32(resolved)
 end
 
@@ -309,6 +309,24 @@ function _resolve_node(val, node::Symbol, fallback)
     return fallback
 end
 
+# Range check for a resolved numeric style value, e.g.
+# `_check_value(r > 0, "node_radius", r, "node :A", "positive")`.
+function _check_value(ok::Bool, name, val, target, requirement)
+    ok || throw(ArgumentError("$name must be $requirement, got $val for $target."))
+    return val
+end
+
+# Merge user `edge_paths` over auto-computed ones (keyed by `(src, dst)`
+# tuples). A user tuple key names an unordered pair, so it also replaces an
+# auto path stored under the reversed tuple.
+function _merge_edge_paths(auto, user)
+    merged = Dict{Any,Any}(auto)
+    for key in keys(user)
+        key isa Tuple{Symbol,Symbol} && delete!(merged, reverse(key))
+    end
+    return merge(merged, user)
+end
+
 Makie.@recipe CausalGraphPlot (graph,) begin
     """Node position layout: `Makie.automatic`, a layout method `Symbol` (see [`layout`](@ref)), or precomputed positions."""
     layout = Makie.automatic
@@ -318,13 +336,13 @@ Makie.@recipe CausalGraphPlot (graph,) begin
     node_labels = nothing
     """Per-node marker shape: `:circle`, `:square`, `:ellipse`, or `:rect`."""
     node_shape = :circle
-    """Fixed node radius, overriding automatic label-fit sizing."""
+    """Fixed node radius, overriding automatic label-fit sizing; `nothing` fits the node to its label."""
     node_radius = nothing
     """Padding around a node's label used when sizing the node automatically."""
     node_padding = 10.0
     """Arrowhead size; defaults to a fraction of the typical node radius."""
     arrow_size = nothing
-    """Bidirected/undirected-edge circle marker size; defaults to a fraction of the typical node radius."""
+    """Open-circle (`o`) endpoint size; defaults to a fraction of the typical node radius."""
     circle_size = nothing
     """Node fill color."""
     node_color = :white
@@ -400,6 +418,12 @@ A `CausalGraphPlot`.
 
 # Attributes
 
+Every node and edge keyword below (styling and labels alike) accepts either a
+single value for all nodes/edges or a `Dict` for per-node/per-edge overrides
+(`edge_paths` only takes a `Dict`). A node `Dict` is keyed by node name; an
+edge `Dict` by a [`CausalEdge`](@ref), a `(src, dst)` tuple (either order), or
+an edge-type symbol, checked in that order. Both fall back to a `:default` key.
+
 ## Layout
 
 | Keyword         | Default            | Controls                                    |
@@ -432,11 +456,6 @@ A `CausalGraphPlot`.
 | `edge_paths`     | `nothing` | explicit waypoints overriding an edge's drawn route |
 | `arrow_size`     | `nothing` | arrowhead size; `nothing` scales with node size |
 | `circle_size`    | `nothing` | open-circle (`o`) endpoint size; `nothing` scales with node size |
-
-Edge styling keywords accept either a scalar or a `Dict` for per-edge
-overrides, keyed by a [`CausalEdge`](@ref), a `(src, dst)` tuple, an
-edge-type symbol, or `:default`; node styling keywords accept a scalar or a
-`Dict` keyed by node name, with `:default` as a fallback.
 
 ## Labels
 
@@ -530,6 +549,43 @@ function Makie.plot!(plot::CausalGraphPlot)
     )
         empty!(plot.plots)
 
+        # Fallback for a node/edge that a style `Dict` (with no `:default`)
+        # doesn't match: what the attribute would have been had no value been
+        # passed, i.e. a `CausalGraphPlot` theme entry, else the recipe default
+        # (following `@inherit`). If that is itself a `Dict`, the built-in
+        # default is used instead.
+        scene = Makie.parent_scene(plot)
+        fallback = Dict{Symbol,Any}()
+        for (name, builtin) in (
+            :node_shape => :circle,
+            :node_radius => nothing,
+            :node_padding => 10.0f0,
+            :node_color => :white,
+            :node_strokecolor => :black,
+            :node_strokewidth => 2.0f0,
+            :node_linestyle => nothing,
+            :node_label_color => :black,
+            :node_label_fontsize => 14.0f0,
+            :node_label_font => :regular,
+            :edge_color => :black,
+            :arrow_fill => nothing,
+            :linewidth => 1.5f0,
+            :edge_linestyle => nothing,
+            :edge_gap => 0.0f0,
+            :curvature => nothing,
+            :arrow_size => nothing,
+            :circle_size => nothing,
+            :edge_label_color => :black,
+            :edge_label_fontsize => 12.0f0,
+            :edge_label_font => :regular,
+            :edge_label_shift => 0.5f0,
+            :edge_label_distance => nothing,
+            :edge_label_rotation => nothing,
+        )
+            themed = Makie.lookup_default(CausalGraphPlot, scene, name)
+            fallback[name] = themed isa AbstractDict ? builtin : themed
+        end
+
         node_names = cg.backend.nodes
         n = length(node_names)
         n == 0 && error("Cannot plot an empty graph (0 nodes).")
@@ -550,12 +606,15 @@ function Makie.plot!(plot::CausalGraphPlot)
         elseif auto_edge_paths === nothing
             edge_paths
         else
-            merge(auto_edge_paths, edge_paths)
+            _merge_edge_paths(auto_edge_paths, edge_paths)
         end
         cx1, cy1, scale1 = _unit_extent_params(raw_positions)
         positions = Point2f[_apply_unit_extent(p, cx1, cy1, scale1) for p in raw_positions]
 
-        shapes = Symbol[Symbol(_resolve_node(node_shape, nd, :circle)) for nd in node_names]
+        shapes = Symbol[
+            Symbol(_resolve_node(node_shape, nd, fallback[:node_shape])) for
+            nd in node_names
+        ]
         for (i, sh) in enumerate(shapes)
             sh in _NODE_SHAPES || error(
                 "Unknown node_shape $(repr(sh)) for node $(repr(node_names[i])). " *
@@ -580,22 +639,52 @@ function Makie.plot!(plot::CausalGraphPlot)
         bbox_w = max(maximum(xs) - minimum(xs), 1.0f-3)
         bbox_h = max(maximum(ys) - minimum(ys), 1.0f-3)
 
-        half_w, half_h = if node_radius !== nothing
-            r = Float32(node_radius)
-            fill(r, n), fill(r, n)
-        else
-            pixel_sizes = [
-                max.(
+        # A node with a fixed `node_radius` uses it directly; the rest
+        # (`nothing`) are sized to fit their label.
+        fixed_radii =
+            [_resolve_node(node_radius, nd, fallback[:node_radius]) for nd in node_names]
+        for (nd, r) in zip(node_names, fixed_radii)
+            r === nothing ||
+                _check_value(r > 0, "node_radius", r, "node $(repr(nd))", "positive")
+        end
+        fit_idx = findall(isnothing, fixed_radii)
+        half_w = Float32[r === nothing ? 0.0f0 : Float32(r) for r in fixed_radii]
+        half_h = copy(half_w)
+        if !isempty(fit_idx)
+            paddings = Dict(
+                i =>
+                    _resolve_node(node_padding, node_names[i], fallback[:node_padding])
+                for i in fit_idx
+            )
+            for (i, pad) in paddings
+                _check_value(
+                    pad >= 0,
+                    "node_padding",
+                    pad,
+                    "node $(repr(node_names[i]))",
+                    "non-negative",
+                )
+            end
+            pixel_sizes = Dict(
+                i => max.(
                     6.0f0,
                     _text_fit_pixel_size(
                         label_texts[i],
                         shapes[i],
-                        _resolve_node(node_label_fontsize, node_names[i], 14.0f0),
-                        _resolve_node(node_label_font, node_names[i], :regular),
-                        node_padding,
+                        _resolve_node(
+                            node_label_fontsize,
+                            node_names[i],
+                            fallback[:node_label_fontsize],
+                        ),
+                        _resolve_node(
+                            node_label_font,
+                            node_names[i],
+                            fallback[:node_label_font],
+                        ),
+                        paddings[i],
                     ),
-                ) for i = 1:n
-            ]
+                ) for i in fit_idx
+            )
             # Nodes are kept apart by their circumradius, whatever their shape.
             pixel_radii = Float32[
                 _circumradius(
@@ -605,7 +694,7 @@ function Makie.plot!(plot::CausalGraphPlot)
                         pixel_sizes[i][1],
                         pixel_sizes[i][2],
                     ),
-                ) for i = 1:n
+                ) for i in fit_idx
             ]
             # px_per_unit that fits the bbox (plus a margin sized to the
             # largest label, in data units at that same ratio) inside the
@@ -616,10 +705,10 @@ function Makie.plot!(plot::CausalGraphPlot)
             px_fit_w = (avail_w - 2.6f0 * maxpr) / bbox_w
             px_fit_h = (avail_h - 2.6f0 * maxpr) / bbox_h
             px_per_unit = max(10.0f0, min(px_fit_w, px_fit_h))
-            (
-                Float32[p[1] / px_per_unit for p in pixel_sizes],
-                Float32[p[2] / px_per_unit for p in pixel_sizes],
-            )
+            for i in fit_idx
+                half_w[i] = pixel_sizes[i][1] / px_per_unit
+                half_h[i] = pixel_sizes[i][2] / px_per_unit
+            end
         end
 
         geoms = [
@@ -630,7 +719,7 @@ function Makie.plot!(plot::CausalGraphPlot)
 
         # Arrowhead/circle-marker sizes are based on the typical (not
         # per-node) node size, so one long label doesn't skew them.
-        r_typical = node_radius !== nothing ? Float32(node_radius) : Float32(sum(radii) / n)
+        r_typical = isempty(fit_idx) ? Float32(sum(half_w) / n) : Float32(sum(radii) / n)
         default_r_arrow = r_typical * 0.4f0
         default_r_circle = r_typical * 0.28f0
 
@@ -653,19 +742,43 @@ function Makie.plot!(plot::CausalGraphPlot)
                 j in eachindex(positions) if j != src_idx && j != dst_idx
             ]
 
-            resolved_gap = _resolve_edge(edge_gap, e, 0.0f0)
-            resolved_gap >= 0 || throw(
-                ArgumentError(
-                    "edge_gap must be non-negative, got $(resolved_gap) for edge $(e).",
-                ),
+            resolved_gap = _resolve_edge(edge_gap, e, fallback[:edge_gap])
+            _check_value(
+                resolved_gap >= 0,
+                "edge_gap",
+                resolved_gap,
+                "edge $(e)",
+                "non-negative",
+            )
+            resolved_arrow_size = _resolve_edge(arrow_size, e, fallback[:arrow_size])
+            resolved_arrow_size === nothing || _check_value(
+                resolved_arrow_size >= 0,
+                "arrow_size",
+                resolved_arrow_size,
+                "edge $(e)",
+                "non-negative",
+            )
+            resolved_circle_size = _resolve_edge(circle_size, e, fallback[:circle_size])
+            resolved_circle_size === nothing || _check_value(
+                resolved_circle_size >= 0,
+                "circle_size",
+                resolved_circle_size,
+                "edge $(e)",
+                "non-negative",
+            )
+            resolved_linewidth = _resolve_edge(linewidth, e, fallback[:linewidth])
+            _check_value(
+                resolved_linewidth >= 0,
+                "linewidth",
+                resolved_linewidth,
+                "edge $(e)",
+                "non-negative",
             )
 
-            r_arrow =
-                Float32(something(_resolve_edge(arrow_size, e, nothing), default_r_arrow))
-            r_circle =
-                Float32(something(_resolve_edge(circle_size, e, nothing), default_r_circle))
+            r_arrow = Float32(something(resolved_arrow_size, default_r_arrow))
+            r_circle = Float32(something(resolved_circle_size, default_r_circle))
 
-            resolved_color = _resolve_edge(edge_color, e, :black)
+            resolved_color = _resolve_edge(edge_color, e, fallback[:edge_color])
             path = _draw_edge!(
                 plot,
                 e,
@@ -675,25 +788,38 @@ function Makie.plot!(plot::CausalGraphPlot)
                 r_circle,
                 obstacles,
                 fan_slots[i],
-                _resolve_curvature(curvature, e),
+                _resolve_curvature(curvature, e, fallback[:curvature]),
                 px_per_data_unit,
                 _resolve_edge_path(edge_paths, e, cx1, cy1, scale1);
                 color = resolved_color,
-                fill = something(_resolve_edge(arrow_fill, e, nothing), resolved_color),
-                linewidth = Float32(_resolve_edge(linewidth, e, 1.5f0)),
-                linestyle = _resolve_edge(edge_linestyle, e, nothing),
+                fill = something(
+                    _resolve_edge(arrow_fill, e, fallback[:arrow_fill]),
+                    resolved_color,
+                ),
+                linewidth = Float32(resolved_linewidth),
+                linestyle = _resolve_edge(edge_linestyle, e, fallback[:edge_linestyle]),
                 edge_gap = resolved_gap,
             )
 
             if edge_labels !== nothing && path !== nothing
                 text = _resolve_edge(edge_labels, e, nothing)
                 if text !== nothing
-                    resolved_edge_label_fontsize =
-                        Float32(_resolve_edge(edge_label_fontsize, e, 12.0f0))
-                    shift = clamp(
-                        Float32(_resolve_edge(edge_label_shift, e, 0.5f0)),
-                        0.0f0,
-                        1.0f0,
+                    resolved_edge_label_fontsize = Float32(
+                        _resolve_edge(
+                            edge_label_fontsize,
+                            e,
+                            fallback[:edge_label_fontsize],
+                        ),
+                    )
+                    shift = Float32(
+                        _resolve_edge(edge_label_shift, e, fallback[:edge_label_shift]),
+                    )
+                    _check_value(
+                        0 <= shift <= 1,
+                        "edge_label_shift",
+                        shift,
+                        "edge $(e)",
+                        "between 0 and 1",
                     )
                     mid = _path_point_at_fraction(path, shift)
                     # Offset perpendicular to the path's local tangent (taken
@@ -710,12 +836,20 @@ function Makie.plot!(plot::CausalGraphPlot)
                     # Scaled to the label's own fontsize by default, so it
                     # clears the line's stroke by roughly a full line height,
                     # whatever the font size; `edge_label_distance` overrides it.
-                    resolved_distance = _resolve_edge(edge_label_distance, e, nothing)
+                    resolved_distance = _resolve_edge(
+                        edge_label_distance,
+                        e,
+                        fallback[:edge_label_distance],
+                    )
                     gap_px =
                         resolved_distance === nothing ? resolved_edge_label_fontsize :
                         Float32(resolved_distance)
                     pos = mid + (gap_px / px_per_data_unit) * perp
-                    resolved_rotation = _resolve_edge(edge_label_rotation, e, nothing)
+                    resolved_rotation = _resolve_edge(
+                        edge_label_rotation,
+                        e,
+                        fallback[:edge_label_rotation],
+                    )
                     Makie.text!(
                         plot,
                         pos[1],
@@ -724,9 +858,17 @@ function Makie.plot!(plot::CausalGraphPlot)
                         align = (:center, :center),
                         rotation = resolved_rotation === nothing ? _upright_angle(tan) :
                                    Float32(resolved_rotation),
-                        color = _resolve_edge(edge_label_color, e, :black),
+                        color = _resolve_edge(
+                            edge_label_color,
+                            e,
+                            fallback[:edge_label_color],
+                        ),
                         fontsize = resolved_edge_label_fontsize,
-                        font = _resolve_edge(edge_label_font, e, :regular),
+                        font = _resolve_edge(
+                            edge_label_font,
+                            e,
+                            fallback[:edge_label_font],
+                        ),
                     )
                 end
             end
@@ -734,13 +876,25 @@ function Makie.plot!(plot::CausalGraphPlot)
 
         for i in eachindex(node_names)
             nd = node_names[i]
+            strokewidth = _resolve_node(node_strokewidth, nd, fallback[:node_strokewidth])
+            _check_value(
+                strokewidth >= 0,
+                "node_strokewidth",
+                strokewidth,
+                "node $(repr(nd))",
+                "non-negative",
+            )
             _draw_node!(
                 plot,
                 geoms[i];
-                color = _resolve_node(node_color, nd, :white),
-                strokecolor = _resolve_node(node_strokecolor, nd, :black),
-                strokewidth = Float32(_resolve_node(node_strokewidth, nd, 2.0)),
-                linestyle = _resolve_node(node_linestyle, nd, nothing),
+                color = _resolve_node(node_color, nd, fallback[:node_color]),
+                strokecolor = _resolve_node(
+                    node_strokecolor,
+                    nd,
+                    fallback[:node_strokecolor],
+                ),
+                strokewidth = Float32(strokewidth),
+                linestyle = _resolve_node(node_linestyle, nd, fallback[:node_linestyle]),
             )
             Makie.text!(
                 plot,
@@ -748,9 +902,11 @@ function Makie.plot!(plot::CausalGraphPlot)
                 positions[i][2];
                 text = label_texts[i],
                 align = (:center, :center),
-                color = _resolve_node(node_label_color, nd, :black),
-                fontsize = Float32(_resolve_node(node_label_fontsize, nd, 14.0f0)),
-                font = _resolve_node(node_label_font, nd, :regular),
+                color = _resolve_node(node_label_color, nd, fallback[:node_label_color]),
+                fontsize = Float32(
+                    _resolve_node(node_label_fontsize, nd, fallback[:node_label_fontsize]),
+                ),
+                font = _resolve_node(node_label_font, nd, fallback[:node_label_font]),
             )
         end
         return
@@ -824,9 +980,8 @@ keywords forwarded to the chosen layout algorithm, e.g.
 `fig_size`, `stretch_to_fig_size` only apply to `Makie.plot`.
 
 For a project-wide default, use a Makie theme, e.g.
-`Makie.set_theme!(CausalGraphPlot = (node_color = :lightblue,))`. `edge_color`
-and `edge_label_color` also inherit the active theme's `linecolor`/`textcolor`;
-`node_color`/`node_label_color` stay fixed and should be set together if changed.
+`Makie.set_theme!(CausalGraphPlot = (; node_color = :lightblue))`. `edge_color`
+and `edge_label_color` also inherit the active theme's `linecolor`/`textcolor`.
 
 `edge_paths` can be used to override an edge's drawn route directly: a
 `Dict` (same keying as other per-edge overrides) from an edge to a vector
@@ -926,18 +1081,23 @@ function Makie.plot(
         stretch_params = _aspect_stretch_params(positions, avail_w / avail_h)
         positions = Point2f[_apply_aspect_stretch(p, stretch_params...) for p in positions]
 
-        if auto_edge_paths !== nothing
-            stretched_auto_edge_paths = Dict(
-                key => Point2f[
-                    _apply_aspect_stretch(
-                        _apply_unit_extent(Point2f(p[1], p[2]), cx1, cy1, scale1),
-                        stretch_params...,
-                    ) for p in path
-                ] for (key, path) in auto_edge_paths
-            )
-            edge_paths =
-                edge_paths === nothing ? stretched_auto_edge_paths :
-                merge(stretched_auto_edge_paths, edge_paths)
+        # Both auto-computed and user-supplied waypoints are in the layout's
+        # own coordinates, so they get the same transform as the positions.
+        stretch_paths(paths) = Dict(
+            key => Point2f[
+                _apply_aspect_stretch(
+                    _apply_unit_extent(Point2f(p[1], p[2]), cx1, cy1, scale1),
+                    stretch_params...,
+                ) for p in path
+            ] for (key, path) in paths
+        )
+        user_edge_paths = edge_paths === nothing ? nothing : stretch_paths(edge_paths)
+        edge_paths = if auto_edge_paths === nothing
+            user_edge_paths
+        elseif user_edge_paths === nothing
+            stretch_paths(auto_edge_paths)
+        else
+            _merge_edge_paths(stretch_paths(auto_edge_paths), user_edge_paths)
         end
 
         layout = Dict{Symbol,NTuple{2,Float64}}(

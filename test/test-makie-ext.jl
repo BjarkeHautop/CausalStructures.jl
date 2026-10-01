@@ -786,10 +786,11 @@ end
     x_late = label_pos(; edge_label_shift = 0.75)[1]
     @test x_late > x_early
 
-    # edge_label_shift outside [0, 1] clamps rather than extrapolating past
-    # an endpoint.
-    @test label_pos(; edge_label_shift = -1.0)[1] == label_pos(; edge_label_shift = 0.0)[1]
-    @test label_pos(; edge_label_shift = 2.0)[1] == label_pos(; edge_label_shift = 1.0)[1]
+    # edge_label_shift outside [0, 1] is rejected; the endpoints themselves
+    # are fine.
+    @test label_pos(; edge_label_shift = 0.0)[1] < label_pos(; edge_label_shift = 1.0)[1]
+    @test_throws ArgumentError label_pos(; edge_label_shift = -1.0)
+    @test_throws ArgumentError label_pos(; edge_label_shift = Dict((:A, :B) => 2.0))
 
     # A larger edge_label_distance pushes the label further from the
     # (horizontal) line, i.e. a bigger |y|.
@@ -929,4 +930,128 @@ end
     # (pi/4), not straight down.
     got = ext._upright_angle(P(-1, -1))
     @test got ≈ Float32(pi) / 4
+end
+
+@testitem "Makie.plot: per-node node_radius/node_padding size each node independently" tags =
+    [:unit, :plot] begin
+    using Makie
+
+    # Two isolated nodes with equal-length labels: the plots are, per node,
+    # its outline Poly then its label Text.
+    g = DAG(node(:A), node(:B))
+    positions = [(0.0, 0.0), (2.0, 0.0)]
+    function widths(; kwargs...)
+        plt = Makie.plot(g; layout = positions, kwargs...).plot
+        width(pts) = -(reverse(extrema(p[1] for p in pts))...)
+        return width(plt.plots[1][1][]), width(plt.plots[3][1][])
+    end
+
+    w_a, w_b = widths()
+    @test w_a ≈ w_b
+
+    # A fixed radius for A only; B keeps fitting its label.
+    w_a, w_b = widths(; node_radius = Dict(:A => 0.5))
+    @test w_a ≈ 1.0
+    @test w_b < w_a
+
+    # Extra padding for A only.
+    w_a, w_b = widths(; node_padding = Dict(:A => 30.0))
+    @test w_a > w_b
+end
+
+@testitem "Makie.plot: a style Dict without :default falls back to the themed default" tags =
+    [:unit, :plot] begin
+    using Makie
+
+    # Plots: edge Lines, arrowhead Poly, label Text, then node A's outline
+    # Poly and label Text, then node B's.
+    dag = DAG(directed(:A, :B))
+    p(; kwargs...) = Makie.plot(
+        dag;
+        layout = [(0.0, 0.0), (2.0, 0.0)],
+        edge_labels = "e",
+        edge_color = Dict(:bidirected => :red),
+        edge_label_color = Dict(:bidirected => :red),
+        linewidth = Dict(:bidirected => 5.0),
+        node_color = Dict(:B => :red),
+        kwargs...,
+    ).plot
+
+    # Inherited attributes follow the general theme...
+    Makie.with_theme(Makie.theme_black()) do
+        plt = p()
+        @test Makie.to_color(plt.plots[1].color[]) == Makie.to_color(:white)
+        @test Makie.to_color(plt.plots[3].color[]) == Makie.to_color(:white)
+    end
+
+    # ...and every attribute follows a `CausalGraphPlot` theme entry.
+    Makie.with_theme(;
+        CausalGraphPlot = (; edge_color = :green, linewidth = 3.0, node_color = :blue),
+    ) do
+        plt = p()
+        @test Makie.to_color(plt.plots[1].color[]) == Makie.to_color(:green)
+        @test plt.plots[1].linewidth[] == 3.0
+        @test Makie.to_color(plt.plots[4].color[]) == Makie.to_color(:blue)
+        @test Makie.to_color(plt.plots[6].color[]) == Makie.to_color(:red)
+    end
+
+    # A theme entry that is itself a Dict falls back to the built-in default.
+    Makie.with_theme(; CausalGraphPlot = (; linewidth = Dict(:bidirected => 4.0))) do
+        @test p().plots[1].linewidth[] == 1.5
+    end
+end
+
+@testitem "Makie.plot: stretch_to_fig_size also stretches user edge_paths" tags =
+    [:unit, :plot] begin
+    using Makie
+
+    # An L-shaped A --> B route through the corner (B.x, A.y). Plots: edge
+    # Lines, arrowhead Poly, then each node's outline Poly and label Text.
+    dag = DAG(directed(:A, :B))
+    plt = Makie.plot(
+        dag;
+        layout = [(0.0, 0.0), (10.0, 5.0)],
+        edge_paths = Dict((:A, :B) => [(0.0, 0.0), (10.0, 0.0), (10.0, 5.0)]),
+        stretch_to_fig_size = true,
+    ).plot
+    center(pts) = Makie.Point2f(
+        sum(extrema(p[1] for p in pts)) / 2,
+        sum(extrema(p[2] for p in pts)) / 2,
+    )
+    a = center(plt.plots[3][1][])
+    b = center(plt.plots[5][1][])
+    corner = Makie.Point2f(b[1], a[2])
+    @test any(p -> isapprox(p, corner; atol = 1.0f-3), plt.plots[1][1][])
+end
+
+@testitem "Makie.plot: a reversed tuple key in edge_paths overrides an auto-routed path" tags =
+    [:unit, :plot] begin
+    using Makie
+
+    ext = Base.get_extension(CausalStructures, :MakieExt)
+    auto = Dict((:A, :B) => [(0.0, 0.0), (1.0, 1.0)], (:B, :C) => [(1.0, 1.0), (2.0, 0.0)])
+    user = Dict((:B, :A) => [(1.0, 1.0), (0.0, 0.0)])
+    merged = ext._merge_edge_paths(auto, user)
+    @test !haskey(merged, (:A, :B))
+    @test merged[(:B, :A)] == user[(:B, :A)]
+    @test merged[(:B, :C)] == auto[(:B, :C)]
+end
+
+@testitem "Makie.plot: rejects out-of-range size and width values" tags = [:unit, :plot] begin
+    using Makie
+
+    dag = DAG(directed(:A, :B))
+    p(; kwargs...) = Makie.plot(dag; layout = [(0.0, 0.0), (2.0, 0.0)], kwargs...)
+
+    @test_throws ArgumentError p(; node_radius = 0.0)
+    @test_throws ArgumentError p(; node_radius = Dict(:A => -0.1))
+    @test_throws ArgumentError p(; node_padding = -1.0)
+    @test_throws ArgumentError p(; node_strokewidth = Dict(:B => -1.0))
+    @test_throws ArgumentError p(; linewidth = -1.0)
+    @test_throws ArgumentError p(; arrow_size = -0.1)
+    @test_throws ArgumentError p(; circle_size = Dict(:directed => -0.1))
+
+    # Zero is a valid width/size.
+    @test p(; linewidth = 0, node_strokewidth = 0, node_padding = 0) isa
+          Makie.FigureAxisPlot
 end

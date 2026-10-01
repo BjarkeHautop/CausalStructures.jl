@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `plot` gained `edge_gap`, which leaves extra space (in pixels) between each end of an edge and the node border. It accepts a scalar or a per-edge `Dict`, like the other edge styling keywords.
 - `plot`'s `arrow_size` and `circle_size` now also accept a per-edge `Dict`, like the other edge styling keywords.
+- `plot`'s `node_radius` and `node_padding` now also accept a per-node `Dict`, like the other node styling keywords. Nodes without a `node_radius` keep fitting their label.
+
+### Bug fixes
+
+- `plot` with `stretch_to_fig_size = true` now stretches user-supplied `edge_paths` along with the node positions, so they stay attached to their nodes.
+
+- Per-node and per-edge style `Dict`s without a `:default` key now fall back to the attribute's themed default instead of the built-in default.
+
+- A user `edge_paths` tuple key now overrides an automatically routed path (e.g. from `layout = :sugiyama`) for the same node pair in either order.
+
+- `plot` now throws an `ArgumentError` for non-positive `node_radius`, negative `node_padding`, `node_strokewidth`, `linewidth`, `arrow_size`, or `circle_size`, or an `edge_label_shift` outside `[0, 1]`, as it already did for `edge_gap`.
 
 ## [1.0.0] - 2026-09-28
 

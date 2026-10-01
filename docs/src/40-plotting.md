@@ -66,9 +66,23 @@ Makie.set_theme!(CausalGraphPlot = (node_color = :lightblue, linewidth = 2))
 ```
 
 `edge_color` and `edge_label_color` also pick up the active theme's `linecolor` and
-`textcolor`. `node_color` and `node_label_color` stay fixed, so set them together if you
-want a dark node with a light label, e.g.
-`Makie.set_theme!(CausalGraphPlot = (node_color = :gray10, node_label_color = :white))`.
+`textcolor`.
+
+!!! tip "Per-node and per-edge styling"
+    Every node, edge, and label keyword accepts either a single value, which applies to
+    all nodes or edges, or a `Dict` that sets it per node or per edge. Nodes and edges the
+    `Dict` doesn't mention keep their default, unless you add a `:default` key:
+
+     ```@example plot
+    plot(dag;
+        node_color = Dict(:Y => :lightskyblue),
+        edge_color = Dict((:K, :Y) => :crimson, :default => :gray60),
+    )
+    ```
+
+    Only `Y` is filled blue; the other nodes keep the default white. The `K --> Y` edge is
+    crimson, and the `:default` key turns every other edge gray. The sections below list
+    the keys each `Dict` accepts.
 
 ## [Layout](@id plot-layouts)
 
@@ -126,9 +140,7 @@ plot(dag; layout = Dict(
 
 ## Styling nodes
 
-You can set each node style either with a single value for all nodes or with a
-`Dict{Symbol, <value>}` for per-node settings. Use `:default` in the dictionary as a
-fallback.
+A per-node `Dict` is keyed by node name, with `:default` as a fallback.
 
 | Keyword             | Default                             | Controls                        |
 | ------------------- | ------------------------------------ | -------------------------------- |
@@ -137,7 +149,7 @@ fallback.
 | `node_strokewidth`  | `2.0`                                | border line width               |
 | `node_linestyle`    | `nothing` (solid)                    | border line style               |
 | `node_shape`        | `:circle`                             | node outline shape              |
-| `node_radius`       | `nothing` (text-fit, per node)       | size of each node               |
+| `node_radius`       | `nothing` (text-fit)                  | size of each node               |
 | `node_padding`      | `10.0`                                | clearance around each label when `node_radius` is `nothing` |
 
 Combine color, border, and shape to highlight a node:
@@ -191,8 +203,7 @@ plot(dag; node_radius = 0.06)
 
 ## Styling edges
 
-You can set each edge style with a single value or with a `Dict` for more specific
-overrides. The keys are checked in this order:
+A per-edge `Dict` can use the following keys, checked in this order:
 
  1. a `CausalEdge` for one exact edge, e.g. `bidirected(:X, :Y)`
  2. a `(src, dst)` tuple for the node pair, in either order
@@ -201,7 +212,7 @@ overrides. The keys are checked in this order:
 
 | Keyword          | Default   | Controls               |
 | ---------------- | --------- | ----------------------- |
-| `edge_color`     | `:black`  | line / marker color     |
+| `edge_color`     | theme's `linecolor` (`:black`) | line / marker color |
 | `arrow_fill`     | `nothing` | arrowhead fill color    |
 | `linewidth`      | `1.5`     | line width              |
 | `edge_linestyle` | `nothing` (solid) | line style      |
@@ -321,8 +332,7 @@ plot(dag;
 
 ### Labels
 
-You can set each label style with a single value or with a `Dict{Symbol, <value>}` keyed by
-node name. Use `:default` as a fallback, just like with node styling.
+Node label keywords use the same `Dict` keys as [node styling](@ref "Styling nodes").
 
 | Keyword               | Default    | Controls                |
 | --------------------- | ---------- | ------------------------ |
@@ -356,13 +366,12 @@ plot(dag;
 
 ### Edge labels
 
-You can set each edge label style with a single value or with a `Dict` for per-edge
-overrides, using the same keys as for [edge styling](@ref "Styling edges").
+Edge label keywords use the same `Dict` keys as [edge styling](@ref "Styling edges").
 
 | Keyword                | Default    | Controls                                              |
 | ----------------------- | ---------- | ------------------------------------------------------ |
 | `edge_labels`          | `nothing`  | text drawn along each edge                             |
-| `edge_label_color`     | `:black`   | edge label text color                                  |
+| `edge_label_color`     | theme's `textcolor` (`:black`) | edge label text color                  |
 | `edge_label_fontsize`  | `12.0`     | edge label font size                                   |
 | `edge_label_font`      | `:regular` | edge label font                                        |
 | `edge_label_shift`     | `0.5`      | position along the edge, 0 (source) to 1 (destination) |
@@ -391,8 +400,10 @@ can use `edge_label_rotation` to give it a fixed angle instead:
 
 ```@example plot
 plot(dag;
-    edge_labels = Dict(directed(:A, :X) => "steep"),
-    edge_label_rotation = 0.0,
+    edge_labels = Dict(directed(:A, :X) => "steep", directed(:K, :Y) => "follows"),
+    edge_label_rotation = Dict(directed(:A, :X) => 0.0),
+    edge_label_distance = Dict(directed(:A, :X) => 20),
+    edge_label_color = Dict(directed(:A, :X) => :crimson),
 )
 ```
 
