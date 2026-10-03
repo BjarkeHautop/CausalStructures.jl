@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+- `mag_to_pag` and `PAG` validation applied rule R8 with the wrong premise, so `mag_to_pag` could return non-invariant tails.
+
 - `plot` with `stretch_to_fig_size = true` now stretches user-supplied `edge_paths` along with the node positions, so they stay attached to their nodes.
 
 - Per-node and per-edge style `Dict`s without a `:default` key now fall back to the attribute's themed default instead of the built-in default.

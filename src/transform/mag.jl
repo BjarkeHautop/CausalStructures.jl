@@ -528,11 +528,11 @@ function _pag_rule_r8!(
             (beta == alpha || beta == gamma) && continue
             scope === nothing || scope[beta] || continue
             adj[alpha, beta] && adj[beta, gamma] || continue
-            into_beta =
-                mark[alpha, beta] == Arrow &&
-                (mark[beta, alpha] == Tail || mark[beta, alpha] == Circle)
+            alpha_to_beta =
+                mark[beta, alpha] == Tail &&
+                (mark[alpha, beta] == Arrow || mark[alpha, beta] == Circle)
             beta_to_gamma = mark[beta, gamma] == Arrow && mark[gamma, beta] == Tail
-            if into_beta && beta_to_gamma
+            if alpha_to_beta && beta_to_gamma
                 changed |= _setmark!(mark, gamma, alpha, Tail)
                 break
             end

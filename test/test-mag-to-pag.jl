@@ -230,3 +230,60 @@ end
     @test !CausalStructures._pag_rule_r10!(adj, mark, n)
     @test mark[gamma, alpha] == Circle
 end
+
+# ── R8 premise ──────────────────────────────────────────────────────────────────
+
+@testitem "_pag_rule_r8!: needs a tail at alpha on the alpha-beta edge" tags =
+    [:unit, :mag_to_pag] begin
+    Circle, Arrow, Tail =
+        CausalStructures.Circle, CausalStructures.Arrow, CausalStructures.Tail
+
+    # alpha o-> gamma, beta --> gamma, and alpha-beta with the given marks.
+    function r8_fires(mark_at_alpha, mark_at_beta)
+        n = 3
+        alpha, beta, gamma = 1, 2, 3
+        adj = falses(n, n)
+        for (i, j) in [(alpha, beta), (beta, gamma), (alpha, gamma)]
+            adj[i, j] = adj[j, i] = true
+        end
+        mark = fill(Circle, n, n)
+        mark[alpha, gamma], mark[gamma, alpha] = Arrow, Circle
+        mark[beta, gamma], mark[gamma, beta] = Arrow, Tail
+        mark[beta, alpha], mark[alpha, beta] = mark_at_alpha, mark_at_beta
+        fired = CausalStructures._pag_rule_r8!(adj, mark, n)
+        return fired && mark[gamma, alpha] == Tail
+    end
+
+    @test r8_fires(Tail, Arrow)    # alpha --> beta
+    @test r8_fires(Tail, Circle)   # alpha --o beta
+    @test !r8_fires(Circle, Arrow) # alpha o-> beta: alpha <-> beta is possible
+    @test !r8_fires(Circle, Circle)
+    @test !r8_fires(Arrow, Arrow)
+end
+
+@testitem "mag_to_pag: R8 must not orient alpha o-> beta as a witness (regression)" setup=[
+    PagEdge,
+] tags = [:unit, :mag_to_pag] begin
+    # The only member of its Markov equivalence class, so every mark of the PAG
+    # is the corresponding mark of the MAG.
+    mag = MAG(
+        bidirected(:A, :B),
+        bidirected(:A, :E),
+        directed(:C, :B),
+        directed(:E, :B),
+        bidirected(:C, :D),
+        bidirected(:C, :E),
+        directed(:E, :D),
+    )
+    pag = mag_to_pag(mag)
+    @test pag_edge(pag, :A, :B) == "<->"
+    @test pag_edge(pag, :A, :E) == "<->"
+    @test pag_edge(pag, :C, :B) == "-->"
+    @test pag_edge(pag, :E, :B) == "-->"
+    @test pag_edge(pag, :C, :D) == "<->"
+    @test pag_edge(pag, :C, :E) == "<->"
+    @test pag_edge(pag, :E, :D) == "-->"
+
+    # ... so the PAG validates and round-trips.
+    @test PAG(nodes(pag), pag.edges) isa PAG
+end

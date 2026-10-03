@@ -19,9 +19,9 @@
         e in CausalStructures._edges_from_marks(node_vec, adj, mark)
     )
 
-    # Fig. 1(d) plus one further R8 step beyond what the figure illustrates.
+    # V2 o-> V5 keeps its circle: V2 <-> V5 is consistent with the local structure.
     expected =
-        UNKNOWN("V1 --> V4 + V5, V2 o-> V1, V2 --> V3 + V5, V5 --> V3 + V4, V3 --> V4")
+        UNKNOWN("V1 --> V4 + V5, V2 o-> V1 + V5, V2 --> V3, V5 --> V3 + V4, V3 --> V4")
     expected_set = Set((e.src, e.dst, e.src_end, e.dst_end) for e in expected.edges)
     @test result == expected_set
 end
@@ -55,7 +55,7 @@ end
     pag = mag_to_pag(mag)
     result = maximal_local_mag(pag, :X, [:A])
     edges_set = Set((e.src, e.dst, e.src_end, e.dst_end) for e in result.edges)
-    expected = UNKNOWN("A --> B, A o-> X, X --> B + Y")
+    expected = UNKNOWN("A o-> B + X, X --> B + Y")
     @test edges_set == Set((e.src, e.dst, e.src_end, e.dst_end) for e in expected.edges)
 end
 
