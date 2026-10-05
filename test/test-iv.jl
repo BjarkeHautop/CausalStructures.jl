@@ -187,3 +187,122 @@ end
     @test is_valid_iv(dag, :X, :Y, :Z) == is_valid_iv(dag, :X, :Y, [:Z])
     @test is_valid_iv(dag, :X, :Y, :U) == is_valid_iv(dag, :X, :Y, [:U])
 end
+
+# ── conditional instruments ──────────────────────────────────────────────────
+
+@testitem "is_valid_iv: confounded instrument is valid given the confounder" tags =
+    [:unit, :iv] begin
+    for cg in (
+        DAG("W --> Z + Y, Z --> X --> Y, U --> X + Y"),
+        ADMG("W --> Z + Y, Z --> X --> Y, X <-> Y"),
+    )
+        @test !is_valid_iv(cg, :X, :Y, :Z)
+        @test is_valid_iv(cg, :X, :Y, :Z, :W)
+        @test is_valid_iv(cg, :X, :Y, [:Z], [:W])
+        @test isempty(all_iv_sets(cg, :X, :Y))
+        @test all_iv_sets(cg, :X, :Y, :W) == [[:Z]]
+    end
+end
+
+@testitem "is_valid_iv: conditioning on a collider breaks an instrument" tags = [:unit, :iv] begin
+    cg = DAG("Z --> X --> Y, U --> X + Y, Z --> C, V --> C + Y")
+    @test is_valid_iv(cg, :X, :Y, :Z)
+    @test !is_valid_iv(cg, :X, :Y, :Z, :C)
+    @test !([:Z] in all_iv_sets(cg, :X, :Y, :C))
+end
+
+@testitem "is_valid_iv: inadmissible conditioning sets" tags = [:unit, :iv] begin
+    cg = DAG("Z --> X --> Y --> D, U --> X + Y")
+    @test is_valid_iv(cg, :X, :Y, :Z)
+    @test !is_valid_iv(cg, :X, :Y, :Z, :D)
+    @test isempty(all_iv_sets(cg, :X, :Y, :D))
+    cg = DAG("Z --> X --> M --> Y, U --> X + Y")
+    @test is_valid_iv(cg, :X, :Y, :Z)
+    @test !is_valid_iv(cg, :X, :Y, :Z, :M)
+    @test isempty(all_iv_sets(cg, :X, :Y, :M))
+    @test !is_valid_iv(cg, :X, :Y, :Z, :X)
+    @test !is_valid_iv(cg, :X, :Y, :Z, :Y)
+    @test !is_valid_iv(cg, :X, :Y, :Z, :Z)
+    cg = DAG("W --> Z + Y, Z --> X --> Y, X --> C")
+    @test is_valid_iv(cg, :X, :Y, :Z, [:W, :C])
+    # C opens the collider X on Z --> X <-- U --> Y.
+    cg = DAG("W --> Z + Y, Z --> X --> Y, X --> C, U --> X + Y")
+    @test is_valid_iv(cg, :X, :Y, :Z, :W)
+    @test !is_valid_iv(cg, :X, :Y, :Z, [:W, :C])
+end
+
+@testitem "all_iv_sets: agrees with is_valid_iv under conditioning" tags = [:unit, :iv] begin
+    graphs = (
+        DAG("W --> Z1 + Y, Z1 --> X --> Y, Z2 --> X, Z2 --> C, V --> C + Y, U --> X + Y"),
+        ADMG("W --> Z1 + Y, Z1 --> X --> Y, Z2 <-> X, Z2 --> C, C <-> Y, X <-> Y"),
+    )
+    for cg in graphs, w in (Symbol[], [:W], [:C], [:W, :C])
+        universe = sort(setdiff(nodes(cg), [:X, :Y], w))
+        candidates =
+            [[[a] for a in universe]; [[a, b] for a in universe for b in universe if a < b]]
+        expected = Set(c for c in candidates if is_valid_iv(cg, :X, :Y, c, w))
+        @test Set(all_iv_sets(cg, :X, :Y, w; minimal = false, max_size = 2)) == expected
+    end
+end
+
+# ── iv_set ───────────────────────────────────────────────────────────────────
+
+@testitem "iv_set: prefers an unconditional instrument" tags = [:unit, :iv] begin
+    @test iv_set(DAG("Z --> X --> Y, U --> X + Y"), :X, :Y) == (z = [:Z], w = Symbol[])
+    @test iv_set(ADMG("Z --> X --> Y, X <-> Y"), :X, :Y) == (z = [:Z], w = Symbol[])
+    cg = DAG("W --> Z1 + Y, Z1 --> X --> Y, Z2 --> X, U --> X + Y")
+    @test iv_set(cg, :X, :Y) == (z = [:Z2], w = Symbol[])
+end
+
+@testitem "iv_set: finds the conditioning set" tags = [:unit, :iv] begin
+    for cg in (
+        DAG("W --> Z + Y, Z --> X --> Y, U --> X + Y"),
+        ADMG("W --> Z + Y, Z --> X --> Y, X <-> Y"),
+    )
+        @test iv_set(cg, :X, :Y) == (z = [:Z], w = [:W])
+    end
+end
+
+@testitem "iv_set: restrict" tags = [:unit, :iv] begin
+    cg = DAG("W --> Z + Y, Z --> X --> Y, U --> X + Y")
+    @test iv_set(cg, :X, :Y; restrict = [:Z, :X, :Y]) === nothing
+    @test iv_set(cg, :X, :Y; restrict = [:W, :X, :Y]) === nothing
+    @test iv_set(cg, :X, :Y; restrict = [:Z, :W]) == (z = [:Z], w = [:W])
+end
+
+@testitem "iv_set: no instrument" tags = [:unit, :iv] begin
+    @test iv_set(DAG("X --> Y, U --> X + Y"), :X, :Y) === nothing
+    @test iv_set(ADMG("Z --> X --> Y, X <-> Y, Z <-> Y"), :X, :Y) === nothing
+    # The only separator of Z and Y is the mediator M.
+    @test iv_set(DAG("Z --> X --> M --> Y, Z --> M, U --> X + Y"), :X, :Y) === nothing
+end
+
+@testitem "iv_set: agrees with exhaustive search" tags = [:unit, :iv] begin
+    using Random
+    function exists_iv(cg, x, y)
+        ns = nodes(cg)
+        for z in ns
+            z in (x, y) && continue
+            rest = setdiff(ns, [x, y, z])
+            for mask = 0:(2^length(rest)-1)
+                w = [rest[i] for i in eachindex(rest) if isodd(mask >> (i - 1))]
+                is_valid_iv(cg, x, y, z, w) && return true
+            end
+        end
+        return false
+    end
+    rng = Xoshiro(1)
+    for trial = 1:200
+        cg = if isodd(trial)
+            generate_graph(rng, 6; p = 0.35)
+        else
+            generate_graph(rng, 6; p = 0.35, class = ADMG, latents = 2)
+        end
+        ns = nodes(cg)
+        length(ns) < 3 && continue
+        x, y = ns[randperm(rng, length(ns))[1:2]]
+        r = iv_set(cg, x, y)
+        @test (r !== nothing) == exists_iv(cg, x, y)
+        r === nothing || @test is_valid_iv(cg, x, y, r.z, r.w)
+    end
+end
