@@ -1,4 +1,4 @@
-# Instrumental Variables (Brito & Pearl 2002)
+# Instrumental Variables
 
 # G with the first edge x --> c of every causal path from x to y removed (c an
 # ancestor of y, or y itself): the graph of the exclusion restriction. For a
@@ -12,13 +12,10 @@ function _build_g_iv(cg::Union{DAG,ADMG}, x::Symbol, y)
     return build_graph(typeof(cg), Set(B.nodes), keep)
 end
 
-# Checks (ii) before (i) to skip the more expensive graph-build when relevance fails.
-function _check_iv(cg, x, y, z, g_iv)
-    all(zi -> m_separated(cg, zi, x), z) && return false   # (ii) relevance: z must reach x
-    for zi in z
-        m_separated(g_iv, zi, y) || return false           # (i)  exclusion: z ⊥ y in g_iv
-    end
-    return true
+# w must avoid y and forb(x, y).
+function _admissible_iv_conditioning(B, x_idx::Int, ys::Vector{Int}, w_idxs::Vector{Int})
+    forbidden = _forbidden_set(B, [x_idx], ys)
+    return !any(v -> forbidden[v] || v in ys, w_idxs)
 end
 
 # Dispatch to the right single-seed REACHABLE routine so `all_iv_sets`'s
@@ -29,34 +26,33 @@ _reachable_single!(visited, q, reached, B::ADMGBackend, seed, a_mask, z_mask) =
     _reachable_admg_single!(visited, q, reached, B, seed, a_mask, z_mask)
 
 """
-    is_valid_iv(cg::Union{DAG,ADMG}, x::Symbol, y, z) -> Bool
+    is_valid_iv(cg::Union{DAG,ADMG}, x::Symbol, y, z, w = Symbol[]) -> Bool
 
 Return `true` if `z` is a valid instrumental set for the causal effect of `x` on `y`
-in `cg`.
+in `cg`, conditionally on `w`.
 
-`y` and `z` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
+`y`, `z` and `w` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 `x` must be a single `Symbol`, since the instrumental-set criterion is defined
-for one structural coefficient `x -> y`.
+for a single treatment.
 
-`z` is a valid instrumental set if:
-1. Every `zi ∈ z` is d-/m-separated from `y` in the graph obtained from `G` by
-   deleting the first edge `x --> c` of every causal path from `x` to `y`. This
-   is the **exclusion restriction**: `z` can only affect `y` through `x`.
-2. At least one `zi ∈ z` is d-/m-connected to `x` in `G`. This is the **relevance
-   condition**: `z` must be associated with the treatment.
-
-When the only causal path is the edge `x --> y`, this is Definition 3.1 of
-[vanderzander2015efficiently](@citet); deleting the first edge of every causal
-path extends it to the total effect.
+`z` is a valid instrumental set given `w` if:
+1. At least one `zi ∈ z` is d-/m-connected to `x` given `w` in `G`. This is the
+   **relevance condition**: `z` must be associated with the treatment.
+2. Every `zi ∈ z` is d-/m-separated from `y` given `w` in the graph obtained from
+   `G` by deleting the first edge `x --> c` of every causal path from `x` to `y`.
+   This is the **exclusion restriction**: `z` can only affect `y` through `x`.
+3. `w` contains neither `y` nor any descendant of a node on a proper causal path
+   from `x` to `y`.
 
 # Arguments
 - `cg::Union{DAG,ADMG}`: the graph to check.
 - `x::Symbol`: the treatment node.
 - `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
 - `z::Union{Symbol,AbstractVector{Symbol}}`: the candidate instrumental set.
+- `w::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: the conditioning set.
 
 # Returns
-`true` if `z` is a valid instrumental set, `false` otherwise.
+`true` if `z` is a valid instrumental set given `w`, `false` otherwise.
 
 # Examples
 
@@ -90,9 +86,21 @@ julia> is_valid_iv(dag2, :X, [:Y1, :Y2], :Z)
 true
 ```
 
+`W` confounds the instrument `Z` and the outcome `Y`, so `Z` is only an
+instrument conditionally on `W`:
+
+```jldoctest
+julia> dag3 = DAG("W --> Z + Y, Z --> X --> Y, U --> X + Y");
+
+julia> is_valid_iv(dag3, :X, :Y, :Z)
+false
+
+julia> is_valid_iv(dag3, :X, :Y, :Z, :W)
+true
+```
+
 # References
 
-- [brito2002generalized](@citet)
 - [pearl2009causality](@citet)
 - [vanderzander2015efficiently](@citet)
 """
@@ -101,33 +109,45 @@ function is_valid_iv(
     x::Symbol,
     y::Union{Symbol,AbstractVector{Symbol}},
     z::Union{Symbol,AbstractVector{Symbol}},
+    w::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
     z_vec = _as_symbol_vec(z)
     isempty(z_vec) && return false
+    w_vec = _as_symbol_vec(w)
     ys_syms = _as_symbol_set(y)
-    any(zi -> zi === x || zi in ys_syms, z_vec) && return false
-    return _check_iv(cg, x, y, z_vec, _build_g_iv(cg, x, y))
+    any(zi -> zi === x || zi in ys_syms || zi in w_vec, z_vec) && return false
+    _admissible_iv_conditioning(
+        cg.backend,
+        node_index(cg, x),
+        _node_indices(cg, y),
+        _node_indices(cg, w_vec),
+    ) || return false
+    all(zi -> m_separated(cg, zi, x, w_vec), z_vec) && return false  # relevance
+    g_iv = _build_g_iv(cg, x, y)
+    return all(zi -> m_separated(g_iv, zi, y, w_vec), z_vec)  # exclusion
 end
 
 """
-    all_iv_sets(cg::Union{DAG,ADMG}, x::Symbol, y;
+    all_iv_sets(cg::Union{DAG,ADMG}, x::Symbol, y, w = Symbol[];
                 minimal::Bool = true, max_size::Int = 3)
         -> Vector{Vector{Symbol}}
 
 Return all valid instrumental sets for the causal effect of `x` on `y` in `cg`,
-up to size `max_size`.
+conditionally on `w`, up to size `max_size`.
 
-`y` may be a single `Symbol` or an `AbstractVector{Symbol}`; `x` must be a
-single `Symbol` (see [`is_valid_iv`](@ref)).
+`y` and `w` may each be a single `Symbol` or an `AbstractVector{Symbol}`; `x` must
+be a single `Symbol` (see [`is_valid_iv`](@ref)). If `w` is not an admissible
+conditioning set, no instrumental set is valid and the result is empty.
 
-Bruteforces over subsets of the allowed universe of nodes (nodes that are not `x` or `y`),
-checking each for validity using [`is_valid_iv`](@ref). When `minimal = true` (default),
-only inclusion-minimal sets are returned.
+Bruteforces over subsets of the allowed universe of nodes (nodes that are not `x`,
+`y`, or in `w`), checking each for validity using [`is_valid_iv`](@ref). When
+`minimal = true` (default), only inclusion-minimal sets are returned.
 
 # Arguments
 - `cg::Union{DAG,ADMG}`: the graph to search.
 - `x::Symbol`: the treatment node.
 - `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+- `w::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: the conditioning set.
 
 # Keywords
 - `minimal::Bool = true`: return only inclusion-minimal sets.
@@ -152,16 +172,26 @@ julia> all_iv_sets(dag2, :X, [:Y1, :Y2])
 2-element Vector{Vector{Symbol}}:
  [:Z1]
  [:Z2]
+
+julia> dag3 = DAG("W --> Z + Y, Z --> X --> Y, U --> X + Y");
+
+julia> all_iv_sets(dag3, :X, :Y)
+Vector{Symbol}[]
+
+julia> all_iv_sets(dag3, :X, :Y, :W)
+1-element Vector{Vector{Symbol}}:
+ [:Z]
 ```
 
 # References
 
-- [brito2002generalized](@citet)
+- [vanderzander2015efficiently](@citet)
 """
 function all_iv_sets(
     cg::Union{DAG,ADMG},
     x::Symbol,
-    y::Union{Symbol,AbstractVector{Symbol}};
+    y::Union{Symbol,AbstractVector{Symbol}},
+    w::Union{Symbol,AbstractVector{Symbol}} = Symbol[];
     minimal::Bool = true,
     max_size::Int = 3,
 )
@@ -169,16 +199,20 @@ function all_iv_sets(
     n = length(B.nodes)
     x_idx = node_index(cg, x)
     ys_idx = _node_indices(cg, y)
+    w_idx = _node_indices(cg, w)
+    _admissible_iv_conditioning(B, x_idx, ys_idx, w_idx) || return Vector{Vector{Symbol}}()
     ys_mask = falses(n)
     for yi in ys_idx
         ys_mask[yi] = true
     end
+    w_mask = falses(n)
+    for wi in w_idx
+        w_mask[wi] = true
+    end
 
-    universe = [v for v = 1:n if v != x_idx && !ys_mask[v]]
-    g_iv = _build_g_iv(cg, x, y)  # built once; x/y already excluded from universe
+    universe = [v for v = 1:n if v != x_idx && !ys_mask[v] && !w_mask[v]]
+    g_iv = _build_g_iv(cg, x, y)  # built once; x/y/w already excluded from universe
     Bd = g_iv.backend
-
-    empty_zmask = falses(n)
 
     anc_mask = falses(n)
     anc_stack = Int[]
@@ -186,32 +220,25 @@ function all_iv_sets(
     q = Tuple{Int,Int}[]
     reached = falses(n)
     seeds_buf = Int[]
+    x_vec = [x_idx]
 
-    # a ⊥ b | ∅ in backend Bk
-    function separated_empty(Bk, a, b)
-        empty!(seeds_buf)
-        push!(seeds_buf, a, b)
-        _ancestors_bitmask!(anc_mask, anc_stack, Bk, seeds_buf)
-        _reachable_single!(visited, q, reached, Bk, a, anc_mask, empty_zmask)
-        return !reached[b]
-    end
-
-    # a ⊥ Y | ∅ in backend Bk, for the (possibly multi-node) target set `bs`
-    function separated_from_all(Bk, a, bs)
+    # a ⊥ every node of bs | w in backend Bk
+    function separated_given_w(Bk, a, bs)
         empty!(seeds_buf)
         push!(seeds_buf, a)
         append!(seeds_buf, bs)
+        append!(seeds_buf, w_idx)
         _ancestors_bitmask!(anc_mask, anc_stack, Bk, seeds_buf)
-        _reachable_single!(visited, q, reached, Bk, a, anc_mask, empty_zmask)
+        _reachable_single!(visited, q, reached, Bk, a, anc_mask, w_mask)
         return !any(reached[bi] for bi in bs)
     end
 
     # Unlike backdoor/GAC-style criteria, the IV criterion tests each candidate
-    # node individually against a fixed conditioning set. So whether a
+    # node individually against a fixed conditioning set `w`. So whether a
     # node can belong to a valid set at all (exclusion) and whether it can witness
     # relevance are both Z-independent, and can be decided once per node.
-    valid_pool = [v for v in universe if separated_from_all(Bd, v, ys_idx)]
-    relevant_pool = [v for v in valid_pool if !separated_empty(B, v, x_idx)]
+    valid_pool = [v for v in universe if separated_given_w(Bd, v, ys_idx)]
+    relevant_pool = [v for v in valid_pool if !separated_given_w(B, v, x_vec)]
 
     to_symbols(cur) = sort([B.nodes[v] for v in cur])
 

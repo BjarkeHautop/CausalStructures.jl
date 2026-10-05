@@ -187,3 +187,60 @@ end
     @test is_valid_iv(dag, :X, :Y, :Z) == is_valid_iv(dag, :X, :Y, [:Z])
     @test is_valid_iv(dag, :X, :Y, :U) == is_valid_iv(dag, :X, :Y, [:U])
 end
+
+# ── conditional instruments ──────────────────────────────────────────────────
+
+@testitem "is_valid_iv: confounded instrument is valid given the confounder" tags =
+    [:unit, :iv] begin
+    for cg in (
+        DAG("W --> Z + Y, Z --> X --> Y, U --> X + Y"),
+        ADMG("W --> Z + Y, Z --> X --> Y, X <-> Y"),
+    )
+        @test !is_valid_iv(cg, :X, :Y, :Z)
+        @test is_valid_iv(cg, :X, :Y, :Z, :W)
+        @test is_valid_iv(cg, :X, :Y, [:Z], [:W])
+        @test isempty(all_iv_sets(cg, :X, :Y))
+        @test all_iv_sets(cg, :X, :Y, :W) == [[:Z]]
+    end
+end
+
+@testitem "is_valid_iv: conditioning on a collider breaks an instrument" tags = [:unit, :iv] begin
+    cg = DAG("Z --> X --> Y, U --> X + Y, Z --> C, V --> C + Y")
+    @test is_valid_iv(cg, :X, :Y, :Z)
+    @test !is_valid_iv(cg, :X, :Y, :Z, :C)
+    @test !([:Z] in all_iv_sets(cg, :X, :Y, :C))
+end
+
+@testitem "is_valid_iv: inadmissible conditioning sets" tags = [:unit, :iv] begin
+    cg = DAG("Z --> X --> Y --> D, U --> X + Y")
+    @test is_valid_iv(cg, :X, :Y, :Z)
+    @test !is_valid_iv(cg, :X, :Y, :Z, :D)
+    @test isempty(all_iv_sets(cg, :X, :Y, :D))
+    cg = DAG("Z --> X --> M --> Y, U --> X + Y")
+    @test is_valid_iv(cg, :X, :Y, :Z)
+    @test !is_valid_iv(cg, :X, :Y, :Z, :M)
+    @test isempty(all_iv_sets(cg, :X, :Y, :M))
+    @test !is_valid_iv(cg, :X, :Y, :Z, :X)
+    @test !is_valid_iv(cg, :X, :Y, :Z, :Y)
+    @test !is_valid_iv(cg, :X, :Y, :Z, :Z)
+    cg = DAG("W --> Z + Y, Z --> X --> Y, X --> C")
+    @test is_valid_iv(cg, :X, :Y, :Z, [:W, :C])
+    # C opens the collider X on Z --> X <-- U --> Y.
+    cg = DAG("W --> Z + Y, Z --> X --> Y, X --> C, U --> X + Y")
+    @test is_valid_iv(cg, :X, :Y, :Z, :W)
+    @test !is_valid_iv(cg, :X, :Y, :Z, [:W, :C])
+end
+
+@testitem "all_iv_sets: agrees with is_valid_iv under conditioning" tags = [:unit, :iv] begin
+    graphs = (
+        DAG("W --> Z1 + Y, Z1 --> X --> Y, Z2 --> X, Z2 --> C, V --> C + Y, U --> X + Y"),
+        ADMG("W --> Z1 + Y, Z1 --> X --> Y, Z2 <-> X, Z2 --> C, C <-> Y, X <-> Y"),
+    )
+    for cg in graphs, w in (Symbol[], [:W], [:C], [:W, :C])
+        universe = sort(setdiff(nodes(cg), [:X, :Y], w))
+        candidates =
+            [[[a] for a in universe]; [[a, b] for a in universe for b in universe if a < b]]
+        expected = Set(c for c in candidates if is_valid_iv(cg, :X, :Y, c, w))
+        @test Set(all_iv_sets(cg, :X, :Y, w; minimal = false, max_size = 2)) == expected
+    end
+end

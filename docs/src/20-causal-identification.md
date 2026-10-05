@@ -117,6 +117,14 @@ However, `Z` is a valid instrument since it is d-connected to `X`, and d-separat
 is_valid_iv(dag3, :X, :Y, :Z)
 ```
 
+An instrument may also only be valid conditionally on a set `W`. Here `W` confounds `Z`
+and `Y`, so `Z` is an instrument only once we condition on `W`:
+
+```@example id
+dag4 = DAG("W --> Z + Y, Z --> X --> Y, U --> X + Y")
+is_valid_iv(dag4, :X, :Y, :Z), is_valid_iv(dag4, :X, :Y, :Z, :W)
+```
+
 ## ADMG adjustment
 
 In an ADMG (Acyclic Directed Mixed Graph), bidirected edges `<->` represent
