@@ -334,7 +334,7 @@ julia> maximal_local_mag(pag, :X, :A)
 UNKNOWN with 4 nodes and 4 edges:
   nodes: A, B, X, Y
   edges:
-    A --> B, A o-> X, X --> B, X --> Y
+    A o-> B, A o-> X, X --> B, X --> Y
 ```
 
 # References
