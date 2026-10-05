@@ -33,6 +33,7 @@ all_frontdoor_sets
 
 ```@docs
 is_valid_iv
+iv_set
 all_iv_sets
 ```
 

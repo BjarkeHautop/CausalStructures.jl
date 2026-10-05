@@ -128,6 +128,99 @@ function is_valid_iv(
 end
 
 """
+    iv_set(cg::Union{DAG,ADMG}, x::Symbol, y; restrict = nothing)
+        -> Union{Nothing,NamedTuple{(:z, :w)}}
+
+Find an instrument `z` for the causal effect of `x` on `y` in `cg`, together with
+a conditioning set `w` that makes it valid (see [`is_valid_iv`](@ref)). Returns
+`nothing` if no such pair exists.
+
+For each candidate `z`, `w` is a separator of `y` and `z` in the graph with the
+first edge of every causal path from `x` to `y` removed, chosen nearest to `y`.
+The pair with the smallest `w` is returned, so an unconditional instrument
+(`w = ∅`) is preferred.
+
+# Arguments
+- `cg::Union{DAG,ADMG}`: the graph to search.
+- `x::Symbol`: the treatment node.
+- `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+
+# Keywords
+- `restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing`: the nodes
+  allowed in `z` and `w`, e.g. the observed ones. Defaults to all nodes.
+
+# Returns
+A `NamedTuple` `(z = Vector{Symbol}, w = Vector{Symbol})`, or `nothing`.
+
+# Examples
+
+```jldoctest
+julia> dag = DAG("Z --> X --> Y, U --> X + Y");
+
+julia> iv_set(dag, :X, :Y)
+(z = [:Z], w = Symbol[])
+
+julia> dag2 = DAG("W --> Z + Y, Z --> X --> Y, U --> X + Y");
+
+julia> iv_set(dag2, :X, :Y)
+(z = [:Z], w = [:W])
+
+julia> iv_set(dag2, :X, :Y; restrict = [:Z, :X, :Y]) === nothing  # W unobserved
+true
+```
+
+# References
+
+- [vanderzander2015efficiently](@citet)
+"""
+function iv_set(
+    cg::Union{DAG,ADMG},
+    x::Symbol,
+    y::Union{Symbol,AbstractVector{Symbol}};
+    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
+)
+    B = cg.backend
+    n = length(B.nodes)
+    x_idx = node_index(cg, x)
+    ys = _node_indices(cg, y)
+    allowed = trues(n)
+    if restrict !== nothing
+        fill!(allowed, false)
+        for v in _node_indices(cg, restrict)
+            allowed[v] = true
+        end
+    end
+    allowed[x_idx] = false
+    for yi in ys
+        allowed[yi] = false
+    end
+    w_allowed = allowed .& .!_forbidden_set(B, [x_idx], ys)
+    Bd = _build_g_iv(cg, x, y).backend
+
+    best = nothing
+    for z = 1:n
+        allowed[z] || continue
+        res = [v for v = 1:n if w_allowed[v] && v != z]
+        w_near = _find_nearest_sep(Bd, ys, [z], Int[], res)
+        w_near === nothing && continue  # exclusion
+        # Shrink to a minimal separator, falling back to the nearest one if
+        # that loses relevance. The fallback is likely dead code (?)
+        # but is kept as a safeguard.
+        w_z = _find_nearest_sep(Bd, [z], ys, Int[], w_near)
+        w_min = w_z === nothing ? w_near : intersect(w_near, w_z)
+        for w in (w_min, w_near)
+            (best === nothing || length(w) < length(best[2])) || continue
+            m_separated(cg, B.nodes[z], x, B.nodes[w]) && continue  # relevance
+            best = (z, w)
+            break
+        end
+        best !== nothing && isempty(best[2]) && break
+    end
+    best === nothing && return nothing
+    return (z = [B.nodes[best[1]]], w = B.nodes[best[2]])
+end
+
+"""
     all_iv_sets(cg::Union{DAG,ADMG}, x::Symbol, y, w = Symbol[];
                 minimal::Bool = true, max_size::Int = 3)
         -> Vector{Vector{Symbol}}
@@ -141,7 +234,8 @@ conditioning set, no instrumental set is valid and the result is empty.
 
 Bruteforces over subsets of the allowed universe of nodes (nodes that are not `x`,
 `y`, or in `w`), checking each for validity using [`is_valid_iv`](@ref). When
-`minimal = true` (default), only inclusion-minimal sets are returned.
+`minimal = true` (default), only inclusion-minimal sets are returned. To find a
+suitable `w` automatically, use [`iv_set`](@ref).
 
 # Arguments
 - `cg::Union{DAG,ADMG}`: the graph to search.

@@ -244,3 +244,65 @@ end
         @test Set(all_iv_sets(cg, :X, :Y, w; minimal = false, max_size = 2)) == expected
     end
 end
+
+# ── iv_set ───────────────────────────────────────────────────────────────────
+
+@testitem "iv_set: prefers an unconditional instrument" tags = [:unit, :iv] begin
+    @test iv_set(DAG("Z --> X --> Y, U --> X + Y"), :X, :Y) == (z = [:Z], w = Symbol[])
+    @test iv_set(ADMG("Z --> X --> Y, X <-> Y"), :X, :Y) == (z = [:Z], w = Symbol[])
+    cg = DAG("W --> Z1 + Y, Z1 --> X --> Y, Z2 --> X, U --> X + Y")
+    @test iv_set(cg, :X, :Y) == (z = [:Z2], w = Symbol[])
+end
+
+@testitem "iv_set: finds the conditioning set" tags = [:unit, :iv] begin
+    for cg in (
+        DAG("W --> Z + Y, Z --> X --> Y, U --> X + Y"),
+        ADMG("W --> Z + Y, Z --> X --> Y, X <-> Y"),
+    )
+        @test iv_set(cg, :X, :Y) == (z = [:Z], w = [:W])
+    end
+end
+
+@testitem "iv_set: restrict" tags = [:unit, :iv] begin
+    cg = DAG("W --> Z + Y, Z --> X --> Y, U --> X + Y")
+    @test iv_set(cg, :X, :Y; restrict = [:Z, :X, :Y]) === nothing
+    @test iv_set(cg, :X, :Y; restrict = [:W, :X, :Y]) === nothing
+    @test iv_set(cg, :X, :Y; restrict = [:Z, :W]) == (z = [:Z], w = [:W])
+end
+
+@testitem "iv_set: no instrument" tags = [:unit, :iv] begin
+    @test iv_set(DAG("X --> Y, U --> X + Y"), :X, :Y) === nothing
+    @test iv_set(ADMG("Z --> X --> Y, X <-> Y, Z <-> Y"), :X, :Y) === nothing
+    # The only separator of Z and Y is the mediator M.
+    @test iv_set(DAG("Z --> X --> M --> Y, Z --> M, U --> X + Y"), :X, :Y) === nothing
+end
+
+@testitem "iv_set: agrees with exhaustive search" tags = [:unit, :iv] begin
+    using Random
+    function exists_iv(cg, x, y)
+        ns = nodes(cg)
+        for z in ns
+            z in (x, y) && continue
+            rest = setdiff(ns, [x, y, z])
+            for mask = 0:(2^length(rest)-1)
+                w = [rest[i] for i in eachindex(rest) if isodd(mask >> (i - 1))]
+                is_valid_iv(cg, x, y, z, w) && return true
+            end
+        end
+        return false
+    end
+    rng = Xoshiro(1)
+    for trial = 1:200
+        cg = if isodd(trial)
+            generate_graph(rng, 6; p = 0.35)
+        else
+            generate_graph(rng, 6; p = 0.35, class = ADMG, latents = 2)
+        end
+        ns = nodes(cg)
+        length(ns) < 3 && continue
+        x, y = ns[randperm(rng, length(ns))[1:2]]
+        r = iv_set(cg, x, y)
+        @test (r !== nothing) == exists_iv(cg, x, y)
+        r === nothing || @test is_valid_iv(cg, x, y, r.z, r.w)
+    end
+end

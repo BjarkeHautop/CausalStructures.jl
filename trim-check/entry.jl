@@ -281,10 +281,12 @@ end
 function _check_iv()
     dag = DAG("Z1 --> X, Z2 --> X, X --> Y, U --> X + Y")
     is_valid_iv(dag, :X, :Y, [:Z1])
+    iv_set(dag, :X, :Y)
     all_iv_sets(dag, :X, :Y)
 
     admg = ADMG("Z --> X, X --> Y, U <-> X, U <-> Y")
     is_valid_iv(admg, :X, :Y, [:Z])
+    iv_set(admg, :X, :Y)
     all_iv_sets(admg, :X, :Y)
     return nothing
 end

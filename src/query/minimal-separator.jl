@@ -386,6 +386,20 @@ function _backdoor_minimal_separator(
 end
 
 function _find_nearest_sep(
+    B::DAGBackend,
+    xs::Vector{Int},
+    ys::Vector{Int},
+    inc_idxs::Vector{Int},
+    res_idxs::Vector{Int},
+)
+    pass1 = _dag_nearest_sep_from_x(B, xs, ys, inc_idxs, res_idxs)
+    pass1 === nothing && return nothing
+    (_, z0_mask, x_star_mask) = pass1
+    any(x_star_mask[yi] for yi in ys) && return nothing
+    return [v for v = 1:length(B.nodes) if (z0_mask[v] && x_star_mask[v]) || v in inc_idxs]
+end
+
+function _find_nearest_sep(
     B::ADMGBackend,
     xs::Vector{Int},
     ys::Vector{Int},

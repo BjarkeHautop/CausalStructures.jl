@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `plot`'s `arrow_size` and `circle_size` now also accept a per-edge `Dict`, like the other edge styling keywords.
 - `plot`'s `node_radius` and `node_padding` now also accept a per-node `Dict`, like the other node styling keywords. Nodes without a `node_radius` keep fitting their label.
 - `is_valid_iv` and `all_iv_sets` take an optional conditioning set `w` for conditional instruments.
+- Add `iv_set`, which finds an instrument together with the conditioning set that makes it valid.
 
 ### Bug fixes
 
