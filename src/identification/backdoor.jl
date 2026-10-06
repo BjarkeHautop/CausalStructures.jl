@@ -115,7 +115,8 @@ end
 
 """
     all_backdoor_sets(cg::Union{DAG,ADMG}, x, y;
-                      minimal::Bool = true, max_size::Int = 3)
+                      minimal::Bool = true, max_size::Int = 3,
+                      include = Symbol[], restrict = nothing)
         -> Vector{Vector{Symbol}}
 
 Return all sets satisfying the backdoor criterion for the causal effect of `x`
@@ -137,7 +138,11 @@ bidirected edges and are never candidates.
 
 # Keywords
 - `minimal::Bool = true`: return only inclusion-minimal sets.
-- `max_size::Int = 3`: the maximum candidate set size to consider.
+- `max_size::Int = 3`: the maximum set size to consider, counting `include`.
+- `include::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: nodes forced into every
+  returned set.
+- `restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing`: candidate pool
+  from which sets are drawn. Defaults to all nodes.
 
 # Returns
 A `Vector{Vector{Symbol}}` of valid backdoor sets.
@@ -170,6 +175,8 @@ function all_backdoor_sets(
     y::Union{Symbol,AbstractVector{Symbol}};
     minimal::Bool = true,
     max_size::Int = 3,
+    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
 )
     B = cg.backend
     n = length(B.nodes)
@@ -237,7 +244,10 @@ function all_backdoor_sets(
 
     to_symbols(cur) = sort([B.nodes[v] for v in cur])
 
-    valid_sets = _search_subsets(universe, 0, max_size, make_checker, to_symbols)
+    constrained = _constrain_universe(cg, universe, include, restrict)
+    constrained === nothing && return Vector{Vector{Symbol}}()
+    inc, pool = constrained
+    valid_sets = _search_subsets_including(pool, inc, max_size, make_checker, to_symbols)
 
     minimal && _prune_minimal!(valid_sets)
     return valid_sets
@@ -275,6 +285,8 @@ function all_backdoor_sets(
     y::Union{Symbol,AbstractVector{Symbol}};
     minimal::Bool = true,
     max_size::Int = 3,
+    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
 )
     B = cg.backend
     n = length(B.nodes)
@@ -331,7 +343,10 @@ function all_backdoor_sets(
 
     to_symbols(cur) = sort([B.nodes[v] for v in cur])
 
-    valid_sets = _search_subsets(universe, 0, max_size, make_checker, to_symbols)
+    constrained = _constrain_universe(cg, universe, include, restrict)
+    constrained === nothing && return Vector{Vector{Symbol}}()
+    inc, pool = constrained
+    valid_sets = _search_subsets_including(pool, inc, max_size, make_checker, to_symbols)
 
     minimal && _prune_minimal!(valid_sets)
     return valid_sets
@@ -349,7 +364,8 @@ function _warn_optimal_undefined(B, xs::Vector{Int}, y_out::Vector{Int}, relatio
 end
 
 """
-    adjustment_set(cg::DAG, x, y; type::Symbol = :optimal) -> Union{Nothing,Vector{Symbol}}
+    adjustment_set(cg::DAG, x, y; type::Symbol = :optimal, include = Symbol[],
+                   restrict = nothing) -> Union{Nothing,Vector{Symbol}}
 
 Compute an adjustment set for the causal effect of `x` on `y` in `cg`, or
 `nothing` if no valid adjustment set exists.
@@ -386,6 +402,10 @@ inclusion-minimal valid adjustment set.
 
 # Keywords
 - `type::Symbol = :optimal`: one of `:parents`, `:backdoor`, or `:optimal`.
+- `include::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: nodes forced into the
+  set. Requires `type = :backdoor`.
+- `restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing`: candidate pool
+  from which the set is drawn. Defaults to all nodes. Requires `type = :backdoor`.
 
 # Returns
 A `Vector{Symbol}` adjustment set, or `nothing` if none exists.
@@ -428,7 +448,13 @@ function adjustment_set(
     x::Union{Symbol,AbstractVector{Symbol}},
     y::Union{Symbol,AbstractVector{Symbol}};
     type::Symbol = :optimal,
+    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
 )
+    constrained = !isempty(_as_symbol_vec(include)) || restrict !== nothing
+    constrained &&
+        type !== :backdoor &&
+        throw(ArgumentError("include and restrict require type = :backdoor"))
     B = cg.backend
     n = length(B.nodes)
     xs = _node_indices(cg, x)
@@ -455,13 +481,18 @@ function adjustment_set(
 
     elseif type === :backdoor
         de_x1 = _descendants_bitmask(B, xs)
-        restrict_mask = falses(n)
-        for v = 1:n
-            restrict_mask[v] = !xs_mask[v] && !ys_mask[v] && !de_x1[v]
-        end
-        restrict = _mask_nodes(B, restrict_mask)
-        z = _backdoor_minimal_separator(cg, x, y; restrict = restrict)
-        z !== nothing && return z
+        universe = [v for v = 1:n if !xs_mask[v] && !ys_mask[v] && !de_x1[v]]
+        window = _constrain_universe(cg, universe, include, restrict)
+        window === nothing && return nothing
+        inc, pool = window
+        z = _backdoor_minimal_separator(
+            cg,
+            x,
+            y;
+            restrict = B.nodes[[pool; inc]],
+            include = B.nodes[inc],
+        )
+        (z !== nothing || constrained) && return z
 
         # Fallback: Pa(X) is a valid (if non-minimal) backdoor set, unless
         # some y ∈ Y is itself a parent of X.
@@ -635,7 +666,8 @@ function adjustment_set(
 end
 
 """
-    backdoor_set(cg::DAG, x::Symbol, y::Symbol) -> Union{Vector{Symbol},Nothing}
+    backdoor_set(cg::DAG, x::Symbol, y::Symbol; include = Symbol[], restrict = nothing)
+        -> Union{Vector{Symbol},Nothing}
 
 Return a generalized back-door set relative to `(x, y)` and `cg` using the
 Generalized Backdoor Criterion (GBC; [maathuiscolombo2015gbc](@citet),
@@ -644,11 +676,18 @@ Corollary 4.1), or `nothing` if none exists.
 For a DAG this reduces to Pearl's original result ([pearl2009causality](@citet)):
 a generalized back-door set exists if and only if `y` is not a parent of `x`,
 and when it exists, `parents(cg, x)` is such a set (not necessarily minimal).
+With `include` or `restrict`, an inclusion-minimal back-door set `Z` with
+`include ⊆ Z ⊆ restrict` is returned instead.
 
 # Arguments
 - `cg::DAG`: the graph to search.
 - `x::Symbol`: the treatment node.
 - `y::Symbol`: the outcome node.
+
+# Keywords
+- `include::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: nodes forced into the set.
+- `restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing`: candidate pool
+  from which the set is drawn. Defaults to all nodes.
 
 # Returns
 A `Vector{Symbol}` back-door set, or `nothing` if none exists.
@@ -671,7 +710,15 @@ true
 - [maathuiscolombo2015gbc](@citet)
 - [pearl2009causality](@citet)
 """
-function backdoor_set(cg::DAG, x::Symbol, y::Symbol)
+function backdoor_set(
+    cg::DAG,
+    x::Symbol,
+    y::Symbol;
+    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
+)
+    (isempty(_as_symbol_vec(include)) && restrict === nothing) ||
+        return _minimal_backdoor_set(cg, x, y, include, restrict)
     B = cg.backend
     xi = node_index(cg, x)
     yi = node_index(cg, y)
@@ -680,7 +727,8 @@ function backdoor_set(cg::DAG, x::Symbol, y::Symbol)
 end
 
 """
-    backdoor_set(cg::ADMG, x::Symbol, y::Symbol) -> Union{Vector{Symbol},Nothing}
+    backdoor_set(cg::ADMG, x::Symbol, y::Symbol; include = Symbol[], restrict = nothing)
+        -> Union{Vector{Symbol},Nothing}
 
 Return a generalized back-door set relative to `(x, y)` and `cg`,
 or `nothing` if none exists.
@@ -689,6 +737,11 @@ or `nothing` if none exists.
 - `cg::ADMG`: the graph to search.
 - `x::Symbol`: the treatment node.
 - `y::Symbol`: the outcome node.
+
+# Keywords
+- `include::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: nodes forced into the set.
+- `restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing`: candidate pool
+  from which the set is drawn. Defaults to all nodes.
 
 # Returns
 A `Vector{Symbol}` back-door set, or `nothing` if none exists.
@@ -718,20 +771,41 @@ true
 
 - [maathuiscolombo2015gbc](@citet)
 """
-function backdoor_set(cg::ADMG, x::Symbol, y::Symbol)
+function backdoor_set(
+    cg::ADMG,
+    x::Symbol,
+    y::Symbol;
+    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
+)
+    return _minimal_backdoor_set(cg, x, y, include, restrict)
+end
+
+# A minimal separator of x and y among the non-descendants of x, in the graph
+# with every directed edge out of x removed.
+function _minimal_backdoor_set(cg::Union{DAG,ADMG}, x::Symbol, y::Symbol, include, restrict)
     B = cg.backend
     n = length(B.nodes)
     xi = node_index(cg, x)
     yi = node_index(cg, y)
 
     de_x = _descendants_bitmask(B, [xi])
-    universe = [B.nodes[v] for v = 1:n if v != xi && v != yi && !de_x[v]]
+    universe = [v for v = 1:n if v != xi && v != yi && !de_x[v]]
+    window = _constrain_universe(cg, universe, include, restrict)
+    window === nothing && return nothing
+    inc, pool = window
 
     gx = build_graph(
-        ADMG,
+        typeof(cg),
         Set(B.nodes),
         filter(e -> !(is_directed(e) && e.src == x), cg.edges),
     )
 
-    return minimal_separator(gx, x, y; restrict = universe)
+    return minimal_separator(
+        gx,
+        x,
+        y;
+        include = B.nodes[inc],
+        restrict = B.nodes[[pool; inc]],
+    )
 end

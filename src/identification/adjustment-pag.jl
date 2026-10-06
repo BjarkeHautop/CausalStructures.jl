@@ -187,9 +187,10 @@ function _nearest_sep_pag_pbg(
     ys::Vector{Int},
     res_idxs::Vector{Int},
     removed::Set{Tuple{Int,Int}},
+    inc_idxs::Vector{Int} = Int[],
 )
     n = length(B.nodes)
-    seeds = unique([xs; ys])
+    seeds = unique([xs; ys; inc_idxs])
     mask = _pag_anterior_bitmask(B, seeds, removed)
 
     z0_mask = falses(n)
@@ -200,7 +201,7 @@ function _nearest_sep_pag_pbg(
     x_star = _reachable_pag(B, xs, mask, z0_mask, removed)
     any(x_star[yi] for yi in ys) && return nothing
 
-    return [v for v = 1:n if z0_mask[v] && x_star[v]]
+    return [v for v = 1:n if (z0_mask[v] && x_star[v]) || v in inc_idxs]
 end
 
 # Two-pass FINDMINSEP (from `xs`, then from `ys` restricted to the first
@@ -211,10 +212,11 @@ function _findminsep_pag_pbg(
     ys::Vector{Int},
     res_idxs::Vector{Int},
     removed::Set{Tuple{Int,Int}},
+    inc_idxs::Vector{Int} = Int[],
 )
-    zx = _nearest_sep_pag_pbg(B, xs, ys, res_idxs, removed)
+    zx = _nearest_sep_pag_pbg(B, xs, ys, res_idxs, removed, inc_idxs)
     zx === nothing && return nothing
-    zy = _nearest_sep_pag_pbg(B, ys, xs, zx, removed)
+    zy = _nearest_sep_pag_pbg(B, ys, xs, zx, removed, inc_idxs)
     zy === nothing && return nothing
     zy_set = Set(zy)
     return sort!([v for v in zx if v in zy_set])
@@ -294,7 +296,8 @@ end
 
 """
     all_adjustment_sets(cg::PAG, x, y;
-                        minimal::Bool = true, max_size::Int = 3)
+                        minimal::Bool = true, max_size::Int = 3,
+                        include = Symbol[], restrict = nothing)
         -> Vector{Vector{Symbol}}
 
 Return all valid adjustment sets for the total causal effect of `x` on `y` in
@@ -312,7 +315,11 @@ Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 
 # Keywords
 - `minimal::Bool = true`: return only inclusion-minimal sets.
-- `max_size::Int = 3`: the maximum candidate set size to consider.
+- `max_size::Int = 3`: the maximum set size to consider, counting `include`.
+- `include::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: nodes forced into every
+  returned set.
+- `restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing`: candidate pool
+  from which sets are drawn. Defaults to all nodes.
 
 # Returns
 A `Vector{Vector{Symbol}}` of valid adjustment sets.
@@ -349,6 +356,8 @@ function all_adjustment_sets(
     y::Union{Symbol,AbstractVector{Symbol}};
     minimal::Bool = true,
     max_size::Int = 3,
+    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
 )
     B = cg.backend
     n = length(B.nodes)
@@ -368,14 +377,18 @@ function all_adjustment_sets(
 
     to_symbols(cur) = sort([B.nodes[v] for v in cur])
 
-    valid_sets = _search_subsets(universe, 0, max_size, make_checker, to_symbols)
+    constrained = _constrain_universe(cg, universe, include, restrict)
+    constrained === nothing && return Vector{Vector{Symbol}}()
+    inc, pool = constrained
+    valid_sets = _search_subsets_including(pool, inc, max_size, make_checker, to_symbols)
 
     minimal && _prune_minimal!(valid_sets)
     return valid_sets
 end
 
 """
-    adjustment_set(cg::PAG, x, y) -> Union{Nothing,Vector{Symbol}}
+    adjustment_set(cg::PAG, x, y; include = Symbol[], restrict = nothing)
+        -> Union{Nothing,Vector{Symbol}}
 
 Return a inclusion-minimalvalid adjustment set for the causal effect of `x` on `y` in `cg`, or
 `nothing` if none exists.
@@ -386,6 +399,11 @@ Return a inclusion-minimalvalid adjustment set for the causal effect of `x` on `
 - `cg::PAG`: the graph to search.
 - `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
 - `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+
+# Keywords
+- `include::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: nodes forced into the set.
+- `restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing`: candidate pool
+  from which the set is drawn. Defaults to all nodes.
 
 # Returns
 A `Vector{Symbol}` adjustment set, or `nothing` if none exists.
@@ -426,7 +444,9 @@ true
 function adjustment_set(
     cg::PAG,
     x::Union{Symbol,AbstractVector{Symbol}},
-    y::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}};
+    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
 )
     B = cg.backend
     n = length(B.nodes)
@@ -440,9 +460,12 @@ function adjustment_set(
     end
 
     universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
+    constrained = _constrain_universe(cg, universe, include, restrict)
+    constrained === nothing && return nothing
+    inc, pool = constrained
     removed = _pbg_removed_pag(B, xs, ys)
 
-    result = _findminsep_pag_pbg(B, xs, ys, universe, removed)
+    result = _findminsep_pag_pbg(B, xs, ys, [pool; inc], removed, inc)
     result === nothing && return nothing
     return [B.nodes[v] for v in result]
 end

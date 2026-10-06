@@ -158,3 +158,57 @@ function _search_subsets(
     end
     return _search_subsets_threaded(universe, min_size, max_size, make_checker, to_symbols)
 end
+
+# Applies `include`/`restrict` to a search `universe` (node indices). Returns
+# `(inc, universe′)`, where `universe′` is `universe ∩ restrict` minus `inc`,
+# or `nothing` if some `include` node is not in `universe ∩ restrict`.
+function _constrain_universe(cg::CausalGraph, universe::Vector{Int}, include, restrict)
+    n = length(cg.backend.nodes)
+    allowed = falses(n)
+    for v in universe
+        allowed[v] = true
+    end
+    if restrict !== nothing
+        in_restrict = falses(n)
+        for v in _node_indices(cg, restrict)
+            in_restrict[v] = true
+        end
+        allowed .&= in_restrict
+    end
+    inc = _node_indices(cg, include)
+    all(v -> allowed[v], inc) || return nothing
+    for v in inc
+        allowed[v] = false
+    end
+    return inc, [v for v in universe if allowed[v]]
+end
+
+# `_search_subsets` over sets `inc ∪ S`, `S ⊆ universe`, of total size at most
+# `max_size`.
+function _search_subsets_including(
+    universe::Vector{Int},
+    inc::Vector{Int},
+    max_size::Int,
+    make_checker::F1,
+    to_symbols::F2,
+) where {F1<:Function,F2<:Function}
+    isempty(inc) && return _search_subsets(universe, 0, max_size, make_checker, to_symbols)
+    function make_inc_checker()
+        checker = make_checker()
+        buf = Int[]
+        return function (cur::Vector{Int})
+            empty!(buf)
+            append!(buf, inc)
+            append!(buf, cur)
+            return checker(buf)
+        end
+    end
+    inc_to_symbols(cur) = to_symbols([inc; cur])
+    return _search_subsets(
+        universe,
+        0,
+        max_size - length(inc),
+        make_inc_checker,
+        inc_to_symbols,
+    )
+end

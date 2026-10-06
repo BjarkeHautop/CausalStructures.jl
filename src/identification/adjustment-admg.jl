@@ -249,13 +249,14 @@ end
 # adjacency-list graph that's already moralized/filtered for the AG/MAG PBG
 # and restricted to `mask`. Mirrors `_find_nearest_sep` in, but from a precomputed
 # `adj` instead of a raw
-# graph. `res_idxs` is assumed disjoint from `xs`/`ys`.
+# graph. `res_idxs` is assumed disjoint from `xs`/`ys`, and to contain `inc_idxs`.
 function _nearest_sep_from_adj(
     adj::Vector{Vector{Int}},
     mask::BitVector,
     xs::Vector{Int},
     ys::Vector{Int},
     res_idxs::Vector{Int},
+    inc_idxs::Vector{Int} = Int[],
 )
     n = length(mask)
     blocked = falses(n)
@@ -283,7 +284,7 @@ function _nearest_sep_from_adj(
     end
 
     any(visited[yi] for yi in ys) && return nothing
-    return [v for v in res_idxs if blocked[v] && visited[v]]
+    return [v for v in res_idxs if (blocked[v] && visited[v]) || v in inc_idxs]
 end
 
 # Two-pass FINDMINSEP (from `xs`, then from `ys` restricted to the first
@@ -294,10 +295,11 @@ function _findminsep_from_adj(
     xs::Vector{Int},
     ys::Vector{Int},
     res_idxs::Vector{Int},
+    inc_idxs::Vector{Int} = Int[],
 )
-    zx = _nearest_sep_from_adj(adj, mask, xs, ys, res_idxs)
+    zx = _nearest_sep_from_adj(adj, mask, xs, ys, res_idxs, inc_idxs)
     zx === nothing && return nothing
-    zy = _nearest_sep_from_adj(adj, mask, ys, xs, zx)
+    zy = _nearest_sep_from_adj(adj, mask, ys, xs, zx, inc_idxs)
     zy === nothing && return nothing
     zy_set = Set(zy)
     return sort!([v for v in zx if v in zy_set])
@@ -469,7 +471,8 @@ end
 
 """
     all_adjustment_sets(cg::DAG, x, y;
-                        minimal::Bool = true, max_size::Int = 3)
+                        minimal::Bool = true, max_size::Int = 3,
+                        include = Symbol[], restrict = nothing)
         -> Vector{Vector{Symbol}}
 
 Return all valid adjustment sets for the total causal effect of `x` on `y` in
@@ -487,7 +490,11 @@ Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 
 # Keywords
 - `minimal::Bool = true`: return only inclusion-minimal sets.
-- `max_size::Int = 3`: the maximum candidate set size to consider.
+- `max_size::Int = 3`: the maximum set size to consider, counting `include`.
+- `include::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: nodes forced into every
+  returned set.
+- `restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing`: candidate pool
+  from which sets are drawn. Defaults to all nodes.
 
 # Returns
 A `Vector{Vector{Symbol}}` of valid adjustment sets.
@@ -504,6 +511,10 @@ julia> all_adjustment_sets(dag, :X, :Y)
 julia> all_adjustment_sets(dag, :X, :Y; minimal=false)
 2-element Vector{Vector{Symbol}}:
  [:A]
+ [:A, :B]
+
+julia> all_adjustment_sets(dag, :X, :Y; include = :B)
+1-element Vector{Vector{Symbol}}:
  [:A, :B]
 
 julia> dag2 = DAG("L1 --> X1, L1 --> Y, L2 --> X2, L2 --> Y, X1 --> Y, X2 --> Y");
@@ -523,6 +534,8 @@ function all_adjustment_sets(
     y::Union{Symbol,AbstractVector{Symbol}};
     minimal::Bool = true,
     max_size::Int = 3,
+    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
 )
     B = cg.backend
     n = length(B.nodes)
@@ -573,7 +586,10 @@ function all_adjustment_sets(
 
     to_symbols(cur) = sort([B.nodes[v] for v in cur])
 
-    valid_sets = _search_subsets(universe, 0, max_size, make_checker, to_symbols)
+    constrained = _constrain_universe(cg, universe, include, restrict)
+    constrained === nothing && return Vector{Vector{Symbol}}()
+    inc, pool = constrained
+    valid_sets = _search_subsets_including(pool, inc, max_size, make_checker, to_symbols)
 
     minimal && _prune_minimal!(valid_sets)
     return valid_sets
@@ -657,7 +673,8 @@ end
 
 """
     all_adjustment_sets(cg::Union{ADMG,AbstractAG,AbstractPDAG}, x, y;
-                        minimal::Bool = true, max_size::Int = 3)
+                        minimal::Bool = true, max_size::Int = 3,
+                        include = Symbol[], restrict = nothing)
         -> Vector{Vector{Symbol}}
 
 Return all valid adjustment sets for the total causal effect of `x` on `y` in
@@ -677,7 +694,11 @@ inclusion-minimal sets are returned.
 
 # Keywords
 - `minimal::Bool = true`: return only inclusion-minimal sets.
-- `max_size::Int = 3`: the maximum candidate set size to consider.
+- `max_size::Int = 3`: the maximum set size to consider, counting `include`.
+- `include::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: nodes forced into every
+  returned set.
+- `restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing`: candidate pool
+  from which sets are drawn. Defaults to all nodes.
 
 # Returns
 A `Vector{Vector{Symbol}}` of valid adjustment sets.
@@ -730,6 +751,8 @@ function all_adjustment_sets(
     y::Union{Symbol,AbstractVector{Symbol}};
     minimal::Bool = true,
     max_size::Int = 3,
+    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
 )
     B = cg.backend
     n = length(B.nodes)
@@ -749,14 +772,18 @@ function all_adjustment_sets(
 
     to_symbols(cur) = sort([B.nodes[v] for v in cur])
 
-    valid_sets = _search_subsets(universe, 0, max_size, make_checker, to_symbols)
+    constrained = _constrain_universe(cg, universe, include, restrict)
+    constrained === nothing && return Vector{Vector{Symbol}}()
+    inc, pool = constrained
+    valid_sets = _search_subsets_including(pool, inc, max_size, make_checker, to_symbols)
 
     minimal && _prune_minimal!(valid_sets)
     return valid_sets
 end
 
 """
-    adjustment_set(cg::ADMG, x, y) -> Union{Nothing,Vector{Symbol}}
+    adjustment_set(cg::ADMG, x, y; include = Symbol[], restrict = nothing)
+        -> Union{Nothing,Vector{Symbol}}
 
 Return a valid inclusion-minimal adjustment set for the causal effect of `x` on `y` in `cg`, or
 `nothing` if none exists.
@@ -767,6 +794,11 @@ Return a valid inclusion-minimal adjustment set for the causal effect of `x` on 
 - `cg::ADMG`: the graph to search.
 - `x::Union{Symbol,AbstractVector{Symbol}}`: the treatment node(s).
 - `y::Union{Symbol,AbstractVector{Symbol}}`: the outcome node(s).
+
+# Keywords
+- `include::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: nodes forced into the set.
+- `restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing`: candidate pool
+  from which the set is drawn. Defaults to all nodes.
 
 # Returns
 A `Vector{Symbol}` adjustment set, or `nothing` if none exists.
@@ -800,7 +832,9 @@ true
 function adjustment_set(
     cg::ADMG,
     x::Union{Symbol,AbstractVector{Symbol}},
-    y::Union{Symbol,AbstractVector{Symbol}},
+    y::Union{Symbol,AbstractVector{Symbol}};
+    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
 )
     B = cg.backend
     n = length(B.nodes)
@@ -813,8 +847,17 @@ function adjustment_set(
         y_mask[yi] = true
     end
 
-    universe = [B.nodes[v] for v = 1:n if !forbidden[v] && !y_mask[v]]
+    universe = [v for v = 1:n if !forbidden[v] && !y_mask[v]]
+    constrained = _constrain_universe(cg, universe, include, restrict)
+    constrained === nothing && return nothing
+    inc, pool = constrained
     gx = _pbg_admg(cg, xs, ys)
 
-    return minimal_separator(gx, x, y; restrict = universe)
+    return minimal_separator(
+        gx,
+        x,
+        y;
+        include = B.nodes[inc],
+        restrict = B.nodes[[pool; inc]],
+    )
 end

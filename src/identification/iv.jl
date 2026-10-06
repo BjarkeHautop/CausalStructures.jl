@@ -222,7 +222,8 @@ end
 
 """
     all_iv_sets(cg::Union{DAG,ADMG}, x::Symbol, y, w = Symbol[];
-                minimal::Bool = true, max_size::Int = 3)
+                minimal::Bool = true, max_size::Int = 3,
+                include = Symbol[], restrict = nothing)
         -> Vector{Vector{Symbol}}
 
 Return all valid instrumental sets for the causal effect of `x` on `y` in `cg`,
@@ -245,7 +246,11 @@ suitable `w` automatically, use [`iv_set`](@ref).
 
 # Keywords
 - `minimal::Bool = true`: return only inclusion-minimal sets.
-- `max_size::Int = 3`: the maximum candidate set size to consider.
+- `max_size::Int = 3`: the maximum set size to consider, counting `include`.
+- `include::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: nodes forced into every
+  returned set.
+- `restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing`: candidate pool
+  from which sets are drawn. Defaults to all nodes.
 
 # Returns
 A `Vector{Vector{Symbol}}` of valid instrumental sets.
@@ -288,6 +293,8 @@ function all_iv_sets(
     w::Union{Symbol,AbstractVector{Symbol}} = Symbol[];
     minimal::Bool = true,
     max_size::Int = 3,
+    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
 )
     B = cg.backend
     n = length(B.nodes)
@@ -305,6 +312,9 @@ function all_iv_sets(
     end
 
     universe = [v for v = 1:n if v != x_idx && !ys_mask[v] && !w_mask[v]]
+    constrained = _constrain_universe(cg, universe, include, restrict)
+    constrained === nothing && return Vector{Vector{Symbol}}()
+    inc, pool = constrained
     g_iv = _build_g_iv(cg, x, y)  # built once; x/y/w already excluded from universe
     Bd = g_iv.backend
 
@@ -331,16 +341,19 @@ function all_iv_sets(
     # node individually against a fixed conditioning set `w`. So whether a
     # node can belong to a valid set at all (exclusion) and whether it can witness
     # relevance are both Z-independent, and can be decided once per node.
-    valid_pool = [v for v in universe if separated_given_w(Bd, v, ys_idx)]
+    all(v -> separated_given_w(Bd, v, ys_idx), inc) || return Vector{Vector{Symbol}}()
+    valid_pool = [v for v in pool if separated_given_w(Bd, v, ys_idx)]
     relevant_pool = [v for v in valid_pool if !separated_given_w(B, v, x_vec)]
+    inc_relevant = any(v -> !separated_given_w(B, v, x_vec), inc)
 
-    to_symbols(cur) = sort([B.nodes[v] for v in cur])
+    to_symbols(cur) = sort([B.nodes[v] for v in [inc; cur]])
 
     if minimal
-        return [[B.nodes[v]] for v in relevant_pool]
+        inc_relevant && return [to_symbols(Int[])]
+        return [to_symbols([v]) for v in relevant_pool]
     end
 
-    isempty(relevant_pool) && return Vector{Vector{Symbol}}()
+    (inc_relevant || !isempty(relevant_pool)) || return Vector{Vector{Symbol}}()
 
     relevant_mask = falses(n)
     for v in relevant_pool
@@ -348,8 +361,8 @@ function all_iv_sets(
     end
 
     valid_sets = Vector{Vector{Symbol}}()
-    for c in _all_subsets(valid_pool, 1, max_size)
-        any(v -> relevant_mask[v], c) && push!(valid_sets, to_symbols(c))
+    for c in _all_subsets(valid_pool, isempty(inc) ? 1 : 0, max_size - length(inc))
+        (inc_relevant || any(v -> relevant_mask[v], c)) && push!(valid_sets, to_symbols(c))
     end
     return valid_sets
 end

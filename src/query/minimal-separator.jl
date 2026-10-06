@@ -342,11 +342,13 @@ function _backdoor_minimal_separator(
     x::Union{Symbol,AbstractVector{Symbol}},
     y::Union{Symbol,AbstractVector{Symbol}};
     restrict::Union{Symbol,AbstractVector{Symbol}},
+    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
     B = cg.backend
     n = length(B.nodes)
     xs = _node_indices(cg, x)
     ys = _node_indices(cg, y)
+    inc_idxs = _node_indices(cg, include)
     xs_mask = falses(n)
     for xi in xs
         xs_mask[xi] = true
@@ -357,7 +359,7 @@ function _backdoor_minimal_separator(
     end
     res_idxs = _node_indices(cg, restrict)
 
-    seeds = unique([xs; ys])
+    seeds = unique([xs; ys; inc_idxs])
     ancestor_mask = _ancestors_bitmask(B, seeds)
 
     z0_mask = falses(n)
@@ -374,12 +376,18 @@ function _backdoor_minimal_separator(
     for v = 1:n
         z0_mask[v] && x_star_mask[v] && (zx_mask[v] = true)
     end
+    for v in inc_idxs
+        zx_mask[v] = true
+    end
 
     y_star_mask = _d_connected_restricted_mask(B, ys, zx_mask, ancestor_mask, xs_mask)
 
     z_mask = falses(n)
     for v = 1:n
         zx_mask[v] && y_star_mask[v] && (z_mask[v] = true)
+    end
+    for v in inc_idxs
+        z_mask[v] = true
     end
 
     return B.nodes[[v for v = 1:n if z_mask[v]]]

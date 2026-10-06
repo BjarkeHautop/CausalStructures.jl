@@ -312,7 +312,8 @@ end
 
 """
     all_adjustment_sets(cg::AbstractPDAG, x, y;
-                        minimal::Bool = true, max_size::Int = 3)
+                        minimal::Bool = true, max_size::Int = 3,
+                        include = Symbol[], restrict = nothing)
         -> Vector{Vector{Symbol}}
 
 Return all valid adjustment sets for the total causal effect of `x` on `y` in
@@ -330,7 +331,11 @@ Sets are validated using [`is_valid_adjustment`](@ref). When `minimal = true`
 
 # Keywords
 - `minimal::Bool = true`: return only inclusion-minimal sets.
-- `max_size::Int = 3`: the maximum candidate set size to consider.
+- `max_size::Int = 3`: the maximum set size to consider, counting `include`.
+- `include::Union{Symbol,AbstractVector{Symbol}} = Symbol[]`: nodes forced into every
+  returned set.
+- `restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing`: candidate pool
+  from which sets are drawn. Defaults to all nodes.
 
 # Returns
 A `Vector{Vector{Symbol}}` of valid adjustment sets.
@@ -369,6 +374,8 @@ function all_adjustment_sets(
     y::Union{Symbol,AbstractVector{Symbol}};
     minimal::Bool = true,
     max_size::Int = 3,
+    include::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
+    restrict::Union{Nothing,Symbol,AbstractVector{Symbol}} = nothing,
 )
     cg = _adjustment_graph(cg)
     B = cg.backend
@@ -413,7 +420,10 @@ function all_adjustment_sets(
 
     to_symbols(cur) = sort([B.nodes[v] for v in cur])
 
-    valid_sets = _search_subsets(universe, 0, max_size, make_checker, to_symbols)
+    constrained = _constrain_universe(cg, universe, include, restrict)
+    constrained === nothing && return Vector{Vector{Symbol}}()
+    inc, pool = constrained
+    valid_sets = _search_subsets_including(pool, inc, max_size, make_checker, to_symbols)
 
     minimal && _prune_minimal!(valid_sets)
     return valid_sets

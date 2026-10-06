@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `plot`'s `node_radius` and `node_padding` now also accept a per-node `Dict`, like the other node styling keywords. Nodes without a `node_radius` keep fitting their label.
 - `is_valid_iv` and `all_iv_sets` take an optional conditioning set `w` for conditional instruments.
 - Add `iv_set`, which finds an instrument together with the conditioning set that makes it valid.
+- `all_adjustment_sets`, `all_backdoor_sets`, `all_iv_sets`, `adjustment_set` (`ADMG`, `AbstractAG`, `PAG`, and `DAG` with `type = :backdoor`) and `backdoor_set` (`DAG`, `ADMG`) take `include` and `restrict` keywords, like `minimal_separator` and `frontdoor_set`.
 
 ### Bug fixes
 
