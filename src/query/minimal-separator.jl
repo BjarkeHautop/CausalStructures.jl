@@ -20,78 +20,79 @@ function _d_connected_restricted_mask(
 )
     n = length(B.nodes)
 
-    visited = falses(n, 2)   # col 1 = Down (from parent), col 2 = Up (from child)
-    reached = falses(n)
-    start_mask = falses(n)
+    cond = Vector{Bool}(conditioned)
+    anc = Vector{Bool}(ancestor_mask)
+    no_out = no_out_mask === nothing ? fill(false, n) : Vector{Bool}(no_out_mask)
+    down = fill(false, n)   # visited arriving from a parent
+    up = fill(false, n)     # visited arriving from a child
+    reached = fill(false, n)
+    start_mask = fill(false, n)
     for v in start_idxs
         start_mask[v] = true
     end
 
-    queue = Tuple{Int,Int}[]
+    queue = Tuple{Int,Bool}[]   # (node, arrived from a parent)
     for v in start_idxs
-        if !visited[v, 1]
-            visited[v, 1] = true
-            push!(queue, (v, 1))
+        if !down[v]
+            down[v] = true
+            push!(queue, (v, true))
         end
-        if !visited[v, 2]
-            visited[v, 2] = true
-            push!(queue, (v, 2))
+        if !up[v]
+            up[v] = true
+            push!(queue, (v, false))
         end
     end
 
     head = 1
     while head <= length(queue)
-        v, dir = queue[head]
+        v, from_parent = queue[head]
         head += 1
 
-        if !conditioned[v]
-            no_out = no_out_mask !== nothing && no_out_mask[v]
-            if dir == 1  # Down: propagate to children
-                no_out && continue
+        if !cond[v]
+            if from_parent  # Down: propagate to children
+                no_out[v] && continue
                 for ch in _children_slice(B, v)
-                    ancestor_mask[ch] || continue
-                    if !visited[ch, 1]
-                        visited[ch, 1] = true
+                    anc[ch] || continue
+                    if !down[ch]
+                        down[ch] = true
                         !start_mask[ch] && (reached[ch] = true)
-                        push!(queue, (ch, 1))
+                        push!(queue, (ch, true))
                     end
                 end
             else  # Up: propagate to parents and bounce to children
                 for pa in _parents_slice(B, v)
-                    no_out_mask !== nothing && no_out_mask[pa] && continue
-                    ancestor_mask[pa] || continue
-                    if !visited[pa, 2]
-                        visited[pa, 2] = true
+                    no_out[pa] && continue
+                    anc[pa] || continue
+                    if !up[pa]
+                        up[pa] = true
                         !start_mask[pa] && (reached[pa] = true)
-                        push!(queue, (pa, 2))
+                        push!(queue, (pa, false))
                     end
                 end
-                no_out && continue
+                no_out[v] && continue
                 for ch in _children_slice(B, v)
-                    ancestor_mask[ch] || continue
-                    if !visited[ch, 1]
-                        visited[ch, 1] = true
+                    anc[ch] || continue
+                    if !down[ch]
+                        down[ch] = true
                         !start_mask[ch] && (reached[ch] = true)
-                        push!(queue, (ch, 1))
+                        push!(queue, (ch, true))
                     end
                 end
             end
-        else
-            if dir == 1  # Down at conditioned collider: activate, propagate to parents
-                for pa in _parents_slice(B, v)
-                    no_out_mask !== nothing && no_out_mask[pa] && continue
-                    ancestor_mask[pa] || continue
-                    if !visited[pa, 2]
-                        visited[pa, 2] = true
-                        !start_mask[pa] && (reached[pa] = true)
-                        push!(queue, (pa, 2))
-                    end
+        elseif from_parent  # Down at conditioned collider: activate, propagate to parents
+            for pa in _parents_slice(B, v)
+                no_out[pa] && continue
+                anc[pa] || continue
+                if !up[pa]
+                    up[pa] = true
+                    !start_mask[pa] && (reached[pa] = true)
+                    push!(queue, (pa, false))
                 end
             end
         end
     end
 
-    return reached
+    return BitVector(reached)
 end
 
 # FINDNEARESTSEP's first pass for a DAG: the ancestor/candidate restriction
