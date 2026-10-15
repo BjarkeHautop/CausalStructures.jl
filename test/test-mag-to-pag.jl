@@ -287,3 +287,121 @@ end
     # ... so the PAG validates and round-trips.
     @test PAG(nodes(pag), pag.edges) isa PAG
 end
+
+# ── Potentially directed paths (R9, R10) ────────────────────────────────────────
+
+@testitem "_pag_rule_r9!: p.d. path rejects an arrowhead at V_i or a tail at V_i+1" tags =
+    [:unit, :mag_to_pag] begin
+    Circle, Arrow, Tail =
+        CausalStructures.Circle, CausalStructures.Arrow, CausalStructures.Tail
+
+    # alpha o-> gamma and the uncovered path alpha - beta - theta - gamma, with
+    # alpha,theta and beta,gamma non-adjacent. `ab` and `bt` give the marks
+    # (at the first node, at the second node) of alpha-beta and beta-theta;
+    # theta o-o gamma. Zhang (2008), Def. 10: an edge V_i - V_i+1 on a p.d.
+    # path is neither into V_i nor out of V_i+1.
+    function r9_fires(ab, bt)
+        n = 4
+        alpha, beta, theta, gamma = 1, 2, 3, 4
+        adj = falses(n, n)
+        for (i, j) in [(alpha, gamma), (alpha, beta), (beta, theta), (theta, gamma)]
+            adj[i, j] = adj[j, i] = true
+        end
+        mark = fill(Circle, n, n)
+        mark[alpha, gamma], mark[gamma, alpha] = Arrow, Circle
+        mark[beta, alpha], mark[alpha, beta] = ab
+        mark[theta, beta], mark[beta, theta] = bt
+        fired = CausalStructures._pag_rule_r9!(adj, mark, n)
+        return fired && mark[gamma, alpha] == Tail
+    end
+
+    @test r9_fires((Circle, Circle), (Circle, Circle))   # o-o, o-o
+    @test r9_fires((Tail, Arrow), (Tail, Arrow))         # -->, -->
+    @test r9_fires((Circle, Circle), (Circle, Arrow))    # o-o, o->
+    @test r9_fires((Tail, Circle), (Circle, Circle))     # --o, o-o
+    @test !r9_fires((Circle, Circle), (Tail, Tail))      # beta --- theta
+    @test !r9_fires((Circle, Circle), (Circle, Tail))    # beta o-- theta
+    @test !r9_fires((Circle, Circle), (Arrow, Circle))   # beta <-o theta
+    @test !r9_fires((Circle, Tail), (Circle, Circle))    # alpha o-- beta (first edge)
+    @test !r9_fires((Tail, Tail), (Circle, Circle))      # alpha --- beta (first edge)
+end
+
+@testitem "_pag_rule_r10!: a p.d. path may start with alpha o-> gamma" tags =
+    [:unit, :mag_to_pag] begin
+    Circle, Arrow, Tail =
+        CausalStructures.Circle, CausalStructures.Arrow, CausalStructures.Tail
+
+    # alpha o-> gamma, beta --> gamma <-- theta. The only uncovered p.d. path
+    # from alpha to beta is alpha o-> gamma o-o x o-o y o-o beta, so mu = gamma;
+    # the path to theta is alpha o-o omega o-o theta. mu and omega are distinct
+    # and non-adjacent. Zhang's R10 places no restriction on gamma appearing on
+    # either path, so it fires.
+    n = 7
+    alpha, gamma, beta, theta, x, y, omega = 1:7
+    adj = falses(n, n)
+    for (i, j) in [
+        (alpha, gamma),
+        (beta, gamma),
+        (theta, gamma),
+        (gamma, x),
+        (x, y),
+        (y, beta),
+        (alpha, omega),
+        (omega, theta),
+    ]
+        adj[i, j] = adj[j, i] = true
+    end
+    mark = fill(Circle, n, n)
+    mark[alpha, gamma], mark[gamma, alpha] = Arrow, Circle
+    mark[beta, gamma], mark[gamma, beta] = Arrow, Tail
+    mark[theta, gamma], mark[gamma, theta] = Arrow, Tail
+
+    @test CausalStructures._pag_rule_r10!(adj, mark, n)
+    @test mark[gamma, alpha] == Tail   # R10: alpha --> gamma
+
+    # Breaking the path through gamma (x o-- y has a tail at y) leaves no witness.
+    mark2 = fill(Circle, n, n)
+    mark2[alpha, gamma], mark2[gamma, alpha] = Arrow, Circle
+    mark2[beta, gamma], mark2[gamma, beta] = Arrow, Tail
+    mark2[theta, gamma], mark2[gamma, theta] = Arrow, Tail
+    mark2[x, y] = Tail
+    @test !CausalStructures._pag_rule_r10!(adj, mark2, n)
+    @test mark2[gamma, alpha] == Circle
+end
+
+# ── R4 consequent ───────────────────────────────────────────────────────────────
+
+@testitem "_pag_rule_r4!: a collider is oriented A <-> beta <-> gamma" tags =
+    [:unit, :mag_to_pag] begin
+    Circle, Arrow, Tail =
+        CausalStructures.Circle, CausalStructures.Arrow, CausalStructures.Tail
+
+    # Discriminating path <D, A, beta, gamma> for beta: D o-> A <-o beta, with
+    # A --> gamma, beta o-o gamma and D not adjacent to gamma. Zhang (2008)
+    # orients the whole triple <A, beta, gamma>, so the circle at beta on
+    # A - beta becomes an arrowhead too when beta is a collider in the MAG.
+    function run_r4(collider)
+        n = 4
+        d, a, beta, gamma = 1, 2, 3, 4
+        adj = falses(n, n)
+        for (i, j) in [(d, a), (a, beta), (a, gamma), (beta, gamma)]
+            adj[i, j] = adj[j, i] = true
+        end
+        mark = fill(Circle, n, n)
+        mark[d, a] = Arrow                                # D o-> A
+        mark[beta, a] = Arrow                             # A <-o beta
+        mark[a, gamma], mark[gamma, a] = Arrow, Tail      # A --> gamma
+        mmark = fill(Tail, n, n)
+        mmark[gamma, beta] = collider ? Arrow : Tail      # mark at beta on beta-gamma
+        @test CausalStructures._pag_rule_r4!(adj, mark, n, mmark)
+        return mark
+    end
+
+    m = run_r4(true)
+    @test m[2, 3] == Arrow                            # A <-> beta
+    @test m[3, 4] == Arrow && m[4, 3] == Arrow        # beta <-> gamma
+
+    m = run_r4(false)
+    @test m[2, 3] == Circle                           # A <-o beta untouched
+    @test m[3, 4] == Arrow && m[4, 3] == Tail         # beta --> gamma
+end

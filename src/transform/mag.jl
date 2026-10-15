@@ -151,11 +151,11 @@ function _edges_from_marks(nodes, adj::BitMatrix, mark::Matrix{Endpoint})
     return new_edges
 end
 
-# Does an uncovered possibly-directed path `start - first - ... - target`
-# exist? "possibly directed" = no arrowhead points back toward `start`;
-# "uncovered" = consecutive triples have non-adjacent endpoints. Nodes in
-# `avoid` may not appear on the path. Shared by R9/R10 in _close_pag_marks!
-# and _close_pag_marks_local!.
+# Does an uncovered potentially directed path `start - first - ... - target`
+# exist? "potentially directed" (Zhang 2008, Def. 10) = no edge V_i - V_i+1 is
+# into V_i (arrowhead at V_i) or out of V_i+1 (tail at V_i+1); "uncovered" =
+# consecutive triples have non-adjacent endpoints. Shared by R9/R10 in
+# _close_pag_marks! and _close_pag_marks_local!.
 function _has_uncovered_pd_path(
     adj::BitMatrix,
     mark::Matrix{Endpoint},
@@ -163,16 +163,11 @@ function _has_uncovered_pd_path(
     start,
     target,
     first,
-    avoid,
 )
     first == start && return false
-    mark[first, start] == Arrow && return false   # arrowhead back at start
+    _pd_step(mark, start, first) || return false
     visited = falses(n)
     visited[start] = true
-    for a in avoid
-        visited[a] = true
-    end
-    visited[first] && return false
     visited[first] = true
     return _has_uncovered_pd_path_dfs!(adj, mark, n, target, visited, first, start)
 end
@@ -190,7 +185,7 @@ function _has_uncovered_pd_path_dfs!(
     for nxt = 1:n
         adj[cur, nxt] || continue
         visited[nxt] && continue
-        mark[nxt, cur] == Arrow && continue   # arrowhead back toward start
+        _pd_step(mark, cur, nxt) || continue
         adj[prev, nxt] && continue            # uncovered: prev-nxt non-adjacent
         visited[nxt] = true
         _has_uncovered_pd_path_dfs!(adj, mark, n, target, visited, nxt, cur) && return true
@@ -199,11 +194,16 @@ function _has_uncovered_pd_path_dfs!(
     return false
 end
 
-# Is there a discriminating path <D, ..., A, beta, gamma> for `beta` in the
-# current PAG? Every node strictly between D and beta is a collider on the
-# path and a parent of gamma; D is not adjacent to gamma. Shared by R4 in
-# _close_pag_marks! and R'_4 in _close_pag_marks_local!.
-function _has_discriminating_path(
+# Can the edge `u - v` sit on a potentially directed path from `u` to `v`: no
+# arrowhead at `u` and no tail at `v`?
+_pd_step(mark::Matrix{Endpoint}, u, v) = mark[v, u] != Arrow && mark[u, v] != Tail
+
+# Find a discriminating path <D, ..., A, beta, gamma> for `beta` in the
+# current PAG and return A, or `nothing` if there is none. Every node strictly
+# between D and beta is a collider on the path and a parent of gamma; D is not
+# adjacent to gamma. Shared by R4 in _close_pag_marks! and R'_4 in
+# _close_pag_marks_local!.
+function _discriminating_path_vertex(
     adj::BitMatrix,
     mark::Matrix{Endpoint},
     n::Int,
@@ -219,9 +219,9 @@ function _has_discriminating_path(
         (mark[a, gamma] == Arrow && mark[gamma, a] == Tail) || continue  # A -> gamma
         visited = falses(n)
         visited[beta] = visited[gamma] = visited[a] = true
-        _has_discriminating_path_dfs!(adj, mark, n, gamma, visited, a) && return true
+        _has_discriminating_path_dfs!(adj, mark, n, gamma, visited, a) && return a
     end
-    return false
+    return nothing
 end
 
 function _has_discriminating_path_dfs!(
@@ -323,7 +323,7 @@ end
 
 # R4: discriminating path <D, ..., A, beta, gamma> for beta with beta o-*
 # gamma. If beta is a collider in the MAG `mmark` comes from, orient
-# beta <-> gamma; otherwise orient beta -> gamma. Only used by
+# A <-> beta <-> gamma; otherwise orient beta -> gamma. Only used by
 # _close_pag_marks! (skipped there without a ground-truth mmark to consult);
 # _close_pag_marks_local! uses R'_4 instead, which needs no such oracle.
 function _pag_rule_r4!(
@@ -337,8 +337,10 @@ function _pag_rule_r4!(
         beta == gamma && continue
         adj[beta, gamma] || continue
         mark[gamma, beta] == Circle || continue
-        _has_discriminating_path(adj, mark, n, beta, gamma) || continue
+        a = _discriminating_path_vertex(adj, mark, n, beta, gamma)
+        a === nothing && continue
         if mmark[gamma, beta] == Arrow   # collider in the MAG
+            changed |= _setmark!(mark, a, beta, Arrow)
             changed |= _setmark!(mark, beta, gamma, Arrow)
             changed |= _setmark!(mark, gamma, beta, Arrow)
         else
@@ -360,7 +362,7 @@ function _pag_rule_r4_local!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
         adj[beta, gamma] || continue
         mark[gamma, beta] == Circle || continue
         mark[beta, gamma] == Arrow || continue
-        _has_discriminating_path(adj, mark, n, beta, gamma) || continue
+        _discriminating_path_vertex(adj, mark, n, beta, gamma) === nothing && continue
         changed |= _setmark!(mark, gamma, beta, Tail)
     end
     return changed
@@ -553,8 +555,7 @@ function _pag_rule_r9!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
             (beta == alpha || beta == gamma) && continue
             adj[alpha, beta] || continue
             adj[beta, gamma] && continue          # beta not adjacent to gamma
-            mark[beta, alpha] == Arrow && continue
-            if _has_uncovered_pd_path(adj, mark, n, alpha, gamma, beta, Int[])
+            if _has_uncovered_pd_path(adj, mark, n, alpha, gamma, beta)
                 changed |= _setmark!(mark, gamma, alpha, Tail)
                 break
             end
@@ -565,7 +566,8 @@ end
 
 # R10: alpha o-> gamma, beta -> gamma <- delta, uncovered p.d. paths
 # alpha..beta and alpha..delta whose first nodes are distinct and
-# non-adjacent => alpha -> gamma
+# non-adjacent => alpha -> gamma. As in Zhang (2008), the paths may pass
+# through gamma, and a first node may be gamma itself.
 function _pag_rule_r10!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
     changed = false
     for alpha = 1:n, gamma = 1:n
@@ -584,17 +586,14 @@ function _pag_rule_r10!(adj::BitMatrix, mark::Matrix{Endpoint}, n::Int)
             bi == di && continue
             bnode, dnode = par[bi], par[di]
             for mu = 1:n
-                (mu == alpha || mu == gamma) && continue
+                mu == alpha && continue
                 adj[alpha, mu] || continue
-                mark[mu, alpha] == Arrow && continue
-                _has_uncovered_pd_path(adj, mark, n, alpha, bnode, mu, [gamma]) || continue
+                _has_uncovered_pd_path(adj, mark, n, alpha, bnode, mu) || continue
                 for omega = 1:n
-                    (omega == alpha || omega == gamma || omega == mu) && continue
+                    (omega == alpha || omega == mu) && continue
                     adj[alpha, omega] || continue
                     adj[mu, omega] && continue        # mu, omega non-adjacent
-                    mark[omega, alpha] == Arrow && continue
-                    _has_uncovered_pd_path(adj, mark, n, alpha, dnode, omega, [gamma]) ||
-                        continue
+                    _has_uncovered_pd_path(adj, mark, n, alpha, dnode, omega) || continue
                     changed |= _setmark!(mark, gamma, alpha, Tail)
                     done = true
                     break
