@@ -34,79 +34,21 @@ function _buckets(cg::PAG)
     return result
 end
 
-# Edge visibility (Zhang 2006) for a *PAG's* Markov equivalence class, rather
-# than a single MAG: unlike `_is_visible_edge`, which only grows its
-# confounding "district" through definite spousal (`<->`) edges, a PAG's
-# circle marks can also resolve to a bidirected edge in some member MAG, so
-# growth must also follow spouses, circle_parents, circle_children, and
-# circle_circle.
-function _possible_spouses_slice(B::PAGBackend, v::Int)
-    return Iterators.flatten((
-        _spouses_slice(B, v),
-        _circle_parents_slice(B, v),
-        _circle_children_slice(B, v),
-        _circle_circle_slice(B, v),
-    ))
-end
-
-function _is_visible_edge_pag(B::PAGBackend, x::Int, y::Int)
-    adjacent(w) = w in _all_nbrs_slice(B, y)
-
-    for w in _collapsed_parents(B, x)
-        (w != y && !adjacent(w)) && return true
-    end
-    for w in _spouses_slice(B, x)
-        (w != y && !adjacent(w)) && return true
-    end
-
-    n = length(B.nodes)
-    restrict = falses(n)
-    restrict[y] = true
-    for p in _collapsed_parents(B, y)
-        restrict[p] = true
-    end
-    restrict[x] || return false
-
-    district = [x]
-    in_district = falses(n)
-    in_district[x] = true
-    stack = [x]
-    while !isempty(stack)
-        u = pop!(stack)
-        for s in _possible_spouses_slice(B, u)
-            if restrict[s] && !in_district[s]
-                in_district[s] = true
-                push!(district, s)
-                push!(stack, s)
-            end
-        end
-    end
-
-    for d in district
-        for w in _collapsed_parents(B, d)
-            (w != y && !adjacent(w)) && return true
-        end
-        for w in _spouses_slice(B, d)
-            (w != y && !adjacent(w)) && return true
-        end
-    end
-    return false
-end
-
-# The (src, dst) index pairs of `x --> y` / `x o-> y` edges within `induced`'s
-# node set that are visible: exactly the arcs a pc-component path must not
-# cross. Visibility is checked against `full`, the top-level PAG the
-# recursion started from, rather than recomputed within `induced`, since a
-# witness proving an edge (in)visible can live outside `induced`'s node set.
+# The (src, dst) index pairs of `x --> y` edges within `induced`'s node set
+# that are visible: exactly the arcs a pc-component path must not cross. An
+# `x o-> y` edge is never visible, since some member MAG has `x <-> y`.
+# Visibility is checked against `full`, the top-level PAG the recursion
+# started from, rather than recomputed within `induced`, since a witness
+# proving an edge (in)visible can live outside `induced`'s node set.
 function _visible_removed_pag(full::PAG, induced::PAG)
     Bf = full.backend
     Bi = induced.backend
     removed = Set{Tuple{Int,Int}}()
     for x = 1:length(Bf.nodes)
         haskey(Bi.index, Bf.nodes[x]) || continue
-        for c in Iterators.flatten((_children_slice(Bf, x), _circle_children_slice(Bf, x)))
+        for c in _children_slice(Bf, x)
             haskey(Bi.index, Bf.nodes[c]) || continue
-            _is_visible_edge_pag(Bf, x, c) &&
+            _is_visible_edge(Bf, x, c) &&
                 push!(removed, (Bi.index[Bf.nodes[x]], Bi.index[Bf.nodes[c]]))
         end
     end

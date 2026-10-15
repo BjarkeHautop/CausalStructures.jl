@@ -92,17 +92,26 @@ end
     @test CausalStructures._buckets(pag) == [[:A], [:B], [:C], [:D]]
 end
 
-@testitem "_is_visible_edge_pag: extends district growth through circle edges" tags =
+@testitem "PAG visibility: a collider path through a circle edge is no witness (regression)" tags =
     [:unit, :idp] begin
-    # A --> Y is invisible under the MAG-only district-growth rule (it only
-    # grows through definite spouses), but B --> X, A o-> X together are a
-    # genuine witness once growth also follows circle-marked edges: B is not
-    # adjacent to Y, and reaches A via the circle edge at X.
+    # A --> Y is visible only if it is visible in every member MAG. B *-> X <-> A
+    # would be a collider path into A, but A o-> X is A --> X in some member,
+    # where nothing witnesses A --> Y. So A --> Y is invisible: lower-
+    # manipulating on A turns it into A <-> Y instead of deleting it.
     pag = PAG("A o-> X, A --> Y, B o-> X, X --> Y")
     B = pag.backend
     a = CausalStructures.node_index(pag, :A)
     y = CausalStructures.node_index(pag, :Y)
-    @test CausalStructures._is_visible_edge_pag(B, a, y)
+    @test !CausalStructures._is_visible_edge(B, a, y)
+
+    manip = CausalStructures._pag_lower_manipulate(pag, [:A])
+    Arrow = CausalStructures.Arrow
+    @test any(manip.edges) do e
+        Set((e.src, e.dst)) == Set((:A, :Y)) && e.src_end == Arrow && e.dst_end == Arrow
+    end
+
+    # Treating A --> Y as visible made this look identifiable.
+    @test cidp(pag, :A, :Y; given = [:X]) === nothing
 end
 
 @testitem "_pc_component_bitmask: a collider joins two nodes into one pc-component" tags =
@@ -118,7 +127,7 @@ end
     w = CausalStructures.node_index(pag, :W)
     x = CausalStructures.node_index(pag, :X)
 
-    @test CausalStructures._is_visible_edge_pag(B, x, CausalStructures.node_index(pag, :Y))
+    @test CausalStructures._is_visible_edge(B, x, CausalStructures.node_index(pag, :Y))
     reach = CausalStructures._pc_component_bitmask(pag, pag, [w])
     @test Set(B.nodes[v] for v in eachindex(reach) if reach[v]) == Set([:W, :X, :Z])
     reach = CausalStructures._pc_component_bitmask(pag, pag, [x])

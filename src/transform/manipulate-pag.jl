@@ -24,7 +24,10 @@ function _pag_lower_manipulate(cg::PAG, xs::AbstractVector{Symbol})
             matched = true
             xi = node_index(cg, v)
             oi = node_index(cg, other)
-            _is_visible_edge_pag(B, xi, oi) || push!(kept, bidirected(v, other))
+            # Only a definite `-->` can be visible: `v o-> other` is `<->` in
+            # some member MAG.
+            (own_mark == Tail && _is_visible_edge(B, xi, oi)) ||
+                push!(kept, bidirected(v, other))
             break
         end
         matched || push!(kept, e)
