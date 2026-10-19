@@ -5,11 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.1] - 2026-10-19
 
 ### Bug fixes
 
-- Rules R4, R9 and R10 used by `mag_to_pag` and `PAG` validation now match Zhang (2008) exactly.
+- Rules R4, R9 and R10 used by `mag_to_pag` and `PAG` were implemented wrong.
 - `idp` and `cidp` could treat an edge as visible when it is visible in only some MAGs of the PAG's equivalence class, and so report an effect as identifiable when it is not.
 
 ## [1.1.0] - 2026-10-06
