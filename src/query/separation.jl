@@ -541,9 +541,14 @@ Return `true` iff every node in `x` is d-separated from every node in `y`
 given `z` in `cg`. `x`, `y`, and `z` may each be a single `Symbol` or an
 `AbstractVector{Symbol}`. Nodes of `x` or `y` that are also in `z` are ignored.
 
-Two nodes are d-separated given a conditioning set `z` if every path between
-them is blocked. A path is blocked if it contains either a non-collider node
-in `z`, or a collider node (and all its descendants) not in `z`.
+In a [`DAG`](@ref), two nodes are d-separated given a conditioning set `z` if
+every path between them is blocked. A path is blocked if it contains either a
+non-collider node in `z`, or a collider node (and all its descendants) not in
+`z`.
+
+For a [`CPDAG`](@ref) or [`MPDAG`](@ref), the result is the d-separation shared
+by the DAGs it represents. For a [`PDAG`](@ref) not closed under Meek's rules,
+it need not match any consistent DAG; call [`meek_closure`](@ref) first.
 
 For [`DAG`](@ref): restricts to the ancestor graph of `x`, `y`, and `z`, then
 runs a Bayes-ball traversal from `x` (blocked at conditioned non-colliders,
@@ -677,6 +682,7 @@ to the anterior set of `x`, `y`, and `z` [richardsonspirtes2002ancestral](@cite)
 
 [`PAG`](@ref): same traversal as `AbstractAG`, with circle marks collapsing to
 tails (as for [`possible_ancestors`](@ref)/[`possible_descendants`](@ref)).
+The result is the m-separation shared by the MAGs the PAG represents.
 
 # Arguments
 - `cg::Union{DAG,ADMG,AbstractAG,PAG}`: the graph to query.
