@@ -189,6 +189,29 @@ end
     @test m_separated(admg, :B, :C, :A) == m_separated(admg, :B, :C, [:A])
 end
 
+@testitem "d_separated/m_separated: nodes of x or y in z are ignored" tags =
+    [:unit, :separation] begin
+    # x _||_ y | z is x \ z _||_ y \ z | z, so swapping x and y never matters.
+    @test d_separated(DAG("A --> B"), :A, :B, :B)
+    @test d_separated(DAG("A --> B"), :B, :A, :B)
+    @test d_separated(CPDAG("A --- B"), :A, :B, :B)
+    @test d_separated(CPDAG("A --- B"), :B, :A, :B)
+    for T in (DAG, ADMG, MAG)
+        g = T("A --> B")
+        @test m_separated(g, :A, :B, :B)
+        @test m_separated(g, :B, :A, :B)
+    end
+    @test m_separated(mag_to_pag(MAG("A --> B")), :A, :B, :B)
+
+    # Only the overlapping nodes are dropped.
+    chain = DAG("A --> B --> C")
+    @test d_separated(chain, :A, [:B, :C], :B)  # A _||_ C | B
+    @test d_separated(chain, [:B, :C], :A, :B)
+    shortcut = DAG("A --> B --> C, A --> C")
+    @test !d_separated(shortcut, :A, [:B, :C], :B)  # A --> C stays open
+    @test !d_separated(shortcut, [:B, :C], :A, :B)
+end
+
 @testitem "minimal_separator: accepts Vector{Symbol} for x and y (DAG)" tags =
     [:unit, :separation] begin
     dag = DAG(directed(:A, :M1), directed(:M1, :Y), directed(:B, :M2), directed(:M2, :Y))

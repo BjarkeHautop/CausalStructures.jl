@@ -539,7 +539,7 @@ end
 
 Return `true` iff every node in `x` is d-separated from every node in `y`
 given `z` in `cg`. `x`, `y`, and `z` may each be a single `Symbol` or an
-`AbstractVector{Symbol}`.
+`AbstractVector{Symbol}`. Nodes of `x` or `y` that are also in `z` are ignored.
 
 Two nodes are d-separated given a conditioning set `z` if every path between
 them is blocked. A path is blocked if it contains either a non-collider node
@@ -628,7 +628,7 @@ function d_separated(
     mask = _ancestors_bitmask(B, seeds)
 
     reached = _reachable_dag(B, seeds_bfs, mask, z_mask)
-    return !any(reached[yi] for yi in ys)
+    return !any(reached[yi] && !z_mask[yi] for yi in ys)
 end
 
 function d_separated(
@@ -655,7 +655,7 @@ function d_separated(
     mask = _anterior_bitmask(B, seeds)
 
     reached = _reachable_pdag(B, seeds_bfs, mask, z_mask)
-    return !any(reached[yi] for yi in ys)
+    return !any(reached[yi] && !z_mask[yi] for yi in ys)
 end
 
 """
@@ -663,7 +663,7 @@ end
 
 Return `true` iff every node in `x` is m-separated from every node in `y`
 given `z` in `cg`. `x`, `y`, and `z` may each be a single `Symbol` or an
-`AbstractVector{Symbol}`.
+`AbstractVector{Symbol}`. Nodes of `x` or `y` that are also in `z` are ignored.
 
 M-separation generalizes d-separation to graphs with bidirected and undirected
 edges. For a [`DAG`](@ref), m-separation is equivalent to [`d_separated`](@ref).
@@ -749,7 +749,7 @@ function m_separated(
     mask = _ancestors_bitmask(B, seeds)
 
     reached = _reachable_admg(B, seeds_bfs, mask, z_mask)
-    return !any(reached[yi] for yi in ys)
+    return !any(reached[yi] && !z_mask[yi] for yi in ys)
 end
 
 # Returns true iff x ⊥_m y | z in AG cg.
@@ -777,7 +777,7 @@ function m_separated(
     mask = _anterior_bitmask(B, seeds)
 
     reached = _reachable_ag(B, seeds_bfs, mask, z_mask)
-    return !any(reached[yi] for yi in ys)
+    return !any(reached[yi] && !z_mask[yi] for yi in ys)
 end
 
 # Returns true iff x ⊥_m y | z in PAG cg.
@@ -805,5 +805,5 @@ function m_separated(
     mask = _pag_anterior_bitmask(B, seeds)
 
     reached = _reachable_pag(B, seeds_bfs, mask, z_mask)
-    return !any(reached[yi] for yi in ys)
+    return !any(reached[yi] && !z_mask[yi] for yi in ys)
 end

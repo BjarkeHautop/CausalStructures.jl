@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Bug fixes
+
+- `d_separated` and `m_separated` ignored nodes of `x` that are in `z` but not nodes of `y` that are in `z`, so swapping `x` and `y` could change the answer (e.g. `d_separated(DAG("A --> B"), :A, :B, :B)` was `false`). Nodes of `x` or `y` in `z` are now both ignored.
+
 ## [1.1.1] - 2026-10-19
 
 ### Bug fixes
