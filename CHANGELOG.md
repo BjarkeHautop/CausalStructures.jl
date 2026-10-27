@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug fixes
 
 - `d_separated` and `m_separated` ignored nodes of `x` that are in `z` but not nodes of `y` that are in `z`, so swapping `x` and `y` could change the answer (e.g. `d_separated(DAG("A --> B"), :A, :B, :B)` was `false`). Nodes of `x` or `y` in `z` are now both ignored.
+- `minimal_separator` on a `DAG` returned a set when `x` and `y` share a node (e.g. `minimal_separator(DAG("A --> B --> C"), :B, :B) == [:A]`), although no set separates a node from itself. It now returns `nothing`, as for the other graph classes.
 
 ## [1.1.1] - 2026-10-19
 

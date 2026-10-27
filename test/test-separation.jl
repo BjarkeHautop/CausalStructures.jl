@@ -69,6 +69,17 @@ end
     @test minimal_separator(dag, :A, :B) === nothing
 end
 
+@testitem "minimal_separator: returns nothing when x and y share a node (DAG)" tags =
+    [:unit, :separation] begin
+    @test minimal_separator(DAG("A"), :A, :A) === nothing
+    dag = DAG("A --> B --> C")
+    @test minimal_separator(dag, :B, :B) === nothing
+    @test minimal_separator(dag, [:A, :B], [:B, :C]) === nothing
+    @test minimal_separator(dag, :B, :B; restrict = [:A]) === nothing
+    @test !CausalStructures._separator_exists(dag, :B, :B)
+    @test minimal_separator(ADMG("A --> B --> C"), :B, :B) === nothing
+end
+
 @testitem "minimal_separator: default R excludes X and Y" tags = [:unit, :separation] begin
     dag = DAG(directed(:A, :B), directed(:B, :C), directed(:C, :D))
     sep = minimal_separator(dag, :A, :D)

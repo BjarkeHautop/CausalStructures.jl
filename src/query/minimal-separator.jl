@@ -26,13 +26,10 @@ function _d_connected_restricted_mask(
     down = fill(false, n)   # visited arriving from a parent
     up = fill(false, n)     # visited arriving from a child
     reached = fill(false, n)
-    start_mask = fill(false, n)
-    for v in start_idxs
-        start_mask[v] = true
-    end
 
     queue = Tuple{Int,Bool}[]   # (node, arrived from a parent)
     for v in start_idxs
+        reached[v] = true
         if !down[v]
             down[v] = true
             push!(queue, (v, true))
@@ -55,7 +52,7 @@ function _d_connected_restricted_mask(
                     anc[ch] || continue
                     if !down[ch]
                         down[ch] = true
-                        !start_mask[ch] && (reached[ch] = true)
+                        reached[ch] = true
                         push!(queue, (ch, true))
                     end
                 end
@@ -65,7 +62,7 @@ function _d_connected_restricted_mask(
                     anc[pa] || continue
                     if !up[pa]
                         up[pa] = true
-                        !start_mask[pa] && (reached[pa] = true)
+                        reached[pa] = true
                         push!(queue, (pa, false))
                     end
                 end
@@ -74,7 +71,7 @@ function _d_connected_restricted_mask(
                     anc[ch] || continue
                     if !down[ch]
                         down[ch] = true
-                        !start_mask[ch] && (reached[ch] = true)
+                        reached[ch] = true
                         push!(queue, (ch, true))
                     end
                 end
@@ -85,7 +82,7 @@ function _d_connected_restricted_mask(
                 anc[pa] || continue
                 if !up[pa]
                     up[pa] = true
-                    !start_mask[pa] && (reached[pa] = true)
+                    reached[pa] = true
                     push!(queue, (pa, false))
                 end
             end
