@@ -63,9 +63,7 @@ function is_valid_backdoor(
 )
     B = cg.backend
     n = length(B.nodes)
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
-    (isempty(xs) || isempty(ys)) && return true
+    xs, ys = _effect_indices(cg, x, y)
     xs_mask = falses(n)
     for xi in xs
         xs_mask[xi] = true
@@ -189,8 +187,7 @@ function all_backdoor_sets(
 )
     B = cg.backend
     n = length(B.nodes)
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
+    xs, ys = _effect_indices(cg, x, y)
     xs_mask = falses(n)
     for xi in xs
         xs_mask[xi] = true
@@ -271,8 +268,7 @@ function is_valid_backdoor(
     z::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
     B = cg.backend
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
+    xs, ys = _effect_indices(cg, x, y)
     z_idxs = _node_indices(cg, z)
     de_x = _descendants_bitmask(B, xs)
     for vi in z_idxs
@@ -301,8 +297,7 @@ function all_backdoor_sets(
 )
     B = cg.backend
     n = length(B.nodes)
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
+    xs, ys = _effect_indices(cg, x, y)
     xs_mask = falses(n)
     for xi in xs
         xs_mask[xi] = true
@@ -468,8 +463,7 @@ function adjustment_set(
         throw(ArgumentError("include and restrict require type = :backdoor"))
     B = cg.backend
     n = length(B.nodes)
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
+    xs, ys = _effect_indices(cg, x, y)
     xs_mask = falses(n)
     for xi in xs
         xs_mask[xi] = true
@@ -629,8 +623,7 @@ function adjustment_set(
     cg = _adjustment_graph(cg)
     B = cg.backend
     n = length(B.nodes)
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
+    xs, ys = _effect_indices(cg, x, y)
     xs_mask = falses(n)
     for xi in xs
         xs_mask[xi] = true

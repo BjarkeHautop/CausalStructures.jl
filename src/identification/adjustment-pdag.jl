@@ -283,8 +283,7 @@ function is_valid_adjustment(
 )
     cg = _adjustment_graph(cg)
     B = cg.backend
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
+    xs, ys = _effect_indices(cg, x, y)
     z_idxs = _node_indices(cg, z)
 
     (isempty(xs) || isempty(ys)) && return true
@@ -380,8 +379,7 @@ function all_adjustment_sets(
     cg = _adjustment_graph(cg)
     B = cg.backend
     n = length(B.nodes)
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
+    xs, ys = _effect_indices(cg, x, y)
 
     cn, removed, amenable = _proper_possibly_causal_paths(B, xs, ys)
     amenable || return Vector{Vector{Symbol}}()

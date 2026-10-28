@@ -379,6 +379,16 @@ end
 _node_indices(cg::CausalGraph, x::Symbol) = [node_index(cg, x)]
 _node_indices(cg::CausalGraph, x::AbstractVector{Symbol}) = [node_index(cg, v) for v in x]
 
+# Resolves the treatment `x` and outcome `y` of an effect query. An empty side
+# leaves no effect to identify, so it is rejected rather than answered vacuously.
+function _effect_indices(cg::CausalGraph, x, y)
+    xs = _node_indices(cg, x)
+    ys = _node_indices(cg, y)
+    isempty(xs) && throw(ArgumentError("x must be non-empty"))
+    isempty(ys) && throw(ArgumentError("y must be non-empty"))
+    return xs, ys
+end
+
 _as_symbol_set(x::Symbol) = Set{Symbol}((x,))
 _as_symbol_set(x::AbstractVector{Symbol}) = Set{Symbol}(x)
 

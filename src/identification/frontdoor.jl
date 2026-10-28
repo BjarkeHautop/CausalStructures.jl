@@ -59,9 +59,7 @@ function is_valid_frontdoor(
 )
     B = cg.backend
     n = length(B.nodes)
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
-    (isempty(xs) || isempty(ys)) && return true
+    xs, ys = _effect_indices(cg, x, y)
     ys_mask = falses(n)
     for yi in ys
         ys_mask[yi] = true
@@ -537,8 +535,7 @@ function frontdoor_set(
     B = cg.backend
     n = length(B.nodes)
 
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
+    xs, ys = _effect_indices(cg, x, y)
 
     x_set = falses(n)
     for xi in xs
@@ -949,8 +946,7 @@ function all_frontdoor_sets(
     B = cg.backend
     n = length(B.nodes)
 
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
+    xs, ys = _effect_indices(cg, x, y)
 
     x_set = falses(n)
     for xi in xs

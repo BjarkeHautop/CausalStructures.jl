@@ -457,8 +457,7 @@ function is_valid_adjustment(
     z::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
     B = cg.backend
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
+    xs, ys = _effect_indices(cg, x, y)
     z_idxs = _node_indices(cg, z)
 
     any(in(ys), z_idxs) && return false
@@ -539,8 +538,7 @@ function all_adjustment_sets(
 )
     B = cg.backend
     n = length(B.nodes)
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
+    xs, ys = _effect_indices(cg, x, y)
 
     forbidden = _forbidden_set(B, xs, ys)
     y_mask = falses(n)
@@ -659,8 +657,7 @@ function is_valid_adjustment(
     z::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
     B = cg.backend
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
+    xs, ys = _effect_indices(cg, x, y)
     z_idxs = _node_indices(cg, z)
 
     any(in(ys), z_idxs) && return false
@@ -756,8 +753,7 @@ function all_adjustment_sets(
 )
     B = cg.backend
     n = length(B.nodes)
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
+    xs, ys = _effect_indices(cg, x, y)
 
     forbidden = _forbidden_set(B, xs, ys)
     y_mask = falses(n)
@@ -838,8 +834,7 @@ function adjustment_set(
 )
     B = cg.backend
     n = length(B.nodes)
-    xs = _node_indices(cg, x)
-    ys = _node_indices(cg, y)
+    xs, ys = _effect_indices(cg, x, y)
 
     forbidden = _forbidden_set(B, xs, ys)
     y_mask = falses(n)

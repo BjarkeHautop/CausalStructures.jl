@@ -115,6 +115,7 @@ function is_valid_iv(
     isempty(z_vec) && return false
     w_vec = _as_symbol_vec(w)
     ys_syms = _as_symbol_set(y)
+    isempty(ys_syms) && throw(ArgumentError("y must be non-empty"))
     any(zi -> zi === x || zi in ys_syms || zi in w_vec, z_vec) && return false
     _admissible_iv_conditioning(
         cg.backend,
@@ -183,6 +184,7 @@ function iv_set(
     n = length(B.nodes)
     x_idx = node_index(cg, x)
     ys = _node_indices(cg, y)
+    isempty(ys) && throw(ArgumentError("y must be non-empty"))
     allowed = trues(n)
     if restrict !== nothing
         fill!(allowed, false)
@@ -300,6 +302,7 @@ function all_iv_sets(
     n = length(B.nodes)
     x_idx = node_index(cg, x)
     ys_idx = _node_indices(cg, y)
+    isempty(ys_idx) && throw(ArgumentError("y must be non-empty"))
     w_idx = _node_indices(cg, w)
     _admissible_iv_conditioning(B, x_idx, ys_idx, w_idx) || return Vector{Vector{Symbol}}()
     ys_mask = falses(n)
