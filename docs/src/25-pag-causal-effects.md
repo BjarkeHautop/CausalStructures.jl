@@ -12,10 +12,11 @@ using NetworkLayout
 ## Adjustment with a PAG
 
 Consider the MAG from [Equivalence Classes](@ref equivalence-classes-guide), where
-`A` and `B` share a hidden common cause, and `C` and `B` each cause their successor:
+`A` and `B` share a hidden common cause, and `C` and `B` each cause their successor,
+with an added direct effect `A --> D`:
 
 ```@example pc
-mag = MAG("A <-> B, C --> B --> D")
+mag = MAG("A <-> B, C --> B --> D, A --> D")
 pag = mag_to_pag(mag)
 plot(pag)
 ```
