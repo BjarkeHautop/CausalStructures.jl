@@ -162,10 +162,11 @@ DAG with 1 node and 0 edges:
 ```
 """
 function remove_nodes(cg::CausalGraph, ns::Symbol...)
+    drop = Set{Symbol}()
     for n in ns
         n in cg.backend.nodes || throw(ArgumentError("node not found in graph: $n"))
+        push!(drop, n)
     end
-    drop = Set(ns)
     new_nodes = setdiff(Set(cg.backend.nodes), drop)
     new_edges = filter(e -> e.src ∉ drop && e.dst ∉ drop, cg.edges)
     return _rebuild(cg, new_nodes, new_edges)

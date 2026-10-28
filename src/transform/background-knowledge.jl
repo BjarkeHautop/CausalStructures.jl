@@ -76,7 +76,7 @@ function BackgroundKnowledge(items...)
             throw(
                 ArgumentError(
                     "Graph edges are not background-knowledge items; use " *
-                    "required_directed($(repr(item.src)), $(repr(item.dst))) " *
+                    "required_directed(:$(item.src), :$(item.dst)) " *
                     "for a required edge",
                 ),
             )

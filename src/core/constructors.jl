@@ -10,13 +10,9 @@ end
 
 for T in (:DAG, :UG, :PDAG, :CPDAG, :MPDAG, :ADMG, :AG, :MAG, :UNKNOWN, :PAG)
     @eval function $T(items...)
-        nodes, edges = _cgraph_collect(items...)
+        nodes, edges = _cgraph_collect(collect(items))
         return build_graph($T, nodes, edges)
     end
-end
-
-function _cgraph_collect(items...)
-    return _cgraph_collect(collect(items))
 end
 
 function _cgraph_collect(items::AbstractVector)

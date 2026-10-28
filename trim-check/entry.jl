@@ -18,6 +18,17 @@ function _check_construction()
     PAG("A o-o B, B o-o C")
     UNKNOWN("A --> B, A <-> B")
 
+    DAG(directed(:A, :B), directed(:B, :C))
+    UG(undirected(:A, :B), undirected(:B, :C))
+    PDAG(directed(:A, :B), undirected(:B, :C))
+    CPDAG(node(:A), node(:B))
+    MPDAG(node(:A), node(:B))
+    ADMG(directed(:A, :B), bidirected(:A, :B))
+    AG(directed(:A, :B), directed(:B, :C))
+    MAG(directed(:A, :B), bidirected(:B, :C))
+    PAG(node(:A), node(:B))
+    UNKNOWN(directed(:A, :B), bidirected(:A, :B))
+
     directed(:A, :B)
     undirected(:A, :B)
     bidirected(:A, :B)
@@ -29,15 +40,20 @@ function _check_construction()
     node(:A)
 
     BackgroundKnowledge("A --> B, C !--> D")
+    try
+        BackgroundKnowledge(directed(:A, :B))
+    catch err
+        err isa ArgumentError || rethrow()
+    end
     return nothing
 end
 
 function _check_edit()
     dag = DAG("A --> B")
     dag = add_edges(dag, directed(:B, :C), directed(:C, :D))
-    dag = add_nodes(dag, :E)
+    dag = add_nodes(dag, :E, :F)
     dag = remove_edges(dag, directed(:C, :D))
-    dag = remove_nodes(dag, :E)
+    dag = remove_nodes(dag, :E, :F)
     has_edge(dag, :A, :B)
     nodes(dag)
     edges(dag)
