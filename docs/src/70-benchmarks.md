@@ -11,7 +11,7 @@ depends directly on the efficiency of these basic queries.
 ```@example bench
 using CausalStructures
 using BenchmarkTools
-using Random
+using StableRNGs
 ```
 
 ## Queries stay fast as graphs grow
@@ -21,7 +21,7 @@ runtime is essentially unchanged whether the graph has 100 nodes or 10,000:
 
 ```@example bench
 for n in (100, 1_000, 10_000)
-    dag = generate_graph(Random.Xoshiro(1), n; p = 5 / n, class = DAG)
+    dag = generate_graph(StableRNG(1), n; p = 5 / n, class = DAG)
     x = Symbol("V", n ÷ 2)
     t = @benchmark children($dag, $x) samples = 200 evals = 1
     println(rpad("n=$n", 10), "children: ", median(t))
@@ -32,8 +32,8 @@ These primitives keep more involved queries fast too, on graphs with hundreds
 of nodes and across graph classes:
 
 ```@example bench
-dag = generate_graph(Random.Xoshiro(1), 500; p = 0.1, class = DAG)
-mag = generate_graph(Random.Xoshiro(1), 500; p = 0.01, class = MAG, latents = 20)
+dag = generate_graph(StableRNG(1), 500; p = 0.1, class = DAG)
+mag = generate_graph(StableRNG(1), 500; p = 0.01, class = MAG, latents = 20)
 x, y = :V10, :V290
 
 rows = [
@@ -58,7 +58,7 @@ validity criterion. Consequently, the runtime grows exponentially with
 `max_size`:
 
 ```@example bench
-admg = generate_graph(Random.Xoshiro(1), 35; p = 0.25, class = ADMG, latents = 8)
+admg = generate_graph(StableRNG(1), 35; p = 0.15, class = ADMG, latents = 8)
 x, y = :V3, :V33
 
 for ms in (2, 3, 4)
@@ -84,7 +84,7 @@ labeled DAGs on `n` nodes using the recursive enumeration algorithm of
 
 ```@example bench
 for n in (10, 20, 40)
-    t = @benchmark uniform_dag(Random.Xoshiro(1), $n) samples = 20 evals = 1
+    t = @benchmark uniform_dag(StableRNG(1), $n) samples = 20 evals = 1
     println("n=$n  ", median(t))
 end
 ```
