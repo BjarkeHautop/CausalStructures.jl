@@ -623,3 +623,17 @@ end
     mag = MAG(bidirected(:A, :X), directed(:A, :M), directed(:M, :Y), directed(:X, :Y))
     @test is_valid_adjustment(mag, :X, :Y, :A) == is_valid_adjustment(mag, :X, :Y, [:A])
 end
+
+@testitem "is_valid_backdoor and all_backdoor_sets: x and y sharing a node" tags =
+    [:unit, :backdoor] begin
+    # A node in both x and y cannot be separated from itself, whatever z is.
+    dag = DAG(directed(:A, :B))
+    admg = ADMG(directed(:A, :B))
+    for cg in (dag, admg)
+        @test !is_valid_backdoor(cg, :A, :A)
+        @test !is_valid_backdoor(cg, :B, :B)
+        @test !is_valid_backdoor(cg, [:A, :B], :B)
+        @test isempty(all_backdoor_sets(cg, :A, :A; minimal = false))
+        @test isempty(all_backdoor_sets(cg, [:A, :B], :B; minimal = false))
+    end
+end
