@@ -33,6 +33,15 @@ end
     dag = DAG(directed(:Y, :X))
     @test !is_valid_backdoor(dag, :X, :Y, Symbol[])
     @test !d_separated(dag, :X, :Y, Symbol[])
+    # conditioning on Y does not block the path X <-- Y
+    @test !is_valid_backdoor(dag, :X, :Y, [:Y])
+    @test !is_valid_backdoor(ADMG(directed(:Y, :X)), :X, :Y, [:Y])
+    @test !is_valid_backdoor(
+        DAG(directed(:Y, :X), directed(:W, :X)),
+        [:X],
+        [:Y, :W],
+        [:Y, :W],
+    )
 
     dag2 = DAG(directed(:Y, :X), directed(:A, :Y))
     @test !is_valid_backdoor(dag2, :X, :Y, [:A])

@@ -101,11 +101,17 @@ function is_valid_backdoor(
         blocked[v] = true
     end
 
+    ys_mask = falses(n)
+    for yi in ys
+        ys_mask[yi] = true
+    end
+
     # Each parent gets its own Bayes-ball traversal so a collider at x ∈ X
     # reopens only when that x ∈ obs. A parent that is itself in Y is a
-    # direct X <-- Y edge, an unblockable backdoor path, so it must still be
-    # checked.
+    # direct X <-- Y edge, an unblockable backdoor path, so it fails even
+    # when it is also in z.
     for p_idx in parents_x
+        ys_mask[p_idx] && return false
         blocked[p_idx] && continue  # p is in obs --> trivially d-separated
         reached = _reachable_dag(B, [p_idx], mask, blocked)
         any(reached[yi] for yi in ys) && return false
