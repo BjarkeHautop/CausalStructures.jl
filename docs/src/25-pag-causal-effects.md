@@ -56,12 +56,14 @@ For this example, the empty set is valid when `A --> B`, since there is then no
 backdoor path from `A` to `D` through `B`. When `A <-> B`, `B` must instead be
 included to block the path through the hidden common cause. Thus `{B}` is a valid adjustment set in that case; nonminimal supersets such as `{B, C}` may also be returned when they are valid.
 
-The same procedure applies when the ambiguity occurs elsewhere in the graph. For
-example:
+Similarly for the effect of `C` on `D`:
 
 ```@example pc
 pagcauses(pag, :C, :D)
 ```
+
+The empty set is valid when `C --> B`. When `C <-> B`, `C` is not an ancestor of
+`D`, so there is no effect to adjust for.
 
 If there is no MAG compatible with the PAG in which `D` can have a causal effect on
 `A`, `pagcauses` returns no possible causal effect:
@@ -81,8 +83,7 @@ This is consistent with [`possible_ancestors`](@ref).
     if the PAG has one:
 
     ```@repl pc
-    selection_pag = PAG(
-        undirected(:A, :B), undirected(:B, :C), undirected(:C, :D), undirected(:A, :D))
+    selection_pag = PAG("A --- B --- C --- D --- A")
     pagcauses(selection_pag, :A, :B)
     ```
 
