@@ -289,7 +289,12 @@ function _check_iv()
     dag = DAG("Z1 --> X, Z2 --> X, X --> Y, U --> X + Y")
     is_valid_iv(dag, :X, :Y, [:Z1])
     iv_set(dag, :X, :Y)
+    iv_set(dag, :X, :Y; restrict = [:Z1, :Z2, :X, :Y])
     all_iv_sets(dag, :X, :Y)
+
+    cond = DAG("W --> Z + Y, Z --> X --> Y, U --> X + Y")
+    is_valid_iv(cond, :X, :Y, [:Z], [:W])
+    all_iv_sets(cond, :X, :Y, [:W])
     all_iv_sets(dag, :X, :Y; include = [:Z1], restrict = [:Z1, :Z2])
 
     admg = ADMG("Z --> X, X --> Y, U <-> X, U <-> Y")
@@ -435,6 +440,7 @@ function _check_enumerate()
 
     pag = PAG("A o-o B o-o C")
     enumerate_mags(pag)
+    enumerate_mags(pag; selection_bias = false)
     return nothing
 end
 
@@ -498,6 +504,8 @@ function _check_io()
 
     dag = DAG("A --> B --> C")
     simulate_data(dag; samples = 20)
+    simulate_data(dag; samples = 20, coef_range = (0.5, 2.0), random_sign = true)
+    simulate_data(dag; samples = 20, error_sd = (0.5, 1.5))
 
     uniform_dag(5)
     uniform_dag_counts(5)

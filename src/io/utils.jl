@@ -613,8 +613,8 @@ function simulate_data(
         )
     end
     if error_sd isa Tuple
-        lo, hi = error_sd
-        0 < lo <= hi || throw(ArgumentError("error_sd must have 0 < lo <= hi"))
+        0 < error_sd[1] <= error_sd[2] ||
+            throw(ArgumentError("error_sd must have 0 < lo <= hi"))
     else
         error_sd > 0 || throw(ArgumentError("error_sd must be positive"))
     end
