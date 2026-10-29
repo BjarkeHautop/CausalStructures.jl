@@ -17,12 +17,13 @@
     # internals of Makie (e.g. `current_default_theme`, `text_bb`, `plottype`) and
     # into our own underscore-prefixed extension points (e.g. `_layout_impl`).
     #
-    # `default_rng`, `get_extension`, and `Iterators.reverse` were only declared
-    # `public` (rather than merely exported) starting in Julia 1.11, so they must
-    # stay ignored to keep this check passing on the LTS (1.10) release too.
+    # `default_rng`, `get_extension`, `Iterators.reverse`, and `@constprop` were only
+    # declared `public` (rather than merely exported) starting in Julia 1.11, so they
+    # must stay ignored to keep this check passing on the LTS (1.10) release too.
     # `Binding` and `meta` are used to introspect docstrings (e.g. to check
     # whether a method has one) and are not declared `public` in `Base.Docs`.
     ignore_names = (
+        Symbol("@constprop"),
         :Arrow,
         :Automatic,
         :Binding,
