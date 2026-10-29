@@ -74,9 +74,37 @@ plot(dag; layout = positions)
 ```
 """
 function layout(cg::CausalGraph, method::Symbol = _default_layout_method(cg); kwargs...)
-    coords = _layout_impl(cg, Val(method); kwargs...)
-    return Dict{Symbol,NTuple{2,Float64}}(
-        nd => (Float64(p[1]), Float64(p[2])) for (nd, p) in zip(cg.backend.nodes, coords)
+    # Each method is matched against a literal so that every `_layout_impl` call is resolved
+    # at compile time, which `juliac --trim` requires, also when `method` is only known at
+    # runtime (as the default is).
+    method === :spring && return _positions(cg, _layout_impl(cg, Val(:spring); kwargs...))
+    method === :stress && return _positions(cg, _layout_impl(cg, Val(:stress); kwargs...))
+    method === :sfdp && return _positions(cg, _layout_impl(cg, Val(:sfdp); kwargs...))
+    method === :spectral &&
+        return _positions(cg, _layout_impl(cg, Val(:spectral); kwargs...))
+    method === :shell && return _positions(cg, _layout_impl(cg, Val(:shell); kwargs...))
+    method === :squaregrid &&
+        return _positions(cg, _layout_impl(cg, Val(:squaregrid); kwargs...))
+    method === :sugiyama &&
+        return _positions(cg, _layout_impl(cg, Val(:sugiyama); kwargs...))
+    _unknown_layout_method(method)
+end
+
+_positions(cg::CausalGraph, coords) = Dict{Symbol,NTuple{2,Float64}}(
+    nd => (Float64(p[1]), Float64(p[2])) for (nd, p) in zip(cg.backend.nodes, coords)
+)
+
+const _LAYOUT_METHODS_LIST = join(map(repr, _LAYOUT_METHODS), ", ")
+
+function _unknown_layout_method(method::Symbol)
+    error(
+        "Unknown layout method :" *
+        String(method) *
+        ".\n" *
+        "Available methods (require `using NetworkLayout` or, for :sugiyama, " *
+        "`using Sugiyama`): " *
+        _LAYOUT_METHODS_LIST *
+        ".",
     )
 end
 
@@ -87,16 +115,12 @@ function _layout_impl(::CausalGraph, ::Val{M}; kwargs...) where {M}
     end
     if M in _LAYOUT_METHODS
         error(
-            "Layout method $(repr(M)) requires NetworkLayout to be loaded: `using NetworkLayout`.",
+            "Layout method :" *
+            String(M) *
+            " requires NetworkLayout to be loaded: `using NetworkLayout`.",
         )
     end
-    error(
-        "Unknown layout method $(repr(M)).\n" *
-        "Available methods (require `using NetworkLayout` or, for :sugiyama, " *
-        "`using Sugiyama`): " *
-        join(map(repr, _LAYOUT_METHODS), ", ") *
-        ".",
-    )
+    _unknown_layout_method(M)
 end
 
 function _layout_edge_paths_impl(::CausalGraph, ::Val{M}; kwargs...) where {M}

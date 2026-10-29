@@ -1,6 +1,8 @@
 module TrimCheck
 
 using CausalStructures
+using Random: Xoshiro
+import Sugiyama
 
 # Exercises the public API
 
@@ -509,6 +511,15 @@ function _check_metrics()
     return nothing
 end
 
+# --- src/io/layout.jl (with SugiyamaExt) ---
+
+function _check_layout()
+    dag = DAG("A --> B, B --> C, A --> C")
+    layout(dag)
+    layout(dag, :sugiyama; direction = :right)
+    return nothing
+end
+
 # --- src/io/utils.jl, uniform-dag.jl ---
 
 function _check_io()
@@ -517,6 +528,8 @@ function _check_io()
     generate_graph(10; p = 0.3, class = ADMG, latents = 2)
     generate_graph(10; p = 0.3, class = MAG, latents = 2)
     generate_graph(10; p = 0.3, class = PAG, latents = 2)
+    generate_graph(Xoshiro(1), 6; m = 5, class = CPDAG)
+    generate_graph(Xoshiro(1), 10; p = 0.3, class = ADMG, latents = 2)
 
     dag = DAG("A --> B --> C")
     simulate_data(dag; samples = 20)
@@ -549,6 +562,7 @@ Base.@ccallable function trim_check_run()::Cint
     _check_enumerate()
     _check_metrics()
     _check_io()
+    _check_layout()
     return Cint(0)
 end
 

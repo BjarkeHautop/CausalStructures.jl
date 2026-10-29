@@ -4,9 +4,12 @@ version = "0.0.1"
 
 [deps]
 CausalStructures = "b41ab49a-79bc-5eac-acbb-517b17bd5c16"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Sugiyama = "a85cd6b6-3810-52a0-aaf7-38a6bd88fd85"
 
 [sources]
 CausalStructures = {path = ".."}
 
 [compat]
+Sugiyama = "1"
 julia = "1.13"

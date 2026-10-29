@@ -435,6 +435,9 @@ function generate_graph(
     class::Union{Type{DAG},Type{CPDAG},Type{ADMG},Type{MAG},Type{PAG}} = DAG,
     latents::Integer = 0,
 )
+    # Without aggressive constant propagation a literal `class` reaches the keyword body as
+    # a `DataType`, which `juliac --trim` cannot dispatch on.
+    Base.@constprop :aggressive
     n = Int(n)
     if n <= 0
         throw(ArgumentError("n must be positive"))
