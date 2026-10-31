@@ -417,8 +417,9 @@ effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
 
 For a DAG this reduces to the adjustment criterion of Shpitser (2012), which is
 sound *and complete* for adjustment. `z` may include
-descendants of `x` as long as they are not on a causal path from `x` to `y`, so
-this criterion accepts some valid sets the backdoor criterion rejects.
+descendants of `x` as long as they are not descendants of a node on a proper
+causal path from `x` to `y` (`y` itself included), so this criterion accepts
+some valid sets the backdoor criterion rejects.
 
 # Arguments
 - `cg::DAG`: the graph to check.
@@ -604,9 +605,9 @@ effect of `x` on `y` in `cg` using the Generalized Adjustment Criterion (GAC).
 `x`, `y`, and `z` may each be a single `Symbol` or an `AbstractVector{Symbol}`.
 
 A set `z` is valid if it contains no forbidden node (no node in
-`De(cn(x,y) \\ {y}) ∪ {x}`, where `cn(x,y)` are the proper causal nodes from
-`x` to `y`) and `x` and `y` are m-separated by `z` in the proper backdoor graph
-of `cg`.
+`De(cn(x,y)) ∪ {x}`, where `cn(x,y)` are the nodes other than `x` on proper
+causal paths from `x` to `y`, `y` included) and `x` and `y` are m-separated by
+`z` in the proper backdoor graph of `cg`.
 
 # Arguments
 - `cg::Union{ADMG,AbstractAG}`: the graph to check.
