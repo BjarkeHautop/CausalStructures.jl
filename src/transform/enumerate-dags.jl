@@ -2,20 +2,6 @@
 #
 # Adapted from caugi: caugi/src/rust/src/graph/pdag/enumerate.rs
 
-function _adj_sets(a::Int, b::Int, pa, ch, und)
-    return b in pa[a] || b in ch[a] || b in und[a]
-end
-
-# `trail` logs every (a, b) orientation made, in order, so `_undo_orient!`
-# can reverse them later instead of the recursion copying pa/ch/und per branch.
-function _orient_sets!(a::Int, b::Int, und, pa, ch, trail::Vector{Tuple{Int,Int}})
-    delete!(und[a], b)
-    delete!(und[b], a)
-    push!(ch[a], b)
-    push!(pa[b], a)
-    push!(trail, (a, b))
-end
-
 # Undo every orientation logged on `trail` since `mark`, in reverse order.
 function _undo_orient!(pa, ch, und, trail::Vector{Tuple{Int,Int}}, mark::Int)
     while length(trail) > mark
@@ -24,95 +10,6 @@ function _undo_orient!(pa, ch, und, trail::Vector{Tuple{Int,Int}}, mark::Int)
         delete!(pa[b], a)
         push!(und[a], b)
         push!(und[b], a)
-    end
-end
-
-function _has_dir_path_enum(ch, src::Int, tgt::Int)
-    src == tgt && return true
-    n = length(ch)
-    seen = falses(n)
-    stack = Int[src]
-    while !isempty(stack)
-        u = pop!(stack)
-        u == tgt && return true
-        seen[u] && continue
-        seen[u] = true
-        for w in ch[u]
-            !seen[w] && push!(stack, w)
-        end
-    end
-    return false
-end
-
-function _try_orient_sets!(a::Int, b::Int, und, pa, ch, trail::Vector{Tuple{Int,Int}})
-    b in und[a] || return false
-    _has_dir_path_enum(ch, b, a) && return false
-    _orient_sets!(a, b, und, pa, ch, trail)
-    return true
-end
-
-function _apply_meek_sets!(pa, ch, und, trail::Vector{Tuple{Int,Int}})
-    n = length(pa)
-    adjacent(a, b) = _adj_sets(a, b, pa, ch, und)
-    creates_collider(b, c) = any(p -> p != b && !adjacent(p, b), pa[c])
-
-    changed = true
-    while changed
-        changed = false
-
-        # R1: a-->b, b---c, a not adj c, no new collider at c => b-->c
-        for b = 1:n
-            (isempty(pa[b]) || isempty(und[b])) && continue
-            pb = collect(pa[b])
-            for c in collect(und[b])
-                any(a -> !adjacent(a, c), pb) || continue
-                creates_collider(b, c) && continue
-                _try_orient_sets!(b, c, und, pa, ch, trail) && (changed = true)
-            end
-        end
-
-        # R2: a---b, ∃w: a-->w-->b => a-->b
-        for a = 1:n
-            for b in collect(und[a])
-                if any(w -> b in ch[w], ch[a])
-                    _try_orient_sets!(a, b, und, pa, ch, trail) && (changed = true)
-                elseif any(w -> a in ch[w], ch[b])
-                    _try_orient_sets!(b, a, und, pa, ch, trail) && (changed = true)
-                end
-            end
-        end
-
-        # R3: a---b, ∃c,d ∈ pa[b]: c!~d, a---c, a---d => a-->b
-        for a = 1:n
-            for b in collect(und[a])
-                pb = collect(pa[b])
-                oriented_b = false
-                for i in eachindex(pb)
-                    oriented_b && break
-                    for j = (i+1):length(pb)
-                        c, d = pb[i], pb[j]
-                        if !adjacent(c, d) && c in und[a] && d in und[a]
-                            if _try_orient_sets!(a, b, und, pa, ch, trail)
-                                changed = true
-                            end
-                            oriented_b = true
-                            break
-                        end
-                    end
-                end
-            end
-        end
-
-        # R4: a---b, directed path a-->+b or b-->+a => orient accordingly
-        for a = 1:n
-            for b in collect(und[a])
-                if _has_dir_path_enum(ch, a, b)
-                    _try_orient_sets!(a, b, und, pa, ch, trail) && (changed = true)
-                elseif _has_dir_path_enum(ch, b, a)
-                    _try_orient_sets!(b, a, und, pa, ch, trail) && (changed = true)
-                end
-            end
-        end
     end
 end
 
@@ -216,7 +113,7 @@ function _dag_from_index_adjacency(
     end
 
     backend = DAGBackend(node_names, index, colptr, deg, rowval)
-    # validate=false is safe here: the recursion checks `_has_dir_path_enum`
+    # validate=false is safe here: the recursion checks `_has_dir_path_sets`
     # before every orientation, and the skeleton never changes.
     return DAG(new_edges, backend)
 end
@@ -236,14 +133,14 @@ function _list_dags_enum!(pa, ch, und, input_pa, skeleton, node_names, index, ou
     u, v = edge
     for (a, b) in ((u, v), (v, u))
         _would_create_v_structure_enum(a, b, pa, ch, und) && continue
-        _has_dir_path_enum(ch, b, a) && continue
+        _has_dir_path_sets(ch, b, a) && continue
 
         # Orient in place, recurse, then undo back to `mark`, so both
         # orientations are explored from the same shared state without
         # copying pa/ch/und per branch.
         mark = length(trail)
         _orient_sets!(a, b, und, pa, ch, trail)
-        _apply_meek_sets!(pa, ch, und, trail)
+        _meek_close_sets!(pa, ch, und, trail)
         if !_has_new_v_structure_enum(pa, input_pa, skeleton)
             _list_dags_enum!(pa, ch, und, input_pa, skeleton, node_names, index, out, trail)
         end
@@ -263,11 +160,11 @@ function _count_dags_enum!(pa, ch, und, input_pa, skeleton, count, trail)
     u, v = edge
     for (a, b) in ((u, v), (v, u))
         _would_create_v_structure_enum(a, b, pa, ch, und) && continue
-        _has_dir_path_enum(ch, b, a) && continue
+        _has_dir_path_sets(ch, b, a) && continue
 
         mark = length(trail)
         _orient_sets!(a, b, und, pa, ch, trail)
-        _apply_meek_sets!(pa, ch, und, trail)
+        _meek_close_sets!(pa, ch, und, trail)
         if !_has_new_v_structure_enum(pa, input_pa, skeleton)
             _count_dags_enum!(pa, ch, und, input_pa, skeleton, count, trail)
         end
@@ -292,14 +189,14 @@ function _dag_enum_fork_children(pa, ch, und, input_pa, skeleton)
     children = Vector{Tuple{Vector{Set{Int}},Vector{Set{Int}},Vector{Set{Int}}}}()
     for (a, b) in ((u, v), (v, u))
         _would_create_v_structure_enum(a, b, pa, ch, und) && continue
-        _has_dir_path_enum(ch, b, a) && continue
+        _has_dir_path_sets(ch, b, a) && continue
 
         pa2 = [copy(s) for s in pa]
         ch2 = [copy(s) for s in ch]
         und2 = [copy(s) for s in und]
         trail2 = Tuple{Int,Int}[]
         _orient_sets!(a, b, und2, pa2, ch2, trail2)
-        _apply_meek_sets!(pa2, ch2, und2, trail2)
+        _meek_close_sets!(pa2, ch2, und2, trail2)
         _has_new_v_structure_enum(pa2, input_pa, skeleton) && continue
         push!(children, (pa2, ch2, und2))
     end

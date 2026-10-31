@@ -140,95 +140,67 @@ function _dor_tarsi_parents!(
     return n_removed == n ? out_pa : nothing
 end
 
-"""
-    meek_closure(cg::AbstractPDAG; check_cycles::Bool = true, r4::Bool = true) -> MPDAG
+function _adj_sets(a::Int, b::Int, pa, ch, und)
+    return b in pa[a] || b in ch[a] || b in und[a]
+end
 
-Apply Meek's orientation rules (R1-R4) to `cg` until no further orientations
-are implied, returning the resulting [`MPDAG`](@ref).
+# `trail` logs every (a, b) orientation made, in order, so `_undo_orient!`
+# can reverse them later instead of the recursion copying pa/ch/und per branch.
+function _orient_sets!(a::Int, b::Int, und, pa, ch, trail::Vector{Tuple{Int,Int}})
+    delete!(und[a], b)
+    delete!(und[b], a)
+    push!(ch[a], b)
+    push!(pa[b], a)
+    push!(trail, (a, b))
+end
 
-The four rules are:
-- **R1**: `a --> b --- c`, `a` not adjacent to `c` --> orient `b --> c`
-- **R2**: `a --- b`, directed path `a --> w --> b` exists --> orient `a --> b`
-- **R3**: `a --- b`, two parents `c, d` of `b` with `c` not adjacent to `d`,
-  and `a --- c`, `a --- d` --> orient `a --> b`
-- **R4**: `a --- b`, `a --- c`, `c` not adjacent to `b`, `a` adjacent to `d`,
-  and a directed path `c --> d --> b` exists --> orient `a --> b`
-
-# Arguments
-- `cg::AbstractPDAG`: the graph to close.
-
-# Keywords
-- `check_cycles::Bool = true`: when `true`, every candidate orientation is
-  verified not to create a directed cycle before being applied. This check is
-  redundant *if* `cg` is a genuine Meek pattern -- every directed
-  edge already justified by an unshielded collider -- since
-  Meek's Theorem 3 then guarantees no cycle can arise. Potentially unsafe
-  downstream, since it always returns an MPDAG without verifying acyclicity.
-- `r4::Bool = true`: whether to apply R4. R4 is only needed when `cg`
-  carries directed edges beyond what its own v-structures imply (background
-  knowledge).
-
-# Returns
-The [`MPDAG`](@ref) resulting from closing `cg` under Meek's rules.
-
-# Examples
-
-```jldoctest
-julia> pdag = PDAG("A --> B --- C");
-
-julia> result = meek_closure(pdag)
-MPDAG with 3 nodes and 2 edges:
-  nodes: A, B, C
-  edges:
-    A --> B, B --> C
-```
-
-# References
-
-- [meek1995causal](@citet)
-"""
-function meek_closure(cg::AbstractPDAG; check_cycles::Bool = true, r4::Bool = true)
-    B = cg.backend
-    n = length(B.nodes)
-
-    pa = [Set{Int}(_parents_slice(B, i)) for i = 1:n]
-    ch = [Set{Int}(_children_slice(B, i)) for i = 1:n]
-    und = [Set{Int}(_undirected_slice(B, i)) for i = 1:n]
-
-    adjacent(a, b) = b in pa[a] || b in ch[a] || b in und[a]
-
-    function has_dir_path(src, tgt)
-        src == tgt && return true
-        seen = falses(n)
-        queue = Int[src]
-        head = 1
-        while head <= length(queue)
-            u = queue[head]
-            head += 1
-            u == tgt && return true
-            seen[u] && continue
-            seen[u] = true
-            for v in ch[u]
-                !seen[v] && push!(queue, v)
-            end
+function _has_dir_path_sets(ch, src::Int, tgt::Int)
+    src == tgt && return true
+    n = length(ch)
+    seen = falses(n)
+    stack = Int[src]
+    while !isempty(stack)
+        u = pop!(stack)
+        u == tgt && return true
+        seen[u] && continue
+        seen[u] = true
+        for w in ch[u]
+            !seen[w] && push!(stack, w)
         end
-        return false
     end
+    return false
+end
 
-    function orient!(a, b)
-        delete!(und[a], b)
-        delete!(und[b], a)
-        push!(ch[a], b)
-        push!(pa[b], a)
-    end
+# Orient a --> b only if the edge is still undirected and, when `check_cycles`,
+# doing so won't create a directed cycle.
+function _try_orient_sets!(
+    a::Int,
+    b::Int,
+    und,
+    pa,
+    ch,
+    trail::Vector{Tuple{Int,Int}},
+    check_cycles::Bool,
+)
+    b in und[a] || return false
+    check_cycles && _has_dir_path_sets(ch, b, a) && return false
+    _orient_sets!(a, b, und, pa, ch, trail)
+    return true
+end
 
-    # Orient a --> b only if edge is still undirected and doing so won't create a cycle
-    function try_orient!(a, b)
-        b in und[a] || return false
-        check_cycles && has_dir_path(b, a) && return false
-        orient!(a, b)
-        return true
-    end
+# Close the index-set state pa/ch/und under Meek's rules R1-R4 in place,
+# logging every orientation on `trail`.
+function _meek_close_sets!(
+    pa,
+    ch,
+    und,
+    trail::Vector{Tuple{Int,Int}};
+    check_cycles::Bool = true,
+    r4::Bool = true,
+)
+    n = length(pa)
+    adjacent(a, b) = _adj_sets(a, b, pa, ch, und)
+    try_orient!(a, b) = _try_orient_sets!(a, b, und, pa, ch, trail, check_cycles)
 
     changed = true
     while changed
@@ -289,6 +261,65 @@ function meek_closure(cg::AbstractPDAG; check_cycles::Bool = true, r4::Bool = tr
             end
         end
     end
+    return pa, ch, und
+end
+
+"""
+    meek_closure(cg::AbstractPDAG; check_cycles::Bool = true, r4::Bool = true) -> MPDAG
+
+Apply Meek's orientation rules (R1-R4) to `cg` until no further orientations
+are implied, returning the resulting [`MPDAG`](@ref).
+
+The four rules are:
+- **R1**: `a --> b --- c`, `a` not adjacent to `c` --> orient `b --> c`
+- **R2**: `a --- b`, directed path `a --> w --> b` exists --> orient `a --> b`
+- **R3**: `a --- b`, two parents `c, d` of `b` with `c` not adjacent to `d`,
+  and `a --- c`, `a --- d` --> orient `a --> b`
+- **R4**: `a --- b`, `a --- c`, `c` not adjacent to `b`, `a` adjacent to `d`,
+  and a directed path `c --> d --> b` exists --> orient `a --> b`
+
+# Arguments
+- `cg::AbstractPDAG`: the graph to close.
+
+# Keywords
+- `check_cycles::Bool = true`: when `true`, every candidate orientation is
+  verified not to create a directed cycle before being applied. This check is
+  redundant *if* `cg` is a genuine Meek pattern -- every directed
+  edge already justified by an unshielded collider -- since
+  Meek's Theorem 3 then guarantees no cycle can arise. Potentially unsafe
+  downstream, since it always returns an MPDAG without verifying acyclicity.
+- `r4::Bool = true`: whether to apply R4. R4 is only needed when `cg`
+  carries directed edges beyond what its own v-structures imply (background
+  knowledge).
+
+# Returns
+The [`MPDAG`](@ref) resulting from closing `cg` under Meek's rules.
+
+# Examples
+
+```jldoctest
+julia> pdag = PDAG("A --> B --- C");
+
+julia> result = meek_closure(pdag)
+MPDAG with 3 nodes and 2 edges:
+  nodes: A, B, C
+  edges:
+    A --> B, B --> C
+```
+
+# References
+
+- [meek1995causal](@citet)
+"""
+function meek_closure(cg::AbstractPDAG; check_cycles::Bool = true, r4::Bool = true)
+    B = cg.backend
+    n = length(B.nodes)
+
+    pa = [Set{Int}(_parents_slice(B, i)) for i = 1:n]
+    ch = [Set{Int}(_children_slice(B, i)) for i = 1:n]
+    und = [Set{Int}(_undirected_slice(B, i)) for i = 1:n]
+
+    _meek_close_sets!(pa, ch, und, Tuple{Int,Int}[]; check_cycles, r4)
 
     new_edges = CausalEdge[]
     seen_und = Set{Tuple{Int,Int}}()
