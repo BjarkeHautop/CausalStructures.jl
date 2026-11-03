@@ -67,8 +67,7 @@ function backdoor_set(cg::MAG, x::Symbol, y::Symbol)
     _check_no_selection_variables(cg, "backdoor_set (GBC, Maathuis & Colombo 2015)")
     B = cg.backend
     n = length(B.nodes)
-    xi = node_index(cg, x)
-    yi = node_index(cg, y)
+    (xi,), (yi,) = _effect_indices(cg, x, y)
 
     excluded = _gbc_removed_children(B, xi)
 

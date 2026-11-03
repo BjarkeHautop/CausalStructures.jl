@@ -9,10 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
-- `d_separated` and `m_separated` ignored nodes of `x` that are in `z` but not nodes of `y` that are in `z`, so swapping `x` and `y` could change the answer (e.g. `d_separated(DAG("A --> B"), :A, :B, :B)` was `false`). Nodes of `x` or `y` in `z` are now both ignored.
-- Fixed `juliac --trim=safe` compile failures in `simulate_data` with `error_sd = (lo, hi)`, graph constructors and `remove_nodes` given several edges or nodes, and `BackgroundKnowledge` given a graph edge.
-- `minimal_separator` on a `DAG` returned a set when `x` and `y` share a node (e.g. `minimal_separator(DAG("A --> B --> C"), :B, :B) == [:A]`), although no set separates a node from itself. It now returns `nothing`, as for the other graph classes.
-- The adjustment, backdoor, frontdoor and IV functions answered vacuously when `x` or `y` was empty (e.g. `adjustment_set(DAG("U --> X --> Y"), :X, Symbol[]; type = :parents) == [:U]`, and `is_valid_adjustment` returned `true` for any set). They now throw an `ArgumentError`, as `id`, `idc`, `idp` and `cidp` already did.
+- `d_separated` and `m_separated` ignored nodes of `x` in `z` but not nodes of `y` in `z`, so swapping `x` and `y` could change the answer.
+- Fixed `juliac --trim=safe` compile failures in `simulate_data`, graph constructors, `remove_nodes` and `BackgroundKnowledge`.
+- `minimal_separator` on a `DAG` returned a set when `x` and `y` share a node.
+- The adjustment, backdoor, frontdoor and IV functions now throw an `ArgumentError` for an empty `x` or `y`, instead of answering vacuously.
+- The adjustment, backdoor, frontdoor and IV functions and `pagcauses` now throw an `ArgumentError` when `x` and `y` share a node. Some of them found a valid set in this case (e.g. `is_valid_adjustment(MAG("A --> B --> C"), :A, :A)` was `true`).
 
 ## [1.1.1] - 2026-10-19
 

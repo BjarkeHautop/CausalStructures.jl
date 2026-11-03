@@ -111,18 +111,14 @@ function is_valid_iv(
     z::Union{Symbol,AbstractVector{Symbol}},
     w::Union{Symbol,AbstractVector{Symbol}} = Symbol[],
 )
+    (x_idx,), ys = _effect_indices(cg, x, y)
     z_vec = _as_symbol_vec(z)
     isempty(z_vec) && return false
     w_vec = _as_symbol_vec(w)
     ys_syms = _as_symbol_set(y)
-    isempty(ys_syms) && throw(ArgumentError("y must be non-empty"))
     any(zi -> zi === x || zi in ys_syms || zi in w_vec, z_vec) && return false
-    _admissible_iv_conditioning(
-        cg.backend,
-        node_index(cg, x),
-        _node_indices(cg, y),
-        _node_indices(cg, w_vec),
-    ) || return false
+    _admissible_iv_conditioning(cg.backend, x_idx, ys, _node_indices(cg, w_vec)) ||
+        return false
     all(zi -> m_separated(cg, zi, x, w_vec), z_vec) && return false  # relevance
     g_iv = _build_g_iv(cg, x, y)
     return all(zi -> m_separated(g_iv, zi, y, w_vec), z_vec)  # exclusion
@@ -182,9 +178,7 @@ function iv_set(
 )
     B = cg.backend
     n = length(B.nodes)
-    x_idx = node_index(cg, x)
-    ys = _node_indices(cg, y)
-    isempty(ys) && throw(ArgumentError("y must be non-empty"))
+    (x_idx,), ys = _effect_indices(cg, x, y)
     allowed = trues(n)
     if restrict !== nothing
         fill!(allowed, false)
@@ -300,9 +294,7 @@ function all_iv_sets(
 )
     B = cg.backend
     n = length(B.nodes)
-    x_idx = node_index(cg, x)
-    ys_idx = _node_indices(cg, y)
-    isempty(ys_idx) && throw(ArgumentError("y must be non-empty"))
+    (x_idx,), ys_idx = _effect_indices(cg, x, y)
     w_idx = _node_indices(cg, w)
     _admissible_iv_conditioning(B, x_idx, ys_idx, w_idx) || return Vector{Vector{Symbol}}()
     ys_mask = falses(n)

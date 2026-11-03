@@ -47,7 +47,7 @@ julia> sort(backdoor_set(pag, :X, :Y))
 function backdoor_set(cg::PAG, x::Symbol, y::Symbol)
     B = cg.backend
     _check_no_selection_variables(cg, "backdoor_set (GBC, Maathuis & Colombo 2015)")
-    xi = node_index(cg, x)
+    (xi,), _ = _effect_indices(cg, x, y)
     # "Edges into x" (Definition 4.2): includes circle_parents, since o->
     # still has a definite arrowhead at x even though the far mark is a circle.
     k =

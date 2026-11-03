@@ -286,7 +286,6 @@ function is_valid_adjustment(
     xs, ys = _effect_indices(cg, x, y)
     z_idxs = _node_indices(cg, z)
 
-    (isempty(xs) || isempty(ys)) && return true
     any(in(ys), z_idxs) && return false
 
     cn, removed, amenable = _proper_possibly_causal_paths(B, xs, ys)

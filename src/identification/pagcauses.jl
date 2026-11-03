@@ -514,6 +514,7 @@ julia> sort(sort.(pagcauses(pag, :X, :Y)))
 """
 function pagcauses(cg::PAG, x::Symbol, y::Symbol)
     _check_no_selection_variables(cg, "pagcauses (Wang, Tao, Qin & Zhou 2025)")
+    _effect_indices(cg, x, y)
     node_vec, index, adj0, mark0 = _pag_adj_marks(cg.backend.nodes, cg.edges)
     n = length(node_vec)
     xi, yi = index[x], index[y]

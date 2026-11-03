@@ -76,9 +76,6 @@ function is_valid_backdoor(
         de_x[vi] && return false
     end
 
-    # A node in both X and Y is never separated from itself.
-    any(xs_mask[yi] for yi in ys) && return false
-
     # Pa(X) \ X: parents of some x ∈ X that are not themselves in X.
     parents_x = Int[]
     seen_p = falses(n)
@@ -252,8 +249,6 @@ function all_backdoor_sets(
 
     constrained = _constrain_universe(cg, universe, include, restrict)
     constrained === nothing && return Vector{Vector{Symbol}}()
-    # A node in both X and Y is never separated from itself.
-    any(xs_mask[yi] for yi in ys) && return Vector{Vector{Symbol}}()
     inc, pool = constrained
     valid_sets = _search_subsets_including(pool, inc, max_size, make_checker, to_symbols)
 
@@ -724,8 +719,7 @@ function backdoor_set(
     (isempty(_as_symbol_vec(include)) && restrict === nothing) ||
         return _minimal_backdoor_set(cg, x, y, include, restrict)
     B = cg.backend
-    xi = node_index(cg, x)
-    yi = node_index(cg, y)
+    (xi,), (yi,) = _effect_indices(cg, x, y)
     yi in _parents_slice(B, xi) && return nothing
     return sort(B.nodes[_parents_slice(B, xi)])
 end
@@ -790,8 +784,7 @@ end
 function _minimal_backdoor_set(cg::Union{DAG,ADMG}, x::Symbol, y::Symbol, include, restrict)
     B = cg.backend
     n = length(B.nodes)
-    xi = node_index(cg, x)
-    yi = node_index(cg, y)
+    (xi,), (yi,) = _effect_indices(cg, x, y)
 
     de_x = _descendants_bitmask(B, [xi])
     universe = [v for v = 1:n if v != xi && v != yi && !de_x[v]]

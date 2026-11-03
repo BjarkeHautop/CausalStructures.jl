@@ -66,8 +66,7 @@ true
 """
 function backdoor_set(cg::CPDAG, x::Symbol, y::Symbol)
     B = cg.backend
-    xi = node_index(cg, x)
-    yi = node_index(cg, y)
+    (xi,), (yi,) = _effect_indices(cg, x, y)
 
     yi in _parents_slice(B, xi) && return nothing
 
