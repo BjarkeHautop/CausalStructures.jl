@@ -453,14 +453,14 @@ characterization (Verma & Pearl, 1990).
 # Examples
 
 ```jldoctest
-julia> cg1 = DAG("A --> B <-- C");
+julia> cg1 = DAG("A --> B --> C");
 
-julia> cg2 = DAG("A --> B <-- C");
+julia> cg2 = DAG("A <-- B <-- C");
 
 julia> markov_equivalent(cg1, cg2)
 true
 
-julia> cg3 = DAG("A --> B --> C");
+julia> cg3 = DAG("A --> B <-- C");
 
 julia> markov_equivalent(cg1, cg3)
 false
