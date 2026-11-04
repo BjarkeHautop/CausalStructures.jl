@@ -30,3 +30,17 @@ end
     @test :X ∉ possible_d_sep(mag, :X, :Y)
     @test possible_d_sep(mag, :X, :Y) == [:Y]
 end
+
+@testitem "possible_d_sep includes undirected neighbors of x" tags =
+    [:unit, :possible_d_sep] begin
+    # A --- B is a collider path with no interior node, and B is an ancestor of C.
+    mag = MAG("A --- B, B --> C")
+    @test possible_d_sep(mag, :A, :C) == [:B]
+    @test possible_d_sep(AG("A --- B, B --> C"), :A, :C) == [:B]
+
+    # B is not an ancestor of A or D, so it stays out.
+    @test possible_d_sep(MAG("A --- B, C --> D"), :A, :D) == Symbol[]
+
+    # An undirected edge has no arrowhead at B, so no collider path continues past it.
+    @test possible_d_sep(MAG("A --- B, B --> C, D --> C"), :A, :C) == [:B]
+end

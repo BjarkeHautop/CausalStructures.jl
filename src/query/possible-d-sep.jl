@@ -33,6 +33,12 @@ function _d_sep_mask(
             push!(stack, s)
         end
     end
+    # An undirected edge is a collider path with no interior node. It has no
+    # arrowhead at u, so no collider path continues past u.
+    for u in _undirected_slice(B, x)
+        anc_xy[u] || continue
+        reach[u] = true
+    end
 
     while !isempty(stack)
         v = pop!(stack)
