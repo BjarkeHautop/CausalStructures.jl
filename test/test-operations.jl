@@ -49,6 +49,45 @@ end
     @test has_edge(sg, :A, :B)
 end
 
+@testitem "skeleton works on every graph class" tags = [:unit, :operations] begin
+    adjacencies(g) = Set(Set([e.src, e.dst]) for e in skeleton(g).edges)
+    expected = Set([Set([:A, :B]), Set([:B, :C])])
+    graphs = [
+        UG("A --- B --- C"),
+        ADMG("A --> B <-> C"),
+        AG("A --> B <-> C"),
+        MAG("A --> B <-> C"),
+        mag_to_pag(MAG("A --> B <-> C")),
+        UNKNOWN("A --> B o-> C"),
+    ]
+    for g in graphs
+        @test skeleton(g) isa UG
+        @test adjacencies(g) == expected
+    end
+
+    isolated = skeleton(ADMG("A --> B, C"))
+    @test Set(nodes(isolated)) == Set([:A, :B, :C])
+end
+
+@testitem "skeleton merges parallel edges and drops self-loops" tags = [:unit, :operations] begin
+    skel = skeleton(ADMG("A --> B, A <-> B"))
+    @test length(skel.edges) == 1
+    @test has_edge(skel, :A, :B)
+
+    # Both directions of a pair in UNKNOWN are one skeleton edge.
+    @test length(skeleton(UNKNOWN("A --> B, B --> A")).edges) == 1
+
+    loop = skeleton(UNKNOWN("A --> A, A --> B"))
+    @test length(loop.edges) == 1
+    @test Set(nodes(loop)) == Set([:A, :B])
+    # The validating constructor accepts the result.
+    @test UG(nodes(loop), loop.edges) == loop
+
+    only_loop = skeleton(UNKNOWN("A --> A"))
+    @test isempty(only_loop.edges)
+    @test nodes(only_loop) == [:A]
+end
+
 @testitem "subgraph errors on a node not in the graph" tags = [:unit, :operations] begin
     cg = DAG("A --> B")
     @test_throws ArgumentError subgraph(cg, :Z)

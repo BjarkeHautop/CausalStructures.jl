@@ -271,9 +271,21 @@ end
 
 @testitem "exogenous_nodes works on UG" tags = [:unit, :queries] begin
     ug = UG(undirected(:A, :B), undirected(:B, :C))
-    @test isempty(exogenous_nodes(ug))
+    @test Set(exogenous_nodes(ug)) == Set([:A, :B, :C])
+    @test isempty(exogenous_nodes(ug; undirected_as_parents = true))
     g_iso = UG(undirected(:A, :B), node(:C))
-    @test exogenous_nodes(g_iso) == [:C]
+    @test Set(exogenous_nodes(g_iso)) == Set([:A, :B, :C])
+    @test exogenous_nodes(g_iso; undirected_as_parents = true) == [:C]
+    # The result is not the graph's own node list.
+    push!(exogenous_nodes(g_iso), :Z)
+    @test !(:Z in nodes(g_iso))
+    # The same edges give the same answer as a PDAG.
+    pdag = PDAG(undirected(:A, :B), undirected(:B, :C), node(:D))
+    ug2 = UG(undirected(:A, :B), undirected(:B, :C), node(:D))
+    for flag in (false, true)
+        @test Set(exogenous_nodes(ug2; undirected_as_parents = flag)) ==
+              Set(exogenous_nodes(pdag; undirected_as_parents = flag))
+    end
 end
 
 # ── possible_ancestors / possible_descendants ─────────────────────────────────

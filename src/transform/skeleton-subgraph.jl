@@ -9,6 +9,7 @@ function _skeleton_edges(input_edges::Vector{CausalEdge})
     seen = Set{Tuple{Symbol,Symbol}}()
 
     for e in input_edges
+        e.src == e.dst && continue
         key = _ordered_pair(e.src, e.dst)
         if !(key in seen)
             push!(seen, key)
@@ -20,13 +21,14 @@ function _skeleton_edges(input_edges::Vector{CausalEdge})
 end
 
 """
-    skeleton(cg::Union{DAG,AbstractPDAG}) -> UG
+    skeleton(cg::CausalGraph) -> UG
 
 Return the skeleton of `cg`: the undirected graph obtained by replacing every
-directed or partially-directed edge with an undirected edge.
+edge, of any type, with an undirected edge. Parallel edges between two nodes become
+one edge, and self-loops are dropped.
 
 # Arguments
-- `cg::Union{DAG,AbstractPDAG}`: the graph to take the skeleton of.
+- `cg::CausalGraph`: the graph to take the skeleton of.
 
 # Returns
 The [`UG`](@ref) skeleton of `cg`.
@@ -43,7 +45,7 @@ UG with 3 nodes and 2 edges:
     A --- B, B --- C
 ```
 """
-function skeleton(cg::Union{DAG,AbstractPDAG})
+function skeleton(cg::CausalGraph)
     # validate=false is safe here: edges come from distinct-endpoint pairs.
     return UG(nodes(cg), _skeleton_edges(cg.edges); validate = false)
 end

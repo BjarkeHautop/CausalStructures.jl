@@ -195,20 +195,22 @@ end
 
 """
     exogenous_nodes(cg::Union{DAG,ADMG,AG}) -> Vector{Symbol}
-    exogenous_nodes(cg::AbstractPDAG; undirected_as_parents = false) -> Vector{Symbol}
-    exogenous_nodes(cg::UG) -> Vector{Symbol}
+    exogenous_nodes(cg::Union{AbstractPDAG,UG}; undirected_as_parents = false) -> Vector{Symbol}
 
 Return all exogenous nodes in `cg`: nodes with no incoming directed edges.
 
-For [`UG`](@ref), where no directed edges exist, a node is considered exogenous
-if and only if it is isolated (no neighbors at all).
-
-For [`AbstractPDAG`](@ref), the `undirected_as_parents` keyword
+For [`AbstractPDAG`](@ref) and [`UG`](@ref), the `undirected_as_parents` keyword
 controls how undirected edges are treated. When `true`, a node incident to any
-undirected edge is not considered exogenous.
+undirected edge is not considered exogenous. A [`UG`](@ref) has no directed edges,
+so by default every node is exogenous, and with `undirected_as_parents = true` only
+the isolated nodes are.
 
 # Arguments
 - `cg`: the graph to query.
+
+# Keywords
+- `undirected_as_parents::Bool = false`: whether to treat undirected edges as
+  (possible) parents. Only for [`AbstractPDAG`](@ref) and [`UG`](@ref).
 
 # Returns
 The `Vector{Symbol}` of exogenous nodes.
@@ -224,7 +226,13 @@ julia> exogenous_nodes(dag)
 
 julia> ug = UG("A --- B, C");
 
-julia> exogenous_nodes(ug)  # only the isolated node C
+julia> exogenous_nodes(ug)
+3-element Vector{Symbol}:
+ :A
+ :B
+ :C
+
+julia> exogenous_nodes(ug, undirected_as_parents = true)  # only the isolated node C
 1-element Vector{Symbol}:
  :C
 
@@ -245,8 +253,9 @@ function exogenous_nodes(cg::Union{DAG,ADMG,AbstractAG})
     return [B.nodes[i] for i in eachindex(B.nodes) if isempty(_parents_slice(B, i))]
 end
 
-function exogenous_nodes(cg::UG)
+function exogenous_nodes(cg::UG; undirected_as_parents::Bool = false)
     B = cg.backend
+    undirected_as_parents || return copy(B.nodes)
     return [B.nodes[i] for i in eachindex(B.nodes) if isempty(_undirected_slice(B, i))]
 end
 

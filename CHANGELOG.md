@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### New features
+
+- `skeleton` now works on every graph class. Parallel edges between two nodes become one edge, and self-loops are dropped.
+
+### Changed
+
+- `exogenous_nodes` on a `UG` now returns every node by default, as it does for a `PDAG` or `AG` with the same edges. Pass the new `undirected_as_parents = true` keyword to get the previous result, the isolated nodes.
+
 ### Bug fixes
 
 - `d_separated` and `m_separated` ignored nodes of `x` in `z` but not nodes of `y` in `z`, so swapping `x` and `y` could change the answer.
