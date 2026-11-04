@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The adjustment, backdoor, frontdoor and IV functions and `pagcauses` now throw an `ArgumentError` when `x` and `y` share a node. Some of them found a valid set in this case (e.g. `is_valid_adjustment(MAG("A --> B --> C"), :A, :A)` was `true`).
 - `all_iv_sets` with `minimal = true` ignored `max_size` and could return larger sets.
 - `is_valid_frontdoor` skipped its third condition for a node repeated in `z`, so `[:M, :M]` could be accepted when `:M` is not.
+- `frontdoor_set` and `all_frontdoor_sets` broke `include ⊆ Z ⊆ restrict` when `include` was outside the candidate pool: `frontdoor_set` dropped those nodes and `all_frontdoor_sets` returned them without checking them. They now return `nothing` and no sets.
 
 ## [1.1.1] - 2026-10-19
 

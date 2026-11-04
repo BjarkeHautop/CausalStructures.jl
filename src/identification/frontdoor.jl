@@ -560,6 +560,9 @@ function frontdoor_set(
         r_mask[node_index(cg, s)] = true
     end
 
+    # No Z satisfies include ⊆ Z ⊆ restrict.
+    any(i_mask .& .!r_mask) && return nothing
+
     # Step 1: filter out candidates with a backdoor path from X (condition 2)
     gx = _build_gx(cg, x)
     buf2 = _FD2ndBuffers(n)
@@ -970,6 +973,9 @@ function all_frontdoor_sets(
     for s in _restrict
         r_mask[node_index(cg, s)] = true
     end
+
+    # No Z satisfies include ⊆ Z ⊆ restrict.
+    any(i_mask .& .!r_mask) && return Vector{Vector{Symbol}}()
 
     gx = _build_gx(cg, x)
     _, cpg_children = _get_causal_path_graph(B, x_set, y_mask)

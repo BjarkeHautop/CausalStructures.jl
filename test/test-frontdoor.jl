@@ -574,3 +574,28 @@ end
     valid = DAG("U --> X --> M --> Y, U --> Y")
     @test is_valid_frontdoor(valid, :X, :Y, [:M, :M])
 end
+
+@testitem "frontdoor_set: include outside the candidate pool finds no set" tags =
+    [:unit, :frontdoor] begin
+    # Z is itself a valid front-door set, so only the window rules it out.
+    dag = DAG(Set([:X, :Y, :Z]), CausalEdge[])
+    @test frontdoor_set(dag, :X, :Y; include = :Z) == [:Z]
+    @test frontdoor_set(dag, :X, :Y; include = :Z, restrict = Symbol[]) === nothing
+    @test frontdoor_set(dag, :X, :Y; include = :X) === nothing
+    @test frontdoor_set(dag, :X, :Y; include = :Y) === nothing
+
+    admg = ADMG(Set([:X, :Y, :Z]), CausalEdge[])
+    @test frontdoor_set(admg, :X, :Y; include = :Z, restrict = Symbol[]) === nothing
+end
+
+@testitem "all_frontdoor_sets: include outside the candidate pool finds no set" tags =
+    [:unit, :frontdoor] begin
+    dag = DAG(Set([:X, :Y, :Z]), CausalEdge[])
+    @test all_frontdoor_sets(dag, :X, :Y; include = :Z) == [[:Z]]
+    @test isempty(all_frontdoor_sets(dag, :X, :Y; include = :Z, restrict = Symbol[]))
+    @test isempty(all_frontdoor_sets(dag, :X, :Y; include = :X))
+    @test isempty(all_frontdoor_sets(dag, :X, :Y; include = :Y))
+
+    admg = ADMG(Set([:X, :Y, :Z]), CausalEdge[])
+    @test isempty(all_frontdoor_sets(admg, :X, :Y; include = :Z, restrict = Symbol[]))
+end
