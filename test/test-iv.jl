@@ -306,3 +306,17 @@ end
         r === nothing || @test is_valid_iv(cg, x, y, r.z, r.w)
     end
 end
+
+@testitem "all_iv_sets: minimal = true respects max_size" tags = [:unit, :iv] begin
+    dag = DAG("Z --> X --> Y")
+    @test isempty(all_iv_sets(dag, :X, :Y; max_size = 0))
+    @test all_iv_sets(dag, :X, :Y; max_size = 1) == [[:Z]]
+    # `include` counts towards max_size, whether or not it is relevant itself.
+    @test isempty(all_iv_sets(dag, :X, :Y; include = :Z, max_size = 0))
+    @test all_iv_sets(dag, :X, :Y; include = :Z, max_size = 1) == [[:Z]]
+
+    # Z is excluded given Q but not relevant, so a minimal set needs one more node.
+    dag2 = DAG("Q --> X, Q --> Z, X --> Y, Z2 --> X")
+    @test isempty(all_iv_sets(dag2, :X, :Y, :Q; include = :Z, max_size = 1))
+    @test all_iv_sets(dag2, :X, :Y, :Q; include = :Z, max_size = 2) == [[:Z, :Z2]]
+end

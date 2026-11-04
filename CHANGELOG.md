@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `minimal_separator` on a `DAG` returned a set when `x` and `y` share a node.
 - The adjustment, backdoor, frontdoor and IV functions now throw an `ArgumentError` for an empty `x` or `y`, instead of answering vacuously.
 - The adjustment, backdoor, frontdoor and IV functions and `pagcauses` now throw an `ArgumentError` when `x` and `y` share a node. Some of them found a valid set in this case (e.g. `is_valid_adjustment(MAG("A --> B --> C"), :A, :A)` was `true`).
+- `all_iv_sets` with `minimal = true` ignored `max_size` and could return larger sets.
 
 ## [1.1.1] - 2026-10-19
 

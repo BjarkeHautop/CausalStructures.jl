@@ -344,7 +344,9 @@ function all_iv_sets(
     to_symbols(cur) = sort([B.nodes[v] for v in [inc; cur]])
 
     if minimal
-        inc_relevant && return [to_symbols(Int[])]
+        inc_relevant &&
+            return length(inc) <= max_size ? [to_symbols(Int[])] : Vector{Vector{Symbol}}()
+        length(inc) < max_size || return Vector{Vector{Symbol}}()
         return [to_symbols([v]) for v in relevant_pool]
     end
 
