@@ -68,6 +68,35 @@ end
     @test shd(UNKNOWN("A o-o B"), UNKNOWN("A o-> B")) == 1
 end
 
+@testitem "shd counts a node pair with two edges once" tags = [:unit, :metrics] begin
+    bow = ADMG("A --> B, A <-> B")
+    @test shd(bow, ADMG("A --> B")) == 1
+    @test shd(bow, ADMG("A <-> B")) == 1
+    @test shd(bow, ADMG("B --> A")) == 1
+    @test shd(bow, ADMG("B --> A, A <-> B")) == 1
+    @test shd(bow, ADMG("A, B")) == 1
+    @test shd(bow, UNKNOWN("A --> B, A --- B")) == 1
+    @test shd(bow, ADMG("A, B"); normalized = true) == 1.0
+    @test hd(bow, ADMG("A, B")) == 1
+end
+
+@testitem "shd does not depend on edge order or argument order" tags = [:unit, :metrics] begin
+    @test shd(ADMG("A <-> B, A --> B"), ADMG("A --> B, A <-> B")) == 0
+    @test shd(UNKNOWN("A --> B, B --> A"), UNKNOWN("B --> A, A --> B")) == 0
+    @test shd(UNKNOWN("A --> B, B --> A"), UNKNOWN("B --> A")) == 1
+    @test shd(UNKNOWN("B --> A"), UNKNOWN("A --> B, B --> A")) == 1
+    @test shd(ADMG("A --> B, A <-> B"), ADMG("A <-> B")) == 1
+    @test shd(ADMG("A <-> B"), ADMG("A <-> B, A --> B")) == 1
+end
+
+@testitem "hd and shd ignore self-loops" tags = [:unit, :metrics] begin
+    @test hd(UNKNOWN("A --> A, B"), UNKNOWN("A, B")) == 0
+    @test shd(UNKNOWN("A --> A, B"), UNKNOWN("A, B")) == 0
+    g = UNKNOWN("A --> A, A --> B")
+    @test hd(g, UNKNOWN("A, B"); normalized = true) == 1.0
+    @test shd(g, UNKNOWN("A, B"); normalized = true) == 1.0
+end
+
 @testitem "shd normalized is zero for graphs with < 2 nodes" tags = [:unit, :metrics] begin
     g = DAG(node(:A))
     @test shd(g, g; normalized = true) == 0.0

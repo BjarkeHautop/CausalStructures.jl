@@ -1,10 +1,13 @@
-# Maps each adjacent pair, in sorted order, to its endpoint marks, oriented so
-# the first mark belongs to the lexicographically smaller node.
+# Maps each adjacent pair of distinct nodes, in sorted order, to the endpoint marks
+# of its edges, oriented so the first mark belongs to the lexicographically smaller
+# node.
 function _pair_marks(cg::CausalGraph)
-    marks = Dict{Tuple{Symbol,Symbol},Tuple{Endpoint,Endpoint}}()
+    marks = Dict{Tuple{Symbol,Symbol},Set{Tuple{Endpoint,Endpoint}}}()
     for e in cg.edges
+        e.src == e.dst && continue
         a, b = _ordered_pair(e.src, e.dst)
-        marks[(a, b)] = e.src == a ? (e.src_end, e.dst_end) : (e.dst_end, e.src_end)
+        pair_marks = get!(() -> Set{Tuple{Endpoint,Endpoint}}(), marks, (a, b))
+        push!(pair_marks, e.src == a ? (e.src_end, e.dst_end) : (e.dst_end, e.src_end))
     end
     return marks
 end
@@ -14,8 +17,8 @@ end
 
 Skeleton Hamming distance between `cg1` and `cg2`. Counts the number of node pairs
 on which the two graphs disagree about whether an edge is present, ignoring edge
-type and orientation entirely. `cg1` and `cg2` must have the same node set;
-they may be of different graph classes.
+type and orientation entirely. Self-loops are ignored. `cg1` and `cg2` must have
+the same node set; they may be of different graph classes.
 
 # Arguments
 - `cg1::CausalGraph`: the first graph.
@@ -60,8 +63,11 @@ end
 
 Structural Hamming Distance (SHD) [tsamardinos2006max](@cite) between `cg1`
 and `cg2`. Counts the node pairs on which the two graphs disagree, weighting
-skeleton and orientation mismatches equally. `cg1` and `cg2` must
-have the same node set; they may be of different graph classes.
+skeleton and orientation mismatches equally. Self-loops are ignored. `cg1` and `cg2`
+must have the same node set; they may be of different graph classes.
+
+A node pair counts once however many of its edges differ: `A --> B` and `A <-> B`
+in an [`ADMG`](@ref) are `1` from `A --> B` and `1` from no edge.
 
 The original paper only defined SHD for PDAGs, but we do the natural extension
 of the metric to any pair of causal graphs.
@@ -92,6 +98,9 @@ julia> shd(DAG("A --> B"), ADMG("A <-> B"))
 
 julia> shd(DAG("A --> B --> C"), DAG("A --> B --> C"))
 0
+
+julia> shd(ADMG("A --> B, A <-> B"), ADMG("A, B"))
+1
 ```
 
 # References
