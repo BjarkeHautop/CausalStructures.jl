@@ -248,6 +248,8 @@ julia> exogenous_nodes(pdag, undirected_as_parents = true)
  :A
 ```
 """
+function exogenous_nodes end
+
 function exogenous_nodes(cg::Union{DAG,ADMG,AbstractAG})
     B = cg.backend
     return [B.nodes[i] for i in eachindex(B.nodes) if isempty(_parents_slice(B, i))]
@@ -339,12 +341,14 @@ end
     possible_ancestors(cg::AbstractPDAG, node::Symbol; open::Bool = true) -> Vector{Symbol}
 
 Return the possible ancestors of `node` in `cg`: all nodes `V` with a
-**b-possibly directed path** from `V` to `node` (Perković, Kalisch & Maathuis
-2017/2018): a path on which no node, however far back, has a directed edge into
-an earlier node on the path. For [`CPDAG`](@ref) this reduces to the simpler "no
-edge compelled away from `node`" rule (checking only consecutive steps suffices
-there, Meek 1995, Lemma 1); for [`MPDAG`](@ref) checking only consecutive steps
-is unsound, since background knowledge can create partially directed cycles.
+**b-possibly directed path** from `V` to `node`.
+
+A b-possibly directed path (Perković, Kalisch & Maathuis 2017/2018) is a path on
+which no node, however far back, has a directed edge into an earlier node on the
+path. For [`CPDAG`](@ref) this reduces to the simpler "no edge compelled away from
+`node`" rule (checking only consecutive steps suffices there, Meek 1995, Lemma 1);
+for [`MPDAG`](@ref) checking only consecutive steps is unsound, since background
+knowledge can create partially directed cycles.
 
 For a [`CPDAG`](@ref) or [`MPDAG`](@ref), these are the nodes that are an ancestor
 of `node` in at least one DAG it represents. For a [`PDAG`](@ref) not closed under
@@ -400,12 +404,14 @@ end
     possible_descendants(cg::AbstractPDAG, node::Symbol; open::Bool = true) -> Vector{Symbol}
 
 Return the possible descendants of `node` in `cg`: all nodes `V` with a
-**b-possibly directed path** from `node` to `V` (Perković, Kalisch & Maathuis
-2017/2018): a path on which no node, however far along, has a directed edge into
-an earlier node on the path. For [`CPDAG`](@ref) this reduces to the simpler "no
-edge compelled away from `node`" rule (checking only consecutive steps suffices
-there, Meek 1995, Lemma 1); for [`MPDAG`](@ref) checking only consecutive steps
-is unsound, since background knowledge can create partially directed cycles.
+**b-possibly directed path** from `node` to `V`.
+
+A b-possibly directed path (Perković, Kalisch & Maathuis 2017/2018) is a path on
+which no node, however far along, has a directed edge into an earlier node on the
+path. For [`CPDAG`](@ref) this reduces to the simpler "no edge compelled away from
+`node`" rule (checking only consecutive steps suffices there, Meek 1995, Lemma 1);
+for [`MPDAG`](@ref) checking only consecutive steps is unsound, since background
+knowledge can create partially directed cycles.
 
 For a [`CPDAG`](@ref) or [`MPDAG`](@ref), these are the nodes that are a descendant
 of `node` in at least one DAG it represents. For a [`PDAG`](@ref) not closed under
