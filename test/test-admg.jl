@@ -36,6 +36,16 @@ end
     @test Set(neighbors(admg, :B)) == Set([:A, :C])
 end
 
+@testitem "neighbors lists a node joined by both --> and <-> once" tags = [:unit, :admg] begin
+    admg = ADMG("A --> B, A <-> B")
+    @test neighbors(admg, :A) == [:B]
+    @test neighbors(admg, :B) == [:A]
+    # Each edge kind is still reported by its own mode.
+    @test neighbors(admg, :A; mode = :out) == [:B]
+    @test neighbors(admg, :A; mode = :bidirected) == [:B]
+    @test has_edge(admg, :A, :B)
+end
+
 # ── ancestors / descendants for ADMG ──────
 
 @testitem "ancestors follows directed edges only in ADMG" tags = [:unit, :admg] begin

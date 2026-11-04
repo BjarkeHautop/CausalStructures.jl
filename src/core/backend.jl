@@ -458,7 +458,8 @@ function neighbors(cg::CausalGraph, node::Symbol; mode::Symbol = :all)
     idx = get(B.index, node, 0)
     idx == 0 && throw(ArgumentError("Unknown node: $(node)"))
     if mode === :all
-        return B.nodes[_all_nbrs_slice(B, idx)]
+        # An ADMG pair joined by both --> and <-> is in two buckets.
+        return B.nodes[unique(_all_nbrs_slice(B, idx))]
     elseif mode === :in
         B isa
         Union{DAGBackend,PDAGBackend,ADMGBackend,AGBackend,UNKNOWNBackend,PAGBackend} ||
