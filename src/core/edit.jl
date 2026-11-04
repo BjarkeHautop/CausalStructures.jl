@@ -49,7 +49,8 @@ end
     remove_edges(cg::CausalGraph, es::CausalEdge...) -> CausalGraph
 
 Return a new graph of the same class with edges `es` removed. Nodes that become
-isolated are retained. Throws `ArgumentError` if any edge in `es` is not present.
+isolated are retained. Throws `ArgumentError` if any edge in `es` is not present, or
+if the remaining graph is not a valid graph of that class.
 
 # Arguments
 - `cg::CausalGraph`: the graph to remove edges from.
@@ -60,6 +61,10 @@ A new `CausalGraph` of the same class as `cg`.
 
 # Throws
 - `ArgumentError`: if any edge in `es` is not present in `cg`.
+- `ArgumentError`: if the remaining graph violates the invariant of its class, which can
+  happen for [`CPDAG`](@ref), [`MPDAG`](@ref), [`MAG`](@ref) and [`PAG`](@ref). To remove
+  such edges, first [`reclass`](@ref) `cg` to a class without that invariant:
+  [`PDAG`](@ref) for a CPDAG or MPDAG, [`AG`](@ref) for a MAG, [`UNKNOWN`](@ref) for a PAG.
 
 # Examples
 
@@ -131,7 +136,8 @@ end
     remove_nodes(cg::CausalGraph, ns::Symbol...) -> CausalGraph
 
 Return a new graph of the same class with nodes `ns` and all their incident edges removed.
-Throws `ArgumentError` if any node in `ns` is not present.
+Throws `ArgumentError` if any node in `ns` is not present, or if the remaining graph is
+not a valid graph of that class.
 
 # Arguments
 - `cg::CausalGraph`: the graph to remove nodes from.
@@ -142,6 +148,9 @@ A new `CausalGraph` of the same class as `cg`.
 
 # Throws
 - `ArgumentError`: if any node in `ns` is not present in `cg`.
+- `ArgumentError`: if the remaining graph violates the invariant of its class, which can
+  happen for [`CPDAG`](@ref) and [`PAG`](@ref). Use [`subgraph`](@ref) instead, which
+  returns the result in a weaker class.
 
 # Examples
 

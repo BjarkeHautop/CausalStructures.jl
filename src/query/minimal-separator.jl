@@ -207,6 +207,10 @@ A set ``Z`` separates ``x`` from ``y`` if conditioning on ``Z`` renders them
 d/m-independent. The returned set is *minimal*: no proper subset (excluding forced
 `include` nodes) still separates ``x`` from ``y``.
 
+For a [`PDAG`](@ref) not closed under Meek's rules, a returned set still separates
+under [`d_separated`](@ref), but it need not be minimal, and the result can be
+`nothing` even though a separator exists; call [`meek_closure`](@ref) first.
+
 # Arguments
 - `cg`: A [`DAG`](@ref), [`ADMG`](@ref), [`AbstractAG`](@ref), [`PAG`](@ref), or
   [`AbstractPDAG`](@ref).

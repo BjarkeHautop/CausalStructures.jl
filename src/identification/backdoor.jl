@@ -9,6 +9,9 @@ Return `true` if `z` satisfies the backdoor criterion for the causal effect of
 `z` is a valid backdoor set if (1) no node in `z` is a descendant of `x`, and
 (2) `z` blocks every backdoor path from `x` to `y`.
 
+A backdoor path starts with an edge pointing into a node of `x`. If `x` has several
+nodes, a path that passes through another node of `x` does not count.
+
 - [`DAG`](@ref): equivalently, every parent of `x` is d-separated from `y`
   given `z ∪ x`.
 - [`ADMG`](@ref): equivalently, `z` m-separates `x` from `y` in the graph
@@ -48,6 +51,11 @@ julia> is_valid_backdoor(dag2, [:X1, :X2], :Y)              # both confounding p
 false
 
 julia> is_valid_backdoor(dag2, [:X1, :X2], :Y, [:L1, :L2])  # conditioning on both blocks them
+true
+
+julia> dag3 = DAG("P --> X1, P --> X2, X2 --> Y");
+
+julia> is_valid_backdoor(dag3, [:X1, :X2], :Y)  # X1 <-- P --> X2 --> Y passes through X2
 true
 ```
 
