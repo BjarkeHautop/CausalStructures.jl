@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `frontdoor_set` and `all_frontdoor_sets` broke `include ⊆ Z ⊆ restrict` when `include` was outside the candidate pool: `frontdoor_set` dropped those nodes and `all_frontdoor_sets` returned them without checking them. They now return `nothing` and no sets.
 - `possible_d_sep` missed undirected neighbors of `x`.
 - `neighbors` listed a node twice when an `ADMG` joins it to `node` by both `-->` and `<->`.
+- `count_dags` and `enumerate_dags` could report DAGs with new v-structures, or throw an unrelated error, for a PDAG or MPDAG with no consistent DAG extension. They now return `0` and an empty vector.
 
 ## [1.1.1] - 2026-10-19
 

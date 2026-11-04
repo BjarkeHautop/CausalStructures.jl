@@ -82,6 +82,22 @@ end
     @test dags[1] isa DAG
 end
 
+@testitem "enumerate_dags and count_dags: no consistent DAG extension" tags =
+    [:unit, :enumerate_dags] begin
+    for cg in (
+        # R1 from either side adds a new v-structure
+        PDAG("G --> K --- X <-- Z"),
+        # Chordless undirected 4-cycle, closed under Meek's rules
+        MPDAG("A --- B --- C --- D --- A"),
+        # Chordless 4-cycle through a directed path, closed under Meek's rules
+        MPDAG("C --> B --> D --> A --- C"),
+    )
+        @test_throws ErrorException dag_from_pdag(cg)
+        @test count_dags(cg) == 0
+        @test isempty(enumerate_dags(cg))
+    end
+end
+
 @testitem "enumerate_dags count matches count_dags" tags = [:unit, :enumerate_dags] begin
     pdag = PDAG(undirected(:A, :B), undirected(:B, :C), undirected(:C, :D))
     @test length(enumerate_dags(pdag)) == count_dags(pdag)

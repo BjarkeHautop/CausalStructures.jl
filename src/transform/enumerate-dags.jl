@@ -297,7 +297,8 @@ can be very large.
 - `cg::AbstractPDAG`: the graph whose Markov equivalence class to enumerate.
 
 # Returns
-A `Vector{DAG}` containing every DAG in the MEC of `cg`.
+A `Vector{DAG}` containing every DAG in the MEC of `cg`, which is empty if `cg`
+has no consistent DAG extension.
 
 # Examples
 
@@ -327,6 +328,10 @@ julia> dags = enumerate_dags(pdag)
 - [chickering2002learning](@citet)
 """
 function enumerate_dags(cg::AbstractPDAG)
+    # Closing can add v-structures to a PDAG with no consistent extension, and the
+    # search below would treat those as part of the input.
+    _dor_tarsi_parents(cg.backend) === nothing && return DAG[]
+
     closed = meek_closure(cg)
     B = closed.backend
     n = length(B.nodes)
@@ -362,7 +367,8 @@ leaf of the search, only incrementing a counter instead.
 - `cg::AbstractPDAG`: the graph whose Markov equivalence class to count.
 
 # Returns
-The number of DAGs in the MEC of `cg`.
+The number of DAGs in the MEC of `cg`, which is `0` if `cg` has no consistent DAG
+extension.
 
 # Examples
 
@@ -374,6 +380,10 @@ julia> count_dags(pdag)
 ```
 """
 function count_dags(cg::AbstractPDAG)
+    # Closing can add v-structures to a PDAG with no consistent extension, and the
+    # search below would treat those as part of the input.
+    _dor_tarsi_parents(cg.backend) === nothing && return 0
+
     closed = meek_closure(cg)
     B = closed.backend
     n = length(B.nodes)
