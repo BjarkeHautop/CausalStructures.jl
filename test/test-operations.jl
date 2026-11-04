@@ -49,6 +49,14 @@ end
     @test has_edge(sg, :A, :B)
 end
 
+@testitem "subgraph errors on a node not in the graph" tags = [:unit, :operations] begin
+    cg = DAG("A --> B")
+    @test_throws ArgumentError subgraph(cg, :Z)
+    @test_throws ArgumentError subgraph(cg, [:A, :Z])
+    @test_throws ArgumentError subgraph(ADMG("A <-> B"), [:A, :Z])
+    @test isempty(nodes(subgraph(cg, Symbol[])))
+end
+
 @testitem "subgraph on CPDAG with v-structure: orphaned arrow downgrades to MPDAG" tags =
     [:unit, :operations] begin
     # V-structure: A-->B<--C, A and C not adjacent.

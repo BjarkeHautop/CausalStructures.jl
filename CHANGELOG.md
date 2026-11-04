@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `count_dags` and `enumerate_dags` could report DAGs with new v-structures, or throw an unrelated error, for a PDAG or MPDAG with no consistent DAG extension. They now return `0` and an empty vector.
 - `shd` kept only the last edge of a node pair with two edges, such as `A --> B` and `A <-> B` in an `ADMG`, so the result depended on edge order and could be non-zero for equal graphs. It now compares all edges of the pair, and the pair still counts once.
 - `hd` and `shd` counted a self-loop as a node pair, so `normalized = true` could exceed `1`. Self-loops are now ignored.
+- `subgraph` silently added nodes that are not in the graph as isolated nodes. It now throws an `ArgumentError`.
 
 ## [1.1.1] - 2026-10-19
 

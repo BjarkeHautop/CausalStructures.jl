@@ -153,6 +153,9 @@ induced subgraph need not satisfy the stronger class invariant:
 The induced subgraph of `cg` on `nodes`, as a `CausalGraph` (see above for which
 class).
 
+# Throws
+- `ArgumentError`: if any node in `nodes` is not present in `cg`.
+
 # Examples
 
 ```jldoctest
@@ -167,6 +170,9 @@ DAG with 2 nodes and 1 edge:
 """
 function subgraph(cg::CausalGraph, nodes::Union{Symbol,AbstractVector{Symbol}})
     keep = _as_symbol_set(nodes)
+    for v in keep
+        haskey(cg.backend.index, v) || throw(ArgumentError("Unknown node: $(v)"))
+    end
     edges = _subgraph_edges(cg.edges, keep)
     return _subgraph_type(typeof(cg))(keep, edges)
 end
