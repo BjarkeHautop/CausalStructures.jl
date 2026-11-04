@@ -102,9 +102,9 @@ function is_valid_frontdoor(
     end
 
     # Condition (iii): Zi ⊥_m Y | X ∪ (Z \ {Zi}) in G_Zi for every Zi ∈ Z.
-    for (k, zi) in enumerate(z_vec)
+    for zi in z_vec
         gzi = _build_gx(cg, zi)
-        cond = [x; [z_vec[j] for j in eachindex(z_vec) if j != k]]
+        cond = [x; [v for v in z_vec if v !== zi]]
         m_separated(gzi, zi, y, cond) || return false
     end
 

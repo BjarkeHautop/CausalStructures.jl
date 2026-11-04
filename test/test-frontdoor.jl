@@ -559,3 +559,18 @@ end
     cg = DAG(directed(:U, :X), directed(:X, :M), directed(:M, :Y), directed(:U, :Y))
     @test is_valid_frontdoor(cg, :X, :Y, :M) == is_valid_frontdoor(cg, :X, :Y, [:M])
 end
+
+@testitem "is_valid_frontdoor: a repeated node of z does not change the answer" tags =
+    [:unit, :frontdoor] begin
+    # M <-- U --> Y is an open backdoor path from M to Y given X.
+    dag = DAG("X --> M --> Y, U --> M, U --> Y")
+    @test !is_valid_frontdoor(dag, :X, :Y, :M)
+    @test !is_valid_frontdoor(dag, :X, :Y, [:M, :M])
+
+    admg = ADMG("X --> M --> Y, M <-> Y")
+    @test !is_valid_frontdoor(admg, :X, :Y, :M)
+    @test !is_valid_frontdoor(admg, :X, :Y, [:M, :M])
+
+    valid = DAG("U --> X --> M --> Y, U --> Y")
+    @test is_valid_frontdoor(valid, :X, :Y, [:M, :M])
+end
