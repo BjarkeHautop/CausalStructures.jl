@@ -256,8 +256,8 @@ end
 Return `true` if `cg` has no self-loops and no parallel edges between the same
 pair of nodes.
 
-For all graph classes except [`UNKNOWN`](@ref), simplicity is guaranteed by
-construction.
+For all graph classes except [`UNKNOWN`](@ref) and [`ADMG`](@ref), simplicity is
+guaranteed by construction.
 
 # Arguments
 - `cg::CausalGraph`: the graph to check.
@@ -277,10 +277,15 @@ julia> unk = UNKNOWN("A --> B, A --> B");
 
 julia> is_simple(unk)
 false
+
+julia> admg = ADMG("A --> B, A <-> B");
+
+julia> is_simple(admg)
+false
 ```
 """
 function is_simple(cg::CausalGraph)
-    if !(cg isa UNKNOWN)
+    if !(cg isa UNKNOWN || cg isa ADMG)
         return true
     end
 

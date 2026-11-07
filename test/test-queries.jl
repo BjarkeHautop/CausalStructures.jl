@@ -19,6 +19,9 @@ end
 
     g_nonsimple = UNKNOWN(directed(:A, :B), bidirected(:A, :B))
     @test !is_simple(g_nonsimple)
+
+    @test is_simple(ADMG("A --> B, B <-> C"))
+    @test !is_simple(ADMG("A --> B, A <-> B"))
 end
 
 # ── is_dag / is_pdag / is_ug / is_admg ───────────────────────────────────────
