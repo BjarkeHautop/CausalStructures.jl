@@ -11,6 +11,14 @@ end
 @testitem "is_acyclic detects cycles in UNKNOWN graphs" tags = [:unit, :queries] begin
     unknown = UNKNOWN(directed(:A, :B), directed(:B, :C), directed(:C, :A))
     @test !is_acyclic(unknown)
+
+    # edges written with marks (Arrow, Tail) point from dst to src
+    CS = CausalStructures
+    b_from_a = CS.CausalEdge(:B, :A, CS.Arrow, CS.Tail)
+    a_from_b = CS.CausalEdge(:A, :B, CS.Arrow, CS.Tail)
+    @test !is_acyclic(UNKNOWN([:A, :B], [b_from_a, a_from_b]))
+    @test !is_acyclic(UNKNOWN([:A, :B], [b_from_a, directed(:B, :A)]))
+    @test is_acyclic(UNKNOWN([:A, :B], [b_from_a]))
 end
 
 @testitem "is_simple reflects graph content" tags = [:unit, :queries] begin

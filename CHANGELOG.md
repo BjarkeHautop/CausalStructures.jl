@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `hd` and `shd` counted a self-loop as a node pair, so `normalized = true` could exceed `1`. Self-loops are now ignored.
 - `subgraph` silently added nodes that are not in the graph as isolated nodes. It now throws an `ArgumentError`.
 - `is_simple` returned `true` for an `ADMG` with a directed and a bidirected edge between the same pair of nodes. It now returns `false`, as it does for an `UNKNOWN` with the same edges.
+- `is_acyclic` missed a directed cycle in an `UNKNOWN` whose edges were built with `CausalEdge` and marks `(Arrow, Tail)`.
 
 ## [1.1.1] - 2026-10-19
 

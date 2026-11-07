@@ -65,6 +65,9 @@ function directed_cycle_detected(cg::CausalGraph)
     for edge in cg.edges
         if is_directed(edge)
             push!(children[index[edge.src]], index[edge.dst])
+        elseif edge_kind(edge) == (Arrow, Tail)
+            # an UNKNOWN keeps this spelling; the backend reads it as dst --> src
+            push!(children[index[edge.dst]], index[edge.src])
         end
     end
 
