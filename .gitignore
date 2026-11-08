@@ -15,4 +15,5 @@ node_modules
 .JETLSConfig.toml
 *.pdf
 *.txt
+!test/trim-allow.txt
 scratch/

@@ -1,4 +1,4 @@
-name: Trim check
+name: TrimTrace
 
 on:
   push:
@@ -10,9 +10,11 @@ on:
       - main
     paths:
       - "src/**"
-      - "trim-check/**"
       - "ext/**"
+      - "test/**"
+      - "trim-check/**"
       - "*.toml"
+      - ".github/workflows/TrimTrace.yml"
   workflow_dispatch:
 
 concurrency:
@@ -22,15 +24,40 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
-  trim-check:
-    name: --trim=safe (JuliaC)
+  trimtrace:
+    name: Public API under --trim=safe
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
         with:
-          version: "1.13" # --trim=safe needs Julia 1.13+
-          arch: x64
+          version: "1.13"
+      - uses: julia-actions/cache@v3
+      - name: Install TrimTrace and the package
+        run: |
+          julia --project=@trimtrace -e '
+            using Pkg
+            Pkg.add(url = "https://github.com/BjarkeHautop/TrimTrace.jl")
+            Pkg.develop(path = ".")'
+      - name: Instantiate the test environment
+        run: julia --project=test -e 'using Pkg; Pkg.instantiate()'
+      - name: Record the tests and check the calls with --trim=safe
+        run: |
+          julia --project=@trimtrace -e '
+            using TrimTrace, CausalStructures
+            allow = isfile("test/trim-allow.txt") ? "test/trim-allow.txt" : String[]
+            result = record_and_check(CausalStructures; allow)
+            display(result)
+            passed(result) || exit(1)'
+
+  trim-check:
+    name: Allowlisted calls under --trim=safe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: "1.13"
       - uses: julia-actions/cache@v3
       - name: Compile trim-check/entry.jl with --trim=safe
         run: |
