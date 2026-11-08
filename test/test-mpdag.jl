@@ -119,6 +119,32 @@ end
     @test directed(:A, :B) in edges(result_with_ad)
 end
 
+@testitem "is_mpdag: R4 requires a adjacent to d, as in meek_closure" tags = [:unit, :mpdag] begin
+    # The pdag of the test above: meek_closure leaves A --- B undirected, since A is not
+    # adjacent to D, so the result must pass is_mpdag.
+    pdag = PDAG(
+        undirected(:A, :B),
+        undirected(:A, :C),
+        directed(:C, :D),
+        directed(:D, :B),
+        directed(:A, :E1),
+        directed(:E1, :E2),
+        directed(:E2, :B),
+    )
+    @test is_mpdag(meek_closure(pdag))
+    @test MPDAG(edges(meek_closure(pdag))...) isa MPDAG
+
+    # D --- A, D --- C, C --> E --> A, C not adjacent to A, D not adjacent to E:
+    # R4 does not fire, and meek_closure leaves the graph unchanged.
+    pdag2 = PDAG("E --> A, A --- D, D --> B, C --- D, C --> E, B --> E")
+    @test is_mpdag(pdag2)
+    @test Set(edges(meek_closure(pdag2))) == Set(edges(pdag2))
+
+    # With D --- E, R4 fires on D --- A.
+    pdag3 = PDAG("E --> A, A --- D, D --> B, C --- D, C --> E, B --> E, D --- E")
+    @test !is_mpdag(pdag3)
+end
+
 # TODO: Make test for unsafe meek_closure with check_cycles = false, which may return a cycle.
 # TODO: Make test for r4 = false for meek_closure on a PDAG with background knowledge.
 

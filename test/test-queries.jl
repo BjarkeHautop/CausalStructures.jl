@@ -748,6 +748,17 @@ end
     @test !is_cpdag(cg)
 end
 
+@testitem "is_cpdag: non-chordal 4-wheel is not a CPDAG" tags = [:unit, :queries] begin
+    # Hub A joined to the cycle B --- D --- C --- E --- B, which has no chord
+    # (B, C and D, E are not adjacent), so the component is not chordal.
+    s = "A --- B, A --- C, A --- D, A --- E, B --- D, B --- E, C --- D, C --- E"
+    @test !is_cpdag(PDAG(s))
+    @test_throws ArgumentError CPDAG(s)
+
+    # The chord B --- C makes it chordal.
+    @test is_cpdag(PDAG(s * ", B --- C"))
+end
+
 @testitem "is_cpdag: rejects Meek R1 violation" tags = [:unit, :queries] begin
     # A-->B, B---C, A not adjacent to C: R1 would orient B-->C
     pdag = PDAG(directed(:A, :B), undirected(:B, :C))

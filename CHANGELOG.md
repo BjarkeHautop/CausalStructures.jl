@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `frontdoor_set` and `all_frontdoor_sets` broke `include ⊆ Z ⊆ restrict` when `include` was outside the candidate pool: `frontdoor_set` dropped those nodes and `all_frontdoor_sets` returned them without checking them. They now return `nothing` and no sets.
 - `possible_d_sep` missed undirected neighbors of `x`.
 - `neighbors` listed a node twice when an `ADMG` joins it to `node` by both `-->` and `<->`.
+- `is_cpdag` and the `CPDAG` constructor accepted some undirected components that are not chordal, such as `A` joined to the chordless cycle `B --- D --- C --- E --- B`. The perfect elimination ordering test now checks the nearest later neighbour of each node instead of the farthest.
+- `is_mpdag`, `is_cpdag` and the `MPDAG` and `CPDAG` constructors applied Meek's rule R4 without requiring `a` to be adjacent to `d`, so they rejected some graphs that `meek_closure` returns unchanged. R4 now matches `meek_closure` and Meek (1995).
 - `count_dags` and `enumerate_dags` could report DAGs with new v-structures, or throw an unrelated error, for a PDAG or MPDAG with no consistent DAG extension. They now return `0` and an empty vector.
 - `shd` kept only the last edge of a node pair with two edges, such as `A --> B` and `A <-> B` in an `ADMG`, so the result depended on edge order and could be non-zero for equal graphs. It now compares all edges of the pair, and the pair still counts once.
 - `hd` and `shd` counted a self-loop as a node pair, so `normalized = true` could exceed `1`. Self-loops are now ignored.

@@ -481,12 +481,14 @@ function _cpdag_components_chordal(B::PDAGBackend, n::Int, comp::Vector{Int}, c:
 
         # PEO clique test: for each v in elimination order,
         # its undirected neighbors with higher rank must form a clique.
+        # It suffices that the nearest one (lowest rank) is adjacent to all the
+        # others (Tarjan & Yannakakis 1984); checking the farthest one is not enough.
         for (i, v) in enumerate(Iterators.reverse(order))
             higher = [w for w in _undirected_slice(B, v) if in_c[w] && pos[w] > i]
             if length(higher) > 1
                 sort!(higher, by = w -> pos[w])
-                pvt = higher[end]
-                for w in @view higher[1:(end-1)]
+                pvt = higher[1]
+                for w in @view higher[2:end]
                     if !_cpdag_in_sorted(pvt, _undirected_slice(B, w))
                         for x in nodes
                             in_c[x] = false
@@ -546,14 +548,17 @@ function _cpdag_meek_closed(B::PDAGBackend, n::Int)
         end
     end
 
-    # R4: u---v, ∃c: u---c, c ⊄ v, ∃d: c-->d-->v  ⇒  u-->v
+    # R4: u---v, ∃c: u---c, c ⊄ v, ∃d: c-->d-->v, u adj d  ⇒  u-->v
     for v = 1:n
+        pa_v = _parents_slice(B, v)
         for u in _undirected_slice(B, v)
             for c in _undirected_slice(B, u)
                 c == v && continue
                 _cpdag_adjacent(B, c, v) && continue
-                _cpdag_intersects(_children_slice(B, c), _parents_slice(B, v)) &&
-                    return false
+                any(
+                    d -> _cpdag_in_sorted(d, pa_v) && _cpdag_adjacent(B, u, d),
+                    _children_slice(B, c),
+                ) && return false
             end
         end
     end
