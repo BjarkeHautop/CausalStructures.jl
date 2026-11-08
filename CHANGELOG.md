@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `meek_closure` now throws an `ArgumentError` when one of Meek's rules implies an orientation that closes a directed cycle. Such a PDAG has no consistent DAG extension, and the graph it returned before was not closed under Meek's rules, so not an `MPDAG`. `apply_background_knowledge` and the adjustment functions on a `PDAG`, which close the graph first, throw in the same case.
+- `is_mpdag`, `is_cpdag` and the `MPDAG` and `CPDAG` constructors no longer skip R1 when its orientation would close a directed cycle, so `is_mpdag(cg)` is `true` exactly when `meek_closure(cg)` returns `cg` unchanged.
 - `exogenous_nodes` on a `UG` now returns every node by default, as it does for a `PDAG` or `AG` with the same edges. Pass the new `undirected_as_parents = true` keyword to get the previous result, the isolated nodes.
 
 ### Bug fixes

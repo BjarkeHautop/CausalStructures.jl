@@ -412,22 +412,6 @@ function _cpdag_adjacent(B::PDAGBackend, i::Int, j::Int)
     return false
 end
 
-# True if there is a directed path from src to dst following children.
-function _cpdag_has_dir_path(B::PDAGBackend, src::Int, dst::Int, n::Int)
-    visited = falses(n)
-    stack = [src]
-    while !isempty(stack)
-        u = pop!(stack)
-        visited[u] && continue
-        visited[u] = true
-        for v in _children_slice(B, u)
-            v == dst && return true
-            !visited[v] && push!(stack, v)
-        end
-    end
-    return false
-end
-
 # MCS maximum cardinality search + PEO clique test (chordalilty per component).
 function _cpdag_components_chordal(B::PDAGBackend, n::Int, comp::Vector{Int}, c::Int)
     nodes_in = [Int[] for _ = 1:c]
@@ -507,17 +491,17 @@ function _cpdag_components_chordal(B::PDAGBackend, n::Int, comp::Vector{Int}, c:
     return true
 end
 
-# True if no Meek orientation rule (R1–R4) would fire.
-# Mirrors the safeguards in meek_closure so this is consistent with it.
+# True if no Meek orientation rule (R1–R4) would fire, i.e. the graph is an MPDAG.
+# A rule whose orientation would close a cycle still counts: meek_closure throws on
+# such a graph, since it has no consistent DAG extension.
 function _cpdag_meek_closed(B::PDAGBackend, n::Int)
-    # R1: u-->v, v---w, u ⊄ w  ⇒  v-->w  (unless cycle)
+    # R1: u-->v, v---w, u ⊄ w  ⇒  v-->w
     for v = 1:n
         pa = _parents_slice(B, v)
         isempty(pa) && continue
         for w in _undirected_slice(B, v)
             for u in pa
                 _cpdag_adjacent(B, u, w) && continue
-                _cpdag_has_dir_path(B, w, v, n) && continue  # would create cycle
                 return false
             end
         end

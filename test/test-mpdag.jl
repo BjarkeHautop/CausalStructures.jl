@@ -95,54 +95,47 @@ end
     @test result isa MPDAG
 end
 
-@testitem "meek_closure: R4 requires a adjacent to d, not just c --> d --> b" tags =
-    [:unit, :mpdag] begin
-    # A --- B, A --- C, C --> D --> B, C not adjacent to B: this alone is not
-    # enough for R4, since A is not adjacent to D. A --> E1 --> E2 --> B blocks
-    # R1 from resolving A --- B via cycle avoidance, and is too long to trigger
-    # R2, so A --- B must stay undirected.
-    pdag = PDAG(
-        undirected(:A, :B),
-        undirected(:A, :C),
-        directed(:C, :D),
-        directed(:D, :B),
-        directed(:A, :E1),
-        directed(:E1, :E2),
-        directed(:E2, :B),
-    )
+@testitem "meek_closure: R4 orients a --> b" tags = [:unit, :mpdag] begin
+    # A --- B, A --- C, C --> D --> B, C not adjacent to B, A adjacent to D: R4
+    # orients A --> B. (Without A adjacent to D, R1 would apply to D --> B --- A
+    # instead.)
+    pdag = PDAG("A --- B, A --- C, A --- D, C --> D, D --> B")
+    @test count_dags(pdag) > 0
+    @test !is_mpdag(pdag)
     result = meek_closure(pdag)
-    @test undirected(:A, :B) in edges(result)
-
-    # Adding A --- D (so A is adjacent to D) makes R4 fire.
-    pdag_with_ad = PDAG(edges(pdag)..., undirected(:A, :D))
-    result_with_ad = meek_closure(pdag_with_ad)
-    @test directed(:A, :B) in edges(result_with_ad)
+    @test directed(:A, :B) in edges(result)
+    @test undirected(:A, :C) in edges(result)
+    @test is_mpdag(result)
 end
 
-@testitem "is_mpdag: R4 requires a adjacent to d, as in meek_closure" tags = [:unit, :mpdag] begin
-    # The pdag of the test above: meek_closure leaves A --- B undirected, since A is not
-    # adjacent to D, so the result must pass is_mpdag.
-    pdag = PDAG(
-        undirected(:A, :B),
-        undirected(:A, :C),
-        directed(:C, :D),
-        directed(:D, :B),
-        directed(:A, :E1),
-        directed(:E1, :E2),
-        directed(:E2, :B),
+@testitem "meek_closure throws when a rule's orientation closes a cycle" tags =
+    [:unit, :mpdag] begin
+    # R1 orients B --> C (A --> B --- C, A not adjacent to C), but C --> D --> B:
+    # no consistent DAG extension, and no MPDAG closes the graph.
+    pdag = PDAG("A --> B, B --- C, C --> D, D --> B")
+    @test count_dags(pdag) == 0
+    @test_throws ArgumentError meek_closure(pdag)
+    @test !is_mpdag(pdag)
+    @test_throws ArgumentError MPDAG("A --> B, B --- C, C --> D, D --> B")
+
+    # R3 orients V04 --> V03 (V01 --> V03 <-- V05, V04 --- V01, V04 --- V05), but
+    # V03 --> V02 --> V06 --> V04.
+    pdag2 = PDAG(
+        "V01 --- V04, V01 --> V03, V01 --- V02, V04 --- V05, V05 --> V03, " *
+        "V04 --- V06, V02 --- V06, V03 --- V04, V03 --> V02",
     )
-    @test is_mpdag(meek_closure(pdag))
-    @test MPDAG(edges(meek_closure(pdag))...) isa MPDAG
+    @test count_dags(pdag2) == 0
+    @test_throws ArgumentError meek_closure(pdag2)
 
-    # D --- A, D --- C, C --> E --> A, C not adjacent to A, D not adjacent to E:
-    # R4 does not fire, and meek_closure leaves the graph unchanged.
-    pdag2 = PDAG("E --> A, A --- D, D --> B, C --- D, C --> E, B --> E")
-    @test is_mpdag(pdag2)
-    @test Set(edges(meek_closure(pdag2))) == Set(edges(pdag2))
+    # R1 orients B --> A (E2 --> B --- A, E2 not adjacent to A), but
+    # A --> E1 --> E2 --> B, with or without A --- D.
+    pdag3 = PDAG("A --- B, A --- C, C --> D, D --> B, A --> E1, E1 --> E2, E2 --> B")
+    @test count_dags(pdag3) == 0
+    @test_throws ArgumentError meek_closure(pdag3)
+    @test_throws ArgumentError meek_closure(PDAG(edges(pdag3)..., undirected(:A, :D)))
 
-    # With D --- E, R4 fires on D --- A.
-    pdag3 = PDAG("E --> A, A --- D, D --> B, C --- D, C --> E, B --> E, D --- E")
-    @test !is_mpdag(pdag3)
+    # Without the cycle check, the closure goes ahead.
+    @test meek_closure(pdag; check_cycles = false) isa MPDAG
 end
 
 # TODO: Make test for unsafe meek_closure with check_cycles = false, which may return a cycle.

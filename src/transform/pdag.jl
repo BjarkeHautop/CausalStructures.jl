@@ -172,7 +172,9 @@ function _has_dir_path_sets(ch, src::Int, tgt::Int)
 end
 
 # Orient a --> b only if the edge is still undirected and, when `check_cycles`,
-# doing so won't create a directed cycle.
+# doing so won't create a directed cycle. If it would, and `cycle_names` holds the
+# node names, throw instead: a rule that fires is implied in every consistent DAG
+# extension, so a cycle means there is none.
 function _try_orient_sets!(
     a::Int,
     b::Int,
@@ -181,9 +183,18 @@ function _try_orient_sets!(
     ch,
     trail::Vector{Tuple{Int,Int}},
     check_cycles::Bool,
+    cycle_names = nothing,
 )
     b in und[a] || return false
-    check_cycles && _has_dir_path_sets(ch, b, a) && return false
+    if check_cycles && _has_dir_path_sets(ch, b, a)
+        cycle_names === nothing && return false
+        throw(
+            ArgumentError(
+                "the PDAG has no consistent DAG extension: Meek's rules imply " *
+                "$(cycle_names[a]) --> $(cycle_names[b]), which closes a directed cycle",
+            ),
+        )
+    end
     _orient_sets!(a, b, und, pa, ch, trail)
     return true
 end
@@ -197,10 +208,12 @@ function _meek_close_sets!(
     trail::Vector{Tuple{Int,Int}};
     check_cycles::Bool = true,
     r4::Bool = true,
+    cycle_names = nothing,
 )
     n = length(pa)
     adjacent(a, b) = _adj_sets(a, b, pa, ch, und)
-    try_orient!(a, b) = _try_orient_sets!(a, b, und, pa, ch, trail, check_cycles)
+    try_orient!(a, b) =
+        _try_orient_sets!(a, b, und, pa, ch, trail, check_cycles, cycle_names)
 
     changed = true
     while changed
@@ -283,17 +296,24 @@ The four rules are:
 
 # Keywords
 - `check_cycles::Bool = true`: when `true`, every candidate orientation is
-  verified not to create a directed cycle before being applied. This check is
+  verified not to create a directed cycle before being applied, and an orientation
+  that would create one throws (see below). This check is
   redundant *if* `cg` is a genuine Meek pattern -- every directed
   edge already justified by an unshielded collider -- since
-  Meek's Theorem 3 then guarantees no cycle can arise. Potentially unsafe
-  downstream, since it always returns an MPDAG without verifying acyclicity.
+  Meek's Theorem 3 then guarantees no cycle can arise. With `false`,
+  potentially unsafe downstream, since it always returns an MPDAG without
+  verifying acyclicity.
 - `r4::Bool = true`: whether to apply R4. R4 is only needed when `cg`
   carries directed edges beyond what its own v-structures imply (background
   knowledge).
 
 # Returns
 The [`MPDAG`](@ref) resulting from closing `cg` under Meek's rules.
+
+# Throws
+- `ArgumentError`: with `check_cycles = true`, if a rule implies an orientation
+  that closes a directed cycle. Every DAG consistent with `cg` would contain that
+  orientation, so `cg` has no consistent DAG extension and no MPDAG closes it.
 
 # Examples
 
@@ -319,7 +339,15 @@ function meek_closure(cg::AbstractPDAG; check_cycles::Bool = true, r4::Bool = tr
     ch = [Set{Int}(_children_slice(B, i)) for i = 1:n]
     und = [Set{Int}(_undirected_slice(B, i)) for i = 1:n]
 
-    _meek_close_sets!(pa, ch, und, Tuple{Int,Int}[]; check_cycles, r4)
+    _meek_close_sets!(
+        pa,
+        ch,
+        und,
+        Tuple{Int,Int}[];
+        check_cycles,
+        r4,
+        cycle_names = B.nodes,
+    )
 
     new_edges = CausalEdge[]
     seen_und = Set{Tuple{Int,Int}}()

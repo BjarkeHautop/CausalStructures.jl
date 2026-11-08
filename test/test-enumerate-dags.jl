@@ -89,8 +89,9 @@ end
         PDAG("G --> K --- X <-- Z"),
         # Chordless undirected 4-cycle, closed under Meek's rules
         MPDAG("A --- B --- C --- D --- A"),
-        # Chordless 4-cycle through a directed path, closed under Meek's rules
-        MPDAG("C --> B --> D --> A --- C"),
+        # Chordless 4-cycle through a directed path: R1 orients A --> C
+        # (D --> A --- C), which closes C --> B --> D --> A --> C
+        PDAG("C --> B --> D --> A --- C"),
     )
         @test_throws ErrorException dag_from_pdag(cg)
         @test count_dags(cg) == 0
