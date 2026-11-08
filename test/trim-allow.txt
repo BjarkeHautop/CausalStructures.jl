@@ -1,0 +1,5 @@
+# Signatures TrimTrace may report without failing the check (see TrimTrace.jl README).
+# Each one is instead checked with literal values by trim-check/entry.jl.
+
+# `class` is a literal type in real calls; only the recorded DataType fails to infer.
+r"^CausalStructures\.generate_graph\(.*class::DataType"
