@@ -5,17 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [1.2.0] - 2026-11-09
+
+Most of the bug fixes in this release were found while formalizing the package in Lean, following the approach of [Formalizing Julia in Lean](https://discourse.julialang.org/t/formalizing-julia-in-lean-and-finding-400-bugs-in-base/140243).
 
 ### New features
 
 - `skeleton` now works on every graph class. Parallel edges between two nodes become one edge, and self-loops are dropped.
-
-### Changed
-
-- `meek_closure` now throws an `ArgumentError` when one of Meek's rules implies an orientation that closes a directed cycle. Such a PDAG has no consistent DAG extension, and the graph it returned before was not closed under Meek's rules, so not an `MPDAG`. `apply_background_knowledge` and the adjustment functions on a `PDAG`, which close the graph first, throw in the same case.
-- `is_mpdag`, `is_cpdag` and the `MPDAG` and `CPDAG` constructors no longer skip R1 when its orientation would close a directed cycle, so `is_mpdag(cg)` is `true` exactly when `meek_closure(cg)` returns `cg` unchanged.
-- `exogenous_nodes` on a `UG` now returns every node by default, as it does for a `PDAG` or `AG` with the same edges. Pass the new `undirected_as_parents = true` keyword to get the previous result, the isolated nodes.
 
 ### Bug fixes
 
@@ -31,12 +27,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `neighbors` listed a node twice when an `ADMG` joins it to `node` by both `-->` and `<->`.
 - `is_cpdag` and the `CPDAG` constructor accepted some undirected components that are not chordal, such as `A` joined to the chordless cycle `B --- D --- C --- E --- B`. The perfect elimination ordering test now checks the nearest later neighbour of each node instead of the farthest.
 - `is_mpdag`, `is_cpdag` and the `MPDAG` and `CPDAG` constructors applied Meek's rule R4 without requiring `a` to be adjacent to `d`, so they rejected some graphs that `meek_closure` returns unchanged. R4 now matches `meek_closure` and Meek (1995).
+- `meek_closure` skipped an orientation implied by one of Meek's rules when it would close a directed cycle, so it returned a graph that was not closed under Meek's rules and so not an `MPDAG`. Such a PDAG has no consistent DAG extension, and `meek_closure` now throws an `ArgumentError`. `apply_background_knowledge` and the adjustment functions on a `PDAG`, which close the graph first, throw in the same case.
+- `is_mpdag`, `is_cpdag` and the `MPDAG` and `CPDAG` constructors skipped R1 when its orientation would close a directed cycle, so they accepted some graphs that are not closed under Meek's rules. Now `is_mpdag(cg)` is `true` exactly when `meek_closure(cg)` returns `cg` unchanged.
 - `count_dags` and `enumerate_dags` could report DAGs with new v-structures, or throw an unrelated error, for a PDAG or MPDAG with no consistent DAG extension. They now return `0` and an empty vector.
 - `shd` kept only the last edge of a node pair with two edges, such as `A --> B` and `A <-> B` in an `ADMG`, so the result depended on edge order and could be non-zero for equal graphs. It now compares all edges of the pair, and the pair still counts once.
 - `hd` and `shd` counted a self-loop as a node pair, so `normalized = true` could exceed `1`. Self-loops are now ignored.
 - `subgraph` silently added nodes that are not in the graph as isolated nodes. It now throws an `ArgumentError`.
 - `is_simple` returned `true` for an `ADMG` with a directed and a bidirected edge between the same pair of nodes. It now returns `false`, as it does for an `UNKNOWN` with the same edges.
 - `is_acyclic` missed a directed cycle in an `UNKNOWN` whose edges were built with `CausalEdge` and marks `(Arrow, Tail)`.
+- `exogenous_nodes` on a `UG` returned only the isolated nodes, unlike a `PDAG` or `AG` with the same edges. It now returns every node by default. Pass the new `undirected_as_parents = true` keyword to get the isolated nodes.
 
 ## [1.1.1] - 2026-10-19
 
