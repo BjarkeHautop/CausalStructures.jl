@@ -132,10 +132,11 @@ Find an instrument `z` for the causal effect of `x` on `y` in `cg`, together wit
 a conditioning set `w` that makes it valid (see [`is_valid_iv`](@ref)). Returns
 `nothing` if no such pair exists.
 
-For each candidate `z`, `w` is a separator of `y` and `z` in the graph with the
-first edge of every causal path from `x` to `y` removed, chosen nearest to `y`.
-The pair with the smallest `w` is returned, so an unconditional instrument
-(`w = ∅`) is preferred.
+For each candidate `z`, two conditioning sets are tried: the separator of `y`
+and `z` nearest to `y` in the graph with the first edge of every causal path
+from `x` to `y` removed, and a minimal separator inside it. The pair with the
+smallest of these `w` is returned, so an unconditional instrument (`w = ∅`) is
+returned whenever one exists.
 
 # Arguments
 - `cg::Union{DAG,ADMG}`: the graph to search.
@@ -199,11 +200,10 @@ function iv_set(
         res = [v for v = 1:n if w_allowed[v] && v != z]
         w_near = _find_nearest_sep(Bd, ys, [z], Int[], res)
         w_near === nothing && continue  # exclusion
-        # Shrink to a minimal separator, falling back to the nearest one if
-        # that loses relevance. The fallback is likely dead code (?)
-        # but is kept as a safeguard.
-        w_z = _find_nearest_sep(Bd, [z], ys, Int[], w_near)
-        w_min = w_z === nothing ? w_near : intersect(w_near, w_z)
+        # Shrink to a minimal separator. The second pass always finds one, since
+        # w_near itself separates z from y.
+        w_z = _find_nearest_sep(Bd, [z], ys, Int[], w_near)::Vector{Int}
+        w_min = intersect(w_near, w_z)
         for w in (w_min, w_near)
             (best === nothing || length(w) < length(best[2])) || continue
             m_separated(cg, B.nodes[z], x, B.nodes[w]) && continue  # relevance
