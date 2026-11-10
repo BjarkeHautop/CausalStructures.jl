@@ -1,0 +1,248 @@
+/*
+ * DocumenterDocstringStyle: layout primitives shared by every theme.
+ * Colors and sizes come only from the --ds-* design tokens. Nothing here sets
+ * `overflow: hidden`, so DocumenterCodeBlocks' hover tooltips can escape.
+ */
+
+.ds-sections {
+  margin-top: 1rem;
+  font-family: var(--ds-font-body);
+  color: var(--ds-text);
+}
+
+.ds-content > :first-child,
+.ds-param-desc > :first-child {
+  margin-top: 0;
+}
+
+.ds-content > :last-child,
+.ds-param-desc > :last-child {
+  margin-bottom: 0;
+}
+
+.ds-na > .ds-content {
+  color: var(--ds-muted);
+}
+
+/* section_header = :label_column */
+.ds-header-label_column {
+  display: grid;
+  grid-template-columns: var(--ds-label-width) minmax(0, 1fr);
+  gap: 0 1.25rem;
+  border-top: 1px solid var(--ds-border);
+  padding: 0.75rem 0 0.25rem;
+}
+
+.ds-header-label_column > .ds-label {
+  font-weight: 700;
+  color: var(--ds-accent);
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .ds-header-label_column {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ds-header-label_column > .ds-label {
+    margin-bottom: 0.4rem;
+  }
+}
+
+/* section_header = :bar */
+.ds-header-bar {
+  margin: 1rem 0 0.5rem;
+}
+
+.ds-header-bar > .ds-label {
+  background: var(--ds-label-bg);
+  border-radius: var(--ds-radius);
+  padding: 0.3rem 0.6rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.ds-header-bar > .ds-label::after {
+  content: ":";
+}
+
+.ds-header-bar > .ds-content {
+  padding: 0 0.6rem;
+}
+
+/* section_header = :heading_rule */
+.ds-header-heading_rule {
+  margin: 1.25rem 0 0.5rem;
+}
+
+.ds-header-heading_rule > .ds-label {
+  font-size: 1.1em;
+  font-weight: 700;
+  border-bottom: 1px solid var(--ds-border);
+  padding-bottom: 0.2rem;
+  margin-bottom: 0.6rem;
+}
+
+/* section_header = :heading */
+.ds-header-heading {
+  margin: 1rem 0 0.5rem;
+}
+
+.ds-header-heading > .ds-label {
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+/* Section header permalinks */
+.ds-sections .ds-label {
+  scroll-margin-top: 4rem;
+}
+
+.ds-sections .ds-label > a.ds-anchor {
+  color: inherit;
+}
+
+.ds-sections .ds-label > a.ds-anchor:hover {
+  text-decoration: underline;
+}
+
+/* Parameters: shared pieces */
+.ds-param-sig {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.1rem 0.5rem;
+}
+
+.ds-param-sig p,
+.ds-default-suffix p,
+.ds-params-table td > p {
+  display: inline;
+  margin: 0;
+}
+
+/* `.ds-sections` outranks Documenter's `html.theme--documenter-dark code`. */
+.ds-sections .ds-param-sig code,
+.ds-sections .ds-default-suffix code,
+.ds-sections .ds-params-table code {
+  font-family: var(--ds-font-mono);
+  background: transparent;
+  padding: 0;
+  font-size: 0.9em;
+}
+
+.ds-sections .ds-name code {
+  font-weight: 600;
+  color: var(--ds-text);
+}
+
+.ds-sections .ds-type code {
+  color: var(--ds-muted);
+}
+
+/* params = :rows */
+.ds-params-rows > .ds-param {
+  padding: 0 0 0.75rem;
+}
+
+.ds-params-rows > .ds-param:last-child {
+  padding-bottom: 0.25rem;
+}
+
+.ds-params-rows .ds-param-desc {
+  margin-top: 0.15rem;
+}
+
+/* params = :bullets */
+.ds-params-bullets > .ds-param {
+  display: list-item;
+  list-style: disc;
+  margin: 0 0 0.4rem 1.25rem;
+}
+
+.ds-params-bullets .ds-param-sig,
+.ds-params-bullets .ds-name,
+.ds-params-bullets .ds-type,
+.ds-params-bullets .ds-param-desc,
+.ds-params-bullets .ds-param-desc > p:first-child {
+  display: inline;
+}
+
+.ds-params-bullets .ds-type {
+  margin-left: 0.3rem;
+}
+
+.ds-params-bullets .ds-type::before {
+  content: "(";
+}
+
+.ds-params-bullets .ds-type::after {
+  content: ")";
+}
+
+.ds-params-bullets .ds-param-desc::before {
+  content: " – ";
+}
+
+/* params = :deflist */
+.ds-params-deflist > .ds-param {
+  padding: 0 0 0.6rem;
+}
+
+.ds-params-deflist .ds-type::before {
+  content: ": ";
+  color: var(--ds-muted);
+}
+
+.ds-params-deflist .ds-param-desc {
+  margin: 0.15rem 0 0 1.5rem;
+}
+
+/* params = :table */
+.ds-params-table {
+  width: 100%;
+}
+
+.ds-params-table th {
+  text-align: left;
+}
+
+/* default = :pill (and :column outside tables) */
+.ds-defaults-pill .ds-default code,
+.ds-defaults-column .ds-default code {
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  padding: 0 0.4rem;
+  font-size: 0.8em;
+  color: var(--ds-muted);
+  white-space: nowrap;
+}
+
+.ds-defaults-pill .ds-default code::before,
+.ds-defaults-column .ds-default code::before {
+  content: "= ";
+}
+
+/* default = :in_type */
+.ds-defaults-in_type .ds-default::before {
+  content: "default: ";
+  color: var(--ds-muted);
+}
+
+.ds-defaults-in_type .ds-type + .ds-default {
+  margin-left: -0.4rem;
+}
+
+.ds-defaults-in_type .ds-type + .ds-default::before {
+  content: ", default: ";
+}
+
+/* default = :suffix */
+.ds-default-suffix {
+  margin-top: 0.15rem;
+  color: var(--ds-muted);
+}
+
+.ds-default-suffix::before {
+  content: "Default: ";
+}

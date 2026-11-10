@@ -1,0 +1,25 @@
+.ds-theme-rustdoc, details.docstring:has(.ds-theme-rustdoc) {
+  --ds-accent: #3873ad;
+  --ds-border: #dbdbdb;
+  --ds-code-bg: #f5f5f5;
+  --ds-error: #cb3c33;
+  --ds-font-body: inherit;
+  --ds-font-mono: "JuliaMono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", "DejaVu Sans Mono", monospace;
+  --ds-label-bg: #f5f5f5;
+  --ds-label-width: 8rem;
+  --ds-muted: #6b6b6b;
+  --ds-note: #4063d8;
+  --ds-radius: 4px;
+  --ds-text: inherit;
+  --ds-warning: #b58900;
+}
+html.theme--documenter-dark .ds-theme-rustdoc, html.theme--documenter-dark details.docstring:has(.ds-theme-rustdoc) {
+  --ds-accent: #d2991d;
+  --ds-border: #4a5354;
+  --ds-code-bg: #282f2f;
+  --ds-error: #e06c63;
+  --ds-label-bg: #282f2f;
+  --ds-muted: #a3a3a3;
+  --ds-note: #7b9cf4;
+  --ds-warning: #e0b14f;
+}
