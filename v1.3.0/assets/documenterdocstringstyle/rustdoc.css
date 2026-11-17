@@ -1,0 +1,11 @@
+/*
+ * Rustdoc theme, modeled on docs.rs
+ * (https://docs.rs/, 2026-09).
+ */
+
+.ds-theme-rustdoc .ds-header-heading > .ds-label {
+  font-size: 1.15em;
+  border-bottom: 1px solid var(--ds-border);
+  padding-bottom: 0.2rem;
+  margin-bottom: 0.6rem;
+}
