@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Bug fixes
+
+- `plot`: a thick `node_strokewidth` no longer covers edge ends and arrowheads, eats into the space for the node's label, or gets cut off at the edge of the plot. The border is now drawn outside the node, so `node_radius` (or the label-fitted size) is the space inside the border, and a thicker border makes the node bigger.
+
 ## [1.3.0] - 2026-11-17
 
 ### New features

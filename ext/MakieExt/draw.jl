@@ -437,10 +437,10 @@ an edge-type symbol, checked in that order. Both fall back to a `:default` key.
 |:------------------ |:--------- |:------------------------------------------------------ |
 | `node_color`       | `:white` | fill color                                           |
 | `node_strokecolor` | `:black` | border color                                         |
-| `node_strokewidth` | `2.0`     | border line width                                    |
+| `node_strokewidth` | `2.0`     | border line width, drawn outside the node            |
 | `node_linestyle`   | `nothing` | border line style (`nothing` = solid)                |
 | `node_shape`       | `:circle`| `:circle`, `:square`, `:ellipse`, or `:rect`         |
-| `node_radius`      | `nothing` | fixed node radius; `nothing` sizes each node to its label |
+| `node_radius`      | `nothing` | fixed node radius, inside the border; `nothing` sizes each node to its label |
 | `node_padding`     | `10.0`    | label clearance used when sizing a node automatically |
 
 ## Edge styling
@@ -639,6 +639,14 @@ function Makie.plot!(plot::CausalGraphPlot)
         bbox_w = max(maximum(xs) - minimum(xs), 1.0f-3)
         bbox_h = max(maximum(ys) - minimum(ys), 1.0f-3)
 
+        strokewidths = Float32[
+            _resolve_node(node_strokewidth, nd, fallback[:node_strokewidth]) for
+            nd in node_names
+        ]
+        for (nd, w) in zip(node_names, strokewidths)
+            _check_value(w >= 0, "node_strokewidth", w, "node $(repr(nd))", "non-negative")
+        end
+
         # A node with a fixed `node_radius` uses it directly; the rest
         # (`nothing`) are sized to fit their label.
         fixed_radii =
@@ -733,28 +741,22 @@ function Makie.plot!(plot::CausalGraphPlot)
         px_per_data_unit =
             min(avail_w / (bbox_w + 2.0f0 * margin), avail_h / (bbox_h + 2.0f0 * margin))
 
-        strokewidths = Float32[
-            _resolve_node(node_strokewidth, nd, fallback[:node_strokewidth]) for
-            nd in node_names
-        ]
-        for (nd, w) in zip(node_names, strokewidths)
-            _check_value(w >= 0, "node_strokewidth", w, "node $(repr(nd))", "non-negative")
-        end
-        # A node's border is stroked centered on its outline, so half of it
-        # (pixels) lies outside the node. Edges stop, and route around
-        # obstacles, at the border's outer edge, or a thick border hides
-        # their ends and arrowheads.
-        stroked = [
-            _inflate(geoms[i], strokewidths[i] / 2.0f0 / px_per_data_unit) for
-            i in eachindex(geoms)
-        ]
+        # A node's size (`geoms`) is the space inside its border: Makie strokes
+        # a border centered on the outline it is given, so the outline is
+        # drawn half a stroke (pixels) further out (`drawn`), and the border's
+        # outer edge lies a whole stroke out (`outer`). Edges stop, and route
+        # around other nodes, at that outer edge.
+        to_data(w) = w / px_per_data_unit
+        drawn =
+            [_inflate(geoms[i], to_data(strokewidths[i] / 2.0f0)) for i in eachindex(geoms)]
+        outer = [_inflate(geoms[i], to_data(strokewidths[i])) for i in eachindex(geoms)]
 
         # Edges drawn first so nodes appear on top.
         for (i, e) in enumerate(cg.edges)
             src_idx = node_idx[e.src]
             dst_idx = node_idx[e.dst]
             obstacles = Tuple{Point2f,Float32}[
-                (positions[j], _circumradius(stroked[j])) for
+                (positions[j], _circumradius(outer[j])) for
                 j in eachindex(positions) if j != src_idx && j != dst_idx
             ]
 
@@ -798,8 +800,8 @@ function Makie.plot!(plot::CausalGraphPlot)
             path = _draw_edge!(
                 plot,
                 e,
-                stroked[src_idx],
-                stroked[dst_idx],
+                outer[src_idx],
+                outer[dst_idx],
                 r_arrow,
                 r_circle,
                 obstacles,
@@ -894,7 +896,7 @@ function Makie.plot!(plot::CausalGraphPlot)
             nd = node_names[i]
             _draw_node!(
                 plot,
-                geoms[i];
+                drawn[i];
                 color = _resolve_node(node_color, nd, fallback[:node_color]),
                 strokecolor = _resolve_node(
                     node_strokecolor,
@@ -917,6 +919,17 @@ function Makie.plot!(plot::CausalGraphPlot)
                 font = _resolve_node(node_label_font, nd, fallback[:node_label_font]),
             )
         end
+
+        # Invisible, but counted by the Axis's autolimits, which see only the
+        # drawn outlines and not the border painted outside them. Added last,
+        # so the other plots keep their order.
+        Makie.poly!(
+            plot,
+            [_shape_polygon(g) for g in outer];
+            color = :transparent,
+            strokewidth = 0,
+            inspectable = false,
+        )
         return
     end
 

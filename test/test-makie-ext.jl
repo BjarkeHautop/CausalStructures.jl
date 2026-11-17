@@ -815,7 +815,8 @@ end
     @test fig isa Makie.FigureAxisPlot
 end
 
-@testitem "Makie.plot: edges stop outside a thick node border" tags = [:unit, :plot] begin
+@testitem "Makie.plot: a thick node border is drawn outside the node, clear of edges" tags =
+    [:unit, :plot] begin
     using Makie
 
     dag = DAG(directed(:A, :B))
@@ -833,6 +834,18 @@ end
     @test tip(; node_strokewidth = Dict(:A => 20.0, :default => 2.0)) ≈ tip()
     @test tip(; node_strokewidth = Dict(:B => 20.0, :default => 2.0)) ≈
           tip(; node_strokewidth = 20.0)
+
+    # `node_radius` is the space inside the border: the outline is drawn half
+    # a stroke further out, and the last, invisible Poly reaches the border's
+    # outer edge, so the Axis limits leave room for all of it.
+    plots = edge_plots(; node_radius = 0.2, node_strokewidth = 20.0)
+    reach(pts) = maximum(p -> abs(p[1]), pts)
+    nodes = [p for p in plots if p isa Makie.Poly && p.strokewidth[] == 20]
+    drawn = reach(nodes[1][1][])
+    outer = reach(plots[end][1][][1])
+    @test Makie.to_color(plots[end].color[]) == Makie.to_color(:transparent)
+    @test 0.2 < drawn < outer
+    @test outer - 0.2 ≈ 2 * (drawn - 0.2) rtol = 1e-4
 end
 
 @testitem "Makie.plot: edge_gap pulls edge ends back from the node border" tags =
@@ -857,9 +870,10 @@ end
     @test_throws ArgumentError edge_plots(; edge_gap = Dict((:A, :B) => -1.0))
 
     # A gap too large to fit between the nodes drops the edge instead of
-    # drawing it reversed; only the two nodes (Poly + Text each) remain.
+    # drawing it reversed; only the two nodes (Poly + Text each) and the
+    # invisible Poly setting the limits remain.
     plots = edge_plots(; edge_gap = 10_000.0)
-    @test length(plots) == 4
+    @test length(plots) == 5
     @test all(p -> !(p isa Makie.Lines), plots)
 end
 
@@ -969,8 +983,9 @@ end
     w_a, w_b = widths()
     @test w_a ≈ w_b
 
-    # A fixed radius for A only; B keeps fitting its label.
-    w_a, w_b = widths(; node_radius = Dict(:A => 0.5))
+    # A fixed radius for A only; B keeps fitting its label. With no border,
+    # the outline is drawn at exactly that radius.
+    w_a, w_b = widths(; node_radius = Dict(:A => 0.5), node_strokewidth = 0.0)
     @test w_a ≈ 1.0
     @test w_b < w_a
 

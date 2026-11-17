@@ -146,10 +146,10 @@ A per-node `Dict` is keyed by node name, with `:default` as a fallback.
 | ------------------- | ------------------------------------ | -------------------------------- |
 | `node_color`        | `:white`                             | fill color                      |
 | `node_strokecolor`  | `:black`                             | border color                    |
-| `node_strokewidth`  | `2.0`                                | border line width               |
+| `node_strokewidth`  | `2.0`                                | border line width, drawn outside the node |
 | `node_linestyle`    | `nothing` (solid)                    | border line style               |
 | `node_shape`        | `:circle`                             | node outline shape              |
-| `node_radius`       | `nothing` (text-fit)                  | size of each node               |
+| `node_radius`       | `nothing` (text-fit)                  | size of each node, inside its border |
 | `node_padding`      | `10.0`                                | clearance around each label when `node_radius` is `nothing` |
 
 Combine color, border, and shape to highlight a node:
