@@ -815,6 +815,26 @@ end
     @test fig isa Makie.FigureAxisPlot
 end
 
+@testitem "Makie.plot: edges stop outside a thick node border" tags = [:unit, :plot] begin
+    using Makie
+
+    dag = DAG(directed(:A, :B))
+    edge_plots(; kwargs...) =
+        Makie.plot(dag; layout = [(0.0, 0.0), (2.0, 0.0)], kwargs...).plot.plots
+    shaft_start(; kwargs...) = edge_plots(; kwargs...)[1][1][][1][1]
+    tip(; kwargs...) = edge_plots(; kwargs...)[2][1][][1][1]
+
+    # Half the border is stroked outside the node, so a thicker border moves
+    # both edge ends outward, the arrowhead included.
+    @test shaft_start(; node_strokewidth = 20.0) > shaft_start()
+    @test tip(; node_strokewidth = 20.0) < tip()
+
+    # Only the border of the node at that end counts.
+    @test tip(; node_strokewidth = Dict(:A => 20.0, :default => 2.0)) ≈ tip()
+    @test tip(; node_strokewidth = Dict(:B => 20.0, :default => 2.0)) ≈
+          tip(; node_strokewidth = 20.0)
+end
+
 @testitem "Makie.plot: edge_gap pulls edge ends back from the node border" tags =
     [:unit, :plot] begin
     using Makie

@@ -733,12 +733,28 @@ function Makie.plot!(plot::CausalGraphPlot)
         px_per_data_unit =
             min(avail_w / (bbox_w + 2.0f0 * margin), avail_h / (bbox_h + 2.0f0 * margin))
 
+        strokewidths = Float32[
+            _resolve_node(node_strokewidth, nd, fallback[:node_strokewidth]) for
+            nd in node_names
+        ]
+        for (nd, w) in zip(node_names, strokewidths)
+            _check_value(w >= 0, "node_strokewidth", w, "node $(repr(nd))", "non-negative")
+        end
+        # A node's border is stroked centered on its outline, so half of it
+        # (pixels) lies outside the node. Edges stop, and route around
+        # obstacles, at the border's outer edge, or a thick border hides
+        # their ends and arrowheads.
+        stroked = [
+            _inflate(geoms[i], strokewidths[i] / 2.0f0 / px_per_data_unit) for
+            i in eachindex(geoms)
+        ]
+
         # Edges drawn first so nodes appear on top.
         for (i, e) in enumerate(cg.edges)
             src_idx = node_idx[e.src]
             dst_idx = node_idx[e.dst]
             obstacles = Tuple{Point2f,Float32}[
-                (positions[j], radii[j]) for
+                (positions[j], _circumradius(stroked[j])) for
                 j in eachindex(positions) if j != src_idx && j != dst_idx
             ]
 
@@ -782,8 +798,8 @@ function Makie.plot!(plot::CausalGraphPlot)
             path = _draw_edge!(
                 plot,
                 e,
-                geoms[src_idx],
-                geoms[dst_idx],
+                stroked[src_idx],
+                stroked[dst_idx],
                 r_arrow,
                 r_circle,
                 obstacles,
@@ -876,14 +892,6 @@ function Makie.plot!(plot::CausalGraphPlot)
 
         for i in eachindex(node_names)
             nd = node_names[i]
-            strokewidth = _resolve_node(node_strokewidth, nd, fallback[:node_strokewidth])
-            _check_value(
-                strokewidth >= 0,
-                "node_strokewidth",
-                strokewidth,
-                "node $(repr(nd))",
-                "non-negative",
-            )
             _draw_node!(
                 plot,
                 geoms[i];
@@ -893,7 +901,7 @@ function Makie.plot!(plot::CausalGraphPlot)
                     nd,
                     fallback[:node_strokecolor],
                 ),
-                strokewidth = Float32(strokewidth),
+                strokewidth = strokewidths[i],
                 linestyle = _resolve_node(node_linestyle, nd, fallback[:node_linestyle]),
             )
             Makie.text!(
