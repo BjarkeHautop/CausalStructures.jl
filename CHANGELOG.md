@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-11-17
+
+### New features
+
+- `add_edges`, `remove_edges`, `add_nodes` and `remove_nodes` also take the edges or nodes as one vector.
+
 ## [1.2.0] - 2026-11-09
 
 Most of the bug fixes in this release were found while formalizing the package in Lean, following the approach of [Formalizing Julia in Lean](https://discourse.julialang.org/t/formalizing-julia-in-lean-and-finding-400-bugs-in-base/140243).

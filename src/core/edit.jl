@@ -4,13 +4,15 @@ end
 
 """
     add_edges(cg::CausalGraph, es::CausalEdge...) -> CausalGraph
+    add_edges(cg::CausalGraph, es::AbstractVector{CausalEdge}) -> CausalGraph
 
 Return a new graph of the same class with edges `es` added. Nodes referenced by
 any edge are added automatically if not already present.
 
 # Arguments
 - `cg::CausalGraph`: the graph to add edges to.
-- `es::CausalEdge...`: the edges to add.
+- `es`: the edges to add, as separate arguments or as one vector. They are applied
+  together, so only the result must be a valid graph of the class of `cg`.
 
 # Returns
 A new `CausalGraph` of the same class as `cg`.
@@ -33,7 +35,9 @@ DAG with 4 nodes and 3 edges:
     A --> B, B --> C, C --> D
 ```
 """
-function add_edges(cg::CausalGraph, es::CausalEdge...)
+add_edges(cg::CausalGraph, es::CausalEdge...) = add_edges(cg, collect(CausalEdge, es))
+
+function add_edges(cg::CausalGraph, es::AbstractVector{<:CausalEdge})
     new_nodes = Set(cg.backend.nodes)
     for e in es
         push!(new_nodes, e.src, e.dst)
@@ -47,6 +51,7 @@ end
 
 """
     remove_edges(cg::CausalGraph, es::CausalEdge...) -> CausalGraph
+    remove_edges(cg::CausalGraph, es::AbstractVector{CausalEdge}) -> CausalGraph
 
 Return a new graph of the same class with edges `es` removed. Nodes that become
 isolated are retained. Throws `ArgumentError` if any edge in `es` is not present, or
@@ -54,7 +59,8 @@ if the remaining graph is not a valid graph of that class.
 
 # Arguments
 - `cg::CausalGraph`: the graph to remove edges from.
-- `es::CausalEdge...`: the edges to remove.
+- `es`: the edges to remove, as separate arguments or as one vector. They are applied
+  together, so only the result must be a valid graph of the class of `cg`.
 
 # Returns
 A new `CausalGraph` of the same class as `cg`.
@@ -78,7 +84,9 @@ DAG with 3 nodes and 0 edges:
     (none)
 ```
 """
-function remove_edges(cg::CausalGraph, es::CausalEdge...)
+remove_edges(cg::CausalGraph, es::CausalEdge...) = remove_edges(cg, collect(CausalEdge, es))
+
+function remove_edges(cg::CausalGraph, es::AbstractVector{<:CausalEdge})
     new_edges = copy(cg.edges)
     for e in es
         idx = findfirst(==(e), new_edges)
@@ -92,13 +100,14 @@ end
 
 """
     add_nodes(cg::CausalGraph, ns::Symbol...) -> CausalGraph
+    add_nodes(cg::CausalGraph, ns::AbstractVector{Symbol}) -> CausalGraph
 
 Return a new graph of the same class with isolated nodes `ns` added.
 Nodes already present are ignored.
 
 # Arguments
 - `cg::CausalGraph`: the graph to add nodes to.
-- `ns::Symbol...`: the nodes to add.
+- `ns`: the nodes to add, as separate arguments or as one vector.
 
 # Returns
 A new `CausalGraph` of the same class as `cg`, or `cg` itself if every node in `ns`
@@ -119,7 +128,9 @@ julia> add_nodes(g, :A) === g
 true
 ```
 """
-function add_nodes(cg::CausalGraph, ns::Symbol...)
+add_nodes(cg::CausalGraph, ns::Symbol...) = add_nodes(cg, collect(Symbol, ns))
+
+function add_nodes(cg::CausalGraph, ns::AbstractVector{<:Symbol})
     new_nodes = Set(cg.backend.nodes)
     any_new = false
     for n in ns
@@ -134,6 +145,7 @@ end
 
 """
     remove_nodes(cg::CausalGraph, ns::Symbol...) -> CausalGraph
+    remove_nodes(cg::CausalGraph, ns::AbstractVector{Symbol}) -> CausalGraph
 
 Return a new graph of the same class with nodes `ns` and all their incident edges removed.
 Throws `ArgumentError` if any node in `ns` is not present, or if the remaining graph is
@@ -141,7 +153,8 @@ not a valid graph of that class.
 
 # Arguments
 - `cg::CausalGraph`: the graph to remove nodes from.
-- `ns::Symbol...`: the nodes to remove.
+- `ns`: the nodes to remove, as separate arguments or as one vector. They are applied
+  together, so only the result must be a valid graph of the class of `cg`.
 
 # Returns
 A new `CausalGraph` of the same class as `cg`.
@@ -170,7 +183,9 @@ DAG with 1 node and 0 edges:
     (none)
 ```
 """
-function remove_nodes(cg::CausalGraph, ns::Symbol...)
+remove_nodes(cg::CausalGraph, ns::Symbol...) = remove_nodes(cg, collect(Symbol, ns))
+
+function remove_nodes(cg::CausalGraph, ns::AbstractVector{<:Symbol})
     drop = Set{Symbol}()
     for n in ns
         n in cg.backend.nodes || throw(ArgumentError("node not found in graph: $n"))

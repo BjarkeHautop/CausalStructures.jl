@@ -163,3 +163,27 @@ end
     u2 = add_edges(u, directed(:A, :B))
     @test length(u2.edges) == 2
 end
+
+# ── vector arguments ──────────────────────────────────────────────────────────
+
+@testitem "editing functions take a vector" tags = [:unit, :edit] begin
+    g = DAG("A --> B")
+    @test add_edges(g, [directed(:B, :C), directed(:C, :D)]) ==
+          add_edges(g, directed(:B, :C), directed(:C, :D))
+    @test remove_edges(DAG("A --> B --> C"), [directed(:A, :B)]) ==
+          remove_edges(DAG("A --> B --> C"), directed(:A, :B))
+    @test add_nodes(g, [:C, :D]) == add_nodes(g, :C, :D)
+    @test add_nodes(g, Symbol[]) === g
+    @test remove_nodes(DAG("A --> B --> C"), [:A, :B]) ==
+          remove_nodes(DAG("A --> B --> C"), :A, :B)
+    @test add_edges(g, CausalEdge[]) == g
+end
+
+@testitem "editing applies all edges before validating" tags = [:unit, :edit] begin
+    # Neither edge alone is a valid CPDAG, but the v-structure is.
+    es = [directed(:A, :C), directed(:B, :C)]
+    cpdag = add_edges(CPDAG("A, B, C"), es)
+    @test cpdag == CPDAG("A --> C <-- B")
+    @test remove_edges(cpdag, es) == CPDAG("A, B, C")
+    @test_throws ArgumentError add_edges(CPDAG("A, B, C"), es[1])
+end
