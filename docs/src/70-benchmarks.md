@@ -80,7 +80,7 @@ algorithms.
 independently, which is cheap regardless of `n` but is not uniform over the
 space of DAGs. [`uniform_dag`](@ref) instead draws exactly uniformly from all
 labeled DAGs on `n` nodes using the recursive enumeration algorithm of
-[kuipers2015uniform](@citet).
+[kuipers2015uniform](@citet).[^1]
 
 ```@example bench
 for n in (10, 20, 40)
@@ -88,6 +88,11 @@ for n in (10, 20, 40)
     println("n=$n  ", median(t))
 end
 ```
+
+[^1]: Each call in this benchmark computes the counting table from scratch. In
+    practice, when drawing several DAGs on `n` or fewer nodes, compute the table
+    once with [`uniform_dag_counts`](@ref)`(n)` and pass it to every call as
+    `counts`.
 
 ### Markov equivalence class enumeration
 
@@ -140,11 +145,11 @@ end
 
 !!! tip "Parallel search"
     [`count_dags`](@ref), [`enumerate_dags`](@ref), [`enumerate_mags`](@ref),
-    [`pagcauses`](@ref), and the whole `all_*_sets`[^1] family all parallelize
+    [`pagcauses`](@ref), and the whole `all_*_sets`[^2] family all parallelize
     their search across `Threads.nthreads()` automatically once the problem is
     large enough to benefit.
 
-[^1]: Except for [`all_iv_sets`](@ref), since the candidate check for IV is a trivial lookup, and thus not worth it.
+[^2]: Except for [`all_iv_sets`](@ref), since the candidate check for IV is a trivial lookup, and thus not worth it.
 
 ## Comparison to CausalInference.jl
 
