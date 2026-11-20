@@ -3,8 +3,8 @@
 # candidate subsets of a "universe" of node indices up to a bounded size and
 # keeps the ones a per-candidate validity check accepts.
 
-# Below this many total candidate subsets, the fixed cost of materializing
-# the candidate list and spawning tasks outweighs any benefit.
+# Below this many total candidate subsets, the fixed cost of spawning tasks
+# outweighs any benefit.
 const _SUBSET_SEARCH_PARALLEL_THRESHOLD = 4096
 
 # Materialize every subset of `universe` of size `min_size:max_size`, in the
@@ -93,8 +93,55 @@ function _search_subsets_rec!(
     return nothing
 end
 
-# Threaded path: materializes every candidate subset up front, then splits
-# them into `nthreads()` contiguous chunks.
+# Positions (into a universe of size `n`) of the subset with 0-based rank `r`
+# in the order `_search_subsets_sequential` visits them: size-by-size from
+# `min_size`, lexicographic within each size.
+function _unrank_subset(n::Int, min_size::Int, r::Int)
+    k = min_size
+    while r >= (c = binomial(n, k))
+        r -= c
+        k += 1
+    end
+    pos = Vector{Int}(undef, k)
+    v = 1
+    for i = 1:k
+        # binomial(n - v, k - i) subsets have `v` at position `i`.
+        while r >= (c = binomial(n - v, k - i))
+            r -= c
+            v += 1
+        end
+        pos[i] = v
+        v += 1
+    end
+    return pos
+end
+
+# Advances `pos` in place to the next subset in the order of `_unrank_subset`,
+# moving on to the first subset of the next size after the last of this one.
+function _next_subset!(pos::Vector{Int}, n::Int)
+    k = length(pos)
+    i = k
+    while i >= 1 && pos[i] == n - k + i
+        i -= 1
+    end
+    if i == 0
+        resize!(pos, k + 1)
+        for j = 1:(k+1)
+            pos[j] = j
+        end
+    else
+        pos[i] += 1
+        for j = (i+1):k
+            pos[j] = pos[j-1] + 1
+        end
+    end
+    return pos
+end
+
+# Threaded path: splits the candidate subsets, in the order the sequential
+# path visits them, into `nthreads()` contiguous rank ranges. Each task
+# unranks the first subset of its range and steps through the rest in place,
+# so the candidates are never materialized.
 function _search_subsets_threaded(
     universe::Vector{Int},
     min_size::Int,
@@ -102,25 +149,34 @@ function _search_subsets_threaded(
     make_checker::F1,
     to_symbols::F2,
 ) where {F1<:Function,F2<:Function}
-    candidates = _all_subsets(universe, min_size, max_size)
+    n = length(universe)
+    # Not accumulated in a loop: a reassigned local captured by the
+    # `@threads` closure would be boxed, making the loop body type-unstable.
+    total = sum(k -> binomial(n, k), min_size:min(max_size, n); init = 0)
     nt = Threads.nthreads()
     per_thread = [Vector{Vector{Symbol}}() for _ = 1:nt]
-    chunk = cld(length(candidates), nt)
+    chunk = cld(total, nt)
 
     Threads.@threads for t = 1:nt
-        lo = (t - 1) * chunk + 1
-        hi = min(t * chunk, length(candidates))
+        lo = (t - 1) * chunk
+        hi = min(lo + chunk, total) - 1
         if lo <= hi
             checker = make_checker()
             results = per_thread[t]
-            for idx = lo:hi
-                c = candidates[idx]
-                checker(c) && push!(results, to_symbols(c))
+            pos = _unrank_subset(n, min_size, lo)
+            cur = Int[]
+            for r = lo:hi
+                resize!(cur, length(pos))
+                for i in eachindex(pos)
+                    cur[i] = universe[pos[i]]
+                end
+                checker(cur) && push!(results, to_symbols(cur))
+                r < hi && _next_subset!(pos, n)
             end
         end
     end
-    # Chunks are contiguous slices of `candidates`, so concatenation preserves
-    # the same order the sequential path produces.
+    # Rank ranges are contiguous, so concatenation preserves the same order
+    # the sequential path produces.
     return reduce(vcat, per_thread)
 end
 

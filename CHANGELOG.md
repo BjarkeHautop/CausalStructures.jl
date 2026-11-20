@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `plot`: a thick `node_strokewidth` no longer covers edge ends and arrowheads, eats into the space for the node's label, or gets cut off at the edge of the plot. The border is now drawn outside the node, so `node_radius` (or the label-fitted size) is the space inside the border, and a thicker border makes the node bigger.
 
+### Performance
+
+- `all_backdoor_sets` and `all_adjustment_sets` no longer build a list of every candidate set before checking them when Julia runs with several threads. Each thread now generates its share of candidates as it goes, which uses far less memory and is faster.
+
 ## [1.3.0] - 2026-11-17
 
 ### New features
