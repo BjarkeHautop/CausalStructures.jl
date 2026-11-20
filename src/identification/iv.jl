@@ -358,7 +358,7 @@ function all_iv_sets(
     end
 
     valid_sets = Vector{Vector{Symbol}}()
-    for c in _all_subsets(valid_pool, isempty(inc) ? 1 : 0, max_size - length(inc))
+    _foreach_subset(valid_pool, isempty(inc) ? 1 : 0, max_size - length(inc)) do c
         (inc_relevant || any(v -> relevant_mask[v], c)) && push!(valid_sets, to_symbols(c))
     end
     return valid_sets

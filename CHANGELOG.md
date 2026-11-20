@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Performance
 
 - `all_backdoor_sets` and `all_adjustment_sets` no longer build a list of every candidate set before checking them when Julia runs with several threads. Each thread now generates its share of candidates as it goes, which uses far less memory and is faster.
+- `all_iv_sets` with `minimal = false` no longer builds a list of every candidate set either, which uses less memory and is somewhat faster on large inputs.
 
 ## [1.3.0] - 2026-11-17
 

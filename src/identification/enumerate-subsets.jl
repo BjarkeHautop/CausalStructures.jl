@@ -1,101 +1,21 @@
-# Shared brute-force subset search used by `all_backdoor_sets` and
-# `all_adjustment_sets` (PDAG/MPDAG/CPDAG, ADMG, AG/MAG): each enumerates
-# candidate subsets of a "universe" of node indices up to a bounded size and
-# keeps the ones a per-candidate validity check accepts.
+# Bounded-size subset enumeration, plus the brute-force subset search built on
+# it that `all_backdoor_sets` and `all_adjustment_sets` (PDAG/MPDAG/CPDAG,
+# ADMG, AG/MAG) share: each enumerates candidate subsets of a "universe" of
+# node indices up to a bounded size and keeps the ones a per-candidate
+# validity check accepts.
+#
+# Subsets are visited size-by-size from `min_size`, lexicographic (by position
+# in `universe`) within each size, and numbered by 0-based rank in that order.
 
 # Below this many total candidate subsets, the fixed cost of spawning tasks
 # outweighs any benefit.
 const _SUBSET_SEARCH_PARALLEL_THRESHOLD = 4096
 
-# Materialize every subset of `universe` of size `min_size:max_size`, in the
-# same order the fused recursion in `_search_subsets_sequential` would visit
-# them (size-by-size, lexicographic within each size).
-function _all_subsets(universe::Vector{Int}, min_size::Int, max_size::Int)
-    n = length(universe)
-    out = Vector{Vector{Int}}()
-    cur = Int[]
+# Number of subsets of a universe of size `n` with size `min_size:max_size`.
+_subset_count(n::Int, min_size::Int, max_size::Int) =
+    sum(k -> binomial(n, k), min_size:min(max_size, n); init = 0)
 
-    for k = min_size:min(max_size, n)
-        _all_subsets_rec!(out, cur, universe, n, 1, k)
-    end
-    return out
-end
-
-function _all_subsets_rec!(
-    out::Vector{Vector{Int}},
-    cur::Vector{Int},
-    universe::Vector{Int},
-    n::Int,
-    start::Int,
-    k_rem::Int,
-)
-    if k_rem == 0
-        push!(out, copy(cur))
-        return nothing
-    end
-    for i = start:n
-        push!(cur, universe[i])
-        _all_subsets_rec!(out, cur, universe, n, i + 1, k_rem - 1)
-        pop!(cur)
-    end
-    return nothing
-end
-
-# Kept as its own function: a shared `checker` local between the sequential
-# and threaded paths made Julia's closure-lowering box them together, so
-# parallel tasks ended up aliasing each other's "fresh" scratch buffers.
-function _search_subsets_sequential(
-    universe::Vector{Int},
-    min_size::Int,
-    max_size::Int,
-    make_checker::F1,
-    to_symbols::F2,
-) where {F1<:Function,F2<:Function}
-    n = length(universe)
-    valid_sets = Vector{Vector{Symbol}}()
-    checker = make_checker()
-    cur = Int[]
-
-    for k = min_size:min(max_size, n)
-        _search_subsets_rec!(valid_sets, cur, universe, n, checker, to_symbols, 1, k)
-    end
-    return valid_sets
-end
-
-function _search_subsets_rec!(
-    valid_sets::Vector{Vector{Symbol}},
-    cur::Vector{Int},
-    universe::Vector{Int},
-    n::Int,
-    checker::C,
-    to_symbols::S,
-    start::Int,
-    k_rem::Int,
-) where {C,S}
-    if k_rem == 0
-        checker(cur) && push!(valid_sets, to_symbols(cur))
-        return nothing
-    end
-    for i = start:n
-        push!(cur, universe[i])
-        _search_subsets_rec!(
-            valid_sets,
-            cur,
-            universe,
-            n,
-            checker,
-            to_symbols,
-            i + 1,
-            k_rem - 1,
-        )
-        pop!(cur)
-    end
-    return nothing
-end
-
-# Positions (into a universe of size `n`) of the subset with 0-based rank `r`
-# in the order `_search_subsets_sequential` visits them: size-by-size from
-# `min_size`, lexicographic within each size.
+# Positions (into a universe of size `n`) of the subset with rank `r`.
 function _unrank_subset(n::Int, min_size::Int, r::Int)
     k = min_size
     while r >= (c = binomial(n, k))
@@ -116,8 +36,9 @@ function _unrank_subset(n::Int, min_size::Int, r::Int)
     return pos
 end
 
-# Advances `pos` in place to the next subset in the order of `_unrank_subset`,
-# moving on to the first subset of the next size after the last of this one.
+# Advances `pos` in place to the subset with the next rank, moving on to the
+# first subset of the next size after the last of this one. Returns the first
+# position that changed; every position before it is unchanged.
 function _next_subset!(pos::Vector{Int}, n::Int)
     k = length(pos)
     i = k
@@ -129,19 +50,79 @@ function _next_subset!(pos::Vector{Int}, n::Int)
         for j = 1:(k+1)
             pos[j] = j
         end
-    else
-        pos[i] += 1
-        for j = (i+1):k
-            pos[j] = pos[j-1] + 1
-        end
+        return 1
     end
-    return pos
+    pos[i] += 1
+    for j = (i+1):k
+        pos[j] = pos[j-1] + 1
+    end
+    return i
 end
 
-# Threaded path: splits the candidate subsets, in the order the sequential
-# path visits them, into `nthreads()` contiguous rank ranges. Each task
-# unranks the first subset of its range and steps through the rest in place,
-# so the candidates are never materialized.
+# Calls `f(cur)` for each subset of `universe` with rank in `lo:hi`, in rank
+# order. `cur` is one buffer reused for every subset, so `f` must copy it to
+# keep it, and must not modify it.
+function _foreach_subset(
+    f::F,
+    universe::Vector{Int},
+    min_size::Int,
+    lo::Int,
+    hi::Int,
+) where {F}
+    lo <= hi || return nothing
+    n = length(universe)
+    pos = _unrank_subset(n, min_size, lo)
+    cur = universe[pos]
+    for r = lo:hi
+        f(cur)
+        r == hi && break
+        k = length(pos)
+        # Fast path for the common step, where only the last position moves.
+        if k > 0 && pos[k] < n
+            pos[k] += 1
+            cur[k] = universe[pos[k]]
+            continue
+        end
+        # Only the tail from the first changed position needs refreshing.
+        first_changed = _next_subset!(pos, n)
+        first_changed == 1 && resize!(cur, length(pos))
+        for i = first_changed:length(pos)
+            cur[i] = universe[pos[i]]
+        end
+    end
+    return nothing
+end
+
+# Calls `f(cur)` for every subset of `universe` of size `min_size:max_size`.
+_foreach_subset(f::F, universe::Vector{Int}, min_size::Int, max_size::Int) where {F} =
+    _foreach_subset(
+        f,
+        universe,
+        min_size,
+        0,
+        _subset_count(length(universe), min_size, max_size) - 1,
+    )
+
+# Kept as its own function: a shared `checker` local between the sequential
+# and threaded paths made Julia's closure-lowering box them together, so
+# parallel tasks ended up aliasing each other's "fresh" scratch buffers.
+function _search_subsets_sequential(
+    universe::Vector{Int},
+    min_size::Int,
+    max_size::Int,
+    make_checker::F1,
+    to_symbols::F2,
+) where {F1<:Function,F2<:Function}
+    valid_sets = Vector{Vector{Symbol}}()
+    checker = make_checker()
+    _foreach_subset(universe, min_size, max_size) do cur
+        checker(cur) && push!(valid_sets, to_symbols(cur))
+    end
+    return valid_sets
+end
+
+# Threaded path: splits the ranks into `nthreads()` contiguous ranges, one
+# task each, so the candidates are never materialized.
 function _search_subsets_threaded(
     universe::Vector{Int},
     min_size::Int,
@@ -149,10 +130,7 @@ function _search_subsets_threaded(
     make_checker::F1,
     to_symbols::F2,
 ) where {F1<:Function,F2<:Function}
-    n = length(universe)
-    # Not accumulated in a loop: a reassigned local captured by the
-    # `@threads` closure would be boxed, making the loop body type-unstable.
-    total = sum(k -> binomial(n, k), min_size:min(max_size, n); init = 0)
+    total = _subset_count(length(universe), min_size, max_size)
     nt = Threads.nthreads()
     per_thread = [Vector{Vector{Symbol}}() for _ = 1:nt]
     chunk = cld(total, nt)
@@ -160,19 +138,10 @@ function _search_subsets_threaded(
     Threads.@threads for t = 1:nt
         lo = (t - 1) * chunk
         hi = min(lo + chunk, total) - 1
-        if lo <= hi
-            checker = make_checker()
-            results = per_thread[t]
-            pos = _unrank_subset(n, min_size, lo)
-            cur = Int[]
-            for r = lo:hi
-                resize!(cur, length(pos))
-                for i in eachindex(pos)
-                    cur[i] = universe[pos[i]]
-                end
-                checker(cur) && push!(results, to_symbols(cur))
-                r < hi && _next_subset!(pos, n)
-            end
+        checker = make_checker()
+        results = per_thread[t]
+        _foreach_subset(universe, min_size, lo, hi) do cur
+            checker(cur) && push!(results, to_symbols(cur))
         end
     end
     # Rank ranges are contiguous, so concatenation preserves the same order
@@ -181,7 +150,7 @@ function _search_subsets_threaded(
 end
 
 # Brute-force every subset of `universe` (node indices) of size
-# min_size:max_size`, keeping those for which `checker(cur)` returns `true`,
+# `min_size:max_size`, keeping those for which `checker(cur)` returns `true`,
 # where `checker = make_checker()`.
 #
 # `make_checker` must be side-effect-free and return a *fresh* closure each
@@ -195,14 +164,7 @@ function _search_subsets(
     make_checker::F1,
     to_symbols::F2,
 ) where {F1<:Function,F2<:Function}
-    n = length(universe)
-    hi_size = min(max_size, n)
-
-    total = 0
-    for k = min_size:hi_size
-        total += binomial(n, k)
-    end
-
+    total = _subset_count(length(universe), min_size, max_size)
     if Threads.nthreads() == 1 || total < _SUBSET_SEARCH_PARALLEL_THRESHOLD
         return _search_subsets_sequential(
             universe,

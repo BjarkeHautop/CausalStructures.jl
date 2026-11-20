@@ -46,7 +46,7 @@ function _for_each_statement(f, ns::Vector{Symbol}, k::Int)
         i == j && continue
         x, y = ns[i], ns[j]
         rest = [ns[m] for m = 1:n if m != i && m != j]
-        for s_idx in _all_subsets(collect(1:length(rest)), k, k)
+        _foreach_subset(collect(1:length(rest)), k, k) do s_idx
             f(x, y, rest[s_idx])
         end
     end
