@@ -81,6 +81,7 @@ all_adjustment_sets(mpdag, :X, :Z)
     cg = PDAG("A --- B --- C --- D --- A")
     is_cpdag(cg)
     is_mpdag(cg)
+    has_consistent_extension(cg)
     dag_from_pdag(cg)
     ```
 

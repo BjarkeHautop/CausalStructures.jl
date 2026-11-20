@@ -263,6 +263,12 @@ A Maximally Partially Directed Acyclic Graph. A PDAG that is closed under Meek's
 orientation rules R1-R4: no further edge orientation can be implied. MPDAGs arise
 when background knowledge (forced edge orientations) is present.
 
+The definition is purely structural and does not require a consistent DAG extension
+(a DAG with the same skeleton and v-structures that contains every directed edge).
+For example, the chordless cycle `A --- B --- C --- D --- A` is a valid MPDAG
+but represents no DAG. For such an MPDAG, statements about "every DAG represented"
+hold vacuously; use [`has_consistent_extension`](@ref) to check.
+
 # Examples
 
 ```jldoctest
@@ -276,6 +282,7 @@ MPDAG with 3 nodes and 2 edges:
 # References
 
 - [meek1995causal](@citet)
+- [perkovic2017mpdag](@citet)
 """
 struct MPDAG <: AbstractPDAG
     edges::Vector{CausalEdge}

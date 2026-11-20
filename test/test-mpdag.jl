@@ -138,6 +138,31 @@ end
     @test meek_closure(pdag; check_cycles = false) isa MPDAG
 end
 
+@testitem "has_consistent_extension" tags = [:unit, :mpdag] begin
+    # Chordless 4-cycle: a valid MPDAG that represents no DAG.
+    c4 = MPDAG("A --- B --- C --- D --- A")
+    @test !has_consistent_extension(c4)
+    @test_throws ErrorException dag_from_pdag(c4)
+
+    @test has_consistent_extension(MPDAG("A --- B --- C"))
+    @test has_consistent_extension(MPDAG("A --> B --> C"))
+    @test has_consistent_extension(dag_to_cpdag(DAG("A --> C, B --> C, C --> D")))
+    @test has_consistent_extension(PDAG("A --> B, C --> B"))
+
+    # Meek's rules would close a cycle: no extension.
+    @test !has_consistent_extension(PDAG("A --> B, B --- C, C --> D, D --> B"))
+
+    # Agrees with count_dags on small graphs.
+    for g in (
+        PDAG("A --- B, B --- C, C --- A"),
+        PDAG("A --> B, B --- C"),
+        PDAG("A --> B, B --- C, C --- D, D --- A"),
+        PDAG("A --- B --- C --- D --- E --- A"),
+    )
+        @test has_consistent_extension(g) == (count_dags(g) > 0)
+    end
+end
+
 # TODO: Make test for unsafe meek_closure with check_cycles = false, which may return a cycle.
 # TODO: Make test for r4 = false for meek_closure on a PDAG with background knowledge.
 

@@ -12,6 +12,7 @@ moralize
 
 ```@docs
 dag_from_pdag
+has_consistent_extension
 dag_to_cpdag
 dag_to_mpdag
 apply_background_knowledge

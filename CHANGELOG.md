@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### New features
+
+- `has_consistent_extension(cg::AbstractPDAG)` checks whether a PDAG or MPDAG represents at least one DAG, i.e. whether `dag_from_pdag` succeeds on it. It is always `true` for a CPDAG.
+
 ### Bug fixes
 
 - `plot`: a thick `node_strokewidth` no longer covers edge ends and arrowheads, eats into the space for the node's label, or gets cut off at the edge of the plot. The border is now drawn outside the node, so `node_radius` (or the label-fitted size) is the space inside the border, and a thicker border makes the node bigger.

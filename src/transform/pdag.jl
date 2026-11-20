@@ -54,6 +54,41 @@ function dag_from_pdag(cg::AbstractPDAG)
     return DAG(Set(B.nodes), new_edges; validate = false)
 end
 
+"""
+    has_consistent_extension(cg::AbstractPDAG) -> Bool
+
+Return `true` if `cg` has a consistent DAG extension: a [`DAG`](@ref) with the
+same skeleton and v-structures as `cg` that contains every directed edge of `cg`.
+Equivalently, `cg` represents at least one DAG, and [`dag_from_pdag`](@ref)
+succeeds on it.
+
+Every [`CPDAG`](@ref) has one, but a [`PDAG`](@ref) or [`MPDAG`](@ref) need not:
+being acyclic and closed under Meek's rules does not ensure it.
+
+# Arguments
+- `cg::AbstractPDAG`: the graph to check.
+
+# Returns
+`true` if a consistent DAG extension exists, `false` otherwise.
+
+# Examples
+
+```jldoctest
+julia> has_consistent_extension(MPDAG("A --- B --- C"))
+true
+
+julia> has_consistent_extension(MPDAG("A --- B --- C --- D --- A"))
+false
+```
+
+# References
+
+- [dortarsi1992simple](@citet)
+"""
+has_consistent_extension(cg::AbstractPDAG) = _dor_tarsi_parents(cg.backend) !== nothing
+# A CPDAG represents a non-empty Markov equivalence class by construction.
+has_consistent_extension(::CPDAG) = true
+
 # Parent sets of a consistent DAG extension of the PDAG in `B` (same
 # v-structures, acyclic), found with Dor-Tarsi, or `nothing` if none exists.
 function _dor_tarsi_parents(B::PDAGBackend)
@@ -283,6 +318,14 @@ end
 Apply Meek's orientation rules (R1-R4) to `cg` until no further orientations
 are implied, returning the resulting [`MPDAG`](@ref).
 
+The rules are sound: an orientation a rule implies is in every consistent DAG
+extension of `cg`. When `cg` has a consistent extension (see
+[`has_consistent_extension`](@ref)), the closure is therefore unique and does not
+depend on the order the rules are applied in. Without one, two rules can orient the
+same edge in opposite directions, so the closure is not well defined; if a rule's
+orientation would close a directed cycle, `meek_closure` throws (see below), much like
+the FAIL of Algorithm 1 in [perkovic2017mpdag](@citet).
+
 The four rules are:
 - **R1**: `a --> b --- c`, `a` not adjacent to `c` --> orient `b --> c`
 - **R2**: `a --- b`, directed path `a --> w --> b` exists --> orient `a --> b`
@@ -330,6 +373,7 @@ MPDAG with 3 nodes and 2 edges:
 # References
 
 - [meek1995causal](@citet)
+- [perkovic2017mpdag](@citet)
 """
 function meek_closure(cg::AbstractPDAG; check_cycles::Bool = true, r4::Bool = true)
     B = cg.backend
