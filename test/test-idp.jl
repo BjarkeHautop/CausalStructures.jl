@@ -114,6 +114,15 @@ end
     @test cidp(pag, :A, :Y; given = [:X]) === nothing
 end
 
+@testitem "_pag_upper_lower_manipulate: visibility is read before the upper manipulation" tags =
+    [:unit, :idp] begin
+    # C <-> X witnesses that X --> Y is visible; cutting edges into C must not undo that.
+    pag = PAG("X --> Y, E --> Y, X <-> C, E o-> X, D o-> C")
+    manip = CausalStructures._pag_upper_lower_manipulate(pag, [:C, :E], [:X])
+    @test !any(e -> Set((e.src, e.dst)) == Set((:X, :Y)), manip.edges)
+    @test CausalStructures._definite_m_separated(manip, :X, :Y, [:C, :E])
+end
+
 @testitem "_pc_component_bitmask: a collider joins two nodes into one pc-component" tags =
     [:unit, :idp] begin
     # Definition 5's own worked example: "W and Z ... are in the same

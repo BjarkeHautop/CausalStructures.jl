@@ -70,8 +70,9 @@ end
 # relative to the conditioning set encoded by `z_mask` (Definition 3). Walk
 # state is (node, previous node); the previous node is needed (not just the
 # incoming mark) to test unshielded circle triples. `an_z_mask` is the closed
-# set of possible ancestors of the conditioning set (An(Z) in the paper's
-# notation), used to decide whether a collider opens the path.
+# set of definite ancestors of the conditioning set, used to decide whether a
+# collider opens the path. Walks can revisit nodes, so a `false` result may
+# have no definite m-connecting path behind it (not on `cidp`'s queries).
 function _definite_reachable(
     B::PAGBackend,
     xs::Vector{Int},
@@ -111,7 +112,7 @@ function _definite_reachable(
 end
 
 # Returns true iff every node in `x` is definite-m-separated from every node
-# in `y` given `z` in the PAG `cg` (Definition 3).
+# in `y` given `z` in the PAG `cg` (Definition 3); see the walk caveat above.
 function _definite_m_separated(
     cg::PAG,
     x::Union{Symbol,AbstractVector{Symbol}},

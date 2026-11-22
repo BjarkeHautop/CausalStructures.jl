@@ -8,9 +8,10 @@
 # intervened on) deletes every edge with an arrowhead into X. Both keep
 # everything else as-is, and return a `PAG` built with `validate = false`
 # (a manipulated graph is not a Markov equivalence class representative).
+# `visible_in` is the graph in which visibility is read.
 
-function _pag_lower_manipulate(cg::PAG, xs::AbstractVector{Symbol})
-    B = cg.backend
+function _pag_lower_manipulate(cg::PAG, xs::AbstractVector{Symbol}; visible_in::PAG = cg)
+    B = visible_in.backend
     x_set = Set(xs)
     kept = CausalEdge[]
     for e in cg.edges
@@ -22,8 +23,8 @@ function _pag_lower_manipulate(cg::PAG, xs::AbstractVector{Symbol})
             other = v == e.src ? e.dst : e.src
             (own_mark == Tail || own_mark == Circle) && other_mark == Arrow || continue
             matched = true
-            xi = node_index(cg, v)
-            oi = node_index(cg, other)
+            xi = node_index(visible_in, v)
+            oi = node_index(visible_in, other)
             # Only a definite `-->` can be visible: `v o-> other` is `<->` in
             # some member MAG.
             (own_mark == Tail && _is_visible_edge(B, xi, oi)) ||
@@ -50,11 +51,12 @@ end
 # Combined P_{W̄, X̲}: upper-manipulate w.r.t. `w`, then lower-manipulate the
 # result w.r.t. `x` (the order matches the do-calculus reading of the
 # subscript: W is already fixed by an outer intervention, X is the one being
-# tested). `w` and `x` are assumed disjoint.
+# tested). `w` and `x` are assumed disjoint. Visibility is read in `cg`:
+# deleting edges into `w` must not change which edges are confounded.
 function _pag_upper_lower_manipulate(
     cg::PAG,
     w::AbstractVector{Symbol},
     x::AbstractVector{Symbol},
 )
-    return _pag_lower_manipulate(_pag_upper_manipulate(cg, w), x)
+    return _pag_lower_manipulate(_pag_upper_manipulate(cg, w), x; visible_in = cg)
 end
