@@ -37,7 +37,7 @@ jobs:
         run: |
           julia --project=@trimtrace -e '
             using Pkg
-            Pkg.add(url = "https://github.com/BjarkeHautop/TrimTrace.jl")
+            Pkg.add("TrimTrace")
             Pkg.develop(path = ".")'
       - name: Instantiate the test environment
         run: julia --project=test -e 'using Pkg; Pkg.instantiate()'
